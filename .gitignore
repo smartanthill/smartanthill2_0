@@ -1,0 +1,4 @@
+*.pyc
+.coverage
+.tox/*
+docs/_build/*
