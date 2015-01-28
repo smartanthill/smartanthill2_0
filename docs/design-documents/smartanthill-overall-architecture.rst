@@ -1,4 +1,4 @@
-v0.1.1
+v0.1.1a
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -117,7 +117,7 @@ SmartAnthill protocol stack consists of the following protocols:
 
 * **SACP** – SmartAnthill Control Protocol. Corresponds to Layer 7 of OSI/ISO network model. On the SmartAnthill Device side, is implemented by Yocto VM, which handles generic commands and routes device-specific commands to device-specific plug-ins.
 
-* **SATP** – SmartAnthill Transfer Protocol. Covers Layers 4-5 of OSI/ISO network model. Provides guaranteed command/reply delivery. Segmentation is not considered due to lack of resources on MCU side, and is not exactly necessary for control purposes; flow control is implemented, but is quite rudimentary. On the other hand, SATP provides efficient support for scenarios such as temporary disabling receiver on the SmartAnthill Device side; such scenarios are very important to ensure energy efficiency.
+* **SATP** – SmartAnthill Transfer Protocol. Covers Layers 4-5 of OSI/ISO network model. Provides guaranteed command/reply delivery. Streaming (and therefore segmentation) is not supported due to lack of resources on MCU side, and is not exactly necessary for control purposes; flow control is implemented, but is quite rudimentary. On the other hand, SATP provides efficient support for scenarios such as temporary disabling receiver on the SmartAnthill Device side; such scenarios are very important to ensure energy efficiency.
 
 * **SASP** – SmartAnthill Security Protocol. Due to several considerations (including resource constraints) SmartAnthill implements security on a datalink layer, so SASP essentially belongs to Layer 2 of OSI/ISO network model. 
 
