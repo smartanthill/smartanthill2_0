@@ -1,4 +1,4 @@
-v0.1.2
+v0.1.2a
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -15,7 +15,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 SmartAnthill Control Protocol (SACP) v2.0
 =========================================
 
-*NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” and "SmartAnthill Protocol Stack" documents, please make sure to read it before proceeding.*
+*NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” and "SmartAnthill Protocol Stack" documents, please make sure to read them before proceeding.*
 
 SACP 2.0 (referred to in this document as SACP) is a part of SmartAnthill protocol stack. It belongs to Level 7 of OSI/ISO Network Model, and is responsible for allowing SmartAnthill Central Controller to control SmartAnthill Device. 
 
