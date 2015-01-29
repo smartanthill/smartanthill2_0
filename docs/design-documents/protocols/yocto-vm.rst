@@ -1,4 +1,4 @@
-v0.1.2
+v0.1.2a
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -51,7 +51,7 @@ As Yocto VM implements an “Execution Layer” of SACP, it needs to implement a
 Bodyparts and Plugins
 ---------------------
 
-According to a more general SmartAnthill architecture, each SmartAnthill Device (a.k.a. 'Ant') has one or more sensors and/or actuators, with each sensor or actuator known as a ant's 'body part' [TODO: add notion of 'body part' to SmartAnthill Architecture]. Each body part is assigned it's own id, which is stored in 'SmartAnthill Database' within SmartAnthill Central Controller.
+According to a more general SmartAnthill architecture, each SmartAnthill Device (a.k.a. 'Ant') has one or more sensors and/or actuators, with each sensor or actuator known as an 'ant body part'. Each 'body part' is assigned it's own id, which is stored in 'SmartAnthill Database' within SmartAnthill Central Controller.
 For each body part type, there is a 'plugin' (so if there are body parts of the same type in the device, number of plugins can be smaller than number of body parts). Plugins are pieces of code which are written in C language and programmed into MCU of SmartAnthill device. 
 
 Structure of Plugin Data and Error Codes

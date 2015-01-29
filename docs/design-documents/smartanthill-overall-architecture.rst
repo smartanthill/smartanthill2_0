@@ -1,4 +1,4 @@
-v0.1.2
+v0.1.3
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -67,17 +67,48 @@ III. SmartAnthill Architecture
 
 III.1 General Architecture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-Any SmartAnthill system consists of one central controller and one or more devices controlled by it (see Fig 1 for an example topology). 
-Central Controller is a relatively complex device (such as Raspberry Pi PC) which runs control software. Control software is intended to be easily customizable according to customer needs. Programming languages for control software may vary, but one language supported is Python [TODO: anything else at the moment?]. SmartAnthill project as such doesn't provide control software, it is rather a library which can be used by a control software.
-Central Controller operates one or more 'buses'. Each SmartAnthill bus can be either a traditional wired bus (such as CAN bus), or a wireless 'bus'. Wireless SmartAnthill 'buses' do not imply any wired connection, they just represent certain domain of wireless connections; for example, one wireless 'bus' can be a ZigBee 'bus' controlling some devices connected via ZigBee, and at the same time another wireless 'bus' can be a 431 MHz RF 'bus' controlling some other devices connected via 431 MHz RF. 
+Any SmartAnthill system consists of one central controller and one or more devices controlled by it (see smartanthill-overall-architecture-diagram for an example topology). 
+
+Central Controller is a relatively complex device (such as Raspberry Pi PC) which runs SmartAnthill Central Controller (also known as 'Anthill') as well as system control software. System control software is intended to be easily customizable according to customer needs. It can be very different, but we aim to support OpenHAB, and to support pretty much any programming language which can support one of the REST, or websockets, or sockets. SmartAnthill project as such doesn't provide control software, it is rather a service which can be used by a control software.
+
+SmartAnthill Central Controller operates one or more 'buses'. Each SmartAnthill bus can be either a traditional wired bus (such as CAN bus), or a wireless 'bus'. Wireless SmartAnthill 'buses' do not imply any wired connection, they just represent certain domain of wireless connections; for example, one wireless 'bus' can be a ZigBee 'bus' controlling some devices connected via ZigBee, and at the same time another wireless 'bus' can be a 431 MHz RF 'bus' controlling some other devices connected via 431 MHz RF. 
 Each bus (wired or wireless) has one or more simple devices (such as sensors or actuators) connected to it (in case of wireless buses, the connection is wireless).
 Each device runs an MPU (or in theory CPU), which runs SmartAnthill stack on it (either a reference stack, or some other implementation).
 
-III.2 Life Cycle of SmartAnthill Device
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Let's consider how new devices are added and used within a SmartAnthill. Life cycle is a bit different for hobbyist-oriented devices and mass-market-oriented devices.
+III.2 SmartAnthill Device
+^^^^^^^^^^^^^^^^^^^^^^^^^
+Each SmartAnthill Device (also known as 'Ant') is either *SmartAnthill Hobbyist Device*, or a *SmartAnthill Mass-Market Device*. While these devices are similar, there are some differences as outlined below.
 
-III.2.1 Life Cycle of SmartAnthill Hobbyist-Oriented Device
+III.2.1. SmartAnthill Hobbyist Device
+'''''''''''''''''''''''''''''''''''''
+
+A diagram of a typical SmartAnthill Hobbyist Device is provided on smartanthill-device-diagram. SmartAnthill Hobbyist Device consists of an MCU, communication module, and one or more sensors and/or actuators (which are also known as 'ant body parts'). MCU on SmartAnthill Hobbyist Device runs several layers of software: 
+
+* SmartAnthill-generated software (it is system-specific, i.e. it is generated for each system)
+* device-specific plugins (for each type of sensor or actuator present)
+* SmartAnthill protocol stack (protocol stack is generic, i.e. it is intended to be pretty much the same for all SmartAnthill Devices)
+
+An important part of SmartAnthill Hobbyist Device (which is absent on SmartAnthill Mass-Market Devices) is programming interface; for example, it can be some kind of SPI, or UART.
+
+III.2.2. SmartAnthill Mass-Market Device
+''''''''''''''''''''''''''''''''''''''''
+
+A diagram of a typical SmartAnthill Mass Market Device is also provided on smartanthill-device-diagram. In addition to the components available on SmartAnthill Hobbyist Device, SmartAnthill Mass-Market Device additionally includes:
+
+* persistent storage (such as EEPROM) to store system-specific data. System-specific data contains things such as bus-specific addresses and security keys; it is obtained during "pairing" process which is described below
+* "pairing" interface and "pairing" module responsible for handling "pairing" interface. "pairing" interface is used during "pairing" process as described below, and can be, for example, NFC or USB interface to handle USB stick. 
+
+MCU on SmartAnthill Mass-Market Device runs several layers of software (note the differences from Hobbyist Device): 
+
+* SmartAnthill Configurator, which is responsible for handling "pairing" process and populating system-specific data. SmartAnthill Configurator is generic.
+* device-specific plugins (for each type of sensor or actuator present)
+* SmartAnthill protocol stack (as noted above, protocol stack is generic)
+
+III.3 Life Cycle of SmartAnthill Device
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Let's consider how new devices are added and used within a SmartAnthill. Life cycle is a bit different for *SmartAnthill Hobbyist Devices* and *SmartAnthill Mass-Market Devices*.
+
+III.3.1 Life Cycle of SmartAnthill Hobbyist-Oriented Device
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 During it's life within SmartAnthill, a hobbyist-oriented device goes through the following stages:
 
@@ -91,7 +122,7 @@ During it's life within SmartAnthill, a hobbyist-oriented device goes through th
 
 * **Operation**. After the device is programmed, it can start operation. Device operation involves receiving and executing commands from Central Controller. Operations can be either device-specific (such as “measure temperature and report”), or generic (such as “wait for XXXX seconds and come back for further instructions”).
 
-III.2.2 Life Cycle of SmartAnthill Mass-Market-Oriented Device
+III.3.2 Life Cycle of SmartAnthill Mass-Market-Oriented Device
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 Mass-market devices are expected to be shipped in already programmed state, with a pre-defined configuration. Expected life cycle of a SmartAnthill Mass-market-oriented Device can be described as follows:
 
@@ -111,7 +142,7 @@ Mass-market devices are expected to be shipped in already programmed state, with
 
 * **Operation**. Operation of Mass-market-oriented device is the same as operation of Hobbyist-oriented device.
 
-III.3 SmartAnthill protocol stack
+III.4 SmartAnthill protocol stack
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 SmartAnthill protocol stack is described in detail in a separate document, "SmartAnthill Protocol Stack".
 
