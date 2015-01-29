@@ -1,1 +1,140 @@
-<mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" fold="1" page="1" pageScale="1" pageWidth="826" pageHeight="1169" style="default-style2" math="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" value="" style="whiteSpace=wrap;html=1;yellow" parent="1" vertex="1"><mxGeometry x="50" y="50" width="720" height="370" as="geometry"/></mxCell><mxCell id="3" value="" style="whiteSpace=wrap;html=1;blue" parent="1" vertex="1"><mxGeometry x="70" y="100" width="680" height="250" as="geometry"/></mxCell><mxCell id="4" value="SmartAnthill-Generated Software (system-specific)&lt;br&gt;" style="whiteSpace=wrap;html=1;red;fontSize=16" parent="1" vertex="1"><mxGeometry x="90" y="165" width="640" height="40" as="geometry"/></mxCell><mxCell id="5" value="Device-specific Plugins: Sensor 1, Sensor 2, Actuator 1, Actuator 2&lt;br&gt;" style="whiteSpace=wrap;html=1;red;fontSize=16" parent="1" vertex="1"><mxGeometry x="90" y="220" width="640" height="40" as="geometry"/></mxCell><mxCell id="6" value="SmartAnthill Protocol Stack (generic)&lt;br&gt;" style="whiteSpace=wrap;html=1;red;fontSize=16" parent="1" vertex="1"><mxGeometry x="90" y="275" width="640" height="40" as="geometry"/></mxCell><mxCell id="7" value="MCU" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1"><mxGeometry x="670" y="110" width="70" height="20" as="geometry"/></mxCell><mxCell id="8" value="Comm Module&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;gray" parent="1" vertex="1"><mxGeometry x="70" y="370" width="120" height="30" as="geometry"/></mxCell><mxCell id="9" value="" style="group" parent="1" vertex="1" connectable="0"><mxGeometry x="15" y="355" width="30" height="30" as="geometry"/></mxCell><mxCell id="10" value="" style="verticalLabelPosition=bottom;shadow=0;dashed=0;fillColor=#ffffff;html=1;verticalAlign=top;strokeWidth=1;shape=mxgraph.electrical.radio.aerial_-_antenna_1;fontSize=16" parent="9" vertex="1"><mxGeometry width="30" height="30" as="geometry"/></mxCell><mxCell id="11" style="rounded=0;html=1;exitX=0.5;exitY=1;exitPerimeter=0;entryX=0;entryY=0.5;startArrow=none;startFill=0;fontSize=16;endArrow=none;endFill=0" parent="9" source="10" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="12" style="rounded=0;html=1;exitX=0.5;exitY=1;exitPerimeter=0;entryX=0;entryY=0.5;fontSize=16;endArrow=none;endFill=0" parent="1" source="10" target="8" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="13" value="Sensor 1&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;yellow" parent="1" vertex="1"><mxGeometry x="210" y="370" width="120" height="30" as="geometry"/></mxCell><mxCell id="15" value="Sensor 2&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;yellow" parent="1" vertex="1"><mxGeometry x="350" y="370" width="120" height="30" as="geometry"/></mxCell><mxCell id="16" value="Actuator 1&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;green" parent="1" vertex="1"><mxGeometry x="490" y="370" width="120" height="30" as="geometry"/></mxCell><mxCell id="17" value="Actuator 2&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;green" parent="1" vertex="1"><mxGeometry x="630" y="370" width="120" height="30" as="geometry"/></mxCell><mxCell id="18" value="&lt;font style=&quot;font-size: 20px&quot;&gt;SmartAnthill Hobbyist Device&lt;br&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1"><mxGeometry x="160" y="460" width="470" height="30" as="geometry"/></mxCell><mxCell id="19" value="SmartAnthill Device [Ant] (Sensor and/or Actuator)&lt;br&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1"><mxGeometry x="390" y="60" width="370" height="30" as="geometry"/></mxCell><mxCell id="20" value="" style="whiteSpace=wrap;html=1;yellow" parent="1" vertex="1"><mxGeometry x="48" y="560" width="720" height="370" as="geometry"/></mxCell><mxCell id="21" value="" style="whiteSpace=wrap;html=1;blue" parent="1" vertex="1"><mxGeometry x="68" y="610" width="680" height="250" as="geometry"/></mxCell><mxCell id="22" value="SmartAnthill Device Configurator (generic)&lt;br&gt;" style="whiteSpace=wrap;html=1;red;fontSize=16" parent="1" vertex="1"><mxGeometry x="88" y="675" width="402" height="40" as="geometry"/></mxCell><mxCell id="23" value="Device-specific Plugins: Sensor 1, Sensor 2, Actuator 1, Actuator 2&lt;br&gt;" style="whiteSpace=wrap;html=1;red;fontSize=16" parent="1" vertex="1"><mxGeometry x="88" y="730" width="640" height="40" as="geometry"/></mxCell><mxCell id="24" value="SmartAnthill Protocol Stack (generic)&lt;br&gt;" style="whiteSpace=wrap;html=1;red;fontSize=16" parent="1" vertex="1"><mxGeometry x="88" y="785" width="640" height="40" as="geometry"/></mxCell><mxCell id="25" value="MCU" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1"><mxGeometry x="668" y="620" width="70" height="20" as="geometry"/></mxCell><mxCell id="26" value="Comm Module&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;gray" parent="1" vertex="1"><mxGeometry x="68" y="880" width="120" height="30" as="geometry"/></mxCell><mxCell id="27" value="" style="group" parent="1" vertex="1" connectable="0"><mxGeometry x="13" y="865" width="30" height="30" as="geometry"/></mxCell><mxCell id="28" value="" style="verticalLabelPosition=bottom;shadow=0;dashed=0;fillColor=#ffffff;html=1;verticalAlign=top;strokeWidth=1;shape=mxgraph.electrical.radio.aerial_-_antenna_1;fontSize=16" parent="27" vertex="1"><mxGeometry width="30" height="30" as="geometry"/></mxCell><mxCell id="29" style="rounded=0;html=1;exitX=0.5;exitY=1;exitPerimeter=0;entryX=0;entryY=0.5;startArrow=none;startFill=0;fontSize=16;endArrow=none;endFill=0" parent="27" source="28" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="30" style="rounded=0;html=1;exitX=0.5;exitY=1;exitPerimeter=0;entryX=0;entryY=0.5;fontSize=16;endArrow=none;endFill=0" parent="1" source="28" target="26" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="31" value="Sensor 1&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;yellow" parent="1" vertex="1"><mxGeometry x="208" y="880" width="120" height="30" as="geometry"/></mxCell><mxCell id="32" value="Sensor 2&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;yellow" parent="1" vertex="1"><mxGeometry x="348" y="880" width="120" height="30" as="geometry"/></mxCell><mxCell id="33" value="Actuator 1&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;green" parent="1" vertex="1"><mxGeometry x="488" y="880" width="120" height="30" as="geometry"/></mxCell><mxCell id="34" value="Actuator 2&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;green" parent="1" vertex="1"><mxGeometry x="628" y="880" width="120" height="30" as="geometry"/></mxCell><mxCell id="35" value="&lt;font style=&quot;font-size: 20px&quot;&gt;SmartAnthill Mass-Market Device&lt;br&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1"><mxGeometry x="158" y="970" width="470" height="30" as="geometry"/></mxCell><mxCell id="36" value="SmartAnthill Device [Ant] (Sensor and/or Actuator)&lt;br&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1"><mxGeometry x="388" y="570" width="370" height="30" as="geometry"/></mxCell><mxCell id="37" value="system-specific data&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16" parent="1" vertex="1"><mxGeometry x="540" y="675" width="190" height="45" as="geometry"/></mxCell><mxCell id="38" style="edgeStyle=none;rounded=0;html=1;exitX=1;exitY=0.5;endArrow=none;endFill=0;fontSize=16;dashed=1" parent="1" source="22" edge="1"><mxGeometry relative="1" as="geometry"><mxPoint x="540" y="695" as="targetPoint"/></mxGeometry></mxCell><mxCell id="39" value="&quot;Pairing&quot; Module&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;gray" parent="1" vertex="1"><mxGeometry x="68" y="570" width="140" height="30" as="geometry"/></mxCell><mxCell id="40" value="" style="shape=step;whiteSpace=wrap;html=1;fontSize=16" parent="1" vertex="1"><mxGeometry x="27" y="570" width="32" height="30" as="geometry"/></mxCell><mxCell id="41" style="edgeStyle=none;rounded=0;html=1;exitX=1;exitY=0.5;exitPerimeter=0;entryX=0;entryY=0.5;endArrow=none;endFill=0;fontSize=16" parent="1" source="40" target="39" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="42" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0.25;entryY=0;endArrow=none;endFill=0;fontSize=16;dashed=1" parent="1" source="39" target="22" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="43" value="" style="shape=step;whiteSpace=wrap;html=1;fontSize=16" parent="1" vertex="1"><mxGeometry x="28" y="115" width="32" height="30" as="geometry"/></mxCell><mxCell id="47" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitPerimeter=0;entryX=0;entryY=0.12;entryPerimeter=0;endArrow=none;endFill=0;fontSize=16" parent="1" source="43" target="3" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell><mxCell id="48" value="Programming&lt;br&gt;Interface&lt;br&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1"><mxGeometry y="70" width="105" height="45" as="geometry"/></mxCell><mxCell id="49" value="&quot;Pairing&quot;&lt;br&gt;Interface&lt;br&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1"><mxGeometry y="525" width="90" height="45" as="geometry"/></mxCell></root></mxGraphModel>
+<mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" fold="1" page="1" pageScale="1" pageWidth="826" pageHeight="1169" style="default-style2" math="0">
+   <root>
+      <mxCell id="0" />
+      <mxCell id="1" parent="0" />
+      <mxCell id="2" value="" style="whiteSpace=wrap;html=1;yellow" parent="1" vertex="1">
+         <mxGeometry x="50" y="50" width="720" height="370" as="geometry" />
+      </mxCell>
+      <mxCell id="3" value="" style="whiteSpace=wrap;html=1;blue" parent="1" vertex="1">
+         <mxGeometry x="70" y="100" width="680" height="250" as="geometry" />
+      </mxCell>
+      <mxCell id="4" value="SmartAnthill-Generated Software (system-specific)&lt;br&gt;" style="whiteSpace=wrap;html=1;red;fontSize=16" parent="1" vertex="1">
+         <mxGeometry x="90" y="165" width="640" height="40" as="geometry" />
+      </mxCell>
+      <mxCell id="5" value="Device-specific Plugins: Sensor 1, Sensor 2, Actuator 1, Actuator 2&lt;br&gt;" style="whiteSpace=wrap;html=1;red;fontSize=16" parent="1" vertex="1">
+         <mxGeometry x="90" y="220" width="640" height="40" as="geometry" />
+      </mxCell>
+      <mxCell id="6" value="SmartAnthill Protocol Stack (generic)&lt;br&gt;" style="whiteSpace=wrap;html=1;red;fontSize=16" parent="1" vertex="1">
+         <mxGeometry x="90" y="275" width="640" height="40" as="geometry" />
+      </mxCell>
+      <mxCell id="7" value="MCU" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1">
+         <mxGeometry x="670" y="110" width="70" height="20" as="geometry" />
+      </mxCell>
+      <mxCell id="8" value="Comm Module&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;gray" parent="1" vertex="1">
+         <mxGeometry x="70" y="370" width="120" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="9" value="" style="group" parent="1" vertex="1" connectable="0">
+         <mxGeometry x="15" y="355" width="30" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="10" value="" style="verticalLabelPosition=bottom;shadow=0;dashed=0;fillColor=#ffffff;html=1;verticalAlign=top;strokeWidth=1;shape=mxgraph.electrical.radio.aerial_-_antenna_1;fontSize=16" parent="9" vertex="1">
+         <mxGeometry width="30" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="11" style="rounded=0;html=1;exitX=0.5;exitY=1;exitPerimeter=0;entryX=0;entryY=0.5;startArrow=none;startFill=0;fontSize=16;endArrow=none;endFill=0" parent="9" source="10" edge="1">
+         <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+      <mxCell id="12" style="rounded=0;html=1;exitX=0.5;exitY=1;exitPerimeter=0;entryX=0;entryY=0.5;fontSize=16;endArrow=none;endFill=0" parent="1" source="10" target="8" edge="1">
+         <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+      <mxCell id="13" value="Sensor 1&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;yellow" parent="1" vertex="1">
+         <mxGeometry x="210" y="370" width="120" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="15" value="Sensor 2&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;yellow" parent="1" vertex="1">
+         <mxGeometry x="350" y="370" width="120" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="16" value="Actuator 1&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;green" parent="1" vertex="1">
+         <mxGeometry x="490" y="370" width="120" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="17" value="Actuator 2&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;green" parent="1" vertex="1">
+         <mxGeometry x="630" y="370" width="120" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="18" value="&lt;font style=&quot;font-size: 20px&quot;&gt;SmartAnthill Hobbyist Device&lt;br&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1">
+         <mxGeometry x="160" y="460" width="470" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="19" value="SmartAnthill Device [Ant] (Sensor and/or Actuator)&lt;br&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1">
+         <mxGeometry x="390" y="60" width="370" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="20" value="" style="whiteSpace=wrap;html=1;yellow" parent="1" vertex="1">
+         <mxGeometry x="48" y="560" width="720" height="370" as="geometry" />
+      </mxCell>
+      <mxCell id="21" value="" style="whiteSpace=wrap;html=1;blue" parent="1" vertex="1">
+         <mxGeometry x="68" y="610" width="680" height="250" as="geometry" />
+      </mxCell>
+      <mxCell id="22" value="SmartAnthill Device Configurator (generic)&lt;br&gt;" style="whiteSpace=wrap;html=1;red;fontSize=16" parent="1" vertex="1">
+         <mxGeometry x="88" y="675" width="402" height="40" as="geometry" />
+      </mxCell>
+      <mxCell id="23" value="Device-specific Plugins: Sensor 1, Sensor 2, Actuator 1, Actuator 2&lt;br&gt;" style="whiteSpace=wrap;html=1;red;fontSize=16" parent="1" vertex="1">
+         <mxGeometry x="88" y="730" width="640" height="40" as="geometry" />
+      </mxCell>
+      <mxCell id="24" value="SmartAnthill Protocol Stack (generic)&lt;br&gt;" style="whiteSpace=wrap;html=1;red;fontSize=16" parent="1" vertex="1">
+         <mxGeometry x="88" y="785" width="640" height="40" as="geometry" />
+      </mxCell>
+      <mxCell id="25" value="MCU" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1">
+         <mxGeometry x="668" y="620" width="70" height="20" as="geometry" />
+      </mxCell>
+      <mxCell id="26" value="Comm Module&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;gray" parent="1" vertex="1">
+         <mxGeometry x="68" y="880" width="120" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="27" value="" style="group" parent="1" vertex="1" connectable="0">
+         <mxGeometry x="13" y="865" width="30" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="28" value="" style="verticalLabelPosition=bottom;shadow=0;dashed=0;fillColor=#ffffff;html=1;verticalAlign=top;strokeWidth=1;shape=mxgraph.electrical.radio.aerial_-_antenna_1;fontSize=16" parent="27" vertex="1">
+         <mxGeometry width="30" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="29" style="rounded=0;html=1;exitX=0.5;exitY=1;exitPerimeter=0;entryX=0;entryY=0.5;startArrow=none;startFill=0;fontSize=16;endArrow=none;endFill=0" parent="27" source="28" edge="1">
+         <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+      <mxCell id="30" style="rounded=0;html=1;exitX=0.5;exitY=1;exitPerimeter=0;entryX=0;entryY=0.5;fontSize=16;endArrow=none;endFill=0" parent="1" source="28" target="26" edge="1">
+         <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+      <mxCell id="31" value="Sensor 1&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;yellow" parent="1" vertex="1">
+         <mxGeometry x="208" y="880" width="120" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="32" value="Sensor 2&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;yellow" parent="1" vertex="1">
+         <mxGeometry x="348" y="880" width="120" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="33" value="Actuator 1&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;green" parent="1" vertex="1">
+         <mxGeometry x="488" y="880" width="120" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="34" value="Actuator 2&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;green" parent="1" vertex="1">
+         <mxGeometry x="628" y="880" width="120" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="35" value="&lt;font style=&quot;font-size: 20px&quot;&gt;SmartAnthill Mass-Market Device&lt;br&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1">
+         <mxGeometry x="158" y="970" width="470" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="36" value="SmartAnthill Device [Ant] (Sensor and/or Actuator)&lt;br&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1">
+         <mxGeometry x="388" y="570" width="370" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="37" value="system-specific data&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16" parent="1" vertex="1">
+         <mxGeometry x="540" y="675" width="190" height="45" as="geometry" />
+      </mxCell>
+      <mxCell id="38" style="edgeStyle=none;rounded=0;html=1;exitX=1;exitY=0.5;endArrow=none;endFill=0;fontSize=16;dashed=1" parent="1" source="22" edge="1">
+         <mxGeometry relative="1" as="geometry">
+            <mxPoint x="540" y="695" as="targetPoint" />
+         </mxGeometry>
+      </mxCell>
+      <mxCell id="39" value="&quot;Pairing&quot; Module&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;gray" parent="1" vertex="1">
+         <mxGeometry x="68" y="570" width="140" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="40" value="" style="shape=step;whiteSpace=wrap;html=1;fontSize=16" parent="1" vertex="1">
+         <mxGeometry x="27" y="570" width="32" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="41" style="edgeStyle=none;rounded=0;html=1;exitX=1;exitY=0.5;exitPerimeter=0;entryX=0;entryY=0.5;endArrow=none;endFill=0;fontSize=16" parent="1" source="40" target="39" edge="1">
+         <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+      <mxCell id="42" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0.25;entryY=0;endArrow=none;endFill=0;fontSize=16;dashed=1" parent="1" source="39" target="22" edge="1">
+         <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+      <mxCell id="43" value="" style="shape=step;whiteSpace=wrap;html=1;fontSize=16" parent="1" vertex="1">
+         <mxGeometry x="28" y="115" width="32" height="30" as="geometry" />
+      </mxCell>
+      <mxCell id="47" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitPerimeter=0;entryX=0;entryY=0.12;entryPerimeter=0;endArrow=none;endFill=0;fontSize=16" parent="1" source="43" target="3" edge="1">
+         <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+      <mxCell id="48" value="Programming&lt;br&gt;Interface&lt;br&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1">
+         <mxGeometry y="70" width="105" height="45" as="geometry" />
+      </mxCell>
+      <mxCell id="49" value="&quot;Pairing&quot;&lt;br&gt;Interface&lt;br&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1">
+         <mxGeometry y="525" width="90" height="45" as="geometry" />
+      </mxCell>
+   </root>
+</mxGraphModel>
