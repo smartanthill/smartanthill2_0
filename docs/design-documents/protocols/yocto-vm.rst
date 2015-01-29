@@ -1,4 +1,4 @@
-v0.1.1
+v0.1.1a
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -319,7 +319,7 @@ where YOCTOVM_OP_EXPRBINOP is a 1-byte opcode, and BINOP is 1-byte taking values
 +-----+--------------------------------+
 |4    + &                              |
 +-----+--------------------------------+
-|5    + |                              |
+|5    + \|                             |
 +-----+--------------------------------+
 |6    + &&                             |
 +-----+--------------------------------+
