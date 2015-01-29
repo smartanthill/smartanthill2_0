@@ -1,4 +1,4 @@
-v0.1.1
+v0.1.2
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -15,52 +15,39 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 SmartAnthill Control Protocol (SACP) v2.0
 =========================================
 
-*NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” document, please make sure to read it before proceeding.*
+*NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” and "SmartAnthill Protocol Stack" documents, please make sure to read it before proceeding.*
 
 SACP 2.0 (referred to in this document as SACP) is a part of SmartAnthill protocol stack. It belongs to Level 7 of OSI/ISO Network Model, and is responsible for allowing SmartAnthill Central Controller to control SmartAnthill Device. 
 
-Within SmartAnthill protocol stack, SACP is located on top of SATP 2.0. On the side of SmartAnthill Device, SACP is implemented by Yocto VM. On the side of SmartAnthill Central Controller, SACP is implemented by Control Program.
+Within SmartAnthill protocol stack, SACP is located on top of SAGDP. On the side of SmartAnthill Device, SACP is implemented by Yocto VM. On the side of SmartAnthill Central Controller, SACP is implemented by Control Program.
 
 As well as it's underlying protocol, SACP is an asymmetric protocol: behaviour of SACP is somewhat different for SmartAnthill Device and SmartAnthill Central Controller. For the purposes of SACP underlying protocol,  SmartAnthill Central Controller is considered “master device”, and SmartAnthill Device is considered “slave device”.
 
 SACP Assumptions
 ----------------
 
-It is assumed that authentication, encryption, integrity and reliable delivery should be implemented by protocol layers below SACP. SACP operates on data packets which are already defragmented, authenticated, decrypted, and are guaranteed to be reliably delivered (reliable delivery includes guarantees that every data packet is delivered only once, see also an exceptions to guaranteed delivery in cases of “dual packet chains” and “fatal error handling” below). The underlying protocol of SACP should support the concept of “packet chain” (see section “Packet Chains” for more details). SACP, when sending a packet, MUST specify to the underlying protocol whether the packet is the first, intermediate, or last in the “packet chain” (and receiving this information back when receiving the packet). One protocol which can be used as SACP underlying protocol, is SATP 2.0.
+It is assumed that authentication, encryption, integrity and reliable delivery should be implemented by protocol layers below SACP. SACP operates on data packets which are already defragmented, authenticated, decrypted, and are guaranteed to be reliably delivered (reliable delivery includes guarantees that every data packet is delivered only once, see also an exceptions to guaranteed delivery in cases of “dual packet chains” and “fatal error handling” below). The underlying protocol of SACP should support the concept of “packet chain” (see section “Packet Chains” for more details). SACP, when sending a packet, MUST specify to the underlying protocol whether the packet is the first, intermediate, or last in the “packet chain” (and receiving this information back when receiving the packet). One protocol which can be used as SACP underlying protocol, is SAGDP.
 
 Packet Chains
 -------------
 
-SACP is intended to provide various request-response services between two entities: SmartAnthill Central Controller and SmartAnthill Device. All interactions in SACP are considered as “packet chains”, when one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever SACP issues a packet to an underlying protocol, it MUST specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication.
+All interactions in SACP are considered as “packet chains” (see "SmartAnthill Protocol Stack" document for more details). With "packet chains", one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever SACP issues a packet to an underlying protocol, it MUST specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication. 
 
-Handling of temporary dual “packet chains”
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Normally, at each moment there can be only one “packet chain” active, and within a “packet chain”, all transmissions are always sequential. However, there are scenarios when both parties try to initiate their own “packet chains”. One such example is when SmartAnthill Device is performing certain time-consuming tasks according to instructions received from SmartAnthill Central Controller, and meanwhile  SmartAnthill Central Controller has made a decision (for example, due to the input from other SmartAnthill Devices or from the end-user) to issue different set of instructions to the SmartAnthill Device.
+Handling of Fatal Errors
+------------------------
 
-In such a case, behaviour of the SACP (and underlying protocol) on SmartAnthill Device and SmartAnthill Central Controller is different:
-
-* As noted above, for the purposes of the underlying protocol, SmartAnthill Device is always considered a “slave device”, and SmartAnthill Central Controller is always considered a “master device”.
-* On SmartAnthill Device (a “slave device” for underlying protocol), on receiving a packet which starts a new “packet chain” (from SmartAnthill Central Controller, a “master device” for underlying protocol) which is in the conflict with it's own pending “packet chain”, underlying protocol aborts it's own “packet chain” and passes the packet received from the “master device”, to SACP, with a special 'previous-send-aborted' flag.
-* On SmartAnthill Central Controller (a “master device” for underlying protocol), on receiving a packet which starts a new “packet chain” (from SmartAnthill Device, a “slave device” for underlying protocol) which is in the conflict with it's own pending “packet chain”, underlying protocol silently ignores received packet.
-
-This behavior ensures (TODO: double-check in case of packet loss) that in such cases, a reply from SmartAnthill Device is ignored (as if it wasn't sent at all), and that SmartAnthill Central Controller “packet chain” is processed as soon as it is possible. This is consistent with SmartAnthill Central Controller sending commands which are intended to abort existing conversation and enforce SmartAnthill Device to start processing a new command (or set of commands).
-For more details, see “SmartAnthill SATP” document.
-
-Fatal Error Handling
---------------------
-
-SACP is built under the assumption that in case of any inconsistency between SmartAnthill Central Controller and SmartAnthill Device, it is SmartAnthill Central Controller which is correct. Keeping this in mind, SACP underlying protocol MUST detect any fatal inconsistencies in the protocol (one example of such inconsistency is authenticated packet which is out-of-chain-order), and MUST invoke re-initialization of the SmartAnthill Device in this case. It is done regardless of the SACP state and layers above SACP, and without notifying SACP or any layers above the SACP. 
+SACP is built under the assumption that in case of any inconsistency between SmartAnthill Central Controller and SmartAnthill Device, it is SmartAnthill Central Controller which is right (see "SmartAnthill Protocol Stack" document for more details). Keeping this in mind, SACP underlying protocol MUST detect any fatal inconsistencies in the protocol (one example of such inconsistency is authenticated packet which is out-of-chain-order), and MUST invoke re-initialization of the SmartAnthill Device in this case. It is done regardless of the SACP state and layers above SACP, and without notifying SACP or any layers above the SACP. 
 
 Layering remarks
 ----------------
 
-SACP (and it's underlying protocol, which is normally SATP) are somewhat unusual for an application-level protocol in a sense that SACP needs to care about details which are implicitly related to retransmission correctness. This is a design choice of SACP (and SATP) which has been made in face of extremely constrained (and unusual for conventional communication) environments. It should also be noted that while some such details are indeed exposed to SACP, they are formalized as a clear set of “rules of engagement” to be obeyed. As long as these “rules of engagement” are obeyed, SACP does not need to care about retransmission correctness (though the rationale for “rules of engagement” is provided by retransmission correctness). Any references to retransmission correctness in current document are non-normative and are presented for the purposes of better understanding only.
+SACP (and it's underlying protocol, which is normally SAGDP) are somewhat unusual for an application-level protocol in a sense that SACP needs to care about details which are implicitly related to retransmission correctness. This is a design choice of SACP (and SAGDP) which has been made in face of extremely constrained (and unusual for conventional communication) environments. It should also be noted that while some such details are indeed exposed to SACP, they are formalized as a clear set of “rules of engagement” to be obeyed. As long as these “rules of engagement” are obeyed, SACP does not need to care about retransmission correctness (though the rationale for “rules of engagement” is provided by retransmission correctness). Any references to retransmission correctness in current document are non-normative and are presented for the purposes of better understanding only.
 
 SACP Rules of Engagement
 ------------------------
 
-To ensure correct operation of an underlying protocol, there are certain rules (referred to “rules of engagement”) which MUST be obeyed (note that these “rules of engagement” are not specific to SATP, but will be a general requirement for any underlying protocol of this nature):
+To ensure correct operation of an underlying protocol, there are certain rules (referred to “rules of engagement”) which MUST be obeyed (note that these “rules of engagement” are not specific to SAGDP, but will be a general requirement for any underlying protocol of this nature):
 
 1. Each packet belongs to a “chain”, and has associated flags which specify whether the packet 'is-first' or 'is-last'
 

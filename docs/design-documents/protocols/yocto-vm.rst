@@ -1,4 +1,4 @@
-v0.1.1a
+v0.1.2
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -64,7 +64,7 @@ Error code == 255 is reserved for Yocto VM exceptions (see below) and SHOULD NOT
 Packet Chains
 -------------
 
-As an implementation of SACP, Yocto VM is intended to provide various request-response services between two entities: SmartAnthill Central Controller and SmartAnthill device. All interactions in SACP are considered as “packet chains”, when one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever Yocto VM issues a packet to an underlying protocol, it specifies whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication.
+In SACP (and in Yocto VM as an implementation of SACP), all interactions between SmartAnthill Central Controller and SmartAnthill Device are considered as “packet chains”, when one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever Yocto VM issues a packet to an underlying protocol, it needs to specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication. See "SmartAnthill Protocol Stack" document for more details on "packet chains". 
 
 Yocto VM Instructions
 ---------------------
