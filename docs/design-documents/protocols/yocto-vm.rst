@@ -1,4 +1,4 @@
-v0.1.2b
+v0.1.3
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -20,7 +20,7 @@ Yocto VM
 Yocto VM is a minimalistic virtual machine used by SmartAnthill Devices. It implements SACP (SmartAnthill Control Protocol) on the side of the SmartAnthill Device (and SACP corresponds to Layer 7 of OSI/ISO network model). By design, Yocto VM is intended to run on devices with extremely limited resources (as little as 512 bytes of RAM).
 
 Sales pitch (not to be taken seriously!)
----------------------------------------
+----------------------------------------
 
 Yocto VM is the only VM which allows you to process fully-fledged Turing-complete byte-code, enables you to program your MCU the way professionals do, with all the bells and whistles such as flow control (including both conditions and loops), postfix expressions, subroutine calls, C routine calls, MCU sleep mode (where not prohibited by law of physics), and even a reasonable facsimile of “green threads” - all at a miserable price of 1 to 50 bytes of RAM (some restrictions apply, batteries not included). Yes, today you can get many of these features at the price of 1 (one) byte of RAM (offer is valid while supplies last, stores open late). 
 
@@ -90,6 +90,7 @@ List of Yocto VM opcodes:
 * YOCTOVM_OP_PUSHEXPR_ERRORCODE
 * YOCTOVM_OP_PUSHEXPR_1BYTE_FROMREPLY
 * YOCTOVM_OP_PUSHEXPR_2BYTES_FROMREPLY
+* YOCTOVM_OP_PUSHEXPR_EXPR
 * YOCTOVM_OP_POPEXPR
 * YOCTOVM_OP_EXPRUNOP
 * YOCTOVM_OP_EXPRBINOP
@@ -101,6 +102,7 @@ List of Yocto VM opcodes:
 * YOCTOVM_OP_JMPIFEXPR_NOPOP_GT
 * YOCTOVM_OP_JMPIFEXPR_NOPOP_EQ
 * YOCTOVM_OP_JMPIFEXPR_NOPOP_NE
+* YOCTOVM_OP_PARALLEL */\* starting from this opcode, instructions are not supported by Yocto VM-Small and below \*/*
 
 Yocto VM Exceptions
 -------------------
@@ -120,6 +122,7 @@ Currently, Yocto VM may issue the following exceptions:
 * YOCTOVM_INVALIDPARAMETER
 * YOCTOVM_INVALIDREPLYOFFSET
 * YOCTOVM_EXPRSTACKUNDERFLOW
+* YOCTOVM_EXPRSTACKINVALIDINDEX
 * YOCTOVM_EXPRSTACKOVERFLOW
 * YOCTOVM_PROGRAMERROR_INVALIDREPLYFLAG
 * YOCTOVM_PROGRAMERROR_INVALIDREPLYSEQUENCE
@@ -192,8 +195,6 @@ To enforce “Execution Layer Requirements”, the following SHOULD be enforced 
 * if 'mcusleep-invoked' flag is set, then original command will have ISLAST flag (because of other restrictions; this means violating 'ISLAST' requirement while processing EXIT instruction is not an exception, but an internal assertion which MUST NOT happen); “reply buffer” MUST be non-empty, and EXIT instruction MUST have REPLY-FLAGS == ISFIRST (this is a 'mcusleep-then-wake' pattern)
 
 If any of the restrictions above is not compied with, Yocto VM generates a YOCTOVM_PROGRAMERROR_INVALIDREPLYSEQUENCE exception.
-
-TODO: YOCTOVM_PARALLEL
 
 Implementation notes
 ''''''''''''''''''''
@@ -275,6 +276,14 @@ where <LEN> is one of {1BYTE,2BYTES}; YOCTOVM_OP_PUSHEXPR_1BYTE_FROMREPLY and  Y
 
 PUSHEXPR <LEN> FROMREPLY takes one or two bytes (as specified by <LEN>) from reply specified by REPLY-OFFSET, at offset within reply as specified by OFFSET-WITHIN-REPLY, and pushes it to the expression stack (if expression stack is exceeded, it will cause YOCTOVM_EXPRSTACKOVERFLOW VM exception). 
 The idea of the PUSHEXPR <LEN> FROMREPLY instruction is that, assuming that one knows the format of reply, she can extract multiple parameters from the replies. Note that due to convention that first byte of reply is the errorcode, \|PUSHEXPR_1BYTE_FROMREPLY\|REPLY-OFFSET\|0\| is the same as \|PUSHEXPR_ERRORCODE\|REPLY-OFFSET\|.
+
+**\ YOCTOVM_OP_PUSHEXPR_EXPR \| EXPR-OFFSET \|** 
+
+where YOCTOVM_OP_PUSHEXPR_EXPR is a 1-byte opcode, and EXPR-OFFSET is a 1-byte offset of the expression which needs to be duplicated on the top of the expression stack.
+
+PUSHEXPR_EXPR instruction peeks a value from the expression stack without removing it from the stack; the value is specified by EXPR-OFFSET, so that EXPR-OFFSET == 0 means "topmost value on the stack", EXPR-OFFSET == 1 means "second topmost value on the stack" and so on. If EXPR-OFFSET is greater than current expression stack size, this will cause YOCTOVM_EXPRSTACKINVALIDINDEX exception.
+
+PUSHEXPR_EXPR instruction is mostly useful within PARALLEL environments (see note on it's specifics in description of YoctoVM-Medium), but is supported in YoctoVM-Small too.
 
 **\| YOCTOVM_OP_POPEXPR \|**
 
@@ -367,8 +376,37 @@ Memory overhead of YoctoVM-Small is (in addition to overhead of YoctoVM-Tiny) is
 Yocto VM-Medium
 ^^^^^^^^^^^^^^^
 
-Yocto VM-Medium adds support for registers and call stack. 
-TODO: CALL, MOV
+Yocto VM-Medium adds support for registers, call stack, and parallel execution.
+
+**\| YOCTOVM_OP_PARALLEL \| N-PSEUDO-THREADS \| PSEUDO-THREAD-1-INSTRUCTIONS-SIZE \| PSEUDO-THREAD-1-INSTRUCTIONS \| ... \| PSEUDO-THREAD-N-INSTRUCTIONS-SIZE \| PSEUDO-THREAD-N-INSTRUCTIONS \|**
+
+where YOCTOVM_OP_PARALLEL is 1-byte opcode, N-PSEUDO-THREADS is a number of "pseudo-threads" requested, 'PSEUDO-THREAD-X-INSTRUCTIONS-SIZE' is 1-byte size of PSEUDO-THREAD-X-INSTRUCTIONS, and PSEUDO-THREAD-X-INSTRUCTIONS is a sequence of Yocto VM commands which belong to the pseudo-thread #X. Within PSEUDO-THREAD-X-INSTRUCTIONS, all commands of Yocto VM are allowed, with an exception of PARALLEL, EXIT and any jump instruction which leads outside of the current pseudo-thread.
+
+PARALLEL instruction starts processing of several pseudo-threads. PARALLEL instruction is considered completed when all the pseudo-threads reach the end of their respective instructions. Normally, it is implemented via state machines (see "SmartAnthill Reference Implementation - MCU Software Architecture" document for details), so it is functionally equivalent to "green threads" (and not to "native threads").
+
+When PARALLEL instruction execution is started, original expression stack is "frozen" and cannot be accessed from any of the pseudo-threads; each pseudo-thread has it's own expression stack which is empty at the beginning of the pseudo-thread execution. After PARALLEL instruction is completed (i.e. all pseudo-threads have been terminated), the original expression stack which existed before PARALLEL instruction has started, is restored, and all the pseudo-thread expression stacks remaining after respective pseudo-threads are terminated, are added to the top of this original stack; this allows to easily pass information from pseudo-threads to the main program; this adding of pseudo-thread expression stacks on top of original expression stack happens *not* in the order in which pseudo-threads have been terminated, but in order of their description within the PARALLEL instruction. 
+
+**Caution:** in addition to any memory overhead listed for Yocto VM-Medium, there is an additional implicit memory overhead associated with PARALLEL instruction: namely, all the states of all the plugin state machines which are run in parallel, need to be kept in RAM simultaneously. Normally, it is not much, but for really constrained environments it might become a problem.
+
+**Note on \ YOCTOVM_OP_PUSHEXPR_EXPR \| EXPR-OFFSET \| within PARALLEL pseudo-thread** 
+
+PUSHEXPR_EXPR instruction, when it is applied within PARALLEL pseudo-thread, allows to access original (pre-PARALLEL) expression stack. That is, first EXPR-OFFSET values identify expression stack items within the pseudo-thread, but when pseudo-thread values are exhausted, increasing EXPR-OFFSET starts to go into pre-PARALLEL expression stack. For example, if \|PUSHEXPR\|0\| is the first instruction of the pseudo-thread, it peeks a topmost value from the pre-PARALLEL expression stack and pushes it to the pseudo-thread's expression stack. This allows to easily pass information from the main program to pseudo-threads.
+
+TODO: CALL (accounting for pseudo-threads), MOV (pseudo-threads-agnostic)
+
+Implementation notes
+''''''''''''''''''''
+
+To implement Yocto VM-Medium, in addition to PC, reply-offset-stack, and expression stack as required by Yocto VM-Small, the following changes need to be made: 
+
+* PC for each pseudo-threads needs to be maintained; maximum number of pseudo-threads is a YOCTOVM_MAX_PSEUDOTHREADS parameter of Yocto VM-Medium (which is stored in SmartAnthill DB on SmartAnthill Central Controller).
+* expression stack needs to be replaced with an array of expression stacks (to accommodate PARALLEL instruction); in practice, it is normally implemented by extending expression stack (say, doubling it) and keeping track of sub-expression stacks via array of offsets (with size of YOCTOVM_MAX_PSEUDOTHREADS) within the expression stack. See "SmartAnthill Reference Implementation - MCU Software Architecture" document for details.
+* to support replies being pushed to "reply buffer" in parallel, an additional array of 2-byte offsets of current replies needs to be maintained, with a size of YOCTOVM_MAX_PSEUDOTHREADS.
+
+Memory overhead
+'''''''''''''''
+
+Memory overhead of YoctoVM-Medium is (in addition to overhead of YoctoVM-Small) is 1+4*YOCTOVM_MAX_PSEUDOTHREADS, though if PARALLEL instruction is intended to be used, an increase of YOCTOVM_EXPR_STACK_SIZE parameter of YoctoVM-Small is advised.
 
 TODO: YOCTOVM_INTERRUPT (? where?)
 
@@ -377,15 +415,16 @@ Appendix
 
 Statistics for different Yocto-VM levels:
 
-+---------------+-----------------+---------------------------------------------+
-|Level          |Opcodes Supported|Amount of RAM used (with typical array sizes)|
-+===============+=================+=============================================+
-|Yocto VM-One   | 6               |1 to 2                                       |
-+---------------+-----------------+---------------------------------------------+
-|Yocto VM-Tiny  | 10              |(1 to 2)+(5 to 9) = 6 to 11                  |
-+---------------+-----------------+---------------------------------------------+
-|Yocto VM-Small | 25              |(6 to 11) + (9 to 17) = 15 to 28             |
-+---------------+-----------------+---------------------------------------------+
-|Yocto VM-Medium| TBD             |TBD                                          |
-+---------------+-----------------+---------------------------------------------+
++---------------+-----------------+-------------------------------------+--------------------------------------------------+
+|Level          |Opcodes Supported|Typical Parameter Values             |Amount of RAM used (with typical parameter values)|
++===============+=================+=====================================+==================================================+
+|Yocto VM-One   | 6               |                                     | 1 to 2                                           |
++---------------+-----------------+-------------------------------------+--------------------------------------------------+
+|Yocto VM-Tiny  | 10              |YOCTOVM_REPLY_STACK_SIZE=4 to 8      | (1 to 2)+(5 to 9) = 6 to 11                      |
++---------------+-----------------+-------------------------------------+--------------------------------------------------+
+|Yocto VM-Small | 26              |YOCTOVM_EXPR_STACK_SIZE=4 to 8       | (6 to 11)+(9 to 17) = 15 to 28                   |
++---------------+-----------------+-------------------------------------+--------------------------------------------------+
+|Yocto VM-Medium| 27+TBD          |YOCTOVM_EXPR_STACK_SIZE=8 to 12      | TBD                                              |
+|               |                 |YOCTOVM_MAX_PSEUDOTHREADS=4 to 8     |                                                  |
++---------------+-----------------+-------------------------------------+--------------------------------------------------+
 
