@@ -1,4 +1,4 @@
-v0.1
+v0.1.1
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -30,7 +30,7 @@ Relation between SmartAnthill protocol stack and OSI/ISO network model
 +--------+--------------+------------------+-----------------------+----------------------+------------------------+
 | 6      | Presentation | --               |                       |                      |                        |
 +--------+--------------+------------------+-----------------------+----------------------+------------------------+
-| 5      | Session      | SAMP             | Support for           | SAMP                 |   --                   |
+| 5      | Session      | SAMP [1]_        | Support for           | SAMP                 |   --                   |
 +--------+--------------+                  | Multi-Node Topologies |                      |                        | 
 | 4      | Transport    |                  |                       |                      |                        |
 +--------+--------------+                  |                       |                      |                        |
@@ -49,6 +49,8 @@ Relation between SmartAnthill protocol stack and OSI/ISO network model
 +--------+----------+---+------------------+-----------------------+----------------------+------------------------+
 | 1      | Physical     | Physical         |                       | Physical             | Physical               |
 +--------+--------------+------------------+-----------------------+----------------------+------------------------+
+
+.. [1] See note in "Layering Remarks" -> "SAMP and SACP" section below
 
 SmartAnthill protocol stack consists of the following protocols:
 
@@ -94,6 +96,15 @@ Handling of these scenarios is explained in detail in respective documents ("SAC
 Layering remarks
 ----------------
 
+SACP and "packet chains"
+^^^^^^^^^^^^^^^^^^^^^^^^
+
 SACP is somewhat unusual for an application-level protocol in a sense that SACP needs to have some knowledge about "packet chains" which are implicitly related to retransmission correctness. This is a conscious design choice of SACP (and SAGDP) which has been made in face of extremely constrained (and unusual for conventional communication) environments which SmartAnthill protocol stack needs to support. It should also be noted that while some such details are indeed exposed to SACP, they are formalized as a clear set of “rules of engagement” to be obeyed. As long as these “rules of engagement” are complied with, SACP does not need to care about retransmission correctness (though the rationale for “rules of engagement” is still provided by retransmission correctness). 
 
+SAMP and SACP
+^^^^^^^^^^^^^
+
+From a certain perspective, SAMP is a higher-level protocol than SACP - it is SAMP which encapsulates SACP, not vice versa. However, SAMP implements services which are typical for the OSI/ISO Layers 3-5, so in the table above we've listed it accordingly. 
+
+In general, it is not worth arguing where exactly certain protocol belongs in the OSI/ISO model, and we provide the table above only to help  with understanding of SmartAnthill protocol stack, not to argue "what is the only right way to represent the mapping between SmartAnthill protocol stack and OSI/ISO".
 
