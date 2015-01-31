@@ -1,4 +1,4 @@
-v0.2.1
+v0.2.1a
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -60,7 +60,7 @@ SmartAnthill on MCU is implemented as a "main loop", which calls different funct
 * NB: all calls of protocol handlers (both “receiving” and “sending”) are made right from the program “main loop” (and not one protocol handler calling another one), to reduce stack usage.
 * after protocol handler has processed the data, it returns to “main loop”. Now previous src is not needed anymore, so "main loop" can and should **memmove()** dst to the beginning of “command buffer”, discarding src and freeing space in "command buffer" for future processing.
 * after such **memmove()** is done, we have current packet (as processed by previous protocol handler) at the beginning of “command buffer”, so we can repeat the process of calling the “receiving” “protocol handler” (such as SAGDP, and then Yocto VM).
-* when Yocto VM is called (it has prototype **yocto_vm(void\* src,uint16 src_size,void\* dst, uint16\* dst_size,WaitingFor\* waiting_for);**; *WaitingFor* structure is described in detail in 'Asynchronous Returns' subsection below), it starts parsing the command buffer and execute commands. Whenever Yocto VM encounters an EXEC command (see "Yocto VM" document for details), Yocto VM calls an appropriate plugin handler, with the following prototype: **plugin_handler(const void\* plugin_data,void\* plugin_state,void\* src,uint16 src_size,void\* reply, uint16\* reply_size, WaitingFor\* waiting_for)**, passing pointer to plugin data as a src and it's own *dst* as *reply*. After plugin_handler returns, Yocto VM increments it's own *dst* by a size of the reply passed back from the plugin. It ensures proper and easy forming of "reply buffer" as required by Yocto VM specification.
+* when Yocto VM is called (it has prototype **yocto_vm(void\* src,uint16 src_size,void\* dst, uint16\* dst_size,WaitingFor\* waiting_for);**; *WaitingFor* structure is described in detail in 'Asynchronous Returns' subsection below), it starts parsing the command buffer and execute commands. Whenever Yocto VM encounters an EXEC command (see "Yocto VM" document for details), Yocto VM calls an appropriate plugin handler, with the following prototype: **plugin_handler(const void\* plugin_config,void\* plugin_state,void\* src,uint16 src_size,void\* reply, uint16\* reply_size, WaitingFor\* waiting_for)**, passing pointer to plugin data as a src and it's own *dst* as *reply*. After plugin_handler returns, Yocto VM increments it's own *dst* by a size of the reply passed back from the plugin. It ensures proper and easy forming of "reply buffer" as required by Yocto VM specification.
 * after the Yocto VM has processed the data, “main loop” doesn't need the command anymore, so it can again **memmove()** "reply buffer" (returned at *dst* location by Yocto VM) to the beginning of “command buffer” and call SAGDP “sending” protocol handler.
 * after “sending” protocol handler returns, “main loop” may and should **memmove()** reply of the “sending” protocol handler to the beginning of the “command buffer” and continue calling the “sending” protocol handlers (and memmove()-ing data to the beginning of the “command buffer”) until the last protocol handler is called; at this point, data is prepared for feeding to the physical channel.
 * at this point, "main loop" may and should call [TODO] function (which belongs to device-specific library) to pass data back to the physical layer.
@@ -98,7 +98,7 @@ Ideally, plugins SHOULD also be implemented as state machines, for example:
 
 ::
 
-  struct MyPluginData { //constant structure filled with data for specific 'ant body part'
+  struct MyPluginConfig { //constant structure filled with a configuration for specific 'ant body part'
     byte request_pin_number;//pin to request sensor read
     byte ack_pin_number;//pin to wait for to see when sensor has provided the data
     byte reply_pin_numbers[4];//pins to read when ack_pin_number shows that the data is ready
@@ -108,23 +108,25 @@ Ideally, plugins SHOULD also be implemented as state machines, for example:
     byte state; //'0' means 'initial state', '1' means 'requested sensor to perform read'
   };
 
-  byte my_plugin_handler_init(const void* plugin_data,void* plugin_state) {
+  byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
     //perform sensor initialization if necessary
     MyPluginState* ps = (MyPluginState*)plugin_state;
     ps->state = 0;
   }
 
-  byte my_plugin_handler(const void* plugin_data, void* plugin_state,
+  //TODO: reinit? (via deinit, or directly, or implicitly)
+
+  byte my_plugin_handler(const void* plugin_config, void* plugin_state,
       byte pins_to_wait[(NPINS+7)/8], byte pin_values_to_wait[(NPINS+7)/8]) {
-    const MyPluginData* pd = (MyPluginData*) plugin_data;
+    const MyPluginConfig* pc = (MyPluginConfig*) plugin_config;
     MyPluginState* ps = (MyPluginState*)plugin_state;
     if(ps->state == 0) {
-      //request sensor to perform read, using pd->request_pin_number
+      //request sensor to perform read, using pc->request_pin_number
       ps->state = 1;
       //let's assume that sensor will set signal on pin#3 to 1 when the data is ready
 
       //filling in pins_to_wait to indicate we're waiting for pin #3, and value =1 for it:
-      byte apn = pd->ack_pin_number;
+      byte apn = pc->ack_pin_number;
 
       //splitting apn into byte number 'idx' and bit number 'shift'
       byte idx = apn >> 3;
@@ -135,24 +137,24 @@ Ideally, plugins SHOULD also be implemented as state machines, for example:
       return WAITING_FOR;
     }
     else {
-      //read pin# pd->ack_pin_number just in case
+      //read pin# pc->ack_pin_number just in case
       if(ack_pin != 1) {
-        byte apn = pd->ack_pin_number;
+        byte apn = pc->ack_pin_number;
         byte idx = apn >> 3;
         byte shift = apn & 0x7;
         pins_to_wait[idx] |= (1<<shift);
         pins_values_to_wait[idx] |= (1<<shift);
         return WAITING_FOR;
       }
-      //read data from sensor and fill in "reply buffer" with data, 
-      //  using pd->reply_pin_numbers[]
+      //read data from sensor using pc->reply_pin_numbers[],
+      //  and fill in "reply buffer" with data
       return 0;
     }
   }
 
 Such an approach allows Yocto VM to perform proper pausing (with ability for Central Controller to interrupt processing by sending a new command while it didn't receive an answer to the previous one) when long waits are needed. It also enables parallel processing of the plugins (TODO: PARALLEL instruction for Yocto VM).
 
-However, for some plugins (simple ones without waiting at all, or if we're too lazy to write proper state machine), we can use 'dummy state machine', with *MyPluginData* being zero-size and unused, and **plugin_handler()** not taking into account any states at all.
+However, for some plugins (simple ones without waiting at all, or if we're too lazy to write proper state machine), we can use 'dummy state machine', with *MyPluginState* being NULL and unused, and **plugin_handler()** not taking into account any states at all.
 
 
 Programming Guidelines
