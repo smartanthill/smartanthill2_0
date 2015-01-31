@@ -1,4 +1,4 @@
-v0.2.2
+v0.2.2a
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -98,7 +98,8 @@ Ideally, plugins SHOULD also be implemented as state machines, for example:
 
 ::
 
-  struct MyPluginConfig { //constant structure filled with a configuration for specific 'ant body part'
+  struct MyPluginConfig { //constant structure filled with a configuration 
+                          //  for specific 'ant body part'
     byte request_pin_number;//pin to request sensor read
     byte ack_pin_number;//pin to wait for to see when sensor has provided the data
     byte reply_pin_numbers[4];//pins to read when ack_pin_number shows that the data is ready
