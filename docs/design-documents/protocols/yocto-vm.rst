@@ -1,4 +1,4 @@
-v0.1.2a
+v0.1.2b
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -19,10 +19,10 @@ Yocto VM
 
 Yocto VM is a minimalistic virtual machine used by SmartAnthill Devices. It implements SACP (SmartAnthill Control Protocol) on the side of the SmartAnthill Device (and SACP corresponds to Layer 7 of OSI/ISO network model). By design, Yocto VM is intended to run on devices with extremely limited resources (as little as 512 bytes of RAM).
 
-Sales pitch (don't take too seriously!)
+Sales pitch (not to be taken seriously!)
 ---------------------------------------
 
-Yocto VM is the only VM which allows you to process fully-fledged Turing-complete byte-code, enables you to program your MCU the way professionals do, with all the bells and whistles such as flow control (including both conditions and loops), postfix expressions, subroutine calls, C routine calls, MCU sleep mode (where not prohibited by law of physics), and even “green threads” - all at a miserable price of 1 to 50 bytes of RAM (some restrictions apply, batteries not included). Yes, today you can get many of these features at the price of 1 (one) byte of RAM (offer is valid while supplies last, stores open late). 
+Yocto VM is the only VM which allows you to process fully-fledged Turing-complete byte-code, enables you to program your MCU the way professionals do, with all the bells and whistles such as flow control (including both conditions and loops), postfix expressions, subroutine calls, C routine calls, MCU sleep mode (where not prohibited by law of physics), and even a reasonable facsimile of “green threads” - all at a miserable price of 1 to 50 bytes of RAM (some restrictions apply, batteries not included). Yes, today you can get many of these features at the price of 1 (one) byte of RAM (offer is valid while supplies last, stores open late). 
 
 We're so confident in our product that we offer a unique memory-back guarantee for 30 days or 30 seconds, whichever comes first. Yes, if you are not satisfied with Yocto VM and remove it from your MCU, you'll immediately get all your hard earned bytes back, no questions asked, no strings attached. 
 TODO: proof of being Turing-complete via being able to implement brainfuck
