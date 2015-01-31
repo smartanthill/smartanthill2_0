@@ -1,4 +1,4 @@
-v0.1.2a
+v0.1.3
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -83,6 +83,16 @@ SACP command packets have the following structure:
 SACP reply packets have the following structure:
 
 **| Execution-Layer-Reply |**
+
+Device Pins SHOULD NOT be Addressed Directly within Execution-Layer-Program
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Execution-Layer-Program may contain EXEC instructions (see "Yocto VM" document for details). These EXEC instructions address a certain 'ant body part', and pass opaque data to the corresponding plugin. While the data passed to the plugin is opaque, it SHOULD NOT contain any device pins in it; which device pins are used by the plugin on this specific device, is considered a part of 'body part configuration' and is stored within MCU. 
+
+Therefore, data within EXEC instruction normally does *not* contain pins, but contains only a BODYPART-ID and an action. For example, a command to plugin which turns on connected LED, SHOULD 
+look as **\|EXEC\|BODYPART-ID\|ON\|**, where ON is a 1-byte taking values '0' and '1', indicating "what to do with LED". All mappings of BODYPART-ID to pins SHOULD be described as plugin_config parameter of plugin_handler(), as described in "SmartAnthill Reference Implementation - MCU Software Architecture" document.
+
+TODO: ?describe same thing in 'Yocto VM'?
 
 Execution Layer and Control Program
 -----------------------------------
