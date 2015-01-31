@@ -1,3 +1,4 @@
+v0.1a
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -14,15 +15,24 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 SmartAnthill Guaranteed Delivery Protocol (SAGDP) v2.0
 ======================================================
 
+*NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” and "SmartAnthill Protocol Stack" documents, please make sure to read them before proceeding.*
+
+SAGDP (SmartAnthill Guaranteed Delivery Protocol) aims to provide reliable message delivery for SmartAnthill environments; as described in "SmartAnthill Overall Architecture" document, SmartAnthill environments tend to be extremely limited, and tend to require special attention to energy-saving features. In addition, special considerations (such as ability to turn off receiver temporarily) need to be considered. 
+
+SAGDP belongs to Layer 2 of OSI/ISO network model, see "SmartAnthill Protocol Stack" document for details.
+
 1. Main notions and definitions
 -------------------------------
 
 1.1. **Packet**. A unit of data exchange with other levels/protocols. For the sake of clarity two types of packets are distinguished:
-1.1.1. **HLP packet**: a packet that is sent to or received from a high level protocol;
-1.1.2. **UP packet**:  a packet that is sent to or received from an underlying protocol.
-HLP packet data is a payload data of UP protocol as it will be discussed in more details below.
-1.1.3. **Packet ID (PID)**: each packet has an associated unique (for communication between two given devices) packet ID.
-1.1.4.  **Preceding packet ID (PPID)**: a PID of a preceding packet in the chain, if preceding packet exists.
+
+     1.1.1. **HLP packet**: a packet that is sent to or received from a high level protocol;
+
+     1.1.2. **UP packet**:  a packet that is sent to or received from an underlying protocol. HLP packet data is a payload data of UP protocol as it will be discussed in more details below.
+
+     1.1.3. **Packet ID (PID)**: each packet has an associated unique (for communication between two given devices) packet ID.
+
+     1.1.4.  **Preceding packet ID (PPID)**: a PID of a preceding packet in the chain, if preceding packet exists.
 
 1.2. **Chain**. An ordered set of packets. Each packet in a chain is of one of mutually exclusive types: "first", "intermediate", and "terminating", wherein "first" is the first packet in the chain, "terminating" is the last packet in the chain, and "intermediate" is neither "first" nor "terminating".
 
@@ -37,39 +47,41 @@ HLP packet data is a payload data of UP protocol as it will be discussed in more
 2.1. Normal processing of a packet chain.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Two devices, A and B, participate in packet exchange. Each packet sent, except a packet with status "terminating", assumes a packet to be received from the opposite side of communication. 
+Two devices, A and B, participate in packet exchange. Each packet sent, except a packet with status "terminating", assumes that there is a packet to be received from the opposite side of communication. 
 
 If all packets sent are actually delivered to the other side of communication (that is, no packet is lost on the way), a  "ping-pong" packet exchange happens starting from a packet marked as "first" and ending with a packet marked "terminating". To have guaranteed delivery, if no response to non-"terminating" packet is received, the packet is resent.
 
-In more details, a device A sends a non-"terminating" packet P to the device B and starts waiting for a packet P' to receive from B. If no packet is received within certain time interval, A resends the packet P to B in hope the packet P will successfully go through. Two main cases are, in general, possible, if A receives no packet from B in turn: (1) packet P is lost, and (2) packet P has been delivered successfully, but packet P' is lost.
+In more detail, a device A sends a non-"terminating" packet P to the device B and starts waiting for a packet P' to receive from B. If no packet is received within certain time interval, A resends the packet P to B in hope the packet P will successfully go through. Two main cases are, in general, possible, if A receives no packet from B in turn: (1) packet P is lost, and (2) packet P has been delivered successfully, but packet P' is lost.
 
 In case (1), resending packet P can lead (after one or more repetitions) to reception of P at B. In the same time, while P is not received at B, similar to what A does, B resends its last packet (a predecessor of P in chain). In case (2) B replies by a packet P' to packet P (and does the same to each additional packet P' received (for instance, because of case (1)).
 
 Thus, after sending a packet P, A can get either a reply to P, or a predecessor of P in chain. Details of processing of both options are considered in more details while discussing protocol states and events.
 
 2.1.1. Special case: planned turning-off the receiver.
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-In some cases it may be desirable to turn of the receiver of one of devices, for instance, for power saving. Since with a receiver turned off a device could not be able to receive or send packets, their  chain must be organized in a way that the last received packet at the side that plans to turn of the receiver, would be "terminating" (that is such that does not assume sending a packet in turn).
+In some cases it may be desirable to turn off the receiver of one of devices, for instance, for power saving. Since with a receiver turned off a device could not be able to receive packets (including reply to the last packet sent to the other side of communication), chains must be organized in a way that the last received packet at the side that plans to turn off the receiver, would be "terminating" (that is such that does not assume sending a packet in turn).
 
 2.2. Motivating differences in protocol for Master and Slave side.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Scenario: Two sides, Master and Slave, start their chains in the same time (that is, send packets that are "first" in a chain). A problem could happen with having two chains in the same time.
+Scenario: Two sides, Master and Slave, start their chains at the same time (that is, they send packets that are "first" ones in their respective chains). This could lead to having two chains at the same time, which is an unusual situation for SAGDP and should be handled separately.
 
-Solution. The protocol is asymmetric for participating parties, that is, incoming packets are processed differently for Master and for Slave side. Particularly, if on the Slave side a "first" packet in a chain is received, current processing (if any) is terminated, and processing of a new chain starts. In turn, on the Master side, if a packet that is not in a chain currently processed by Master, is received, it is ignored. In particular, if a packet with status "first" in the chain is received from the Slave as in the discussed scenario, it will be ignored, and the "first" packet of the Master chain will eventually be resent (by timeout). Upon reception on the Slave side, this packet will cause start of the Master chain processing.
+Solution. The protocol is asymmetric for participating parties, that is, incoming packets are processed differently for Master and for Slave side. Particularly, if on the Slave side a "first" packet in a chain is received, current processing on the Slave side (if any) is terminated, and processing of a new chain starts. In turn, on the Master side, if a packet that is not in a chain currently processed by Master, is received, it is ignored. In particular, if a packet with status "first" in the chain is received from the Slave as in the discussed scenario, it will be ignored, and the "first" packet of the Master chain will eventually be resent (by timeout). Upon reception on the Slave side, this packet will cause start of the Master chain processing.
 
 2.3. Inconsistency in order of incoming packets within the chain.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Scenario: a packet that is not "first" in a chain received, and the ID of a packet to which it is intended to be a reply does not coincide with the ID of the last sent message. Problem: obvious inconsistency in data exchange.
+Scenario: a packet that is not "first" in a chain received, and the ID of a packet to which it is intended to be a reply does not coincide with the ID of the last sent message. Problem: obvious inconsistency in data exchange. While this shouldn't happen if both parties adhere to the protocol, in real life it is possible due to events such as reboots, power losses, malfunctions etc.
 
 Solution. On the Slave side this causes a device reset (since no reasonable processing can be continued). On the master side such a packet is ignored [+++do we report it to an upper level?]
 
 2.4. Motivating "requested-resend" flag.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Scenario: Side A sent an "intermediate" packet in a chain to side B, but B has not received it; both sides are waiting for a packet: side A waits for a reply to the packet sent, and size B waits for a reply to a previous packet in the chain. Both sides can re-send respective packets by timeout. A problem could appear, if both sides would send packets by timeout in the same time as this will cause duplicated sending of all remaining packets in the chain.
+TODO: is 'requested-resend' the same as 'Resent-Packet' below?
+
+Scenario: Side A has sent an "intermediate" packet in a chain to side B, but B has not received it; both sides are waiting for a packet: side A waits for a reply to the packet sent, and size B waits for a reply to a previous packet in the chain. Both sides can re-send respective packets by timeout. A problem could appear, if both sides would send packets by timeout in the same time as this will cause duplicated sending of all remaining packets in the chain.
 
 (Virtual) **Example 1**:
 
@@ -141,9 +153,11 @@ When a packet is sent to the communication partner device, a reply packet is exp
 Another event that can happen in this state is a timer event. If nothing is received from a communication partner device within certain time period from the last packet has been sent, a last sent packet should be resent. Timer event happens after expiration of that time period. The protocol remains in the same "wait-remote" state after timer event.
 
 "Wait-remote" has the following associated data:
+
 - last sent packet (LSP);
 - last sent packet ID (LSPID);
 - length of time interval between re-send attempts (RSP).
+
 LSP is used for packet resending, and RSP is used to set timer. LSPID is used to check whether an incoming packet is a reply to the last sent packet by comparison of LSPID with PPID of the received packet.
 
 3.4. "wait-local" 
@@ -161,23 +175,22 @@ All events may be separated into three groups: (1) getting a packet from an unde
 
 Here is a full list of events.
 
-4.1. Receiving a UP packet with flag "New-Packet"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+4.1. Receiving an UP packet with flag "New-Packet"
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 A packet that has not been received ever before arrives. Unless an error in chaining happened, it is either the first in a new chain, or a reply of a communication partner to the last sent packet. This event is initiated by an underlying protocol. In general, a payload of this packet is to be extracted and passed to a higher level protocol.
 
-4.2. Receiving a UP packet with flag "Resent-Packet"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+4.2. Receiving an UP packet with flag "Resent-Packet"
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 A packet that is identical to last received packet arrives. Regularly it can happen, if a communication partner has not received the last sent packet. This event is initiated by an underlying protocol. In general, a last sent
 
-4.3. Receiving an HLP packet that is "first"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-4.4. Receiving an HLP packet that is "intermediate"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-4.5. Receiving an HLP packet that is "terminating"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+4.3. Receiving an HLP packet that is "first", or is "intermediate", or is "terminating"
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+TODO: pls check that the intended meaning didn't change
+
 A packet from an higher level protocol has been received with a respective status in chain. This packet is to be pre-processed and passed to an underlying protocol to be ultimately sent to a communication partner device.
 
-4.6. Timer
+4.4. Timer
 ^^^^^^^^^^
 In the context of SAGDP timer event is used for packet resending, if a response has not been received within certain time.
 
@@ -185,15 +198,16 @@ In the context of SAGDP timer event is used for packet resending, if a response 
 5. Event processing
 -------------------
 
-In short, to process events from the first group (receiving a UP packet) the protocol should be in either "idle" or "wait-remote" state. To process events from the second group (receiving an HLP packet) the protocol should be in either "idle" or "wait-local" state. To process timer events the protocol should be in "wait-remote" state. Detailed description is placed below.
+In short, to process events from the first group (receiving an UP packet) the protocol should be in either "idle" or "wait-remote" state. To process events from the second group (receiving an HLP packet) the protocol should be in either "idle" or "wait-local" state. To process timer events the protocol should be in "wait-remote" state. Detailed description is placed below.
 
 5.1. Processing events in idle state
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In idle state SAGDP is ready to accept a packet marked as "first" from either underlying or higher level protocol.
 
-5.1.1. Receiving a UP packet with flag "New-Packet"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+5.1.1. Receiving an UP packet with flag "New-Packet"
+''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 Processing of this event is different at Mater's and Slave's side in a part when the packet is not a subsequent packet within a current chain.
 
 **At Master's side**, processing depends on the status of the packet in chain.
@@ -207,50 +221,54 @@ Processing of this event is different at Mater's and Slave's side in a part when
   * Error Message, "Intermediate", "Terminating": unexpected; system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
 
 5.1.2. Receiving an HLP packet that is "first"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The value of LSPID is incremented. A UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is set, "is-last" is not set) and the packet PID that is equal to LSPID. The UP packet is saved as LSP. Timer is set to RSP. The UP packet is sent to the underlying protocol. SAGDP changes its state to "wait-remote".
+''''''''''''''''''''''''''''''''''''''''''''''
 
-5.1.3. Receiving a UP packet with flag "Resent-Packet"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-5.1.4. Receiving an HLP packet that is "intermediate"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-5.1.5. Receiving an HLP packet that is "terminating"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The value of LSPID is incremented. An UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is set, "is-last" is not set) and the packet PID that is equal to LSPID. The UP packet is saved as LSP. Timer is set to RSP. The UP packet is sent to the underlying protocol. SAGDP changes its state to "wait-remote".
+
+5.1.3. Receiving an UP packet with flag "Resent-Packet", or an HLP packet that is "intermediate", or an HLP packet that is "terminating"
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+TODO: pls check that the intended meaning didn't change
+
 If any of these events happen in idle state, consistency of data processing is broken. If implemented on Master, an error must e reported to the higher level protocol, and SAGDP transits to "idle" state. If implemented on Slave, system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
 
-5.1.6. Timer
-^^^^^^^^^^^^
+5.1.4. Timer
+''''''''''''
+
 Ignored in this state.
 
 5.2. Processing events in wait-local state
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 In wait-local state SAGDP waits from a higher level protocol for a packet that is not a "first" in the chain.
 
-5.2.1. Wait-local state, receiving an HLP packet that is "intermediate"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The value of LSPID is incremented. A UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is not set, "is-last" is not set) and the packet PID that is equal to LSPID. The UP packet is saved as LSP. Timer is set to RSP. The UP packet is sent to the underlying protocol. SAGDP changes its state to "wait-remote".
+5.2.1. Receiving an HLP packet that is "intermediate"
+'''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-5.2.2. Wait-local state, receiving an HLP packet that is "terminating"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The value of LSPID is incremented. A UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is not set, "is-last" is set) and the packet PID that is equal to LSPID. The UP packet is sent to the underlying protocol. SAGDP changes its state to "idle".
+The value of LSPID is incremented. An UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is not set, "is-last" is not set) and the packet PID that is equal to LSPID. The UP packet is saved as LSP. Timer is set to RSP. The UP packet is sent to the underlying protocol. SAGDP changes its state to "wait-remote".
 
-5.2.3. Receiving an HLP packet that is "first"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-5.2.4. Receiving a UP packet with flag "New-Packet"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-5.2.5. Receiving a UP packet with flag "Resent-Packet"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-If any of these events happen in idle state, consistency of data processing is broken. If implemented on Master, an error must e reported to the higher level protocol, and SAGDP transits to "idle" state. If implemented on Slave, system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
+5.2.2. Receiving an HLP packet that is "terminating"
+''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-5.2.6. Time
-^^^^^^^^^^^
+The value of LSPID is incremented. An UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is not set, "is-last" is set) and the packet PID that is equal to LSPID. The UP packet is sent to the underlying protocol. SAGDP changes its state to "idle".
+
+5.2.3. Receiving an HLP packet that is "first", or an UP packet with flag "New-Packet", or an UP packet with flag "Resent-Packet"
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+TODO: pls check that the intended meaning didn't change
+
+If any of these events happen in idle (TODO: idle??) state, consistency of data processing is broken. If implemented on Master, an error must e reported to the higher level protocol, and SAGDP transits to "idle" state. If implemented on Slave, system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
+
+5.2.4. Time
+'''''''''''
+
 Ignored in this state.
 
 5.3. Processing events in wait-remote state
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-5.3.1. Receiving a UP packet with flag "New-Packet"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+5.3.1. Receiving an UP packet with flag "New-Packet"
+''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 Processing of this event is different at Mater's and Slave's side in a part when the packet is not a subsequent packet within a current chain.
 
 **At Master's side**, processing depends on the status of the packet in chain.
@@ -272,20 +290,25 @@ Processing of this event is different at Mater's and Slave's side in a part when
      * PPID is equal to LSPID (received packet is a response to the last sent packet): payload of the packet is reported to a higher level protocol with its status in chain, and SAGDP changes its state to idle.
      * PPID is not equal to LSPID (chain is broken): system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
 
-5.3.2. Receiving a UP packet with flag "Resent-Packet"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+5.3.2. Receiving an UP packet with flag "Resent-Packet"
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 The LSP is sent to the underlying protocol. Timer is set to RSP. 
 
 5.3.3. Timer
-^^^^^^^^^^^^
+''''''''''''
+
 The LSP is sent to the underlying protocol. Timer is set to RSP. 
 
 5.3.4. Receiving an HLP packet that is "first"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+''''''''''''''''''''''''''''''''''''''''''''''
 5.3.5. Wait-local state, receiving an HLP packet that is "intermediate"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 5.3.6. Wait-local state, receiving an HLP packet that is "terminating"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+TODO: is it 'wait-remote', 'wait-local', or 'idle'??
+
 If any of these events happen in idle state, consistency of data processing is broken. If implemented on Master, an error must e reported to the higher level protocol, and SAGDP transits to "idle" state. If implemented on Slave, system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
 
 
