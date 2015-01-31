@@ -1,4 +1,4 @@
-v0.2.1a
+v0.2.2
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -115,6 +115,13 @@ Ideally, plugins SHOULD also be implemented as state machines, for example:
   }
 
   //TODO: reinit? (via deinit, or directly, or implicitly)
+
+  uint16 my_plugin_max_reply_size(const void* plugin_config, void* plugin_state,
+    void* data, uint16 datasz ) { //should return maximum reply size for supplied data 
+                                  //  without performing actual processing
+    return 0xFFFF; //returning 0xFFFF means that this plugin cannot be effectively used 
+                   //  for PARALLEL Yocto VM instruction and will be serialized instead
+  }
 
   byte my_plugin_handler(const void* plugin_config, void* plugin_state,
       byte pins_to_wait[(NPINS+7)/8], byte pin_values_to_wait[(NPINS+7)/8]) {
