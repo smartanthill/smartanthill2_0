@@ -1,5 +1,3 @@
-v0.1.4
-
 ..  Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
     Redistribution and use of this file in source (.rst) and compiled
     (.html, .pdf, etc.) forms, with or without modification, are permitted
@@ -27,6 +25,8 @@ v0.1.4
 Yocto VM
 ========
 
+:Version:   v0.1.4
+
 *NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” and “SmartAnthill SACP” documents, please make sure to read them before proceeding.*
 
 Yocto VM is a minimalistic virtual machine used by SmartAnthill Devices. It implements SACP (SmartAnthill Control Protocol) on the side of the SmartAnthill Device (and SACP corresponds to Layer 7 of OSI/ISO network model). By design, Yocto VM is intended to run on devices with extremely limited resources (as little as 512 bytes of RAM).
@@ -36,19 +36,19 @@ Yocto VM is a minimalistic virtual machine used by SmartAnthill Devices. It impl
 Sales pitch (not to be taken seriously!)
 ----------------------------------------
 
-Yocto VM is the only VM which allows you to process fully-fledged Turing-complete byte-code, enables you to program your MCU the way professionals do, with all the bells and whistles such as flow control (including both conditions and loops), postfix expressions, subroutine calls, C routine calls, MCU sleep mode (where not prohibited by law of physics), and even a reasonable facsimile of “green threads” - all at a miserable price of 1 to 50 bytes of RAM (some restrictions apply, batteries not included). Yes, today you can get many of these features at the price of 1 (one) byte of RAM (offer is valid while supplies last, stores open late). 
+Yocto VM is the only VM which allows you to process fully-fledged Turing-complete byte-code, enables you to program your MCU the way professionals do, with all the bells and whistles such as flow control (including both conditions and loops), postfix expressions, subroutine calls, C routine calls, MCU sleep mode (where not prohibited by law of physics), and even a reasonable facsimile of “green threads” - all at a miserable price of 1 to 50 bytes of RAM (some restrictions apply, batteries not included). Yes, today you can get many of these features at the price of 1 (one) byte of RAM (offer is valid while supplies last, stores open late).
 
-We're so confident in our product that we offer a unique memory-back guarantee for 30 days or 30 seconds, whichever comes first. Yes, if you are not satisfied with Yocto VM and remove it from your MCU, you'll immediately get all your hard earned bytes back, no questions asked, no strings attached. 
+We're so confident in our product that we offer a unique memory-back guarantee for 30 days or 30 seconds, whichever comes first. Yes, if you are not satisfied with Yocto VM and remove it from your MCU, you'll immediately get all your hard earned bytes back, no questions asked, no strings attached.
 TODO: proof of being Turing-complete via being able to implement brainfuck
 
 Yocto VM Philosophy
 -------------------
 
-“Yocto” is a prefix in the metric system (SI system) which denotes a factor of 10^-24. This is 10^15 times less than “nano”, 10^12 times less than “pico”, and a billion times less than “femto”. As of now, 'yocto' is the smallest prefix in SI system. 
+“Yocto” is a prefix in the metric system (SI system) which denotes a factor of 10^-24. This is 10^15 times less than “nano”, 10^12 times less than “pico”, and a billion times less than “femto”. As of now, 'yocto' is the smallest prefix in SI system.
 
 Yocto VM is the smallest VM we were able to think about, with an emphasis of using as less RAM as possible. While in theory it might be possible to implement something smaller, in practice it is difficult to go below 1 byte of RAM (which is the minimum overhead by Yocto VM-One).
 
-To handle plugins and replies, Yocto VM uses a “reply buffer”. Whenever plugin is called, it is asked to place its reply at the end of “reply buffer”. Therefore, if there is more than one instruction, plugin replies are effectively collected in a “reply buffer” (in the order of instructions). As “reply buffer” would be needed regardless of Yocto VM (even simple call to a plugin would need to implement some kind of “reply buffer”), it is not considered a part of Yocto VM and it's size is not counted as “memory overhead” of Yocto VM. 
+To handle plugins and replies, Yocto VM uses a “reply buffer”. Whenever plugin is called, it is asked to place its reply at the end of “reply buffer”. Therefore, if there is more than one instruction, plugin replies are effectively collected in a “reply buffer” (in the order of instructions). As “reply buffer” would be needed regardless of Yocto VM (even simple call to a plugin would need to implement some kind of “reply buffer”), it is not considered a part of Yocto VM and it's size is not counted as “memory overhead” of Yocto VM.
 
 Note on memory overhead
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -58,7 +58,7 @@ While Yocto VM itself indeed uses ridiculously low amount of RAM, a developer ne
 Yocto VM Restrictions
 ---------------------
 
-As Yocto VM implements an “Execution Layer” of SACP, it needs to implement all  “Execution Layer Restrictions” set in “SmartAnthill SACP” document. While present document doesn't duplicate these restrictions, it aims to specify them in appropriate places (for example, when specific instructions are described). 
+As Yocto VM implements an “Execution Layer” of SACP, it needs to implement all  “Execution Layer Restrictions” set in “SmartAnthill SACP” document. While present document doesn't duplicate these restrictions, it aims to specify them in appropriate places (for example, when specific instructions are described).
 
 “Program Errors” as specified in Execution Layer Restrictions are implemented as YOCTOVM_PROGRAMERROR_* Yocto VM exceptions as described below.
 
@@ -66,7 +66,7 @@ Bodyparts and Plugins
 ---------------------
 
 According to a more general SmartAnthill architecture, each SmartAnthill Device (a.k.a. 'Ant') has one or more sensors and/or actuators, with each sensor or actuator known as an 'ant body part'. Each 'body part' is assigned it's own id, which is stored in 'SmartAnthill Database' within SmartAnthill Central Controller.
-For each body part type, there is a 'plugin' (so if there are body parts of the same type in the device, number of plugins can be smaller than number of body parts). Plugins are pieces of code which are written in C language and programmed into MCU of SmartAnthill device. 
+For each body part type, there is a 'plugin' (so if there are body parts of the same type in the device, number of plugins can be smaller than number of body parts). Plugins are pieces of code which are written in C language and programmed into MCU of SmartAnthill device.
 
 Structure of Plugin Data and Error Codes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -78,14 +78,14 @@ Error code == 255 is reserved for Yocto VM exceptions (see below) and SHOULD NOT
 Packet Chains
 -------------
 
-In SACP (and in Yocto VM as an implementation of SACP), all interactions between SmartAnthill Central Controller and SmartAnthill Device are considered as “packet chains”, when one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever Yocto VM issues a packet to an underlying protocol, it needs to specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication. See "SmartAnthill Protocol Stack" document for more details on "packet chains". 
+In SACP (and in Yocto VM as an implementation of SACP), all interactions between SmartAnthill Central Controller and SmartAnthill Device are considered as “packet chains”, when one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever Yocto VM issues a packet to an underlying protocol, it needs to specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication. See "SmartAnthill Protocol Stack" document for more details on "packet chains".
 
 Yocto VM Instructions
 ---------------------
 
 All Yocto VM instructions have the same basic format (through this document '\|' denotes field boundaries):
 \| OP-CODE \| OP-PARAMS \|
-where OP-CODE is a 1-byte operation code, and length and content of OP-PARAMS are implicitly defined by OP code. 
+where OP-CODE is a 1-byte operation code, and length and content of OP-PARAMS are implicitly defined by OP code.
 If one of OP-PARAM fields is separated into bitfields, it is denoted as \| SOME_PARAM,SOME_OTHER_PARAM\| and exact length of bitfields is specified in instruction description.
 
 List of Yocto VM opcodes:
@@ -159,8 +159,8 @@ In some places of the present document, a notion of 'Encoded-Size' is mentioned.
 
 * if first byte of Encoded-Size is c1 <= 127, then the value of Encoded-size is equal to c1
 * if first byte of Encoded-Size is c1 >= 128, then the next byte c2 is needed:
-  
-  + if second byte of Encoded-Size is c2 <= 127, then the value of Encoded-Size is equal to *128+((uint16)(c1&0x7F) | ((uint16)c2 << 7))*. 
+
+  + if second byte of Encoded-Size is c2 <= 127, then the value of Encoded-Size is equal to *128+((uint16)(c1&0x7F) | ((uint16)c2 << 7))*.
   + if second byte of Encoded-Size is c2 >= 128, this is currently a YOCTOVM_INVALIDENCODEDSIZE exception (c2 >= 128 is reserved for potential future expansion)
 
 
@@ -205,7 +205,7 @@ Pauses execution for approximately MSEC-DELAY milliseconds.
 **\| YOCTOVM_OP_MCUSLEEP \| SEC-DELAY \|**
 
 where YOCTOVM_OP_MCUSLEEP is a 1-byte opcode, and SEC-DELAY is a 2-byte unsigned integer.
-MCUSLEEP instruction puts MCU into sleep-with-timer mode for approximately SEC-DELAY seconds. If sleep-with-timer mode is not available with current MCU, then such an instruction still may be sent to such a device, as a means of long delay, and SmartAnthill device MUST process it just by waiting for specified time. 
+MCUSLEEP instruction puts MCU into sleep-with-timer mode for approximately SEC-DELAY seconds. If sleep-with-timer mode is not available with current MCU, then such an instruction still may be sent to such a device, as a means of long delay, and SmartAnthill device MUST process it just by waiting for specified time.
 As MCUSLEEP may disable device receiver, Yocto VM enforces relevant “Execution Layer Restrictions” when MCUSLEEP is invoked; to ensure consistent behavior between MCUs, these restriction MUST be enforced regardless of MCUSLEEP really disabling device receiver. Therefore (NB: these checks SHOULD be implemented for YoctoVM-One; they MUST be implemented for all Yocto-VM levels other than YoctoVM-One):
 
 * If original command has not had an ISLAST flag, and MCUSLEEP is invoked, it is YOCTOVM_PROGRAMERROR_INVALIDREPLYSEQUENCE exception.
@@ -276,7 +276,7 @@ YOCTOVM_OP_JMPIFERRORCODE_* instruction takes the reply of the last plugin which
 
 **\| YOCTOMV_OP_POPREPLIES \| N-REPLIES \|**
 
-where POPREPLIES is a 1-byte opcode and N-REPLIES is a 1-byte number of replies to be popped. 
+where POPREPLIES is a 1-byte opcode and N-REPLIES is a 1-byte number of replies to be popped.
 
 POPREPLIES instruction removes last N-REPLIES of plugins from the reply buffer. If N-REPLIES is less than number of replies currently in buffer, it means that all replies are removed, therefore \|POPREPLIES\|255\| always means “Remove all replies currently in reply buffer”. Usually, either \|POPREPLIES\|1\| or \|POPREPLIES\|255\| is used, but other values are also possible.
 
@@ -288,7 +288,7 @@ To implement Yocto VM-Tiny, in addition to PC required by Yocto VM-One, a stack 
 Memory overhead
 '''''''''''''''
 
-Memory overhead of YoctoVM-Tiny is (in addition to overhead of YoctoVM-One) is 1+YOCTOVM_REPLY_STACK_SIZE. 
+Memory overhead of YoctoVM-Tiny is (in addition to overhead of YoctoVM-One) is 1+YOCTOVM_REPLY_STACK_SIZE.
 
 Level Small
 ^^^^^^^^^^^
@@ -312,10 +312,10 @@ PUSHEXPR_ERRORCODE pushes an error code of appropriate reply (as specified by RE
 
 where <LEN> is one of {1BYTE,2BYTES}; YOCTOVM_OP_PUSHEXPR_1BYTE_FROMREPLY and  YOCTOVM_OP_PUSHEXPR_2BYTES_FROMREPLY are 1-byte opcodes, REPLY-OFFSET is a 1-byte offset similar to that of PUSHEXPR_ERRORCODE, and OFFSET-WITHIN-REPLY is a 1-byte offset within specified reply.  If REPLY-OFFSET is more than current value of replies in “reply buffer”, this will cause a YOCTOVM_INVALIDREPLYOFFSET VM exception.
 
-PUSHEXPR <LEN> FROMREPLY takes one or two bytes (as specified by <LEN>) from reply specified by REPLY-OFFSET, at offset within reply as specified by OFFSET-WITHIN-REPLY, and pushes it to the expression stack (if expression stack is exceeded, it will cause YOCTOVM_EXPRSTACKOVERFLOW VM exception). 
+PUSHEXPR <LEN> FROMREPLY takes one or two bytes (as specified by <LEN>) from reply specified by REPLY-OFFSET, at offset within reply as specified by OFFSET-WITHIN-REPLY, and pushes it to the expression stack (if expression stack is exceeded, it will cause YOCTOVM_EXPRSTACKOVERFLOW VM exception).
 The idea of the PUSHEXPR <LEN> FROMREPLY instruction is that, assuming that one knows the format of reply, she can extract multiple parameters from the replies. Note that due to convention that first byte of reply is the errorcode, \|PUSHEXPR_1BYTE_FROMREPLY\|REPLY-OFFSET\|0\| is the same as \|PUSHEXPR_ERRORCODE\|REPLY-OFFSET\|.
 
-**\ YOCTOVM_OP_PUSHEXPR_EXPR \| EXPR-OFFSET \|** 
+**\ YOCTOVM_OP_PUSHEXPR_EXPR \| EXPR-OFFSET \|**
 
 where YOCTOVM_OP_PUSHEXPR_EXPR is a 1-byte opcode, and EXPR-OFFSET is a 1-byte offset of the expression which needs to be duplicated on the top of the expression stack.
 
@@ -347,7 +347,7 @@ where YOCTOVM_OP_EXPRUNOP is a 1-byte opcode, and UNOP is 1-byte taking values f
 |4   + --                            |
 +----+-------------------------------+
 
-EXPRUNOP instruction pops topmost value from the expression stack, modifies it according to the table above, and pushes modified value back to expression stack. All operations are performed as specified in the table above, using signed 16-bit arithmetic. If expression stack is empty, it will cause a YOCTOVM_EXPRSTACKUNDERFLOW VM exception. TODO? : overflows for '-','++','--'? 
+EXPRUNOP instruction pops topmost value from the expression stack, modifies it according to the table above, and pushes modified value back to expression stack. All operations are performed as specified in the table above, using signed 16-bit arithmetic. If expression stack is empty, it will cause a YOCTOVM_EXPRSTACKUNDERFLOW VM exception. TODO? : overflows for '-','++','--'?
 
 **\| YOCTOVM_OP_EXPRBINOP \| BINOP \|**
 
@@ -373,11 +373,11 @@ where YOCTOVM_OP_EXPRBINOP is a 1-byte opcode, and BINOP is 1-byte taking values
 |7    + ||                             |
 +-----+--------------------------------+
 
-EXPRBINOP instruction pops two topmost values from the expression stack, calculates result out of them according to the table above (as 'second topmost' op 'topmost'), and pushes calculated value back to the expression stack. All operations are performed as specified in the table above, using signed 16-bit arithmetic (except for shifts, which use unsigned 16-bit arithmetic). If expression stack has less than two items, it will cause a YOCTOVM_EXPRSTACKUNDERFLOW VM exception. TODO? : overflows for '+','-','<<'? 
+EXPRBINOP instruction pops two topmost values from the expression stack, calculates result out of them according to the table above (as 'second topmost' op 'topmost'), and pushes calculated value back to the expression stack. All operations are performed as specified in the table above, using signed 16-bit arithmetic (except for shifts, which use unsigned 16-bit arithmetic). If expression stack has less than two items, it will cause a YOCTOVM_EXPRSTACKUNDERFLOW VM exception. TODO? : overflows for '+','-','<<'?
 
 **\| YOCTOVM_OP_JMPIFEXPR <SUBCODE> \| THRESHOLD \| DELTA \|**
 
-where <SUBCODE> is one of {LT,GT,EQ,NE}; YOCTOVM_OP_JMPIFEXPR_LT, YOCTOVM_OP_JMPIFEXPR_GT, YOCTOVM_OP_JMPIFEXPR_EQ, and  YOCTOVM_OP_JMPIFEXPR_NE are 1-byte opcodes, THRESHOLD is a 2-byte signed integer, and interpretation of DELTA is similar to that of in JMP description. 
+where <SUBCODE> is one of {LT,GT,EQ,NE}; YOCTOVM_OP_JMPIFEXPR_LT, YOCTOVM_OP_JMPIFEXPR_GT, YOCTOVM_OP_JMPIFEXPR_EQ, and  YOCTOVM_OP_JMPIFEXPR_NE are 1-byte opcodes, THRESHOLD is a 2-byte signed integer, and interpretation of DELTA is similar to that of in JMP description.
 
 +---------+----------------------------------------------------+
 |<SUBCODE>|Jump if                                             |
@@ -391,11 +391,11 @@ where <SUBCODE> is one of {LT,GT,EQ,NE}; YOCTOVM_OP_JMPIFEXPR_LT, YOCTOVM_OP_JMP
 |NE       | Topmost value on the expression stack != THRESHOLD |
 +---------+----------------------------------------------------+
 
-JMPIFEXPR <SUBCODE> instruction pops the topmost value from the expression stack, compares it with THRESHOLD according to <SUBCODE>, and updates Program Counter by DELTA if condition specified by comparison is met (as with JMP, DELTA is added to a PC positioned right after current instruction). If expression stack is empty, it will cause a YOCTOVM_EXPRSTACKUNDERFLOW VM exception. 
+JMPIFEXPR <SUBCODE> instruction pops the topmost value from the expression stack, compares it with THRESHOLD according to <SUBCODE>, and updates Program Counter by DELTA if condition specified by comparison is met (as with JMP, DELTA is added to a PC positioned right after current instruction). If expression stack is empty, it will cause a YOCTOVM_EXPRSTACKUNDERFLOW VM exception.
 
 **\| YOCTOVM_OP_JMPIFEXPR_NOPOP <SUBCODE> \| THRESHOLD \| DELTA \|**
 
-where <SUBCODE> is one of {LT,GT,EQ,NE}; YOCTOVM_OP_JMPIFEXPR_NOPOP_LT, YOCTOVM_OP_JMPIFEXPR_NOPOP_GT, YOCTOVM_OP_JMPIFEXPR_NOPOP_EQ, and  YOCTOVM_OP_JMPIFEXPR_NOPOP_NE are 1-byte opcodes, THRESHOLD is a 2-byte signed integer, and interpretation of DELTA is similar to that of in JMP description. 
+where <SUBCODE> is one of {LT,GT,EQ,NE}; YOCTOVM_OP_JMPIFEXPR_NOPOP_LT, YOCTOVM_OP_JMPIFEXPR_NOPOP_GT, YOCTOVM_OP_JMPIFEXPR_NOPOP_EQ, and  YOCTOVM_OP_JMPIFEXPR_NOPOP_NE are 1-byte opcodes, THRESHOLD is a 2-byte signed integer, and interpretation of DELTA is similar to that of in JMP description.
 
 JMPIFEXPR_NOPOP <SUBCODE> instruction peeks the topmost value on the expression stack without popping it, compares it with THRESHOLD according to <SUBCODE>, and updates Program Counter by DELTA if condition specified by comparison is met (as with JMP, DELTA is added to a PC positioned right after current instruction). If expression stack is empty, it will cause a YOCTOVM_EXPRSTACKUNDERFLOW VM exception. For details on <SUBCODE>, see description of JMPIFEXPR <SUBCODE> instruction.
 
@@ -409,7 +409,7 @@ To implement Yocto VM-Small, in addition to PC and reply-offset-stack required b
 Memory overhead
 '''''''''''''''
 
-Memory overhead of YoctoVM-Small is (in addition to overhead of YoctoVM-Tiny) is 1+2*YOCTOVM_EXPR_STACK_SIZE. 
+Memory overhead of YoctoVM-Small is (in addition to overhead of YoctoVM-Tiny) is 1+2*YOCTOVM_EXPR_STACK_SIZE.
 
 Yocto VM-Medium
 ^^^^^^^^^^^^^^^
@@ -428,7 +428,7 @@ When PARALLEL instruction execution is started, original expression stack is "fr
 
 **Caution:** in addition to any memory overhead listed for Yocto VM-Medium, there is an additional implicit memory overhead associated with PARALLEL instruction: namely, all the states of all the plugin state machines which are run in parallel, need to be kept in RAM simultaneously. Normally, it is not much, but for really constrained environments it might become a problem.
 
-**Note on \ YOCTOVM_OP_PUSHEXPR_EXPR \| EXPR-OFFSET \| within PARALLEL pseudo-thread** 
+**Note on \ YOCTOVM_OP_PUSHEXPR_EXPR \| EXPR-OFFSET \| within PARALLEL pseudo-thread**
 
 PUSHEXPR_EXPR instruction, when it is applied within PARALLEL pseudo-thread, allows to access original (pre-PARALLEL) expression stack. That is, first EXPR-OFFSET values identify expression stack items within the pseudo-thread, but when pseudo-thread values are exhausted, increasing EXPR-OFFSET starts to go into pre-PARALLEL expression stack. For example, if \|PUSHEXPR\|0\| is the first instruction of the pseudo-thread, it peeks a topmost value from the pre-PARALLEL expression stack and pushes it to the pseudo-thread's expression stack. This allows to easily pass information from the main program to pseudo-threads.
 
@@ -437,7 +437,7 @@ TODO: CALL (accounting for pseudo-threads), MOV (pseudo-threads-agnostic)
 Implementation notes
 ''''''''''''''''''''
 
-To implement Yocto VM-Medium, in addition to PC, reply-offset-stack, and expression stack as required by Yocto VM-Small, the following changes need to be made: 
+To implement Yocto VM-Medium, in addition to PC, reply-offset-stack, and expression stack as required by Yocto VM-Small, the following changes need to be made:
 
 * PC for each pseudo-threads needs to be maintained; maximum number of pseudo-threads is a YOCTOVM_MAX_PSEUDOTHREADS parameter of Yocto VM-Medium (which is stored in SmartAnthill DB on SmartAnthill Central Controller).
 * expression stack needs to be replaced with an array of expression stacks (to accommodate PARALLEL instruction); in practice, it is normally implemented by extending expression stack (say, doubling it) and keeping track of sub-expression stacks via array of offsets (with size of YOCTOVM_MAX_PSEUDOTHREADS) within the expression stack. See "SmartAnthill Reference Implementation - MCU Software Architecture" document for details.

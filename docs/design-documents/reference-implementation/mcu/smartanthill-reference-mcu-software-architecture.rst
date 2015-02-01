@@ -1,10 +1,3 @@
-v0.2.3a
-
-
-SmartAnthill Reference Implementation - MCU Software Architecture
-=================================================================
-
-*NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” document, please make sure to read it before proceeding.*
 ..  Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
     Redistribution and use of this file in source (.rst) and compiled
     (.html, .pdf, etc.) forms, with or without modification, are permitted
@@ -28,6 +21,16 @@ SmartAnthill Reference Implementation - MCU Software Architecture
     LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE
+
+.. _sasoftarch:
+
+MCU Software Architecture
+=========================
+
+:Version:   v0.2.3a
+
+*NB: this document relies on certain terms and concepts introduced in*
+:ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
 SmartAnthill project is intended to operate on MCUs which are extremely resource-constrained. In particular, currently we're aiming to run SmartAnthill on MCUs with as little as 512 bytes of RAM. This makes the task of implementing SmartAnthill on such MCUs rather non-trivial. Present document aims to describe our approach to implementing SmartAnthill on MCU side. It should be noted that what is described here is merely our approach to a reference SmartAnthill implementation; it is not the only possible approach, and any other implementation which is compliant with SmartAnthill protocol specification, is welcome (as long as it can run on target MCUs and meet energy consumption and other requirements).
 
@@ -55,7 +58,7 @@ Reference implementation of SmartAnthill on MCU is divided into two parts:
 Memory Architecture
 -------------------
 
-As RAM is considered the most valuable resource, it is suggested to pay special attention to RAM usage. 
+As RAM is considered the most valuable resource, it is suggested to pay special attention to RAM usage.
 
 SmartAnthill memory architecture is designed as follows:
 
@@ -85,15 +88,15 @@ Return Codes
 
 Each protocol handler returns error code. Error codes are protocol-handler specific and may include such things as IGNORE_PACKET (causing "main loop" to stop processing of current packet and start waiting for another one), FATAL_ERROR_REINIT (causing "main loop" to perform complete re-initialization of the whole protocol stack), WAITING_FOR (described below in 'Asynchronous Returns' subsection) and so on.
 
-Asynchronous Returns from Yocto VM 
+Asynchronous Returns from Yocto VM
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In addition to paramaters which are usual for protocol handlers, Yocto VM also receives a pointer to a struct WaitingFor { uint16 sec; uint16 msec; byte pins_to_wait[(NPINS+7)/8]; byte pin_values_to_wait[(NPINS+7)/8] };
 When Yocto VM execution is paused to wait for some event, it SHOULD return to "main loop" with an error code = WAITING_FOR, filling in this parameter with time which it wants to wait, and filling in any pins (with associated pin values) for which it wants to wait. These instructions to wait for are always treated as waiting for *any* of conditions to happen, i.e. to "wait for time OR for pin#2==1 OR for pin#4==0".
 
-It is responsibility of the "main loop" to perform waiting as requested by Yocto VM and call it back when the condition is met (passing NULL for src). 
+It is responsibility of the "main loop" to perform waiting as requested by Yocto VM and call it back when the condition is met (passing NULL for src).
 
-During such a wait, "main loop" is supposed to wait for incoming packets too; if an incoming packet comes in during such a wait, "main loop" should handle incoming packet first (before reporting to 'Yocto VM' that it's requested wait is over). 
+During such a wait, "main loop" is supposed to wait for incoming packets too; if an incoming packet comes in during such a wait, "main loop" should handle incoming packet first (before reporting to 'Yocto VM' that it's requested wait is over).
 
 Yocto VM may issue WAITING_FOR either as a result of SLEEP instruction, or as a result of plugin handler returning WAITING_FOR (see example below).
 
@@ -109,28 +112,28 @@ Plugins
 
 Ideally, plugins SHOULD also be implemented as state machines, for example:
 
-::
+.. code-block:: c
 
-  struct MyPluginConfig { //constant structure filled with a configuration 
+    struct MyPluginConfig { //constant structure filled with a configuration
                           //  for specific 'ant body part'
     byte request_pin_number;//pin to request sensor read
     byte ack_pin_number;//pin to wait for to see when sensor has provided the data
     byte reply_pin_numbers[4];//pins to read when ack_pin_number shows that the data is ready
-  };
+    };
 
-  struct MyPluginState {
+    struct MyPluginState {
     byte state; //'0' means 'initial state', '1' means 'requested sensor to perform read'
-  };
+    };
 
-  byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
+    byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
     //perform sensor initialization if necessary
     MyPluginState* ps = (MyPluginState*)plugin_state;
     ps->state = 0;
-  }
+    }
 
-  //TODO: reinit? (via deinit, or directly, or implicitly)
+    //TODO: reinit? (via deinit, or directly, or implicitly)
 
-  byte my_plugin_handler(const void* plugin_config, void* plugin_state,
+    byte my_plugin_handler(const void* plugin_config, void* plugin_state,
       const void* cmd, uint16 cmd_size, REPLY_HANDLE reply, WaitingFor* waiting_for) {
     const MyPluginConfig* pc = (MyPluginConfig*) plugin_config;
     MyPluginState* ps = (MyPluginState*)plugin_state;
@@ -162,12 +165,12 @@ Ideally, plugins SHOULD also be implemented as state machines, for example:
       }
       //read data from sensor using pc->reply_pin_numbers[],
       //  and fill in "reply buffer" with data using reply_append(reply,sz)
-      //  Note that the pointer returned by reply_append() may change between different 
-      //    calls to my_plugin_handler() and therefore MUST NOT be stored 
+      //  Note that the pointer returned by reply_append() may change between different
+      //    calls to my_plugin_handler() and therefore MUST NOT be stored
       //    within plugin_state
       return 0;
     }
-  }
+    }
 
 Such an approach allows Yocto VM to perform proper pausing (with ability for Central Controller to interrupt processing by sending a new command while it didn't receive an answer to the previous one) when long waits are needed. It also enables parallel processing of the plugins (TODO: PARALLEL instruction for Yocto VM).
 
@@ -186,7 +189,7 @@ The following guidelines are considered important to ensure that only absolutely
 Support for PARALLEL instruction
 --------------------------------
 
-PARALLEL instruction is supported starting from YoctoVM-Medium. It allows for pseudo-parallel execution (i.e. when plugin A is waiting, plugin B may continue to work). 
+PARALLEL instruction is supported starting from YoctoVM-Medium. It allows for pseudo-parallel execution (i.e. when plugin A is waiting, plugin B may continue to work).
 
 Implementing PARALLEL instruction is tricky, in particular, because we don't know how much space to allocate for each pseudo-thread to use from "reply buffer". To get around this problem, we've encapsulated reply buffer as an opaque YOCTOVM_REPLYBUFFER handle, which allows us to move reply sub-buffers as it is needed as the pseudo-threads are working and plugins are requesting 'push_reply(handle)'.
 
@@ -200,7 +203,7 @@ TODO
 Plugin API
 ----------
 
-Yocto VM provides certain APIs for plugins. 
+Yocto VM provides certain APIs for plugins.
 
 Data Types
 ^^^^^^^^^^
@@ -208,7 +211,7 @@ Data Types
 REPLY_HANDLE
 ''''''''''''
 
-REPLY_HANDLE is an encapsulation of a "reply buffer", which allows plugin to call **reply_append()** (see below). 
+REPLY_HANDLE is an encapsulation of a "reply buffer", which allows plugin to call **reply_append()** (see below).
 REPLY_HANDLE is normally obtained as a parameter from plugin_handler() call.
 
 **Caution:** Plugins MUST treat REPLY_HANDLE as completely opaque and MUST NOT try to use it to access reply buffer directly; doing so may easily result in memory corruption when running certain Yocto VM programs (for example, when PARALLEL instruction is used).
@@ -223,7 +226,7 @@ reply_append()
 
 **void\* reply_append(REPLY_HANDLE handle,uint16 sz);**
 
-reply_append() allocates 'sz' bytes within "reply buffer" specified by handle and returns a pointer to this allocated buffer. This buffer can be then filled with plugin's reply. 
+reply_append() allocates 'sz' bytes within "reply buffer" specified by handle and returns a pointer to this allocated buffer. This buffer can be then filled with plugin's reply.
 
 **Caution:** note that the pointer returned by reply_append() is temporary and may change between different calls to the same plugin, i.e. this pointer (or derivatives) MUST NOT be stored as a part of the plugin state.
 

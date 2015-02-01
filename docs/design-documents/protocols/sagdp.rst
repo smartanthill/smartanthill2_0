@@ -1,5 +1,3 @@
-v0.1a
-
 ..  Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
     Redistribution and use of this file in source (.rst) and compiled
     (.html, .pdf, etc.) forms, with or without modification, are permitted
@@ -27,9 +25,11 @@ v0.1a
 SmartAnthill Guaranteed Delivery Protocol (SAGDP) v2.0
 ======================================================
 
+:Version:   v0.1a
+
 *NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” and "SmartAnthill Protocol Stack" documents, please make sure to read them before proceeding.*
 
-SAGDP (SmartAnthill Guaranteed Delivery Protocol) aims to provide reliable message delivery for SmartAnthill environments; as described in "SmartAnthill Overall Architecture" document, SmartAnthill environments tend to be extremely limited, and tend to require special attention to energy-saving features. In addition, special considerations (such as ability to turn off receiver temporarily) need to be considered. 
+SAGDP (SmartAnthill Guaranteed Delivery Protocol) aims to provide reliable message delivery for SmartAnthill environments; as described in "SmartAnthill Overall Architecture" document, SmartAnthill environments tend to be extremely limited, and tend to require special attention to energy-saving features. In addition, special considerations (such as ability to turn off receiver temporarily) need to be considered.
 
 SAGDP belongs to Layer 2 of OSI/ISO network model, see "SmartAnthill Protocol Stack" document for details.
 
@@ -61,7 +61,7 @@ SAGDP belongs to Layer 2 of OSI/ISO network model, see "SmartAnthill Protocol St
 2.1. Normal processing of a packet chain.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Two devices, A and B, participate in packet exchange. Each packet sent, except a packet with status "terminating", assumes that there is a packet to be received from the opposite side of communication. 
+Two devices, A and B, participate in packet exchange. Each packet sent, except a packet with status "terminating", assumes that there is a packet to be received from the opposite side of communication.
 
 If all packets sent are actually delivered to the other side of communication (that is, no packet is lost on the way), a  "ping-pong" packet exchange happens starting from a packet marked as "first" and ending with a packet marked "terminating". To have guaranteed delivery, if no response to non-"terminating" packet is received, the packet is resent.
 
@@ -101,7 +101,7 @@ Scenario: Side A has sent an "intermediate" packet in a chain to side B, but B h
 
 ...
 
-S1. A <- B: packet #3 
+S1. A <- B: packet #3
 
 S2. A -> B: packet #4 (reply to #3; lost)
 
@@ -117,13 +117,13 @@ S6. A <- B: packet #5 (as reply to packet #4 received at S5.)
 
 ...
 
-To avoid such duplication a "requested-resend" flag is set for each packet that is a reply to a packet that is received not a first time. Then the Example 1 is transformed to 
+To avoid such duplication a "requested-resend" flag is set for each packet that is a reply to a packet that is received not a first time. Then the Example 1 is transformed to
 
 (Actual) **Example 2**:
 
 ...
 
-S1. A <- B: packet #3 
+S1. A <- B: packet #3
 
 S2. A -> B: packet #4 (reply to #3; lost)
 
@@ -148,15 +148,15 @@ Thus a potential for duplicated packet sending is eliminated.
 
 SAGDP has four states.
 
-3.1. "not initialized" 
+3.1. "not initialized"
 ^^^^^^^^^^^^^^^^^^^^^^
 SAGDP appears in this state at system start, and can appear at any time, if detected inconsistencies in packet sequencing are such that the context of processing is lost and all existing data, if any, becomes invalid. The only event that can be processed in this state is "initializing", which results in transition to "idle" state.
 
-This state has no associated data. 
+This state has no associated data.
 
 3.2. "idle"
 ^^^^^^^^^^^
-If no chain is being processed, the protocol appears in state "idle" and waits for a packet that is marked as a "first" in chain from either a higher level protocol (when the device itself initiates communication) or from an underlying protocol (that is, ultimately, from a device that is a partner for communication). The first case results in transition to "wait-remote" state since after packet sending to the other device a response is being expected and waited. In the second case it is a communication partner device that initiated communication, and implementing device is to respond, so transition happens toward "wait-local" state. 
+If no chain is being processed, the protocol appears in state "idle" and waits for a packet that is marked as a "first" in chain from either a higher level protocol (when the device itself initiates communication) or from an underlying protocol (that is, ultimately, from a device that is a partner for communication). The first case results in transition to "wait-remote" state since after packet sending to the other device a response is being expected and waited. In the second case it is a communication partner device that initiated communication, and implementing device is to respond, so transition happens toward "wait-local" state.
 
 Idle state has no associated data.
 
@@ -174,13 +174,13 @@ Another event that can happen in this state is a timer event. If nothing is rece
 
 LSP is used for packet resending, and RSP is used to set timer. LSPID is used to check whether an incoming packet is a reply to the last sent packet by comparison of LSPID with PPID of the received packet.
 
-3.4. "wait-local" 
+3.4. "wait-local"
 ^^^^^^^^^^^^^^^^^
 When payload data of a new packet received from the underlying protocol (and thus, ultimately, from a communication partner device) is forwarded to the higher level protocol, SAGDP starts waiting for a reply from a higher level, and stays in "wait-local" state. In this state the only legitimate event is receiving a packet from a higher level that is not marked as a "first" in chain.
 
 "Wait-local" has the following associated data:
 - last received packet unique identifier (LRPID),
-which is to be added to the header of a packet that is to be forwarded to underlying protocol as an indication to which packet in chain the current packet serves as a reply. 
+which is to be added to the header of a packet that is to be forwarded to underlying protocol as an indication to which packet in chain the current packet serves as a reply.
 
 4. Events
 ---------
@@ -230,7 +230,7 @@ Processing of this event is different at Mater's and Slave's side in a part when
   * "Intermediate": unexpected, ignored [+++check]
   * "Terminating": unexpected, ignored [+++check]
 
-**At Slave side**, 
+**At Slave side**,
   * "First": packet PID is saved as a current value of LRPID, payload of the packet is reported to a higher level protocol with its status, and SAGDP changes its state to wait-local.
   * Error Message, "Intermediate", "Terminating": unexpected; system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
 
@@ -288,31 +288,31 @@ Processing of this event is different at Mater's and Slave's side in a part when
 **At Master's side**, processing depends on the status of the packet in chain.
   * Error Message: payload of the packet is reported to a higher level protocol with its status, and SAGDP changes its state to idle.
   * "First":  unexpected, ignored [+++check]
-  * "Intermediate": chain consistency is verified by comparison of PPID of the packet with LSPID. 
+  * "Intermediate": chain consistency is verified by comparison of PPID of the packet with LSPID.
      * PPID is equal to LSPID (received packet is a response to the last sent packet): packet PID is saved as a current value of LRPID, payload of the packet is reported to a higher level protocol with its status in chain, and SAGDP changes its state to wait-local.
      * PPID is not equal to LSPID (chain is broken): the packet is ignored.
-  * "Terminating": chain consistency is verified by comparison of PPID of the packet with LSPID. 
+  * "Terminating": chain consistency is verified by comparison of PPID of the packet with LSPID.
      * PPID is equal to LSPID (received packet is a response to the last sent packet): payload of the packet is reported to a higher level protocol with its status in chain, and SAGDP changes its state to idle.
      * PPID is not equal to LSPID (chain is broken): the packet is ignored  [+++check]
 
-**At Slave side**, 
+**At Slave side**,
   * Error Message, "First": unexpected; system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
-  * "Intermediate": chain consistency is verified by comparison of PPID of the packet with LSPID. 
+  * "Intermediate": chain consistency is verified by comparison of PPID of the packet with LSPID.
      * PPID is equal to LSPID (received packet is a response to the last sent packet): packet PID is saved as a current value of LRPID, payload of the packet is reported to a higher level protocol with its status in chain, and SAGDP changes its state to wait-local.
      * PPID is not equal to LSPID (chain is broken): system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
-  * "Terminating": chain consistency is verified by comparison of PPID of the packet with LSPID. 
+  * "Terminating": chain consistency is verified by comparison of PPID of the packet with LSPID.
      * PPID is equal to LSPID (received packet is a response to the last sent packet): payload of the packet is reported to a higher level protocol with its status in chain, and SAGDP changes its state to idle.
      * PPID is not equal to LSPID (chain is broken): system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
 
 5.3.2. Receiving an UP packet with flag "Resent-Packet"
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-The LSP is sent to the underlying protocol. Timer is set to RSP. 
+The LSP is sent to the underlying protocol. Timer is set to RSP.
 
 5.3.3. Timer
 ''''''''''''
 
-The LSP is sent to the underlying protocol. Timer is set to RSP. 
+The LSP is sent to the underlying protocol. Timer is set to RSP.
 
 5.3.4. Receiving an HLP packet that is "first"
 ''''''''''''''''''''''''''''''''''''''''''''''

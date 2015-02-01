@@ -1,5 +1,3 @@
-v0.1.3
-
 ..  Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
     Redistribution and use of this file in source (.rst) and compiled
     (.html, .pdf, etc.) forms, with or without modification, are permitted
@@ -24,8 +22,12 @@ v0.1.3
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE
 
+.. _saoverarch:
+
 SmartAnthill 2.0 Overall Architecture
 =====================================
+
+:Version:   v0.1.3
 
 **TODO**
 
@@ -34,15 +36,15 @@ SmartAnthill 2.0 Overall Architecture
 I. Aims
 -------
 
-SmartAnthill aims to create a viable system of control for the Internet of Things (IoT) devices in home and office environments. More secure and more risky environments (such as industrial control, military, etc.) are currently out of scope. 
+SmartAnthill aims to create a viable system of control for the Internet of Things (IoT) devices in home and office environments. More secure and more risky environments (such as industrial control, military, etc.) are currently out of scope.
 Due to SmartAnthill roots in hardware hobbyist movement, special attention is to be paid for hobbyist needs.
 
 II. Requirements.
 -----------------
 
-SmartAnthill is built around the following requirements. They follow from the aims and generally are not negotiable. 
+SmartAnthill is built around the following requirements. They follow from the aims and generally are not negotiable.
 
-1. **Low Cost**. In home/office environments SmartAnthill should aim for a single device (such as sensor) to be in the range of $10-$20. Rationale: higher costs will deter acceptance greatly. 
+1. **Low Cost**. In home/office environments SmartAnthill should aim for a single device (such as sensor) to be in the range of $10-$20. Rationale: higher costs will deter acceptance greatly.
 
 2. **Support for Devices with Limited Resources**. Many of devices and MPUs aimed to be used with SmartAnthill are very limited in their resources (which is closely related to their low cost). Currently, minimal MPU configuration which minimal SmartAnthill aims to run on, is as low as 512 bytes RAM, 16K bytes PROM (to store the program) and 256 bytes EEPROM. [TODO: think about number of rewrites in EEPROM, incl. optimization]
 
@@ -54,7 +56,7 @@ SmartAnthill is built around the following requirements. They follow from the ai
 
 6. **Energy Efficiency**. SmartAnthill should aim to achieve best energy efficiency possible. In particular, a wide range of SmartAnthill sensors should be able to run from a single 'tablet'-size battery for at least a year (more is better).
 
-7. **Security**. SmartAnthill should provide adequate protection given the home/office environment. In other words, SmartAnthill as such doesn't aim to protect from NSA (or any other government agency) or from somebody who's already obtained physical access to the system. However: 
+7. **Security**. SmartAnthill should provide adequate protection given the home/office environment. In other words, SmartAnthill as such doesn't aim to protect from NSA (or any other government agency) or from somebody who's already obtained physical access to the system. However:
 
    a) protection from remote attackers (both over the Internet and present within the reach of wireless communications) is the must
    b) level of protection should be sufficient to control home/office physical security systems
@@ -62,8 +64,8 @@ SmartAnthill is built around the following requirements. They follow from the ai
 
 8. **Openness**. All core SmartAnthill technologies should be open. SmartAnthill protocols are intended to be published, and any device compliant with these protocols should be able to interoperate with other compliant devices. SmartAnthill project will provide a reference software stack as an open source code, which will be distributed under GPL v2 [TODO:decide] license.
 
-   a) Openness of SmartAnthill does not mean that all SmartAnthill devices should use open-source software. Any device, whether using open- or closed-source software, is welcome as long as it complies with published SmartAnthill protocols. 
-   b) Openness of SmartAnthill does not mean that SmartAnthill devices are not allowed to use existing proprietary protocols as a transport. 
+   a) Openness of SmartAnthill does not mean that all SmartAnthill devices should use open-source software. Any device, whether using open- or closed-source software, is welcome as long as it complies with published SmartAnthill protocols.
+   b) Openness of SmartAnthill does not mean that SmartAnthill devices are not allowed to use existing proprietary protocols as a transport.
    c) Position on patents. SmartAnthill Core MUST use patent-free technologies wherever possible. Support for patented technologies as a transport is allowed. All SmartAnthill contributors MUST fill a form with a statement on their knowledge on patents related to their contribution.
 
 9. **Vendor and Technology Neutrality**. SmartAnthill should not rely on any single technology/platform (leave alone any single vendor). All kinds of suitable technologies and platforms are welcome. Any references to a specific technology should be considered only as an example.
@@ -81,11 +83,11 @@ III. SmartAnthill Architecture
 
 III.1 General Architecture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-Any SmartAnthill system consists of one central controller and one or more devices controlled by it (see smartanthill-overall-architecture-diagram for an example topology). 
+Any SmartAnthill system consists of one central controller and one or more devices controlled by it (see smartanthill-overall-architecture-diagram for an example topology).
 
 Central Controller is a relatively complex device (such as Raspberry Pi PC) which runs SmartAnthill Central Controller (also known as 'Anthill') as well as system control software. System control software is intended to be easily customizable according to customer needs. It can be very different, but we aim to support OpenHAB, and to support pretty much any programming language which can support one of the REST, or websockets, or sockets. SmartAnthill project as such doesn't provide control software, it is rather a service which can be used by a control software.
 
-SmartAnthill Central Controller operates one or more 'buses'. Each SmartAnthill bus can be either a traditional wired bus (such as CAN bus), or a wireless 'bus'. Wireless SmartAnthill 'buses' do not imply any wired connection, they just represent certain domain of wireless connections; for example, one wireless 'bus' can be a ZigBee 'bus' controlling some devices connected via ZigBee, and at the same time another wireless 'bus' can be a 431 MHz RF 'bus' controlling some other devices connected via 431 MHz RF. 
+SmartAnthill Central Controller operates one or more 'buses'. Each SmartAnthill bus can be either a traditional wired bus (such as CAN bus), or a wireless 'bus'. Wireless SmartAnthill 'buses' do not imply any wired connection, they just represent certain domain of wireless connections; for example, one wireless 'bus' can be a ZigBee 'bus' controlling some devices connected via ZigBee, and at the same time another wireless 'bus' can be a 431 MHz RF 'bus' controlling some other devices connected via 431 MHz RF.
 Each bus (wired or wireless) has one or more simple devices (such as sensors or actuators) connected to it (in case of wireless buses, the connection is wireless).
 Each device runs an MPU (or in theory CPU), which runs SmartAnthill stack on it (either a reference stack, or some other implementation).
 
@@ -96,7 +98,7 @@ Each SmartAnthill Device (also known as 'Ant') is either *SmartAnthill Hobbyist 
 III.2.1. SmartAnthill Hobbyist Device
 '''''''''''''''''''''''''''''''''''''
 
-A diagram of a typical SmartAnthill Hobbyist Device is provided on smartanthill-device-diagram. SmartAnthill Hobbyist Device consists of an MCU, communication module, and one or more sensors and/or actuators (which are also known as 'ant body parts'). MCU on SmartAnthill Hobbyist Device runs several layers of software: 
+A diagram of a typical SmartAnthill Hobbyist Device is provided on smartanthill-device-diagram. SmartAnthill Hobbyist Device consists of an MCU, communication module, and one or more sensors and/or actuators (which are also known as 'ant body parts'). MCU on SmartAnthill Hobbyist Device runs several layers of software:
 
 * SmartAnthill-generated software (it is system-specific, i.e. it is generated for each system)
 * device-specific plugins (for each type of sensor or actuator present)
@@ -110,9 +112,9 @@ III.2.2. SmartAnthill Mass-Market Device
 A diagram of a typical SmartAnthill Mass Market Device is also provided on smartanthill-device-diagram. In addition to the components available on SmartAnthill Hobbyist Device, SmartAnthill Mass-Market Device additionally includes:
 
 * persistent storage (such as EEPROM) to store system-specific data. System-specific data contains things such as bus-specific addresses and security keys; it is obtained during "pairing" process which is described below
-* "pairing" interface and "pairing" module responsible for handling "pairing" interface. "pairing" interface is used during "pairing" process as described below, and can be, for example, NFC or USB interface to handle USB stick. 
+* "pairing" interface and "pairing" module responsible for handling "pairing" interface. "pairing" interface is used during "pairing" process as described below, and can be, for example, NFC or USB interface to handle USB stick.
 
-MCU on SmartAnthill Mass-Market Device runs several layers of software (note the differences from Hobbyist Device): 
+MCU on SmartAnthill Mass-Market Device runs several layers of software (note the differences from Hobbyist Device):
 
 * SmartAnthill Configurator, which is responsible for handling "pairing" process and populating system-specific data. SmartAnthill Configurator is generic.
 * device-specific plugins (for each type of sensor or actuator present)
@@ -142,7 +144,7 @@ Mass-market devices are expected to be shipped in already programmed state, with
 
 * **Initial State**. Initially (when shipped to the customer), SmartAnthill mass-market-oriented device does contain a program which ensures it's operation. Re-programming capability and connector are optional for SmartAnthill mass-market-oriented devices.
 
-* **“Pairing” with Central Controller**. This includes Central Controller generating and exchanging credentials with device, querying device configuration and capabilities, and entering credentials, configuration and capabilities into SmartAnthill Database. 
+* **“Pairing” with Central Controller**. This includes Central Controller generating and exchanging credentials with device, querying device configuration and capabilities, and entering credentials, configuration and capabilities into SmartAnthill Database.
 
   - Physically, “pairing” can be done in several different ways [TODO: check feasibility of each]:
 
@@ -150,9 +152,9 @@ Mass-market devices are expected to be shipped in already programmed state, with
 
     + Using indirect NFC. It means: first, launching SmartAnthill-pairing app on an NFC-enabled smartphone; second, bringing the smartphone physically close to Central Controller; third, bringing the smartphone physically close to the device; fourth, bringing the smartphone physically close to Central Controller again.
 
-    + Using USB flash. Will need to insert USB flash stick sequentially: to Central Controller, to USB-enabled device, and again to Central Controller. 
+    + Using USB flash. Will need to insert USB flash stick sequentially: to Central Controller, to USB-enabled device, and again to Central Controller.
 
-  - Special considerations: to achieve reasonable levels of security, SmartAnthill Device MUST NOT allow to extract credentials; the only action allowed is to re-pair device with a different Central Controller, destroying previously existing credentials in the process. In other words, while it is possible to steal device to use with a different Central Controller, it should not be possible to impersonate device without access to Central Controller. 
+  - Special considerations: to achieve reasonable levels of security, SmartAnthill Device MUST NOT allow to extract credentials; the only action allowed is to re-pair device with a different Central Controller, destroying previously existing credentials in the process. In other words, while it is possible to steal device to use with a different Central Controller, it should not be possible to impersonate device without access to Central Controller.
 
 * **Operation**. Operation of Mass-market-oriented device is the same as operation of Hobbyist-oriented device.
 

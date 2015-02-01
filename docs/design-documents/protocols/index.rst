@@ -22,41 +22,12 @@
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE
 
-
-SmartAnthill: An open IoT system
-================================
-
-**SmartAnthill** is an open IoT system which allows easy control over multiple
-microcontroller-powered devices, creating a home- or office-wide heterogeneous
-network out of these devices.
-
-SmartAnthill system can be pretty much anything: from a system to control
-railway network model to an office-wide heating control and security system.
-As an open system, SmartAnthill can integrate together a wide range of devices
-beginning from embedded development boards and ending with off-the-shelf
-sensors and actuators. They can be connected via very different communication
-means - from wired (currently Serial and CAN bus, with Ethernet planned soon)
-to wireless (currently IEEE 802.15.4, with low-cost RF, ZigBee and WiFi planned
-soon).
-
-All SmartAnthill devices within a system are controlled from the one
-place (such as PC or credit-card sized computer Raspberry Pi, BeagleBoard or
-CubieBoard), with an optional access via Internet.
-
-Contents
---------
+Protocols
+=========
 
 .. toctree::
     :maxdepth: 2
 
-    design-documents/index
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+    smartanthill-protocol-stack
+    sacp
+    sagdp

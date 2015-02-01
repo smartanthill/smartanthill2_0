@@ -1,5 +1,3 @@
-v0.1.3
-
 ..  Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
     Redistribution and use of this file in source (.rst) and compiled
     (.html, .pdf, etc.) forms, with or without modification, are permitted
@@ -27,9 +25,11 @@ v0.1.3
 SmartAnthill Control Protocol (SACP) v2.0
 =========================================
 
+:Version:   v0.1.3
+
 *NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” and "SmartAnthill Protocol Stack" documents, please make sure to read them before proceeding.*
 
-SACP 2.0 (referred to in this document as SACP) is a part of SmartAnthill protocol stack. It belongs to Level 7 of OSI/ISO Network Model, and is responsible for allowing SmartAnthill Central Controller to control SmartAnthill Device. 
+SACP 2.0 (referred to in this document as SACP) is a part of SmartAnthill protocol stack. It belongs to Level 7 of OSI/ISO Network Model, and is responsible for allowing SmartAnthill Central Controller to control SmartAnthill Device.
 
 Within SmartAnthill protocol stack, SACP is located on top of SAGDP. On the side of SmartAnthill Device, SACP is implemented by Yocto VM. On the side of SmartAnthill Central Controller, SACP is implemented by Control Program.
 
@@ -45,13 +45,13 @@ It is assumed that authentication, encryption, integrity and reliable delivery s
 Packet Chains
 -------------
 
-All interactions in SACP are considered as “packet chains” (see "SmartAnthill Protocol Stack" document for more details). With "packet chains", one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever SACP issues a packet to an underlying protocol, it MUST specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication. 
+All interactions in SACP are considered as “packet chains” (see "SmartAnthill Protocol Stack" document for more details). With "packet chains", one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever SACP issues a packet to an underlying protocol, it MUST specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication.
 
 
 Handling of Fatal Errors
 ------------------------
 
-SACP is built under the assumption that in case of any inconsistency between SmartAnthill Central Controller and SmartAnthill Device, it is SmartAnthill Central Controller which is right (see "SmartAnthill Protocol Stack" document for more details). Keeping this in mind, SACP underlying protocol MUST detect any fatal inconsistencies in the protocol (one example of such inconsistency is authenticated packet which is out-of-chain-order), and MUST invoke re-initialization of the SmartAnthill Device in this case. It is done regardless of the SACP state and layers above SACP, and without notifying SACP or any layers above the SACP. 
+SACP is built under the assumption that in case of any inconsistency between SmartAnthill Central Controller and SmartAnthill Device, it is SmartAnthill Central Controller which is right (see "SmartAnthill Protocol Stack" document for more details). Keeping this in mind, SACP underlying protocol MUST detect any fatal inconsistencies in the protocol (one example of such inconsistency is authenticated packet which is out-of-chain-order), and MUST invoke re-initialization of the SmartAnthill Device in this case. It is done regardless of the SACP state and layers above SACP, and without notifying SACP or any layers above the SACP.
 
 Layering remarks
 ----------------
@@ -70,7 +70,7 @@ To ensure correct operation of an underlying protocol, there are certain rules (
    a) From (2) it follows that 'is-first' and 'is-last' flags are inherently incompatible (which MAY be relied on by implementation)
 
 3. Multiple replies to a single command are not allowed. Scenarios when 'double-reply' to the same command is needed (for example, for longer- or uncertain-time-taking commands need to be implemented, SHOULD be handled in the same way as scenarios with disabling the receiver ('last' packet on the SmartAnthill Device side, then long command, then SmartAnthill Device initiates a new chain).a short “ACK” to confirm that the command is received, may be sent first, then the command can be executed, and then a real reply may be sent), MUST be implemented as follows:
-	
+
    a) first reply MUST be the last packet in the “packet chain” (that is, it MUST have 'is-last' flag)
    b) second reply MUST start a new “packet chain” (that is, it MUST have 'is-first' flag)
 
@@ -83,13 +83,13 @@ To ensure correct operation of an underlying protocol, there are certain rules (
 5. If the underlying protocol issues a packet with a 'previous-send-aborted' flag (which can happen only for SmartAnthill Device, and not for SmartAnthill Central Controller), it means that underlying protocol has canceled a send of previously issued packet. In such cases, SACP (and all the layers above) MUST NOT assume that previously issued packet was received by counterpart (TODO: maybe we can guarantee that the packet was NOT sent?)
 
 6. Due to the “Fatal Error Handling” mechanism described above, SACP (as well as any layers above SACP) on the SmartAnthill Device MUST assume that re-initialization can occur at any moment of their operation (at least whenever control is passed to the protocol which is an underlying protocol for SACP). The effect of such re-initialization is that all volatile memory (such as RAM) is re-initialized, but all non-volatile memory (such as EEPROM) is preserved.
-   
+
    As long as the “rules of engagement” above are obeyed, and SACP properly informs an underlying protocol whether each packet it sends, is first, intermediary, or last in the chain, retransmission correctness can be provided by an underlying protocol, and SACP doesn't need to care about it.
 
 SACP Packets
 ------------
 
-SACP packets are divided into SACP command packets (from SmartAnthill Central Controller to SmartAnthill Device) and SACP reply packets ( from SmartAnthill Device to SmartAnthill Central Controller). 
+SACP packets are divided into SACP command packets (from SmartAnthill Central Controller to SmartAnthill Device) and SACP reply packets ( from SmartAnthill Device to SmartAnthill Central Controller).
 SACP command packets have the following structure:
 
 **\| Execution-Layer-Program \|**
@@ -101,9 +101,9 @@ SACP reply packets have the following structure:
 Device Pins SHOULD NOT be Addressed Directly within Execution-Layer-Program
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Execution-Layer-Program may contain EXEC instructions (see "Yocto VM" document for details). These EXEC instructions address a certain 'ant body part', and pass opaque data to the corresponding plugin. While the data passed to the plugin is opaque, it SHOULD NOT contain any device pins in it; which device pins are used by the plugin on this specific device, is considered a part of 'body part configuration' and is stored within MCU. 
+Execution-Layer-Program may contain EXEC instructions (see "Yocto VM" document for details). These EXEC instructions address a certain 'ant body part', and pass opaque data to the corresponding plugin. While the data passed to the plugin is opaque, it SHOULD NOT contain any device pins in it; which device pins are used by the plugin on this specific device, is considered a part of 'body part configuration' and is stored within MCU.
 
-Therefore, data within EXEC instruction normally does *not* contain pins, but contains only a BODYPART-ID and an action. For example, a command to plugin which turns on connected LED, SHOULD 
+Therefore, data within EXEC instruction normally does *not* contain pins, but contains only a BODYPART-ID and an action. For example, a command to plugin which turns on connected LED, SHOULD
 look as **\|EXEC\|BODYPART-ID\|ON\|**, where ON is a 1-byte taking values '0' and '1', indicating "what to do with LED". All mappings of BODYPART-ID to pins SHOULD be described as plugin_config parameter of plugin_handler(), as described in "SmartAnthill Reference Implementation - MCU Software Architecture" document.
 
 TODO: ?describe same thing in 'Yocto VM'?
@@ -113,7 +113,7 @@ Execution Layer and Control Program
 
 Whenever SmartAnthill Device receives a SACP command packet, SACP invokes Execution Layer  and passes received Execution-Layer-Program to it. After Execution Layer has finished it's execution, SACP passes the reply back to the SmartAnthill Central Controller. One example of a valid Execution Layer is Yocto VM which is described in a separate document, “SmartAnthill Yocto VM”.
 
-Within SmartAnthill system, Execution Layer exists only on the side of SmartAnthill Device (and not on the side of SmartAnthill Central Controller). It's counterpart on the side of SmartAnthill Central Controller is Control Program. 
+Within SmartAnthill system, Execution Layer exists only on the side of SmartAnthill Device (and not on the side of SmartAnthill Central Controller). It's counterpart on the side of SmartAnthill Central Controller is Control Program.
 
 Execution Layer Restrictions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -124,9 +124,9 @@ To comply with SACP's “rules of engagement”, SACP on the side of SmartAnthil
 
 2. If a reply is sent before the Execution-Layer-Program exit, it MUST have a 'is-last' flag is set. If it is not the case, Execution Layer MUST generate a “Program Error” exception.
 
-3. If Execution Layer disables device receiver (such a disabling is always temporary) while processing a program, it MUST check that a reply was not sent before disabling device receiver (if it was –Execution Layer generates a “Program Error” exception, and does not disable receiver). However, after device receiver is re-enabled and Execution Layer execution continues and completes, Execution layer MUST check that a reply is sent before the Execution-Layer-Program is completed; this reply MUST have 'is-first' flag. If any of these conditions is not met, Execution Layer MUST generate a “Program Error” exception. 
+3. If Execution Layer disables device receiver (such a disabling is always temporary) while processing a program, it MUST check that a reply was not sent before disabling device receiver (if it was –Execution Layer generates a “Program Error” exception, and does not disable receiver). However, after device receiver is re-enabled and Execution Layer execution continues and completes, Execution layer MUST check that a reply is sent before the Execution-Layer-Program is completed; this reply MUST have 'is-first' flag. If any of these conditions is not met, Execution Layer MUST generate a “Program Error” exception.
 
-4. If Execution Layer does not disable device receiver while processing an Execution-Layer-Program and the program terminates, Execution Layer MUST check that reply was sent before or on program exit; this reply MUST NOT have 'is-first' flag. If any of these conditions is not met, Execution Layer MUST generate a “Program Error” exception. 
+4. If Execution Layer does not disable device receiver while processing an Execution-Layer-Program and the program terminates, Execution Layer MUST check that reply was sent before or on program exit; this reply MUST NOT have 'is-first' flag. If any of these conditions is not met, Execution Layer MUST generate a “Program Error” exception.
 
 5.  Multiple replies to the same command are NOT allowed
 
