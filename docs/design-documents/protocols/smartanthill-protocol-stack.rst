@@ -31,6 +31,8 @@ SmartAnthill Protocol Stack
 
 SmartAnthill protocol stack is intended to provide communication services between SmartAnthill Control Centers and SmartAnthill Devices, allowing SmartAnthill Control Centers to control SmartAnthill Devices. These communication services are implemented as a request-response services within OSI/ISO network model.
 
+.. contents::
+
 Relation between SmartAnthill protocol stack and OSI/ISO network model
 ----------------------------------------------------------------------
 

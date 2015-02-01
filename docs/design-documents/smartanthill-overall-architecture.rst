@@ -29,6 +29,8 @@ SmartAnthill 2.0 Overall Architecture
 
 **TODO**
 
+.. contents::
+
 I. Aims
 -------
 

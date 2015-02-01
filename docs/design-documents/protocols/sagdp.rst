@@ -33,6 +33,8 @@ SAGDP (SmartAnthill Guaranteed Delivery Protocol) aims to provide reliable messa
 
 SAGDP belongs to Layer 2 of OSI/ISO network model, see "SmartAnthill Protocol Stack" document for details.
 
+.. contents::
+
 1. Main notions and definitions
 -------------------------------
 

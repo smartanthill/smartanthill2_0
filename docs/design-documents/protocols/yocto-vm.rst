@@ -31,6 +31,8 @@ Yocto VM
 
 Yocto VM is a minimalistic virtual machine used by SmartAnthill Devices. It implements SACP (SmartAnthill Control Protocol) on the side of the SmartAnthill Device (and SACP corresponds to Layer 7 of OSI/ISO network model). By design, Yocto VM is intended to run on devices with extremely limited resources (as little as 512 bytes of RAM).
 
+.. contents::
+
 Sales pitch (not to be taken seriously!)
 ----------------------------------------
 

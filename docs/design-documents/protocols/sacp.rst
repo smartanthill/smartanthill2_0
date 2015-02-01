@@ -35,6 +35,8 @@ Within SmartAnthill protocol stack, SACP is located on top of SAGDP. On the side
 
 As well as it's underlying protocol, SACP is an asymmetric protocol: behaviour of SACP is somewhat different for SmartAnthill Device and SmartAnthill Central Controller. For the purposes of SACP underlying protocol,  SmartAnthill Central Controller is considered “master device”, and SmartAnthill Device is considered “slave device”.
 
+.. contents::
+
 SACP Assumptions
 ----------------
 
