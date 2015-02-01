@@ -1,4 +1,4 @@
-v0.1.3a
+v0.1.4
 
 Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
 
@@ -118,6 +118,7 @@ The structure of the reply means that it will be interpreted as a reply with err
 Currently, Yocto VM may issue the following exceptions:
 
 * YOCTO_VM_INVALID_INSTRUCTION */\* Note that this exception may also be issued when an instruction is encountered which is legal in general, but is not supported by current level of Yocto VM. \*/*
+* YOCTOVM_INVALIDENCODEDSIZE
 * YOCTOVM_PLUGINERROR
 * YOCTOVM_INVALIDPARAMETER
 * YOCTOVM_INVALIDREPLYOFFSET
@@ -137,6 +138,29 @@ Yocto VM Overriding Command
 
 If there is a new command incoming from SmartAnthill Central Controller, while Yocto VM is executing a current program, Yocto VM will (at the very first opportunity) automatically abort execution of the current program, and starts executing the new one. This behaviour is consistent with the concept of “SmartAnthill Central Controller always knows better” which is used throughout the SmartAnthill protocol stack. Such command may be used, for example, by SmartAnthill Central Controller to abort execution of a long-running request and ask SmartAnthill Device to do something else.
 
+Yocto VM Encoded-Size
+---------------------
+
+In some places of the present document, a notion of 'Encoded-Size' is mentioned. This is a variable-length encoding of sizes (with the idea being somewhat similar to the idea behind UTF-8). Namely:
+
+* if first byte of Encoded-Size is c1 <= 127, then the value of Encoded-size is equal to c1
+* if first byte of Encoded-Size is c1 >= 128, then the next byte c2 is needed:
+  
+  + if second byte of Encoded-Size is c2 <= 127, then the value of Encoded-Size is equal to *128+((uint16)(c1&0x7F) | ((uint16)c2 << 7))*. 
+  + if second byte of Encoded-Size is c2 >= 128, this is currently a YOCTOVM_INVALIDENCODEDSIZE exception (c2 >= 128 is reserved for potential future expansion)
+
+
+The following table shows how many Encoded-Size bytes is necessary to encode ranges of Encoded-Size values:
+
++--------------------+---------------------+
+| Encoded-Size Values| Encoded-Size Bytes  |
++====================+=====================+
+| 0-127              | 1                   |
++--------------------+---------------------+
+| 128-16512          | 2                   |
++--------------------+---------------------+
+
+
 Yocto VM Levels
 ---------------
 
@@ -151,12 +175,12 @@ YoctoVM-One is the absolute minimum implementation of Yocto-VM, which allows to 
 
 **\| YOCTOVM_OP_EXEC \| BODYPART-ID \| DATA-SIZE \| DATA \|**
 
-where YOCTOVM_OP_EXEC is 1-byte opcode, BODYPART-ID is 1-byte id of the bodypart to be used, DATA-SIZE is a 1-byte length of DATA field, and DATA in an opaque data to be passed to the plugin associated with body part identified by BODYPART-ID; DATA field has size DATA-SIZE.
+where YOCTOVM_OP_EXEC is 1-byte opcode, BODYPART-ID is 1-byte id of the bodypart to be used, DATA-SIZE is an Encoded-Size length of DATA field, and DATA in an opaque data to be passed to the plugin associated with body part identified by BODYPART-ID; DATA field has size DATA-SIZE.
 EXEC instruction invokes a plug-in which corresponds to BODYPART-ID, and passes DATA of DATA-SIZE  size to this plug-in. Plug-in always adds a reply to the reply-buffer; reply size may vary, but MUST be at least 1 byte in length; otherwise it is a YOCTOVM_PLUGINERROR exception.
 
 **\| YOCTOVM_OP_PUSHREPLY \| DATA-SIZE \| DATA \|**
 
-where YOCTOVM_OP_PUSHREPLY is a 1-byte opcode, DATA-SIZE is a 1-byte length of DATA field, and DATA is opaque data to be pushed to reply buffer.
+where YOCTOVM_OP_PUSHREPLY is a 1-byte opcode, DATA-SIZE is an Encoded-Size length of DATA field, and DATA is opaque data to be pushed to reply buffer.
 PUSHREPLY instruction pushes an additional reply with DATA in it to reply buffer.
 
 **\| YOCTOVM_OP_SLEEP \| MSEC-DELAY \|**
@@ -380,7 +404,7 @@ Yocto VM-Medium adds support for registers, call stack, and parallel execution.
 
 **\| YOCTOVM_OP_PARALLEL \| N-PSEUDO-THREADS \| PSEUDO-THREAD-1-INSTRUCTIONS-SIZE \| PSEUDO-THREAD-1-INSTRUCTIONS \| ... \| PSEUDO-THREAD-N-INSTRUCTIONS-SIZE \| PSEUDO-THREAD-N-INSTRUCTIONS \|**
 
-where YOCTOVM_OP_PARALLEL is 1-byte opcode, N-PSEUDO-THREADS is a number of "pseudo-threads" requested, 'PSEUDO-THREAD-X-INSTRUCTIONS-SIZE' is 1-byte size of PSEUDO-THREAD-X-INSTRUCTIONS, and PSEUDO-THREAD-X-INSTRUCTIONS is a sequence of Yocto VM commands which belong to the pseudo-thread #X. Within PSEUDO-THREAD-X-INSTRUCTIONS, all commands of Yocto VM are allowed, with an exception of PARALLEL, EXIT and any jump instruction which leads outside of the current pseudo-thread.
+where YOCTOVM_OP_PARALLEL is 1-byte opcode, N-PSEUDO-THREADS is a number of "pseudo-threads" requested, 'PSEUDO-THREAD-X-INSTRUCTIONS-SIZE' is Encoded-Size size of PSEUDO-THREAD-X-INSTRUCTIONS, and PSEUDO-THREAD-X-INSTRUCTIONS is a sequence of Yocto VM commands which belong to the pseudo-thread #X. Within PSEUDO-THREAD-X-INSTRUCTIONS, all commands of Yocto VM are allowed, with an exception of PARALLEL, EXIT and any jump instruction which leads outside of the current pseudo-thread.
 
 PARALLEL instruction starts processing of several pseudo-threads. PARALLEL instruction is considered completed when all the pseudo-threads reach the end of their respective instructions. Normally, it is implemented via state machines (see "SmartAnthill Reference Implementation - MCU Software Architecture" document for details), so it is functionally equivalent to "green threads" (and not to "native threads").
 
