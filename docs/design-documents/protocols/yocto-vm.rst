@@ -25,7 +25,7 @@
 Yocto VM
 ========
 
-:Version:   v0.1.4
+:Version:   v0.1.5
 
 *NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” and “SmartAnthill SACP” documents, please make sure to read them before proceeding.*
 
@@ -197,22 +197,29 @@ EXEC instruction invokes a plug-in which corresponds to BODYPART-ID, and passes 
 where YOCTOVM_OP_PUSHREPLY is a 1-byte opcode, DATA-SIZE is an Encoded-Size length of DATA field, and DATA is opaque data to be pushed to reply buffer.
 PUSHREPLY instruction pushes an additional reply with DATA in it to reply buffer.
 
+**\| YOCTOVM_OP_TRANSMITTER \| <ONOFF> \|**
+
+where YOCTOVM_OP_TRANSMITTER is a 1-byte opcode, and <ONOFF> is a 1-bit bitfield, taking values {0,1}
+
+TRANSMITTER instruction turns transmitter on or off, according to the value of <ONOFF> field.
+
 **\| YOCTOVM_OP_SLEEP \| MSEC-DELAY \|**
 
 where YOCTOVM_OP_SLEEP is a 1-byte opcode, and MSEC-DELAY is a 2-byte unsigned integer.
 Pauses execution for approximately MSEC-DELAY milliseconds.
 
-**\| YOCTOVM_OP_MCUSLEEP \| SEC-DELAY \|**
+**\| YOCTOVM_OP_MCUSLEEP \| SEC-DELAY \| <TRANSMITTERONWHENBACK>,<MAYDROPEARLIERINSTRUCTIONS> \|**
 
-where YOCTOVM_OP_MCUSLEEP is a 1-byte opcode, and SEC-DELAY is a 2-byte unsigned integer.
-MCUSLEEP instruction puts MCU into sleep-with-timer mode for approximately SEC-DELAY seconds. If sleep-with-timer mode is not available with current MCU, then such an instruction still may be sent to such a device, as a means of long delay, and SmartAnthill device MUST process it just by waiting for specified time.
+where YOCTOVM_OP_MCUSLEEP is a 1-byte opcode, SEC-DELAY is a 2-byte unsigned integer, and <TRANSMITTERONWHENBACK> and <MAYDROPEARLIERINSTRUCTIONS> are 1-bit bitfields, each taking values {0,1}.
+MCUSLEEP instruction puts MCU into sleep-with-timer mode for approximately SEC-DELAY seconds. If sleep-with-timer mode is not available with current MCU, then such an instruction still may be sent to such a device, as a means of long delay, and SmartAnthill device MUST process it just by waiting for specified time. <TRANSMITTERONWHENBACK> specifies if device transmitter should be turned on after MCUSLEEP, and <MAYDROPEARLIERINSTRUCTIONS> is an optimization flag which specifies if MCUSLEEP is allowed to drop the portion of the YoctoVM program which is located before MCUSLEEP, when going to sleep (this may allow to provide certain savings, see below).
+
 As MCUSLEEP may disable device receiver, Yocto VM enforces relevant “Execution Layer Restrictions” when MCUSLEEP is invoked; to ensure consistent behavior between MCUs, these restriction MUST be enforced regardless of MCUSLEEP really disabling device receiver. Therefore (NB: these checks SHOULD be implemented for YoctoVM-One; they MUST be implemented for all Yocto-VM levels other than YoctoVM-One):
 
 * If original command has not had an ISLAST flag, and MCUSLEEP is invoked, it is YOCTOVM_PROGRAMERROR_INVALIDREPLYSEQUENCE exception.
 * Yocto VM keeps track if MCUSLEEP was invoked; this 'mcusleep-invoked' flag is used by some other instructions.
 * NB: double MCUSLEEP within the same program is ok, so if 'mcusleep-invoked' flag is already set and MCUSLEEP is invoked, this is not a problem
 
-It should be noted that implementing MCUSLEEP instruction will implicitly require storing current PC and current “reply buffer” either in EEPROM, or to request MPU to preserve RAM while waiting. This will be done automagically by Yocto VM, but it is not without it's cost. It might be useful to know that in some cases this cost is lower when amount of data to be preserved is small (for example, it happens when “reply buffer” is empty).
+It should be noted that implementing MCUSLEEP instruction will implicitly require storing current program, current PC and current “reply buffer” either in EEPROM, or to request MPU to preserve RAM while waiting. This will be done automagically by Yocto VM, but it is not without it's cost. It might be useful to know that in some cases this cost is lower when amount of data to be preserved is small (for example, it happens when “reply buffer” is empty, and/or when <MAYDROPEARLIERINSTRUCTIONS> is used and the remaining program is small).
 
 
 **\| YOCTOVM_OP_POPREPLIES \| N-REPLIES \|**
@@ -458,13 +465,13 @@ Statistics for different Yocto-VM levels:
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
 |Level          |Opcodes Supported|Typical Parameter Values             |Amount of RAM used (with typical parameter values)|
 +===============+=================+=====================================+==================================================+
-|Yocto VM-One   | 6               |                                     | 1 to 2                                           |
+|Yocto VM-One   | 7               |                                     | 1 to 2                                           |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
-|Yocto VM-Tiny  | 10              |YOCTOVM_REPLY_STACK_SIZE=4 to 8      | (1 to 2)+(5 to 9) = 6 to 11                      |
+|Yocto VM-Tiny  | 11              |YOCTOVM_REPLY_STACK_SIZE=4 to 8      | (1 to 2)+(5 to 9) = 6 to 11                      |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
-|Yocto VM-Small | 26              |YOCTOVM_EXPR_STACK_SIZE=4 to 8       | (6 to 11)+(9 to 17) = 15 to 28                   |
+|Yocto VM-Small | 27              |YOCTOVM_EXPR_STACK_SIZE=4 to 8       | (6 to 11)+(9 to 17) = 15 to 28                   |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
-|Yocto VM-Medium| 27+TBD          |YOCTOVM_EXPR_STACK_SIZE=8 to 12      | TBD                                              |
+|Yocto VM-Medium| 28+TBD          |YOCTOVM_EXPR_STACK_SIZE=8 to 12      | TBD                                              |
 |               |                 |YOCTOVM_MAX_PSEUDOTHREADS=4 to 8     |                                                  |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
 
