@@ -118,6 +118,7 @@ III. SmartAnthill Architecture
 ------------------------------
 
 .. image:: /_static/diagrams/smartanthill-overall-architecture-diagram.png
+    :alt: SmartAnthill Overall Architecture
 
 III.1 General Architecture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -144,6 +145,7 @@ III.2 SmartAnthill Devices
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. image:: /_static/diagrams/smartanthill-device-diagram.png
+    :alt: SmartAnthill Device
 
 Each SmartAnthill Device (also known as 'Ant') is either *SmartAnthill Hobbyist Device*, or a *SmartAnthill Mass-Market Device*. While these devices are similar, there are some differences as outlined below. In addition, in a completely different and independent dimension each SmartAnthill Device is either a "Simple Device", or an "IP-enabled Device".
 
