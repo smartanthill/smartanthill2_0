@@ -46,6 +46,20 @@ All SmartAnthill devices within a system are controlled from the one place
 (such as PC or credit-card sized computer Raspberry Pi, BeagleBoard or
 CubieBoard), with an optional access via Internet.
 
+From programming point of view, SmartAnthill provides a clear separation
+between microcontroller programming (such as "how to get temperature from this
+sensor") and system integration logic (such as "how we should heat this
+particular house to reduce the heating bill"). Microcontroller programming
+usually requires C/asm programming and C/asm programs are notoriously difficult
+to customize. SmartAnthill allows you to customise device with pre-defined
+capabilities via GUI and generate compatible firmware which will be flashed to
+device automatically. On the other hand, system integration logic needs to be
+highly customizable for needs and properties of specific house or office, but
+within SmartAnthill it can be done via rich suite of development instruments:
+Generic Protocols (HTTP, WebSokets, TCP/IP), High Level API (REST API)
+and SDK for popular languages, which allow for easy development and
+customization.
+
 SmartAnthill 2.0 represents further work on SmartAnthill 1.0, which was
 designed solely by Ivan Kravets, an author of `PlatformIO <http://platformio.org>`_.
 Improvements in SmartAnthill 2.0 cover several areas, from introducing
