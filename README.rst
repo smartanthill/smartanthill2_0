@@ -27,3 +27,8 @@ CubieBoard), with an optional access via Internet.
     - `Yocto VM <http://docs.smartanthill.org/en/latest/design-documents/protocols/yocto-vm.html>`_
 * `Reference Implementation <http://docs.smartanthill.org/en/latest/design-documents/reference-implementation/index.html>`_
     - `MCU Software Architecture <http://docs.smartanthill.org/en/latest/design-documents/reference-implementation/mcu/smartanthill-reference-mcu-software-architecture.html>`_
+
+
+.. image:: https://raw.githubusercontent.com/smartanthill/smartanthill2_0/develop/docs/_static/diagrams/smartanthill-overall-architecture-diagram.png
+    :alt: SmartAnthill Overall Architecture
+
