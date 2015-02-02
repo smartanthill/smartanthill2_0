@@ -56,7 +56,7 @@ capabilities via GUI and generate compatible firmware which will be flashed to
 device automatically. On the other hand, system integration logic needs to be
 highly customizable for needs and properties of specific house or office, but
 within SmartAnthill it can be done via rich suite of development instruments:
-Generic Protocols (HTTP, WebSokets, TCP/IP), High Level API (REST API)
+Generic Protocols (HTTP, Sockets, WebSokets), High Level API (REST API)
 and SDK for popular languages, which allow for easy development and
 customization.
 
@@ -117,6 +117,8 @@ SmartAnthill is built around the following requirements. They follow from the ai
 III. SmartAnthill Architecture
 ------------------------------
 
+.. image:: /_static/diagrams/smartanthill-overall-architecture-diagram.png
+
 III.1 General Architecture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 Simple SmartAnthill system consists of one Controlling PC and one or more devices controlled by it (see smartanthill-overall-architecture-diagram for an example topology).
@@ -140,6 +142,8 @@ TODO: Master-Slave topology!
 
 III.2 SmartAnthill Devices
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. image:: /_static/diagrams/smartanthill-device-diagram.png
 
 Each SmartAnthill Device (also known as 'Ant') is either *SmartAnthill Hobbyist Device*, or a *SmartAnthill Mass-Market Device*. While these devices are similar, there are some differences as outlined below. In addition, in a completely different and independent dimension each SmartAnthill Device is either a "Simple Device", or an "IP-enabled Device".
 

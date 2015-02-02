@@ -53,7 +53,7 @@ capabilities via GUI and generate compatible firmware which will be flashed to
 device automatically. On the other hand, system integration logic needs to be
 highly customizable for needs and properties of specific house or office, but
 within SmartAnthill it can be done via rich suite of development instruments:
-Generic Protocols (HTTP, WebSokets, TCP/IP), High Level API (REST API)
+Generic Protocols (HTTP, Sockets, WebSokets), High Level API (REST API)
 and SDK for popular languages, which allow for easy development and
 customization.
 
