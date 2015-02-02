@@ -35,12 +35,12 @@ railway network model to an office-wide heating control and security system.
 As an open system, SmartAnthill can integrate together a wide range of devices
 beginning from embedded development boards and ending with off-the-shelf
 sensors and actuators. They can be connected via very different communication
-means - from wired (currently Serial and CAN bus, with Ethernet planned soon)
-to wireless (currently IEEE 802.15.4, with low-cost RF, ZigBee and WiFi planned
+means - from wired (currently Serial, with CAN bus and Ethernet planned soon)
+to wireless (currently IEEE 802.15, with low-cost RF, ZigBee and WiFi planned
 soon).
 
-All SmartAnthill devices within a system are controlled from the one
-place (such as PC or credit-card sized computer Raspberry Pi, BeagleBoard or
+All SmartAnthill devices within a system are controlled from the one place
+(such as PC or credit-card sized computer Raspberry Pi, BeagleBoard or
 CubieBoard), with an optional access via Internet.
 
 Contents
@@ -51,13 +51,3 @@ Contents
 
     design-documents/index
     design-documents/reference-implementation/index
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-

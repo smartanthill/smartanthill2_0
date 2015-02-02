@@ -29,7 +29,29 @@ SmartAnthill 2.0 Overall Architecture
 
 :Version:   v0.2
 
-**TODO**
+**SmartAnthill** is an open IoT system which allows easy control over multiple
+microcontroller-powered devices, creating a home- or office-wide heterogeneous
+network out of these devices.
+
+SmartAnthill system can be pretty much anything: from a system to control
+railway network model to an office-wide heating control and security system.
+As an open system, SmartAnthill can integrate together a wide range of devices
+beginning from embedded development boards and ending with off-the-shelf
+sensors and actuators. They can be connected via very different communication
+means - from wired (currently Serial, with CAN bus and Ethernet planned soon)
+to wireless (currently IEEE 802.15, with low-cost RF, ZigBee and WiFi planned
+soon).
+
+All SmartAnthill devices within a system are controlled from the one place
+(such as PC or credit-card sized computer Raspberry Pi, BeagleBoard or
+CubieBoard), with an optional access via Internet.
+
+SmartAnthill 2.0 represents further work on SmartAnthill 1.0, which was
+designed solely by Ivan Kravets, an author of `PlatformIO <http://platformio.org>`_.
+Improvements in SmartAnthill 2.0 cover several areas, from introducing
+security, to support of protocols such as ZigBee and improvements aimed at
+reducing energy consumption. SmartAnthill 2.0 is not intended to be compatible
+with SmartAnthill 1.0.
 
 .. contents::
 
@@ -88,10 +110,10 @@ Simple SmartAnthill system consists of one Controlling PC and one or more device
 Controlling PC is a relatively complex device (such as Raspberry Pi PC) which normally runs several pieces of software: system control software, SmartAnthill Central Controller (also known as 'Anthill'), and SmartAnthill Router.
 
 * System control software is intended to be easily customizable according to customer needs. It can be very different, but we aim to support OpenHAB, and to support pretty much any programming language which can support one of the REST, or websockets, or sockets. SmartAnthill project as such doesn't provide control software, it is rather a service which can be used by a control software.
-* SmartAnthill Central Controller is responsible for receiving requests (via REST etc.) from System control software and taking necessary measures to execute them via SACCP protocol (see document 
-  :ref:`saprotostack` for details). 
-* SmartAnthill Router is responsible for translating IP-based requests into bus-specific requests for SmartAnthill Simple Devices (see below for definition of 'SmartAnthill Simple Device'; also see document 
-  :ref:`saprotostack` for details). 
+* SmartAnthill Central Controller is responsible for receiving requests (via REST etc.) from System control software and taking necessary measures to execute them via SACCP protocol (see document
+  :ref:`saprotostack` for details).
+* SmartAnthill Router is responsible for translating IP-based requests into bus-specific requests for SmartAnthill Simple Devices (see below for definition of 'SmartAnthill Simple Device'; also see document
+  :ref:`saprotostack` for details).
 
 SmartAnthill Router operates one or more 'buses'. Each SmartAnthill bus can be either a traditional wired bus (such as CAN bus), or a wireless 'bus'. Wireless SmartAnthill 'buses' do not imply any wired connection, they just represent certain domain of wireless connections; for example, one wireless 'bus' can be a IEEE 802.15.4 'bus' controlling some devices connected via IEEE 802.15.4, and at the same time another wireless 'bus' can be a 431 MHz RF 'bus' controlling some other devices connected via 431 MHz RF.
 Each bus (wired or wireless) has one or more simple devices (such as sensors or actuators) connected to it (in case of wireless buses, the connection is wireless).
@@ -105,7 +127,7 @@ TODO: Master-Slave topology!
 III.2 SmartAnthill Devices
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Each SmartAnthill Device (also known as 'Ant') is either *SmartAnthill Hobbyist Device*, or a *SmartAnthill Mass-Market Device*. While these devices are similar, there are some differences as outlined below. In addition, in a completely different and independent dimension each SmartAnthill Device is either a "Simple Device", or an "IP-enabled Device". 
+Each SmartAnthill Device (also known as 'Ant') is either *SmartAnthill Hobbyist Device*, or a *SmartAnthill Mass-Market Device*. While these devices are similar, there are some differences as outlined below. In addition, in a completely different and independent dimension each SmartAnthill Device is either a "Simple Device", or an "IP-enabled Device".
 
 These properties are independent of each other, so it is possible to have all four different types of devices: SmartAnthill Hobbyist Simple Device, SmartAnthill Hobbyist IP-enabled Device, SmartAnthill Mass-Market Simple Device, and SmartAnthill Mass-Market IP-enabled Device.
 
@@ -138,7 +160,7 @@ III.2.3. SmartAnthill Simple Device
 '''''''''''''''''''''''''''''''''''
 
 Many of SmartAnthill Devices are expected to have very little resources, and might be unable to implement IP stack. Such devices implement a portion of SmartAnthill Protocol Stack (see document
-:ref:`saprotostack` for details), with SmartAnthill Router providing interface to the outside world and conversion between IP-based requests/replies and Simple Device requests/replies. 
+:ref:`saprotostack` for details), with SmartAnthill Router providing interface to the outside world and conversion between IP-based requests/replies and Simple Device requests/replies.
 
 III.2.4. SmartAnthill IP-enabled Device
 '''''''''''''''''''''''''''''''''''''''
@@ -186,6 +208,6 @@ Mass-market devices are expected to be shipped in already programmed state, with
 
 III.4 SmartAnthill protocol stack
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-SmartAnthill protocol stack is described in detail in a separate document, 
+SmartAnthill protocol stack is described in detail in a separate document,
 :ref:`saprotostack` .
 
