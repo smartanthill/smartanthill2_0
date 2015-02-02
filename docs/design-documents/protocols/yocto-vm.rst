@@ -25,7 +25,7 @@
 Yocto VM
 ========
 
-:Version:   v0.1.5a
+:Version:   v0.1.5b
 
 *NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” and “SmartAnthill SACP” documents, please make sure to read them before proceeding.*
 
@@ -443,7 +443,7 @@ When PARALLEL instruction execution is started, original expression stack is "fr
 
 **Caution:** in addition to any memory overhead listed for Yocto VM-Medium, there is an additional implicit memory overhead associated with PARALLEL instruction: namely, all the states of all the plugin state machines which are run in parallel, need to be kept in RAM simultaneously. Normally, it is not much, but for really constrained environments it might become a problem.
 
-**Note on \ YOCTOVM_OP_PUSHEXPR_EXPR \| EXPR-OFFSET \| within PARALLEL pseudo-thread**
+**Note on \| YOCTOVM_OP_PUSHEXPR_EXPR \| EXPR-OFFSET \| within PARALLEL pseudo-thread**
 
 PUSHEXPR_EXPR instruction, when it is applied within PARALLEL pseudo-thread, allows to access original (pre-PARALLEL) expression stack. That is, first EXPR-OFFSET values identify expression stack items within the pseudo-thread, but when pseudo-thread values are exhausted, increasing EXPR-OFFSET starts to go into pre-PARALLEL expression stack. For example, if \|PUSHEXPR\|0\| is the first instruction of the pseudo-thread, it peeks a topmost value from the pre-PARALLEL expression stack and pushes it to the pseudo-thread's expression stack. This allows to easily pass information from the main program to pseudo-threads.
 
