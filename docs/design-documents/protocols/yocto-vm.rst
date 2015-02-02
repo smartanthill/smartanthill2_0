@@ -25,7 +25,7 @@
 Yocto VM
 ========
 
-:Version:   v0.1.5
+:Version:   v0.1.5a
 
 *NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” and “SmartAnthill SACP” documents, please make sure to read them before proceeding.*
 
@@ -83,24 +83,31 @@ In SACP (and in Yocto VM as an implementation of SACP), all interactions between
 Yocto VM Instructions
 ---------------------
 
-All Yocto VM instructions have the same basic format (through this document '\|' denotes field boundaries):
-\| OP-CODE \| OP-PARAMS \|
-where OP-CODE is a 1-byte operation code, and length and content of OP-PARAMS are implicitly defined by OP code.
-If one of OP-PARAM fields is separated into bitfields, it is denoted as \| SOME_PARAM,SOME_OTHER_PARAM\| and exact length of bitfields is specified in instruction description.
+Notation
+^^^^^^^^
 
-List of Yocto VM opcodes:
+* Through this document, '\|' denotes field boundaries. All fields (except for bitfields, which are described below) take a whole number of bytes.
+* All Yocto VM instructions have the same basic format: **\| OP-CODE \| OP-PARAMS \|**, where OP-CODE is a 1-byte operation code, and length and content of OP-PARAMS are implicitly defined by OP code.
+* If one of OP-PARAM fields is separated into bitfields, it is denoted as **\| SOME-BITFIELD,SOME-OTHER-BITFIELD \|**, and exact length of bitfields is specified in instruction description.
+* If one of the fields or bitfields in an enumerated value, it is denoted as **\| <SOME-ENUM-FIELD> \|**, and a list of possible values for this enumerated value is provided in instruction description.
+
+Yocto VM Opcodes
+^^^^^^^^^^^^^^^^
 
 * YOCTOVM_OP_EXEC
 * YOCTOVM_OP_PUSHREPLY
 * YOCTOVM_OP_SLEEP
+* YOCTOVM_OP_TRANSMITTER
 * YOCTOVM_OP_MCUSLEEP
 * YOCTOVM_OP_POPREPLIES
 * YOCTOVM_OP_EXIT
-* YOCTOVM_OP_JMP */\* starting from this opcode, instructions are not supported by Yocto VM-One \*/*
+* */\* starting from the next opcode, instructions are not supported by Yocto VM-One \*/*
+* YOCTOVM_OP_JMP 
 * YOCTOVM_OP_JMPIFERRORCODE_LT
 * YOCTOVM_OP_JMPIFERRORCODE_GT
 * YOCTOVM_OP_JMPIFERRORCODE_EQ
-* YOCTOVM_OP_PUSHEXPR_CONSTANT */\* starting from this opcode, instructions are not supported by Yocto VM-Tiny and below \*/*
+* */\* starting from the next opcode, instructions are not supported by Yocto VM-Tiny and below \*/*
+* YOCTOVM_OP_PUSHEXPR_CONSTANT 
 * YOCTOVM_OP_PUSHEXPR_ERRORCODE
 * YOCTOVM_OP_PUSHEXPR_1BYTE_FROMREPLY
 * YOCTOVM_OP_PUSHEXPR_2BYTES_FROMREPLY
@@ -116,7 +123,8 @@ List of Yocto VM opcodes:
 * YOCTOVM_OP_JMPIFEXPR_NOPOP_GT
 * YOCTOVM_OP_JMPIFEXPR_NOPOP_EQ
 * YOCTOVM_OP_JMPIFEXPR_NOPOP_NE
-* YOCTOVM_OP_PARALLEL */\* starting from this opcode, instructions are not supported by Yocto VM-Small and below \*/*
+* */\* starting from the next opcode, instructions are not supported by Yocto VM-Small and below \*/*
+* YOCTOVM_OP_PARALLEL 
 
 Yocto VM Exceptions
 -------------------
@@ -322,7 +330,7 @@ where <LEN> is one of {1BYTE,2BYTES}; YOCTOVM_OP_PUSHEXPR_1BYTE_FROMREPLY and  Y
 PUSHEXPR <LEN> FROMREPLY takes one or two bytes (as specified by <LEN>) from reply specified by REPLY-OFFSET, at offset within reply as specified by OFFSET-WITHIN-REPLY, and pushes it to the expression stack (if expression stack is exceeded, it will cause YOCTOVM_EXPRSTACKOVERFLOW VM exception).
 The idea of the PUSHEXPR <LEN> FROMREPLY instruction is that, assuming that one knows the format of reply, she can extract multiple parameters from the replies. Note that due to convention that first byte of reply is the errorcode, \|PUSHEXPR_1BYTE_FROMREPLY\|REPLY-OFFSET\|0\| is the same as \|PUSHEXPR_ERRORCODE\|REPLY-OFFSET\|.
 
-**\ YOCTOVM_OP_PUSHEXPR_EXPR \| EXPR-OFFSET \|**
+**\| YOCTOVM_OP_PUSHEXPR_EXPR \| EXPR-OFFSET \|**
 
 where YOCTOVM_OP_PUSHEXPR_EXPR is a 1-byte opcode, and EXPR-OFFSET is a 1-byte offset of the expression which needs to be duplicated on the top of the expression stack.
 
