@@ -22,12 +22,15 @@
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE
 
-SmartAnthill Protocol Stack
-===========================
+.. _saprotostack:
+
+SmartAnthill 2.0 Protocol Stack
+===============================
 
 :Version:   v0.1.1
 
-*NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” document, please make sure to read it before proceeding.*
+*NB: this document relies on certain terms and concepts introduced in*
+:ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
 SmartAnthill protocol stack is intended to provide communication services between SmartAnthill Control Centers and SmartAnthill Devices, allowing SmartAnthill Control Centers to control SmartAnthill Devices. These communication services are implemented as a request-response services within OSI/ISO network model.
 
@@ -85,7 +88,9 @@ In real-world operation, it is inevitable that from time to time a mismatch occu
 
 SmartAnthill protocol stack attempts to clear as many such scenarios as possible 'automagically', without the need to reprogram SmartAnthill Device. To achieve this goal, the following approach is used: SmartAnthill protocol stack assumes that in any case when there is any kind of the mismatch, it is the SmartAnthill Central Controller who's "right". In addition, if such a decision is not sufficient to recover from the mismatch, SmartAnthill Device will perform complete re-initialization.
 
-It means that certain SmartAnthill protocols (such as SACP and SAGDP) are inherently asymmetrical; details are provided in their respective documents ("SACP" and "SAGDP").
+It means that certain SmartAnthill protocols (such as SACP and SAGDP) are inherently asymmetrical; details are provided in their respective documents (
+:ref:`saccp`  and 
+:ref:`sagdp` ).
 
 TODO: recommend on-device self-recovery circuit?
 
@@ -95,7 +100,8 @@ Packet Chains
 
 SmartAnthill protocol stack is intended to provide various services between two entities: SmartAnthill Central Controller and SmartAnthill Device. Most of these services are of request-response nature. To implement them while imposing the least requirements on the resource-stricken SmartAnthill Device, all interactions within SmartAnthill protocol stack at the levels between SACP and SAGDP (inclusive) are considered as “packet chains”, when one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on.
 
-Chains are initiated by the topmost protocol is SmartAnthill protocol layer, SACP, and are supported by all the layers between SACP and SAGDP (inclusive). Whenever SACP issues a packet to an underlying protocol, it MUST specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocols (down to SAGDP) to arrange for proper retransmission if some packets are lost during communication, see "SAGDP" document for details.
+Chains are initiated by the topmost protocol is SmartAnthill protocol layer, SACP, and are supported by all the layers between SACP and SAGDP (inclusive). Whenever SACP issues a packet to an underlying protocol, it MUST specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocols (down to SAGDP) to arrange for proper retransmission if some packets are lost during communication, see 
+:ref:`sagdp` document for details.
 
 Starting from SADLP-* and above, there is a virtual link established between SmartAnthill Central Controller and SmartAnthill Device. Normally (as guaranteed by SAGDP) only one outstanding packet is allowed on each such virtual link. There is one exception to this rule, which is described below.
 
@@ -104,7 +110,9 @@ Handling of temporary dual “packet chains”
 
 Normally, at each moment for each of the 'virtual links' decribed above, there can be only one “packet chain” active, and within a “packet chain”, all transmissions are always sequential. However, there are scenarios when both SmartAnthill Central Controller and SmartAnthill Device try to initiate their own “packet chains”. One such example is when SmartAnthill Device is sleeping according to instructions received from SmartAnthill Central Controller (and just woke up to perform task and report), and meanwhile SmartAnthill Central Controller has made a decision (for example, due to the input from other SmartAnthill Devices or from the end-user) to issue different set of instructions to the SmartAnthill Device.
 
-Handling of these scenarios is explained in detail in respective documents ("SACP" and "SAGDP"); as a result of such handling, one of the chains (the one coming from the SmartAnthill Device, according to "Central Controller is always right" principle described above), will be dropped pretty much as if it has never been started.
+Handling of these scenarios is explained in detail in respective documents (
+:ref:`saccp` and 
+:ref:`sagdp` ); as a result of such handling, one of the chains (the one coming from the SmartAnthill Device, according to "Central Controller is always right" principle described above), will be dropped pretty much as if it has never been started.
 
 
 Layering remarks

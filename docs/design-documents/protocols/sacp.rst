@@ -22,12 +22,16 @@
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE SUCH DAMAGE
 
+.. _saccp:
+
 SmartAnthill Control Protocol (SACP) v2.0
 =========================================
 
 :Version:   v0.1.3
 
-*NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” and "SmartAnthill Protocol Stack" documents, please make sure to read them before proceeding.*
+*NB: this document relies on certain terms and concepts introduced in*
+:ref:`saoverarch` *and*
+:ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
 SACP 2.0 (referred to in this document as SACP) is a part of SmartAnthill protocol stack. It belongs to Level 7 of OSI/ISO Network Model, and is responsible for allowing SmartAnthill Central Controller to control SmartAnthill Device.
 
@@ -45,13 +49,15 @@ It is assumed that authentication, encryption, integrity and reliable delivery s
 Packet Chains
 -------------
 
-All interactions in SACP are considered as “packet chains” (see "SmartAnthill Protocol Stack" document for more details). With "packet chains", one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever SACP issues a packet to an underlying protocol, it MUST specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication.
+All interactions in SACP are considered as “packet chains” (see
+:ref:`saprotostack` document for more details). With "packet chains", one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever SACP issues a packet to an underlying protocol, it MUST specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication.
 
 
 Handling of Fatal Errors
 ------------------------
 
-SACP is built under the assumption that in case of any inconsistency between SmartAnthill Central Controller and SmartAnthill Device, it is SmartAnthill Central Controller which is right (see "SmartAnthill Protocol Stack" document for more details). Keeping this in mind, SACP underlying protocol MUST detect any fatal inconsistencies in the protocol (one example of such inconsistency is authenticated packet which is out-of-chain-order), and MUST invoke re-initialization of the SmartAnthill Device in this case. It is done regardless of the SACP state and layers above SACP, and without notifying SACP or any layers above the SACP.
+SACP is built under the assumption that in case of any inconsistency between SmartAnthill Central Controller and SmartAnthill Device, it is SmartAnthill Central Controller which is right (see 
+:ref:`saprotostack` document for more details). Keeping this in mind, SACP underlying protocol MUST detect any fatal inconsistencies in the protocol (one example of such inconsistency is authenticated packet which is out-of-chain-order), and MUST invoke re-initialization of the SmartAnthill Device in this case. It is done regardless of the SACP state and layers above SACP, and without notifying SACP or any layers above the SACP.
 
 Layering remarks
 ----------------
@@ -101,17 +107,20 @@ SACP reply packets have the following structure:
 Device Pins SHOULD NOT be Addressed Directly within Execution-Layer-Program
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Execution-Layer-Program may contain EXEC instructions (see "Yocto VM" document for details). These EXEC instructions address a certain 'ant body part', and pass opaque data to the corresponding plugin. While the data passed to the plugin is opaque, it SHOULD NOT contain any device pins in it; which device pins are used by the plugin on this specific device, is considered a part of 'body part configuration' and is stored within MCU.
+Execution-Layer-Program may contain EXEC instructions (see
+:ref:`sayoctovm` document for details). These EXEC instructions address a certain 'ant body part', and pass opaque data to the corresponding plugin. While the data passed to the plugin is opaque, it SHOULD NOT contain any device pins in it; which device pins are used by the plugin on this specific device, is considered a part of 'body part configuration' and is stored within MCU.
 
 Therefore, data within EXEC instruction normally does *not* contain pins, but contains only a BODYPART-ID and an action. For example, a command to plugin which turns on connected LED, SHOULD
-look as **\|EXEC\|BODYPART-ID\|ON\|**, where ON is a 1-byte taking values '0' and '1', indicating "what to do with LED". All mappings of BODYPART-ID to pins SHOULD be described as plugin_config parameter of plugin_handler(), as described in "SmartAnthill Reference Implementation - MCU Software Architecture" document.
+look as **\|EXEC\|BODYPART-ID\|ON\|**, where ON is a 1-byte taking values '0' and '1', indicating "what to do with LED". All mappings of BODYPART-ID to pins SHOULD be described as plugin_config parameter of plugin_handler(), as described in 
+:ref:`sarefimplmcusoftarch` document.
 
 TODO: ?describe same thing in 'Yocto VM'?
 
 Execution Layer and Control Program
 -----------------------------------
 
-Whenever SmartAnthill Device receives a SACP command packet, SACP invokes Execution Layer  and passes received Execution-Layer-Program to it. After Execution Layer has finished it's execution, SACP passes the reply back to the SmartAnthill Central Controller. One example of a valid Execution Layer is Yocto VM which is described in a separate document, “SmartAnthill Yocto VM”.
+Whenever SmartAnthill Device receives a SACP command packet, SACP invokes Execution Layer  and passes received Execution-Layer-Program to it. After Execution Layer has finished it's execution, SACP passes the reply back to the SmartAnthill Central Controller. One example of a valid Execution Layer is Yocto VM which is described in a separate document, 
+:ref:`sayoctovm` .
 
 Within SmartAnthill system, Execution Layer exists only on the side of SmartAnthill Device (and not on the side of SmartAnthill Central Controller). It's counterpart on the side of SmartAnthill Central Controller is Control Program.
 

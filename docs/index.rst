@@ -50,6 +50,7 @@ Contents
     :maxdepth: 2
 
     design-documents/index
+    design-documents/reference-implementation/index
 
 
 

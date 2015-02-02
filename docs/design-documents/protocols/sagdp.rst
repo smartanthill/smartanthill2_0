@@ -22,16 +22,22 @@
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE
 
-SmartAnthill Guaranteed Delivery Protocol (SAGDP) v2.0
-======================================================
+.. _sagdp:
+
+SmartAnthill Guaranteed Delivery Protocol (SAGDP)
+=================================================
 
 :Version:   v0.1a
 
-*NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” and "SmartAnthill Protocol Stack" documents, please make sure to read them before proceeding.*
+*NB: this document relies on certain terms and concepts introduced in*
+:ref:`saoverarch` *and*
+:ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
-SAGDP (SmartAnthill Guaranteed Delivery Protocol) aims to provide reliable message delivery for SmartAnthill environments; as described in "SmartAnthill Overall Architecture" document, SmartAnthill environments tend to be extremely limited, and tend to require special attention to energy-saving features. In addition, special considerations (such as ability to turn off receiver temporarily) need to be considered.
+SAGDP (SmartAnthill Guaranteed Delivery Protocol) aims to provide reliable message delivery for SmartAnthill environments; as described in
+:ref:`saoverarch` document, SmartAnthill environments tend to be extremely limited, and tend to require special attention to energy-saving features. In addition, special considerations (such as ability to turn off receiver temporarily) need to be considered.
 
-SAGDP belongs to Layer 2 of OSI/ISO network model, see "SmartAnthill Protocol Stack" document for details.
+SAGDP belongs to Layer 2 of OSI/ISO network model, see
+:ref:`saprotostack` document for details.
 
 .. contents::
 

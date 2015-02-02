@@ -29,6 +29,5 @@ Specification
     :maxdepth: 2
 
     Overall Architecture <smartanthill-overall-architecture>
-    reference-implementation/mcu/smartanthill-reference-mcu-software-architecture
     protocols/index
     protocols/yocto-vm

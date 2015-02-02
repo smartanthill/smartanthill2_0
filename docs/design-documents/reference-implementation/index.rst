@@ -22,13 +22,11 @@
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE
 
-Protocols
-=========
+Reference Implementation
+========================
 
 .. toctree::
     :maxdepth: 2
 
-    smartanthill-protocol-stack
-    yocto-vm
-    sacp
-    sagdp
+    MCU Software Architecture <mcu/smartanthill-reference-mcu-software-architecture>
+

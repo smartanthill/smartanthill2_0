@@ -22,12 +22,16 @@
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE
 
+.. _sayoctovm:
+
 Yocto VM
 ========
 
 :Version:   v0.1.5b
 
-*NB: this document relies on certain terms and concepts introduced in “SmartAnthill Overall Architecture” and “SmartAnthill SACP” documents, please make sure to read them before proceeding.*
+*NB: this document relies on certain terms and concepts introduced in*
+:ref:`saoverarch` *and*
+:ref:`saccp` *documents, please make sure to read them before proceeding.*
 
 Yocto VM is a minimalistic virtual machine used by SmartAnthill Devices. It implements SACP (SmartAnthill Control Protocol) on the side of the SmartAnthill Device (and SACP corresponds to Layer 7 of OSI/ISO network model). By design, Yocto VM is intended to run on devices with extremely limited resources (as little as 512 bytes of RAM).
 
@@ -58,7 +62,8 @@ While Yocto VM itself indeed uses ridiculously low amount of RAM, a developer ne
 Yocto VM Restrictions
 ---------------------
 
-As Yocto VM implements an “Execution Layer” of SACP, it needs to implement all  “Execution Layer Restrictions” set in “SmartAnthill SACP” document. While present document doesn't duplicate these restrictions, it aims to specify them in appropriate places (for example, when specific instructions are described).
+As Yocto VM implements an “Execution Layer” of SACP, it needs to implement all  “Execution Layer Restrictions” set in 
+:ref:`saccp` document. While present document doesn't duplicate these restrictions, it aims to specify them in appropriate places (for example, when specific instructions are described).
 
 “Program Errors” as specified in Execution Layer Restrictions are implemented as YOCTOVM_PROGRAMERROR_* Yocto VM exceptions as described below.
 
@@ -78,7 +83,8 @@ Error code == 255 is reserved for Yocto VM exceptions (see below) and SHOULD NOT
 Packet Chains
 -------------
 
-In SACP (and in Yocto VM as an implementation of SACP), all interactions between SmartAnthill Central Controller and SmartAnthill Device are considered as “packet chains”, when one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever Yocto VM issues a packet to an underlying protocol, it needs to specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication. See "SmartAnthill Protocol Stack" document for more details on "packet chains".
+In SACP (and in Yocto VM as an implementation of SACP), all interactions between SmartAnthill Central Controller and SmartAnthill Device are considered as “packet chains”, when one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever Yocto VM issues a packet to an underlying protocol, it needs to specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication. See 
+:ref:`saprotostack` document for more details on "packet chains".
 
 Yocto VM Instructions
 ---------------------
@@ -435,7 +441,8 @@ Yocto VM-Medium adds support for registers, call stack, and parallel execution.
 
 where YOCTOVM_OP_PARALLEL is 1-byte opcode, N-PSEUDO-THREADS is a number of "pseudo-threads" requested, 'PSEUDO-THREAD-X-INSTRUCTIONS-SIZE' is Encoded-Size size of PSEUDO-THREAD-X-INSTRUCTIONS, and PSEUDO-THREAD-X-INSTRUCTIONS is a sequence of Yocto VM commands which belong to the pseudo-thread #X. Within PSEUDO-THREAD-X-INSTRUCTIONS, all commands of Yocto VM are allowed, with an exception of PARALLEL, EXIT and any jump instruction which leads outside of the current pseudo-thread.
 
-PARALLEL instruction starts processing of several pseudo-threads. PARALLEL instruction is considered completed when all the pseudo-threads reach the end of their respective instructions. Normally, it is implemented via state machines (see "SmartAnthill Reference Implementation - MCU Software Architecture" document for details), so it is functionally equivalent to "green threads" (and not to "native threads").
+PARALLEL instruction starts processing of several pseudo-threads. PARALLEL instruction is considered completed when all the pseudo-threads reach the end of their respective instructions. Normally, it is implemented via state machines (see 
+:ref:`sarefimplmcusoftarch` document for details), so it is functionally equivalent to "green threads" (and not to "native threads").
 
 When PARALLEL instruction execution is started, original "reply buffer" is "frozen" and cannot be accessed by any of the pseudo-threads; each pseudo-thread has it's own "reply buffer" which is empty at the beginning of the pseudo-thread execution. After PARALLEL instruction is completed (i.e. all pseudo-threads have been terminated), the original "reply buffer" which existed before PARALLEL instruction has started, is restored, and all the pseudo-thread "reply buffers" which existed right before after respective pseudo-threads are terminated, are added to the end of the original "reply buffer"; this allows to have instructions such as EXEC and PUSHREPLY within the pseudo-threads; this adding of pseudo-thread "reply buffers" to the end of original "reply buffer" always happens in order of pseudo-thread descriptions within the PARALLEL instruction (and is therefore does *not* depend on the race conditions between different pseudo-threads).
 
@@ -455,7 +462,8 @@ Implementation notes
 To implement Yocto VM-Medium, in addition to PC, reply-offset-stack, and expression stack as required by Yocto VM-Small, the following changes need to be made:
 
 * PC for each pseudo-threads needs to be maintained; maximum number of pseudo-threads is a YOCTOVM_MAX_PSEUDOTHREADS parameter of Yocto VM-Medium (which is stored in SmartAnthill DB on SmartAnthill Central Controller).
-* expression stack needs to be replaced with an array of expression stacks (to accommodate PARALLEL instruction); in practice, it is normally implemented by extending expression stack (say, doubling it) and keeping track of sub-expression stacks via array of offsets (with size of YOCTOVM_MAX_PSEUDOTHREADS) within the expression stack. See "SmartAnthill Reference Implementation - MCU Software Architecture" document for details.
+* expression stack needs to be replaced with an array of expression stacks (to accommodate PARALLEL instruction); in practice, it is normally implemented by extending expression stack (say, doubling it) and keeping track of sub-expression stacks via array of offsets (with size of YOCTOVM_MAX_PSEUDOTHREADS) within the expression stack. See 
+  :ref:`sarefimplmcusoftarch` document for details.
 * to support replies being pushed to "reply buffer" in parallel, an additional array of 2-byte offsets of current replies needs to be maintained, with a size of YOCTOVM_MAX_PSEUDOTHREADS.
 
 Memory overhead

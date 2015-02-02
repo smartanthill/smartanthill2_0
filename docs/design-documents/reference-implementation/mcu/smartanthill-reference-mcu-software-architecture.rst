@@ -22,10 +22,10 @@
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE
 
-.. _sasoftarch:
+.. _sarefimplmcusoftarch:
 
-MCU Software Architecture
-=========================
+SmartAnthill Reference Implementation: MCU Software Architecture
+================================================================
 
 :Version:   v0.2.3a
 
@@ -45,7 +45,9 @@ Assumptions (=mother of all screw-ups)
 4. This limit is usually per-writing-location and EEPROM writings are done with some granularity which is less than whole EEPROM size. One expected granularity size is 32 bits-per-write; if EEPROM on MCU has such a granularity, it means that even we're writing one byte, we're actually writing 4 bytes (and reducing the number of available writes for all 4 bytes).
 5. There are MCUs out there which allow to switch to “sleep” mode
 6. During such “MCU sleep”, RAM may or may not be preserved (NB: if RAM is preserved, it usually means higher energy consumption)
-7. During such “MCU sleep”, receiver may or may not be turned off (NB: this issue is addressed in detail in "SmartAnthill Protocol Stack" and "SAGDP" documents).
+7. During such “MCU sleep”, receiver may or may not be turned off (NB: this issue is addressed in detail in 
+   :ref:`saprotostack` and 
+   :ref:`sagdp` documents).
 
 Layers and Libraries
 --------------------
@@ -76,7 +78,8 @@ SmartAnthill on MCU is implemented as a "main loop", which calls different funct
 * NB: all calls of protocol handlers (both “receiving” and “sending”) are made right from the program “main loop” (and not one protocol handler calling another one), to reduce stack usage.
 * after protocol handler has processed the data, it returns to “main loop”. Now previous src is not needed anymore, so "main loop" can and should **memmove()** dst to the beginning of “command buffer”, discarding src and freeing space in "command buffer" for future processing.
 * after such **memmove()** is done, we have current packet (as processed by previous protocol handler) at the beginning of “command buffer”, so we can repeat the process of calling the “receiving” “protocol handler” (such as SAGDP, and then Yocto VM).
-* when Yocto VM is called (it has prototype **yocto_vm(const void\* src,uint16 src_size,void\* dst, uint16\* dst_size,WaitingFor\* waiting_for);**; *WaitingFor* structure is described in detail in 'Asynchronous Returns' subsection below), it starts parsing the command buffer and execute commands. Whenever Yocto VM encounters an EXEC command (see "Yocto VM" document for details), Yocto VM calls an appropriate plugin handler, with the following prototype: **plugin_handler(const void\* plugin_config, void\* plugin_state, const void\* cmd, uint16 cmd_size, REPLY_HANDLE reply, WaitingFor\* waiting_for)**, passing pointer to plugin data as a cmd and creating *REPLY_HANDLE reply* out of it's own *dst*. See details on REPLY_HANDLE in 'Plugin API' section below. After plugin_handler returns, Yocto VM makes sure that it's own *dst* is incremented by a size of the accumulated reply. This ensures proper and easy forming of "reply buffer" as required by Yocto VM specification.
+* when Yocto VM is called (it has prototype **yocto_vm(const void\* src,uint16 src_size,void\* dst, uint16\* dst_size,WaitingFor\* waiting_for);**; *WaitingFor* structure is described in detail in 'Asynchronous Returns' subsection below), it starts parsing the command buffer and execute commands. Whenever Yocto VM encounters an EXEC command (see 
+  :ref:`sayoctovm` document for details), Yocto VM calls an appropriate plugin handler, with the following prototype: **plugin_handler(const void\* plugin_config, void\* plugin_state, const void\* cmd, uint16 cmd_size, REPLY_HANDLE reply, WaitingFor\* waiting_for)**, passing pointer to plugin data as a cmd and creating *REPLY_HANDLE reply* out of it's own *dst*. See details on REPLY_HANDLE in 'Plugin API' section below. After plugin_handler returns, Yocto VM makes sure that it's own *dst* is incremented by a size of the accumulated reply. This ensures proper and easy forming of "reply buffer" as required by Yocto VM specification.
 * after the Yocto VM has processed the data, “main loop” doesn't need the command anymore, so it can again **memmove()** "reply buffer" (returned at *dst* location by Yocto VM) to the beginning of “command buffer” and call SAGDP “sending” protocol handler.
 * after “sending” protocol handler returns, “main loop” may and should **memmove()** reply of the “sending” protocol handler to the beginning of the “command buffer” and continue calling the “sending” protocol handlers (and memmove()-ing data to the beginning of the “command buffer”) until the last protocol handler is called; at this point, data is prepared for feeding to the physical channel.
 * at this point, "main loop" may and should call [TODO] function (which belongs to device-specific library) to pass data back to the physical layer.

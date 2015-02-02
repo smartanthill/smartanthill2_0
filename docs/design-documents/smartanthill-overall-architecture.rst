@@ -160,5 +160,6 @@ Mass-market devices are expected to be shipped in already programmed state, with
 
 III.4 SmartAnthill protocol stack
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-SmartAnthill protocol stack is described in detail in a separate document, "SmartAnthill Protocol Stack".
+SmartAnthill protocol stack is described in detail in a separate document, 
+:ref:`saprotostack` .
 
