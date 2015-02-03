@@ -27,7 +27,7 @@
 SmartAnthill Reference Implementation: MCU Software Architecture
 ================================================================
 
-:Version:   v0.2.3a
+:Version:   v0.2.3b
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *document, please make sure to read it before proceeding.*
@@ -175,7 +175,7 @@ Ideally, plugins SHOULD also be implemented as state machines, for example:
     }
     }
 
-Such an approach allows Yocto VM to perform proper pausing (with ability for Central Controller to interrupt processing by sending a new command while it didn't receive an answer to the previous one) when long waits are needed. It also enables parallel processing of the plugins (TODO: PARALLEL instruction for Yocto VM).
+Such an approach allows Yocto VM to perform proper pausing (with ability for SmartAnthill Client to interrupt processing by sending a new command while it didn't receive an answer to the previous one) when long waits are needed. It also enables parallel processing of the plugins (TODO: PARALLEL instruction for Yocto VM).
 
 However, for some plugins (simple ones without waiting at all, or if we're too lazy to write proper state machine), we can use 'dummy state machine', with *MyPluginState* being NULL and unused, and **plugin_handler()** not taking into account any states at all.
 

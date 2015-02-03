@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2
+:Version:   v0.2a
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *document, please make sure to read it before proceeding.*
@@ -40,9 +40,9 @@ SmartAnthill protocol stack is intended to provide communication services betwee
 Actors
 ------
 
-In SmartAnthill architecture, there are three distinct entities:
+In SmartAnthill Protocol Stack, there are three distinct actors:
 
-* **SmartAnthill Client**. Whoever needs to control SmartAnthill Device(s). SmartAnthill Clients are usually implemented by SmartAnthill Central Controllers (which normally reside on the same physical machines as SmartAnthill Routers), but this is not strictly required, and is not the case in some topologies (such as distributed SmartAnthill network as shown on TODO).
+* **SmartAnthill Client**. Whoever needs to control SmartAnthill Device(s). SmartAnthill Clients are usually implemented by SmartAnthill Central Controllers, though this is not strictly required. 
 * **SmartAnthill Router**. SmartAnthill Router allows to control SmartAnthill Devices connected to it. Performs conversion between SAoIP and SADLP-* protocols (see below).
 * **SmartAnthill Device**. Physical device (containing sensor(s) and/or actuator(s)), which implements at least some parts of SmartAnthill protocol stack. SmartAnthill Devices can be further separated into:
 

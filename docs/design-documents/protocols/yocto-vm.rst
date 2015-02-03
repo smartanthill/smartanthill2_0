@@ -27,13 +27,13 @@
 Yocto VM
 ========
 
-:Version:   v0.1.5b
+:Version:   v0.1.6
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
 :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
-Yocto VM is a minimalistic virtual machine used by SmartAnthill Devices. It implements SACP (SmartAnthill Control Protocol) on the side of the SmartAnthill Device (and SACP corresponds to Layer 7 of OSI/ISO network model). By design, Yocto VM is intended to run on devices with extremely limited resources (as little as 512 bytes of RAM).
+Yocto VM is a minimalistic virtual machine used by SmartAnthill Devices. It implements SACCP (SmartAnthill Command&Control Protocol) on the side of the SmartAnthill Device (and SACCP corresponds to Layer 7 of OSI/ISO network model). By design, Yocto VM is intended to run on devices with extremely limited resources (as little as 512 bytes of RAM).
 
 .. contents::
 
@@ -62,7 +62,7 @@ While Yocto VM itself indeed uses ridiculously low amount of RAM, a developer ne
 Yocto VM Restrictions
 ---------------------
 
-As Yocto VM implements an “Execution Layer” of SACP, it needs to implement all  “Execution Layer Restrictions” set in 
+As Yocto VM implements an “Execution Layer” of SACCP, it needs to implement all  “Execution Layer Restrictions” set in 
 :ref:`saccp` document. While present document doesn't duplicate these restrictions, it aims to specify them in appropriate places (for example, when specific instructions are described).
 
 “Program Errors” as specified in Execution Layer Restrictions are implemented as YOCTOVM_PROGRAMERROR_* Yocto VM exceptions as described below.
@@ -70,7 +70,7 @@ As Yocto VM implements an “Execution Layer” of SACP, it needs to implement a
 Bodyparts and Plugins
 ---------------------
 
-According to a more general SmartAnthill architecture, each SmartAnthill Device (a.k.a. 'Ant') has one or more sensors and/or actuators, with each sensor or actuator known as an 'ant body part'. Each 'body part' is assigned it's own id, which is stored in 'SmartAnthill Database' within SmartAnthill Central Controller.
+According to a more general SmartAnthill architecture, each SmartAnthill Device (a.k.a. 'Ant') has one or more sensors and/or actuators, with each sensor or actuator known as an 'ant body part'. Each 'body part' is assigned it's own id, which is stored in 'SmartAnthill Database' within SmartAnthill Client (which in turn is usually implemented by SmartAnthill Central Controller).
 For each body part type, there is a 'plugin' (so if there are body parts of the same type in the device, number of plugins can be smaller than number of body parts). Plugins are pieces of code which are written in C language and programmed into MCU of SmartAnthill device.
 
 Structure of Plugin Data and Error Codes
@@ -83,7 +83,7 @@ Error code == 255 is reserved for Yocto VM exceptions (see below) and SHOULD NOT
 Packet Chains
 -------------
 
-In SACP (and in Yocto VM as an implementation of SACP), all interactions between SmartAnthill Central Controller and SmartAnthill Device are considered as “packet chains”, when one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever Yocto VM issues a packet to an underlying protocol, it needs to specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication. See 
+In SACCP (and in Yocto VM as an implementation of SACCP), all interactions between SmartAnthill Client and SmartAnthill Device are considered as “packet chains”, when one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever Yocto VM issues a packet to an underlying protocol, it needs to specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication. See 
 :ref:`saprotostack` document for more details on "packet chains".
 
 Yocto VM Instructions
@@ -159,12 +159,12 @@ Currently, Yocto VM may issue the following exceptions:
 Yocto VM End of Execution
 -------------------------
 
-Yocto VM program exits when the sequence of instructions has ended. At this point, an equivalent of \|EXIT\|ISLAST\| is implicitly executed (see description of 'EXIT' instruction below); this causes “reply buffer” to be sent back to the SmartAnt Central Controller, with 'is-last' flag set. Alternatively, an “EXIT” command (see below) may end program execution; in this case, parameter to “EXIT” command specifies which flag is to be used.
+Yocto VM program exits when the sequence of instructions has ended. At this point, an equivalent of \|EXIT\|ISLAST\| is implicitly executed (see description of 'EXIT' instruction below); this causes “reply buffer” to be sent back to the SmartAnt Client, with 'is-last' flag set. Alternatively, an “EXIT” command (see below) may end program execution; in this case, parameter to “EXIT” command specifies which flag is to be used.
 
 Yocto VM Overriding Command
 ---------------------------
 
-If there is a new command incoming from SmartAnthill Central Controller, while Yocto VM is executing a current program, Yocto VM will (at the very first opportunity) automatically abort execution of the current program, and starts executing the new one. This behaviour is consistent with the concept of “SmartAnthill Central Controller always knows better” which is used throughout the SmartAnthill protocol stack. Such command may be used, for example, by SmartAnthill Central Controller to abort execution of a long-running request and ask SmartAnthill Device to do something else.
+If there is a new command incoming from SmartAnthill Client, while Yocto VM is executing a current program, Yocto VM will (at the very first opportunity) automatically abort execution of the current program, and starts executing the new one. This behaviour is consistent with the concept of “SmartAnthill Client always knows better” which is used throughout the SmartAnthill protocol stack. Such command may be used, for example, by SmartAnthill Client to abort execution of a long-running request and ask SmartAnthill Device to do something else.
 
 Yocto VM Encoded-Size
 ---------------------
@@ -304,7 +304,7 @@ POPREPLIES instruction removes last N-REPLIES of plugins from the reply buffer. 
 Implementation notes
 ''''''''''''''''''''
 
-To implement Yocto VM-Tiny, in addition to PC required by Yocto VM-One, a stack of offsets which signify positions of recent replies in “reply buffer”, need to be maintained. Such stack should consist of an array of bytes for offsets, and additional byte to store number of entries on the stack. Size of this stack is a YOCTOVM_REPLY_STACK_SIZE parameter of Yocto VM-Tiny (which is stored in SmartAnthill DB on SmartAnthill Central Controller).
+To implement Yocto VM-Tiny, in addition to PC required by Yocto VM-One, a stack of offsets which signify positions of recent replies in “reply buffer”, need to be maintained. Such stack should consist of an array of bytes for offsets, and additional byte to store number of entries on the stack. Size of this stack is a YOCTOVM_REPLY_STACK_SIZE parameter of Yocto VM-Tiny (which is stored in SmartAnthill DB on SmartAnthill Client).
 
 Memory overhead
 '''''''''''''''
@@ -425,7 +425,7 @@ JMPIFEXPR_NOPOP instruction is useful for organizing loops based on a value stor
 Implementation notes
 ''''''''''''''''''''
 
-To implement Yocto VM-Small, in addition to PC and reply-offset-stack required by Yocto VM-Tiny, an expression stack of 16-bit values, need to be maintained. Such stack should consist of an array of 16-bit values, and additional byte to store number of entries on the stack. Size of this stack is a YOCTOVM_EXPR_STACK_SIZE parameter of Yocto VM-Small (which is stored in SmartAnthill DB on SmartAnthill Central Controller).
+To implement Yocto VM-Small, in addition to PC and reply-offset-stack required by Yocto VM-Tiny, an expression stack of 16-bit values, need to be maintained. Such stack should consist of an array of 16-bit values, and additional byte to store number of entries on the stack. Size of this stack is a YOCTOVM_EXPR_STACK_SIZE parameter of Yocto VM-Small (which is stored in SmartAnthill DB on SmartAnthill Client).
 
 Memory overhead
 '''''''''''''''
@@ -461,7 +461,7 @@ Implementation notes
 
 To implement Yocto VM-Medium, in addition to PC, reply-offset-stack, and expression stack as required by Yocto VM-Small, the following changes need to be made:
 
-* PC for each pseudo-threads needs to be maintained; maximum number of pseudo-threads is a YOCTOVM_MAX_PSEUDOTHREADS parameter of Yocto VM-Medium (which is stored in SmartAnthill DB on SmartAnthill Central Controller).
+* PC for each pseudo-threads needs to be maintained; maximum number of pseudo-threads is a YOCTOVM_MAX_PSEUDOTHREADS parameter of Yocto VM-Medium (which is stored in SmartAnthill DB on SmartAnthill Client).
 * expression stack needs to be replaced with an array of expression stacks (to accommodate PARALLEL instruction); in practice, it is normally implemented by extending expression stack (say, doubling it) and keeping track of sub-expression stacks via array of offsets (with size of YOCTOVM_MAX_PSEUDOTHREADS) within the expression stack. See 
   :ref:`sarefimplmcusoftarch` document for details.
 * to support replies being pushed to "reply buffer" in parallel, an additional array of 2-byte offsets of current replies needs to be maintained, with a size of YOCTOVM_MAX_PSEUDOTHREADS.
