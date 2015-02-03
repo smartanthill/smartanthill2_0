@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2b
+:Version:   v0.2.1
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *document, please make sure to read it before proceeding.*
@@ -52,7 +52,7 @@ In SmartAnthill Protocol Stack, there are three distinct actors:
 Addressing
 ----------
 
-In SmartAnthill, each SmartAnthill Device is assigned it's own address, which is a pair (IPv6 address,port number). It allows to have either one IP address per device, or to have multiple devices per IP address as necessary and/or convenient.
+In SmartAnthill, each SmartAnthill Device (whether Simple Device or IP-enabled device) is assigned it's own address, which is a triplet (IPv6-address,SAoIP-subprotocol,port-number). It allows to have either one IP address per device, or to have multiple devices per IP address as necessary and/or convenient. Currently supported SAoIP-subprotocols are: UDP, TCP, TLSoTCP (with port-number being UDP port number for UDP subprotocol, and TCP port number for TCP and TLSoTCP subprotocols). TODO: ref to SAoIP document. For SmartAnthill Simple Devices, this SA 'triplet' address is translated into L2 bus-specific address by SmartAnthill Router.
 
 Relation between SmartAnthill protocol stack and OSI/ISO network model
 ----------------------------------------------------------------------
@@ -100,7 +100,7 @@ SmartAnthill protocol stack consists of the following protocols:
 
 * **SASP** – SmartAnthill Security Protocol. Due to several considerations (including resource constraints) SmartAnthill protocol stack implements security on a layer right below SAGDP, so SASP essentially belongs to Layer 5 of OSI/ISO network model.
 
-* **SAoIP** – SmartAnthill over IP Protocol. Lies right on top of TLS, TCP or UDP. SAoIP is not implemented on SmartAnthill Simple Devices, and all the SAoIP headers are stripped by SmartAnthill Router before passing the data to SmartAnthill Simple Device.
+* **SAoIP** – SmartAnthill over IP Protocol. Lies right on top of TLS, TCP or UDP. SAoIP is not implemented on SmartAnthill Simple Devices, and all the SAoIP headers are stripped (and replaced with L2 headers) by SmartAnthill Router before passing the data to SmartAnthill Simple Device.
 
 * **SADLP-\*** – SmartAnthill DataLink Protocol family. Belongs to Layer 2 of OSI/ISO network model. SADLP-* is specific to an underlying transfer technology (so for CAN bus SADLP-CAN is used, for IEEE 802.15.4 SADLP-IEEE802.15.4 is used). SADLP-* handles fragmentation if necessary and provides non-guaranteed packet transfer.
 
