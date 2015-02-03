@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2a
+:Version:   v0.2b
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *document, please make sure to read it before proceeding.*
@@ -153,8 +153,8 @@ It is somewhat unusual to have encryption layer (SASP) "below" transport/session
 
 * rely that all the packets reaching SAGDP layer, are already authenticated; this allows (at the cost of the authenticating potentially malicious packets) to:
 
-  + avoid attacks such as sending RST to disrupt logical connection
+  + avoid attacks such as malicious RST sent to disrupt logical connection (TODO: check)
   + avoid attacks similar to "SYN flood" attacks
 
-* allows to implement "Trusted Router" nodes in a simple manner (without implementing SAGDP on the router).
+* implement "Trusted Router" nodes in a simple manner (without implementing SAGDP on the router).
 
