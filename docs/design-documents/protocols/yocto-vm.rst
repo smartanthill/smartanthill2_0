@@ -27,7 +27,7 @@
 Yocto VM
 ========
 
-:Version:   v0.1.6
+:Version:   v0.1.7
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -86,6 +86,12 @@ Packet Chains
 In SACCP (and in Yocto VM as an implementation of SACCP), all interactions between SmartAnthill Client and SmartAnthill Device are considered as “packet chains”, when one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever Yocto VM issues a packet to an underlying protocol, it needs to specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication. See 
 :ref:`saprotostack` document for more details on "packet chains".
 
+Device Capabilities
+-------------------
+
+As an implementation of SACCP on SmartAnthill Device side, Yocto VM is responsible for parsing and replying to SACCP 'Device Capabilities' request as described in
+:ref:`saccp` document.
+
 Yocto VM Instructions
 ---------------------
 
@@ -100,6 +106,7 @@ Notation
 Yocto VM Opcodes
 ^^^^^^^^^^^^^^^^
 
+* YOCTOVM_OP_DEVICECAPS
 * YOCTOVM_OP_EXEC
 * YOCTOVM_OP_PUSHREPLY
 * YOCTOVM_OP_SLEEP
@@ -201,10 +208,47 @@ Level One
 
 YoctoVM-One is the absolute minimum implementation of Yocto-VM, which allows to execute only a linear sequence of commands, at the cost of additional RAM needed being 1 byte. YoctoVM-One supports the following instructions:
 
+**\| YOCTOVM_OP_DEVICECAPS \| MAXIMUM-REPLY-SIZE \|**
+
+where YOCTOVM_OP_DEVICECAPS is 1-byte opcode, and MAXIMUM-REPLY-SIZE is a 1-byte field.
+
+DEVICECAPS instruction pushes Device-Capabilities-Reply to "reply buffer". Usually DEVICECAPS instruction is the only instruction in the program (this allows to provide guarantees on the maximum reply size).
+
+Device-Capabilities-Reply MUST be at most of the *maximum-devicecaps-size = min(MAXIMUM-REPLY-SIZE,CurrentDeviceCapabilities.SACCP_EXTENDED_GUARANTEED_PAYLOAD)* size; this is necessary to ensure that it safely passes all the SmartAnthill Protocols (see 
+:ref:`saprotostack` document for details). *maximum-devicecaps-size* MUST be >= 8 and <= 384.
+
+Device-Capabilities-Reply is defined as follows:
+
+**\| Basic-Device-Capabilities \| Extended-Device-Capabilities \|**
+
+where Basic-Device-Capabilities is restricted to 8 bytes:
+
+**\| SACCP_BASIC_GUARANTEED_PAYLOAD \| <YOCTOVM_LEVEL>, <YOCTOVM_BASIC_REPLY_STACK_SIZE> \| YOCTOVM_BASIC_EXPR_STACK_SIZE \| <YOCTOVM_BASIC_MAX_PSEUDOTHREADS>, <RESERVED-4-BITS> \| RESERVED-4-BYTES \|**
+
+and Extended-Device-Capabilities extends beyond 8 bytes to provide more information; Extended-Device-Capabilities MUST be cut on field boundaries as necessary to fit *maximum-devicecaps-size*:
+
+**\| SACCP_EXTENDED_GUARANTEED_PAYLOAD \| YOCTOVM_EXTENDED_REPLY_STACK_SIZE \| YOCTOVM_EXTENDED_MAX_PSEUDOTHREADS \|**
+
+Here:
+
+* SACCP_BASIC_GUARANTEED_PAYLOAD is a 1-byte field specifying guaranteed size of SACCP payload which is supported by current device (taking into account capabilities of it's L2 protocol, see 
+  :ref:`saprotostack` document for details). If SACCP guaranteed payload of the device is more than 255 bytes, then SACCP_GUARANTEED_PAYLOAD MUST be set to 255, and SACCP_EXTENDED_GUARANTEED_PAYLOAD SHOULD be set to real value of the SACCP guaranteed payload.
+* <YOCTOVM_LEVEL> is a 3-bit bitfield, specifying Yocto VM Level supported
+* <YOCTOVM_BASIC_REPLY_STACK_SIZE> is a 5-bit bitfield, equal to YOCTOVM_REPLY_STACK_SIZE (see below for details). If YOCTOVM_REPLY_STACK_SIZE is more than 31, then <YOCTOVM_BASIC_REPLY_STACK_SIZE> MUST be set to 31, and real YOCTOVM_REPLY_STACK_SIZE SHOULD be reported in YOCTOVM_EXTENDED_REPLY_STACK_SIZE field.
+* YOCTOVM_BASIC_EXPR_STACK_SIZE is a 1-byte field, equal to YOCTOVM_EXPR_STACK_SIZE (see below for details). If YOCTOVM_EXPR_STACK_SIZE is more than 255, then YOCTOVM_BASIC_EXPR_STACK_SIZE MUST be set to 255, and real YOCTOVM_EXPR_STACK_SIZE SHOULD be reported in YOCTOVM_EXTENDED_EXPR_STACK_SIZE field.
+* <YOCTOVM_BASIC_MAX_PSEUDOTHREADS> is a 4-bit bitfield, equal to YOCTOVM_MAX_PSEUDOTHREADS (see below for details). If YOCTOVM_MAX_PSEUDOTHREADS is more than 15, then <YOCTOVM_BASIC_MAX_PSEUDOTHREADS> MUST be set to 15, and real YOCTOVM_MAX_PSEUDOTHREADS SHOULD be reported in YOCTOVM_EXTENDED_MAX_PSEUDOTHREADS field.
+* <RESERVED-\*-BITS> and <RESERVED-\*-BYTES> fields are reserved for future use and MUST be set to 0.
+* SACCP_EXTENDED_GUARANTEED_PAYLOAD is a 2-byte field specifying guaranteed size of SACCP payload which is supported by current device (see SACCP_GUARANTEED_PAYLOAD above for details; unlike SACCP_GUARANTEED_PAYLOAD, SACCP_EXTENDED_GUARANTEED_PAYLOAD is capped at 65535 rather than at 255). SACCP_EXTENDED_GUARANTEED_PAYLOAD field MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
+* YOCTOVM_EXTENDED_REPLY_STACK_SIZE is a 2-byte field specifying YOCTOVM_REPLY_STACK_SIZE (unlike <YOCTOVM_BASIC_REPLY_STACK_SIZE> bitfield, YOCTOVM_EXTENDED_REPLY_STACK_SIZE is capped at 65535 rather than at 31). YOCTOVM_EXTENDED_REPLY_STACK_SIZE MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
+* YOCTOVM_EXTENDED_EXPR_STACK_SIZE is a 2-byte field specifying YOCTOVM_EXPR_STACK_SIZE (unlike YOCTOVM_BASIC_EXPR_STACK_SIZE field, YOCTOVM_EXTENDED_EXPR_STACK_SIZE is capped at 65535 rather than at 255). YOCTOVM_EXTENDED_EXPR_STACK_SIZE field MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
+* YOCTOVM_EXTENDED_MAX_PSEUDOTHREADS is a 2-byte field specifying YOCTOVM_MAX_PSEUDOTHREADS (unlike YOCTOVM_BASIC_MAX_PSEUDOTHREADS field, YOCTOVM_EXTENDED_MAX_PSEUDOTHREADS is capped at 65535 rather than at 15). YOCTOVM_EXTENDED_MAX_PSEUDOTHREADS field MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
+
+
 **\| YOCTOVM_OP_EXEC \| BODYPART-ID \| DATA-SIZE \| DATA \|**
 
 where YOCTOVM_OP_EXEC is 1-byte opcode, BODYPART-ID is 1-byte id of the bodypart to be used, DATA-SIZE is an Encoded-Size length of DATA field, and DATA in an opaque data to be passed to the plugin associated with body part identified by BODYPART-ID; DATA field has size DATA-SIZE.
 EXEC instruction invokes a plug-in which corresponds to BODYPART-ID, and passes DATA of DATA-SIZE  size to this plug-in. Plug-in always adds a reply to the reply-buffer; reply size may vary, but MUST be at least 1 byte in length; otherwise it is a YOCTOVM_PLUGINERROR exception.
+
 
 **\| YOCTOVM_OP_PUSHREPLY \| DATA-SIZE \| DATA \|**
 
@@ -304,7 +348,7 @@ POPREPLIES instruction removes last N-REPLIES of plugins from the reply buffer. 
 Implementation notes
 ''''''''''''''''''''
 
-To implement Yocto VM-Tiny, in addition to PC required by Yocto VM-One, a stack of offsets which signify positions of recent replies in “reply buffer”, need to be maintained. Such stack should consist of an array of bytes for offsets, and additional byte to store number of entries on the stack. Size of this stack is a YOCTOVM_REPLY_STACK_SIZE parameter of Yocto VM-Tiny (which is stored in SmartAnthill DB on SmartAnthill Client).
+To implement Yocto VM-Tiny, in addition to PC required by Yocto VM-One, a stack of offsets which signify positions of recent replies in “reply buffer”, need to be maintained. Such stack should consist of an array of bytes for offsets, and additional byte to store number of entries on the stack. Size of this stack is a YOCTOVM_REPLY_STACK_SIZE parameter of Yocto VM-Tiny (which is stored in SmartAnthill DB on SmartAnthill Client and reported via "Device Capabilities" request).
 
 Memory overhead
 '''''''''''''''
@@ -425,7 +469,7 @@ JMPIFEXPR_NOPOP instruction is useful for organizing loops based on a value stor
 Implementation notes
 ''''''''''''''''''''
 
-To implement Yocto VM-Small, in addition to PC and reply-offset-stack required by Yocto VM-Tiny, an expression stack of 16-bit values, need to be maintained. Such stack should consist of an array of 16-bit values, and additional byte to store number of entries on the stack. Size of this stack is a YOCTOVM_EXPR_STACK_SIZE parameter of Yocto VM-Small (which is stored in SmartAnthill DB on SmartAnthill Client).
+To implement Yocto VM-Small, in addition to PC and reply-offset-stack required by Yocto VM-Tiny, an expression stack of 16-bit values, need to be maintained. Such stack should consist of an array of 16-bit values, and additional byte to store number of entries on the stack. Size of this stack is a YOCTOVM_EXPR_STACK_SIZE parameter of Yocto VM-Small (which is stored in SmartAnthill DB on SmartAnthill Client and reported via "Device Capabilities" request).
 
 Memory overhead
 '''''''''''''''
@@ -461,7 +505,7 @@ Implementation notes
 
 To implement Yocto VM-Medium, in addition to PC, reply-offset-stack, and expression stack as required by Yocto VM-Small, the following changes need to be made:
 
-* PC for each pseudo-threads needs to be maintained; maximum number of pseudo-threads is a YOCTOVM_MAX_PSEUDOTHREADS parameter of Yocto VM-Medium (which is stored in SmartAnthill DB on SmartAnthill Client).
+* PC for each pseudo-threads needs to be maintained; maximum number of pseudo-threads is a YOCTOVM_MAX_PSEUDOTHREADS parameter of Yocto VM-Medium (which is stored in SmartAnthill DB on SmartAnthill Client and reported via "Device Capabilities" request).
 * expression stack needs to be replaced with an array of expression stacks (to accommodate PARALLEL instruction); in practice, it is normally implemented by extending expression stack (say, doubling it) and keeping track of sub-expression stacks via array of offsets (with size of YOCTOVM_MAX_PSEUDOTHREADS) within the expression stack. See 
   :ref:`sarefimplmcusoftarch` document for details.
 * to support replies being pushed to "reply buffer" in parallel, an additional array of 2-byte offsets of current replies needs to be maintained, with a size of YOCTOVM_MAX_PSEUDOTHREADS.
@@ -481,13 +525,13 @@ Statistics for different Yocto-VM levels:
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
 |Level          |Opcodes Supported|Typical Parameter Values             |Amount of RAM used (with typical parameter values)|
 +===============+=================+=====================================+==================================================+
-|Yocto VM-One   | 7               |                                     | 1 to 2                                           |
+|Yocto VM-One   | 8               |                                     | 1 to 2                                           |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
-|Yocto VM-Tiny  | 11              |YOCTOVM_REPLY_STACK_SIZE=4 to 8      | (1 to 2)+(5 to 9) = 6 to 11                      |
+|Yocto VM-Tiny  | 12              |YOCTOVM_REPLY_STACK_SIZE=4 to 8      | (1 to 2)+(5 to 9) = 6 to 11                      |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
-|Yocto VM-Small | 27              |YOCTOVM_EXPR_STACK_SIZE=4 to 8       | (6 to 11)+(9 to 17) = 15 to 28                   |
+|Yocto VM-Small | 28              |YOCTOVM_EXPR_STACK_SIZE=4 to 8       | (6 to 11)+(9 to 17) = 15 to 28                   |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
-|Yocto VM-Medium| 28+TBD          |YOCTOVM_EXPR_STACK_SIZE=8 to 12      | TBD                                              |
+|Yocto VM-Medium| 29+TBD          |YOCTOVM_EXPR_STACK_SIZE=8 to 12      | TBD                                              |
 |               |                 |YOCTOVM_MAX_PSEUDOTHREADS=4 to 8     |                                                  |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
 

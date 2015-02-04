@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.1
+:Version:   v0.2.2
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *document, please make sure to read it before proceeding.*
@@ -43,7 +43,7 @@ Actors
 In SmartAnthill Protocol Stack, there are three distinct actors:
 
 * **SmartAnthill Client**. Whoever needs to control SmartAnthill Device(s). SmartAnthill Clients are usually implemented by SmartAnthill Central Controllers, though this is not strictly required. 
-* **SmartAnthill Router**. SmartAnthill Router allows to control SmartAnthill Devices connected to it. Performs conversion between SAoIP and SADLP-* protocols (see below).
+* **SmartAnthill Router**. SmartAnthill Router allows to control SmartAnthill Devices connected to it. Performs conversion between SAoIP and SADLP-\* protocols (see below).
 * **SmartAnthill Device**. Physical device (containing sensor(s) and/or actuator(s)), which implements at least some parts of SmartAnthill protocol stack. SmartAnthill Devices can be further separated into:
 
   + **SmartAnthill Simple Device**. SmartAnthill Device which is not powerful enough to run it's own SAoIP/IP stack. MUST be connected via SmartAnthill Router.
@@ -53,6 +53,7 @@ Addressing
 ----------
 
 In SmartAnthill, each SmartAnthill Device (whether Simple Device or IP-enabled device) is assigned it's own address, which is a triplet (IPv6-address,SAoIP-subprotocol,port-number). It allows to have either one IP address per device, or to have multiple devices per IP address as necessary and/or convenient. Currently supported SAoIP-subprotocols are: UDP, TCP, TLSoTCP (with port-number being UDP port number for UDP subprotocol, and TCP port number for TCP and TLSoTCP subprotocols). TODO: ref to SAoIP document. For SmartAnthill Simple Devices, this SA 'triplet' address is translated into L2 bus-specific address by SmartAnthill Router.
+
 
 Relation between SmartAnthill protocol stack and OSI/ISO network model
 ----------------------------------------------------------------------
@@ -82,7 +83,7 @@ Relation between SmartAnthill protocol stack and OSI/ISO network model
 | 3      | Network      | IP               | As usual for IP       | IP                   | IP                     | IP            |            |                        |
 |        |              |                  |                       |                      |                        |               |            |                        |
 +--------+--------------+------------------+-----------------------+----------------------+------------------------+---------------+------------+------------------------+
-| 2      | Datalink     | SADLP-*          | Intra-bus addressing, | -- (standard network | -- (standard network   | -- (std netwk | SADLP-*    | SADLP-*                |
+| 2      | Datalink     | SADLP-\*         | Intra-bus addressing, | -- (standard network | -- (standard network   | -- (std netwk | SADLP-*    | SADLP-*                |
 |        |              |                  | Fragmentation         | capabilities)        | capabilities)          | capabilities) |            |                        |
 |        |              |                  | (if applicable)       |                      |                        |               |            |                        |
 +--------+--------------+------------------+-----------------------+----------------------+------------------------+---------------+------------+------------------------+
@@ -90,7 +91,7 @@ Relation between SmartAnthill protocol stack and OSI/ISO network model
 |        |              |                  |                       | capabilities)        | capabilities)          | capabilities) |            |                        |
 +--------+--------------+------------------+-----------------------+----------------------+------------------------+---------------+------------+------------------------+
 
-.. [1] For Simple SmartAnthill Devices, SAoIP is translated into SADLP-* by the SmartAnthill Router (the one which directly controls the SmartAnthill Device). It can (and SHOULD) be done in a completely transparent manner, so that SmartAnthill Client SHOULD be able to communicate with SmartAnthill Device in exactly the same manner regardless of SmartAnthill Device being IP-enabled Device or Simple Device.
+.. [1] For Simple SmartAnthill Devices, SAoIP is translated into SADLP-\* by the SmartAnthill Router (the one which directly controls the SmartAnthill Device). It can (and SHOULD) be done in a completely transparent manner, so that SmartAnthill Client SHOULD be able to communicate with SmartAnthill Device in exactly the same manner regardless of SmartAnthill Device being IP-enabled Device or Simple Device.
 
 SmartAnthill protocol stack consists of the following protocols:
 
@@ -102,7 +103,7 @@ SmartAnthill protocol stack consists of the following protocols:
 
 * **SAoIP** – SmartAnthill over IP Protocol. Lies right on top of TLS, TCP or UDP. SAoIP is not implemented on SmartAnthill Simple Devices, and all the SAoIP headers are stripped (and replaced with L2 headers) by SmartAnthill Router before passing the data to SmartAnthill Simple Device.
 
-* **SADLP-\*** – SmartAnthill DataLink Protocol family. Belongs to Layer 2 of OSI/ISO network model. SADLP-* is specific to an underlying transfer technology (so for CAN bus SADLP-CAN is used, for IEEE 802.15.4 SADLP-IEEE802.15.4 is used). SADLP-* handles fragmentation if necessary and provides non-guaranteed packet transfer.
+* **SADLP-\*** – SmartAnthill DataLink Protocol family. Belongs to Layer 2 of OSI/ISO network model. SADLP-\* is specific to an underlying transfer technology (so for CAN bus SADLP-CAN is used, for IEEE 802.15.4 SADLP-IEEE802.15.4 is used). SADLP-\* handles fragmentation if necessary and provides non-guaranteed packet transfer.
 
 
 Error Handling Philosophy and Asymmetric Nature
@@ -137,6 +138,21 @@ Handling of these scenarios is explained in detail in respective documents (
 :ref:`saccp` and 
 :ref:`sagdp` ); as a result of such handling, one of the chains (the one coming from the SmartAnthill Device, according to "Central Controller is always right" principle described above), will be dropped pretty much as if it has never been started.
 
+Packet Size Guarantees, DEVICECAPS instruction, SACCP_GUARANTEED_PAYLOAD, and Fragmentation
+-------------------------------------------------------------------------------------------
+
+In SmartAnthill, SACCP MUST allow sending commands with at-least-8-bytes payload; all underlying protocols MUST support it (taking into account appropriate header sizes, so, for example, SASP MUST be able to pass at least 8_bytes+SACCP_headers+SAGDP_headers as payload). If Client needs to send a command which is larger than 8 bytes, it SHOULD obtain information about device capabilities, before doing it. Currently, SmartAnthill provides two ways to do it:
+
+* to obtain Device Capabilities information about SmartAnthill Device from SmartAnthill DB (see 
+  :ref:`saoverarch` document for details) at the time of SmartAnthill Device programming or "pairing". This method is currently beyond the scope of SmartAnthill Protocols (TODO: should we add it?).
+* to obtain Device Capabilities information via Yocto VM DEVICECAPS instruction (see
+  :ref:`sayoctovm` document for details). When Client doesn't have information about Device, it's SACCP request with Yocto VM's DEVICECAPS instruction MUST be <= 8 bytes in size; Yocto VM's SACCP  reply to a DEVICECAPS instruction MAY be larger than 8 bytes if it is specified in the instruction (and if is Device itself is capable of sending it).
+
+One of DeviceCapabilities fields is SACCP_GUARANTEED_PAYLOAD (which is conceptually similar to MTU from IP stack, but includes header sizes to provide information which is appropriate for Layer 7). When SmartAnthill Device fills in SACCP_GUARANTEED_PAYLOAD in response to Device Capabilities request, it MUST take into account capabilities of it's L1/L2 protocol; that is, if a SmartAnthill Device supports IEEE 802.15.4 and L2 protocol which doesn't perform packet fragmentation and re-assembly, then the Device won't be able to send/receive payloads which are roughly 80 bytes in size (exact size depends on headers and needs to be calculated depending on protocol specifics), and it MUST NOT report DeviceCapabilities.SACCP_GUARANTEED_PAYLOAD which is more than this amount.
+
+In SmartAnthill, fragmentation and re-assembly is a responsibility of SADLP-\* family of protocols. If implemented, it may allow device to increase reported (and sent/received) SACCP_GUARANTEED_PAYLOAD. 
+
+All SmartAnthill Protocols, except for SADLP-\*, MUST support SACCP payload sizes of at least 384 bytes. Therefore, after obtaining Device Capabilities for a SmartAnthill Device, SmartAnthill Client MAY calculate *min(DeviceCapabilities.SACCP_GUARANTEED_PAYLOAD,384)* to determine SACCP payload size which is guaranteed to be delivered to the Device. Alternatively, SmartAnthill MAY calculate *min(DeviceCapabilities.SACCP_GUARANTEED_PAYLOAD,Client_Side_SACCP_Payload)* for the same purpose (here Client_Side_SACCP_Payload will depend on SAoIP protocol in use).
 
 Layering remarks
 ----------------

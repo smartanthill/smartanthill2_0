@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.1.4
+:Version:   v0.1.5
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -98,13 +98,23 @@ SACCP Packets
 -------------
 
 SACCP packets are divided into SACCP command packets (from SmartAnthill Client to SmartAnthill Device) and SACCP reply packets (from SmartAnthill Device to SmartAnthill Client).
+
+
+SACCP Command Packets
+^^^^^^^^^^^^^^^^^^^^^
+
 SACCP command packets have the following structure:
 
 **\| Execution-Layer-Program \|**
 
+
+SACCP Reply Packets
+^^^^^^^^^^^^^^^^^^^^^
+
 SACCP reply packets have the following structure:
 
 **| Execution-Layer-Reply |**
+
 
 Device Pins SHOULD NOT be Addressed Directly within Execution-Layer-Program
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
