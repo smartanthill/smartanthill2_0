@@ -35,13 +35,27 @@ railway network model to an office-wide heating control and security system.
 As an open system, SmartAnthill can integrate together a wide range of devices
 beginning from embedded development boards and ending with off-the-shelf
 sensors and actuators. They can be connected via very different communication
-means - from wired (currently Serial and CAN bus, with Ethernet planned soon)
-to wireless (currently IEEE 802.15.4, with low-cost RF, ZigBee and WiFi planned
-soon).
+means - from wired (currently Serial, with CAN bus and Ethernet planned soon)
+to wireless (currently IEEE 802.15.4, with low-cost RF, Bluetooth Smart,
+ZigBee and WiFi planned soon).
 
-All SmartAnthill devices within a system are controlled from the one
-place (such as PC or credit-card sized computer Raspberry Pi, BeagleBoard or
+All SmartAnthill devices within a system are controlled from the one place
+(such as PC or credit-card sized computer Raspberry Pi, BeagleBoard or
 CubieBoard), with an optional access via Internet.
+
+From programming point of view, SmartAnthill provides a clear separation
+between microcontroller programming (such as "how to get temperature from this
+sensor") and system integration logic (such as "how we should heat this
+particular house to reduce the heating bill"). Microcontroller programming
+usually requires C/asm programming and C/asm programs are notoriously difficult
+to customize. SmartAnthill allows you to customise device with pre-defined
+capabilities via GUI and generate compatible firmware which will be flashed to
+device automatically. On the other hand, system integration logic needs to be
+highly customizable for needs and properties of specific house or office, but
+within SmartAnthill it can be done via rich suite of development instruments:
+Generic Protocols (HTTP, Sockets, WebSokets), High Level API (REST API)
+and SDK for popular languages, which allow for easy development and
+customization.
 
 Contents
 --------
@@ -51,13 +65,3 @@ Contents
 
     design-documents/index
     design-documents/reference-implementation/index
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
