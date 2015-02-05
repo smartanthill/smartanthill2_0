@@ -30,7 +30,7 @@ Protocols
 
     smartanthill-protocol-stack
     yocto-vm
-    sacp
+    saccp
     sagdp
     sasp
 
