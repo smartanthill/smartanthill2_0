@@ -27,7 +27,7 @@
 SmartAnthill Security Protocol (SASP)
 =====================================
 
-:Version:   v0.1b
+:Version:   v0.1c
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -203,8 +203,32 @@ A packet-based authentication is performed.
         * nonce VP is greater than NLW: a new packet is received: NLW is set to the value of nonce VP of the received packet; LRPS is set to packet signature; an HLP packet with payload of the received packet is passed to the higher level protocol with status "new".
 
 
+7. Payload Size and SASP Packet Size
+------------------------------------
 
-7. Implementation notes
+As SASP is using block cipher (AES128) with a block size of 128 bits (=16 bytes), and tag size is chosen as maximum 128 bits, it means that SASP packet size is always *(6+k\*16)*, where *k >= 2* (one block is needeed for data, another block is needed for tag). 
+
+The following table shows relations between SASP packet sizes and SASP payload [1]_:
+
++-------------------------+------------------------+
+| SASP packet size, bytes | SASP payload, bytes    |
++=========================+========================+
+| 38                      |  0-16                  |
++-------------------------+------------------------+
+| 54                      | 17-32                  |
++-------------------------+------------------------+
+| 70                      | 33-48                  |
++-------------------------+------------------------+
+| 86                      | 49-64                  |
++-------------------------+------------------------+
+| 102                     | 65-80                  |
++-------------------------+------------------------+
+| 118                     | 81-96                  |
++-------------------------+------------------------+
+
+.. [1] Note that *SASP payload* is not the same as, say, *SAGDP payload* or *SACCP payload*: for example, if SAGDP lies right on top of SASP, then *SAGDP_Payload = SASP_Payload - Size_of_SAGDP_Headers*.
+
+8. Implementation notes
 -----------------------
 
 When a packet with status "new" is received, it is important that an updated value of NLW be saved permanently before further message processing (and definitely, before responding to the message) to avoid using an obsolete value of NLW in case of restore from backup (and thus to avoid a potential for replay attacks). It should be noted that NFS does not require to be stored permanently, since if NFS becomes obsolete, it can be fixed by means of Error "Old Nonce" Message.
