@@ -29,43 +29,15 @@ SmartAnthill 2.0 Overall Architecture
 
 :Version:   v0.2
 
-**SmartAnthill** is an open IoT system which allows easy control over multiple
-microcontroller-powered devices, creating a home- or office-wide heterogeneous
-network out of these devices.
+**SmartAnthill** is an open IoT system which allows easy control over multiple microcontroller-powered devices, creating a home- or office-wide heterogeneous network out of these devices.
 
-SmartAnthill system can be pretty much anything: from a system to control
-railway network model to an office-wide heating control and security system.
-As an open system, SmartAnthill can integrate together a wide range of devices
-beginning from embedded development boards and ending with off-the-shelf
-sensors and actuators. They can be connected via very different communication
-means - from wired (currently Serial, with CAN bus and Ethernet planned soon)
-to wireless (currently IEEE 802.15.4, with low-cost RF, Bluetooth Smart,
-ZigBee and WiFi planned soon).
+SmartAnthill system can be pretty much anything: from a system to control railway network model to an office-wide heating control and security system.  As an open system, SmartAnthill can integrate together a wide range of devices beginning from embedded development boards and ending with off-the-shelf sensors and actuators. They can be connected via very different communication means - from wired (currently Serial, with CAN bus and Ethernet planned soon) to wireless (currently IEEE 802.15.4, with low-cost RF, Bluetooth Smart, ZigBee and WiFi planned soon).
 
-All SmartAnthill devices within a system are controlled from the one place
-(such as PC or credit-card sized computer Raspberry Pi, BeagleBoard or
-CubieBoard), with an optional access via Internet.
+All SmartAnthill devices within a system are controlled from the one place (such as PC or credit-card sized computer Raspberry Pi, BeagleBoard or CubieBoard), with an optional access via Internet.
 
-From programming point of view, SmartAnthill provides a clear separation
-between microcontroller programming (such as "how to get temperature from this
-sensor") and system integration logic (such as "how we should heat this
-particular house to reduce the heating bill"). Microcontroller programming
-usually requires C/asm programming and C/asm programs are notoriously difficult
-to customize. SmartAnthill allows you to customise device with pre-defined
-capabilities via GUI and generate compatible firmware which will be flashed to
-device automatically. On the other hand, system integration logic needs to be
-highly customizable for needs and properties of specific house or office, but
-within SmartAnthill it can be done via rich suite of development instruments:
-Generic Protocols (HTTP, Sockets, WebSokets), High Level API (REST API)
-and SDK for popular languages, which allow for easy development and
-customization.
+From programming point of view, SmartAnthill provides a clear separation between microcontroller programming (such as "how to get temperature from this sensor") and system integration logic (such as "how we should heat this particular house to reduce the heating bill"). Microcontroller programming usually requires C/asm programming and C/asm programs are notoriously difficult to customize. SmartAnthill allows you to customise device with pre-defined capabilities via GUI and generate compatible firmware which will be flashed to device automatically. On the other hand, system integration logic needs to be highly customizable for needs and properties of specific house or office, but within SmartAnthill it can be done via rich suite of development instruments: Generic Protocols (HTTP, Sockets, WebSokets), High Level API (REST API) and SDK for popular languages, which allow for easy development and customization.
 
-SmartAnthill 2.0 represents further work on SmartAnthill 1.0, which was
-designed solely by Ivan Kravets, an author of `PlatformIO <http://platformio.org>`_.
-Improvements in SmartAnthill 2.0 cover several areas, from introducing
-security, to support of protocols such as ZigBee and improvements aimed at
-reducing energy consumption. SmartAnthill 2.0 is not intended to be compatible
-with SmartAnthill 1.0.
+SmartAnthill 2.0 represents further work on SmartAnthill 1.0, which was designed solely by Ivan Kravets, an author of `PlatformIO <http://platformio.org>`_.  Improvements in SmartAnthill 2.0 cover several areas, from introducing security, to support of protocols such as ZigBee and improvements aimed at reducing energy consumption. SmartAnthill 2.0 is not intended to be compatible with SmartAnthill 1.0.
 
 .. contents::
 
