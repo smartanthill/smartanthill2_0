@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Overall Architecture
 =====================================
 
-:Version:   v0.2
+:Version:   v0.3
 
 **SmartAnthill** is an open IoT system which allows easy control over multiple microcontroller-powered devices, creating a home- or office-wide heterogeneous network out of these devices.
 
@@ -94,15 +94,58 @@ III. SmartAnthill Architecture
 
 III.1 General Architecture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-Simple SmartAnthill system consists of one Controlling PC and one or more devices controlled by it (see *SmartAnthill Overall Architecture* diagram above for an example topology).
+Simple SmartAnthill system consists of one *SmartAnthill Central Controller* and one or more devices controlled by it (see *SmartAnthill Overall Architecture* diagram above for an example topology).
 
-Controlling PC is a relatively complex device (such as Raspberry Pi PC) which normally runs several pieces of software: System Control Software, SmartAnthill Central Controller (also known as "SmartAnthill Core"), and SmartAnthill Router.
+*SmartAnthill Central Controller* is a relatively complex device (such as PC or credit-card sized computer Raspberry Pi, BeagleBoard or CubieBoard) which normally runs several pieces of software: System Control Software, SmartAnthill Core and SmartAnthill Router.
 
-* **System Control Software** is intended to be easily customizable according to customer needs. It can be very different, but we aim to support OpenHAB, and to support pretty much any programming language which can support one of the REST, WebSockets or Sockets. SmartAnthill project as such doesn't provide control software, it is rather a service which can be used by a control software.
-* **SmartAnthill Central Controller** is responsible for receiving requests (via REST etc.) from System Control Software and taking necessary measures to execute them via :ref:`saccp`.
-* **SmartAnthill Router** is responsible for translating IP-based requests into bus-specific requests for :ref:`SmartAnthill Simple Devices <sasimpledev>` (also see document :ref:`saprotostack` for details).
+.. _saoversyscsoft:
 
-SmartAnthill Router operates one or more 'buses'. Each SmartAnthill bus can be either a traditional wired bus (such as CAN bus), or a wireless 'bus'. Wireless SmartAnthill 'buses' do not imply any wired connection, they just represent certain domain of wireless connections; for example, one wireless 'bus' can be a IEEE 802.15.4 'bus' controlling some devices connected via IEEE 802.15.4, and at the same time another wireless 'bus' can be a 431 MHz RF 'bus' controlling some other devices connected via 431 MHz RF.
+III.2 System Control Software
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+*System Control Software* is intended to be easily customizable according to customer needs. It can be very different, but we aim to support OpenHAB, and to support pretty much any programming languages which can support one of the REST, WebSockets or Sockets. SmartAnthill project as such doesn't provide control software, it is rather a service which can be used by a control software.
+
+.. _saovercore:
+
+III.3 SmartAnthill Core
+^^^^^^^^^^^^^^^^^^^^^^^
+
+*SmartAnthill Core* represents a cross-platform software which is written in Python language and should support the popular operation systems (Mac OS X, Linux (+ARM) and Windows). The requirements of *SmartAnthill Core* by the system resources should by very low:
+
+* < 1% CPU in IDLE mode
+* < 20Mb RAM for service/daemon
+* < 20Mb of free disk space (the cross-compilers, tool chains and firmware upload software are not included here)
+
+III.3.1. SmartAnthill Core Services
+'''''''''''''''''''''''''''''''''''
+
+*SmartAnthill Core* operates on PC like a system foreground daemon with the
+following own services:
+
+* **Dashboard Service** represents WEB-based GUI (requires browser with enabled JavaScript) which allows:
+
+  + to manage :ref:`saoverdevices` (add, edit or remove them, customise with the specific capabilities/plugins/operations)
+  + to generate and upload device-compatible firmware via "TrainIt" wizard (see explanation below in :ref:`saovercorefirmbau`)
+  + to monitor *SmartAnthill Heterogeneous Network* in the real time (operational state of each device, the number of sent/received messages, errors and etc)
+  + to analyze log messages
+* **Network Service** is based on the :ref:`saprotostack` and operates with the network data (messages, packets, fragments) within *SmartAnthill Heterogeneous Network*.
+* **API Service** is responsible for receiving requests (via REST, WebSockets or Sockets) from *System Control Software* and taking necessary measures to execute them via :ref:`saccp`.
+
+.. _saovercorefirmbau:
+
+III.3.2. SmartAnthill Firmware Builder and Uploader
+'''''''''''''''''''''''''''''''''''''''''''''''''''
+
+@TODO PlatformIO role here should be explained here
+
+.. _saoverrouter:
+
+III.4 SmartAnthill Router
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+*SmartAnthill Router* is responsible for translating IP-based requests into bus-specific requests for :ref:`SmartAnthill Simple Devices <sasimpledev>` (also see document :ref:`saprotostack` for details).
+
+*SmartAnthill Router* operates one or more 'buses'. Each SmartAnthill bus can be either a traditional wired bus (such as CAN bus), or a wireless 'bus'. Wireless SmartAnthill 'buses' do not imply any wired connection, they just represent certain domain of wireless connections; for example, one wireless 'bus' can be a IEEE 802.15.4 'bus' controlling some devices connected via IEEE 802.15.4, and at the same time another wireless 'bus' can be a 431 MHz RF 'bus' controlling some other devices connected via 431 MHz RF.
 Each bus (wired or wireless) has one or more simple devices (such as sensors or actuators) connected to it (in case of wireless buses, the connection is wireless).
 Each device runs an MPU (or in theory CPU), which runs SmartAnthill stack on it (either a reference stack, or some other implementation).
 
@@ -112,7 +155,7 @@ TODO: Master-Slave topology!
 
 .. _saoverdevices:
 
-III.2 SmartAnthill Devices
+III.5 SmartAnthill Devices
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. image:: ../_static/diagrams/smartanthill-device-diagram.png
@@ -124,7 +167,7 @@ These properties are independent of each other, so it is possible to have all fo
 
 .. _saoverhobdev:
 
-III.2.1. SmartAnthill Hobbyist Device
+III.5.1. SmartAnthill Hobbyist Device
 '''''''''''''''''''''''''''''''''''''
 
 A diagram of a typical *SmartAnthill Hobbyist Device* is provided in section :ref:`saoverdevices`. SmartAnthill Hobbyist Device consists of an MCU, communication module, and one or more sensors and/or actuators (which are also known as 'ant body parts'). MCU on SmartAnthill Hobbyist Device runs several layers of software:
@@ -137,7 +180,7 @@ An important part of *SmartAnthill Hobbyist Device* (which is absent on SmartAnt
 
 .. _saovermmdev:
 
-III.2.2. SmartAnthill Mass-Market Device
+III.5.2. SmartAnthill Mass-Market Device
 ''''''''''''''''''''''''''''''''''''''''
 
 A diagram of a typical *SmartAnthill Mass Market Device* is also provided in the section :ref:`saoverdevices`. In addition to the components available on *SmartAnthill Hobbyist Device*, *SmartAnthill Mass-Market Device* additionally includes:
@@ -153,22 +196,22 @@ MCU on *SmartAnthill Mass-Market Device* runs several layers of software (note t
 
 .. _sasimpledev:
 
-III.2.3. SmartAnthill Simple Device
+III.5.3. SmartAnthill Simple Device
 '''''''''''''''''''''''''''''''''''
 
 Many of SmartAnthill Devices are expected to have very little resources, and might be unable to implement IP stack. Such devices implement a portion of :ref:`saprotostack`, with *SmartAnthill Router* providing interface to the outside world and conversion between IP-based requests/replies and *Simple Device* requests/replies.
 
-III.2.4. SmartAnthill IP-enabled Device
+III.5.4. SmartAnthill IP-enabled Device
 '''''''''''''''''''''''''''''''''''''''
 
 SmartAnthill IP-enabled Device is a device which is able to handle IP requests itself. Such devices can be accessed without the assistance of SmartAnthill Router.
 
 
-III.3 Life Cycle of SmartAnthill Device
+III.6 Life Cycle of SmartAnthill Device
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Let's consider how new devices are added and used within a SmartAnthill. Life cycle is a bit different for :ref:`saoverhobdev` and :ref:`saovermmdev`.
 
-III.3.1 Life Cycle of SmartAnthill Hobbyist-Oriented Device
+III.6.1 Life Cycle of SmartAnthill Hobbyist-Oriented Device
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 During it's life within SmartAnthill, a hobbyist-oriented device goes through the following stages:
 
@@ -182,7 +225,7 @@ After the device is programmed, it is automatically added to a *SmartAnthill Dat
 
 * **Operation**. After the device is programmed, it can start operation. Device operation involves receiving and executing commands from Central Controller. Operations can be either device-specific (such as “measure temperature and report”), or generic (such as “wait for XXXX seconds and come back for further instructions”).
 
-III.3.2 Life Cycle of SmartAnthill Mass-Market-Oriented Device
+III.6.2 Life Cycle of SmartAnthill Mass-Market-Oriented Device
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 Mass-market devices are expected to be shipped in already programmed state, with a pre-defined configuration. Expected life cycle of a *SmartAnthill Mass-market-oriented Device* can be described as follows:
 
@@ -202,8 +245,8 @@ Mass-market devices are expected to be shipped in already programmed state, with
 
 * **Operation**. Operation of Mass-market-oriented device is the same as operation of Hobbyist-oriented device.
 
-III.4 SmartAnthill protocol stack
+III.7 SmartAnthill protocol stack
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 SmartAnthill protocol stack is described in detail in a separate document,
-:ref:`saprotostack` .
+:ref:`saprotostack`.
 
