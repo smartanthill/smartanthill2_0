@@ -250,24 +250,78 @@ The following table shows relations between SASP packet sizes and SASP payload [
 
 .. [1] Note that *SASP payload* is not the same as, say, *SAGDP payload* or *SACCP payload*: for example, if SAGDP lies right on top of SASP, then *SAGDP_Payload = SASP_Payload - Size_of_SAGDP_Headers*.
 
-9. Implementation notes
------------------------
 
-9.1 Incrementing nonces
-^^^^^^^^^^^^^^^^^^^^^^^
+9. SASP padding
+---------------
+
+SASP Encoded-Size
+^^^^^^^^^^^^^^^^^
+
+In some places of the present document, a notion of 'Encoded-Size' is mentioned. This is a variable-length encoding of sizes (with the idea being somewhat similar to the idea behind UTF-8). Namely:
+
+* if first byte of Encoded-Size is c1 <= 127, then the value of Encoded-size is equal to c1
+* if first byte of Encoded-Size is c1 >= 128, then the next byte c2 is needed:
+
+  + if second byte of Encoded-Size is c2 <= 127, then the value of Encoded-Size is equal to *128+((uint16)(c1&0x7F) | ((uint16)c2 << 7))*.
+  + if second byte of Encoded-Size is c2 >= 128, this is currently a SASP_INVALIDENCODEDSIZE exception (c2 >= 128 is reserved for potential future expansion)
+
+
+The following table shows how many Encoded-Size bytes is necessary to encode ranges of Encoded-Size values:
+
++--------------------+---------------------+
+| Encoded-Size Values| Encoded-Size Bytes  |
++====================+=====================+
+| 0-127              | 1                   |
++--------------------+---------------------+
+| 128-16512          | 2                   |
++--------------------+---------------------+
+
+**Note 1**: it should be evident that this encoding contains both an addressed size and the size used for storing encoded value.
+
+**Note 2**:  upon necessity this encoding can be extended by analogy to address greater sizes.
+
+SASP payload data structure
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+SASP payload data is organized as follows:
+
+**fixed size header** | (opt) **padding size** | **higher protocol data** | (opt) **padding**
+
+  * **fixed size header** is a 1 byte (8 bit) field bits of which are used as follows:
+     * **bit 0**: padding size flag, which is set to 1, if padding is present, and 0 otherwise. Presence of padding implies presence of padding size field as well.
+     * **bit 1-4**: reserved and must be set to 0.
+     * **bit 5-7**: used by a higher level protocol; when packet is formed, must be filled with data received from a higher level protocol; when packet data is to be passed to the higher level protocol, must be reported unmodified to higher level protocol, too.
+  * **padding size**: variable size field; this field is present only if padding size flag is set; in this case the field contains encoded padding size; the size of the field can be derived from the field data itself (see SASP Encoded size for details).
+  * **higher protocol data**: variable size field; data that is defined by a higher level protocol.
+  * **padding**: variable size field; this field is present only if padding size flag is set; contains padding up to a target size.
+
+SASP padding
+^^^^^^^^^^^^
+
+If present, padding data should be data generated randomly. Depending on capabilities of the implementing device, upon necessity, this restriction can be relaxed. [TODO: describe approach with generating pseudorandom data using an independent encryption key and a current nonce]
+
+
+
+
+
+10. Implementation notes
+------------------------
+
+10.1 Incrementing nonces
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 For SASP security, it is absolutely critical that nonces are never re-used and are always incremented (never going back). Therefore, implementation MUST enforce it (both for sending side and for receiving side).
 
-9.1.1 Basic Implementation
-''''''''''''''''''''''''''
+10.1.1 Basic Implementation
+'''''''''''''''''''''''''''
 
 Basic secure implementation is rather simple:
 
 * Whenever a new packet is sent, an update value of NSF MUST be **saved and committed in in persistent storage**; this commit MUST be performed **before** the packet is actually sent over the air. This is necessary to keep EAX security guarantees.
 * Whenever a packet with status "new" is received, an updated value of NLW MUST be **saved and committed in persistent storage**; this commit MUST be performed **before** further message processing. This is necessary to avoid using an obsolete value of NLW in case of "dirty" reboot (and thus to avoid a potential for replay attacks). 
 
-9.1.2 Optimized Implementation
-''''''''''''''''''''''''''''''
+10.1.2 Optimized Implementation
+'''''''''''''''''''''''''''''''
 
 In cases where basic secure implementation is too resource-intensive (causing too many writes to persistent storage, which can be undesirable, in particular for EEPROM), the following optimizations MAY be used without affecting security; note that **implementation described below are ok if and only if all of the steps are implemented** (or none is implemented, falling back to the basic schema described above): [TODO: check that boundary handling ('<' vs '<=' etc. etc.) is described correctly]
 
@@ -292,8 +346,8 @@ In cases where basic secure implementation is too resource-intensive (causing to
   + 'Current_NLW' is returned as the new NLW value, and then incremented
 
 
-9.1.3 Restoring from Backup
-'''''''''''''''''''''''''''
+10.1.3 Restoring from Backup
+''''''''''''''''''''''''''''
 
 Whenever an entity-implementing-SASP (such as "SmartAnthill Central Controller") is restored from backup, it MUST take care to avoid duplicate nonces, in particular:
 
