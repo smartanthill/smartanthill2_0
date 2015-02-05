@@ -1,4 +1,7 @@
-This folder contains source files for documentation and is NOT intended to be read directly from GitHub
-=======================================================================================================
+This folder contains .rst files, which are source files for documentation. .rst files are NOT intended to be viewed directly on GitHub
+======================================================================================================================================
 
-Compiled version of the docs is maintained here: http://docs.smartanthill.org/ 
+Github doesn't support proper .rst rendering, so viewing .rst files on GitHub is not advisable. 
+
+Compiled and viewable version of the docs is maintained here: http://docs.smartanthill.org/ 
+
