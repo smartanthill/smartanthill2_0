@@ -147,115 +147,11 @@ If an Error "Old Nonce" Message is received, the receiving party compares its NF
 
 
 
-
-5. SASP data
-------------
-
-SASP is a stateless protocol. For its operations SASP uses the following data:
-
-- Nonce Lower Watermark (NLW)
-- Nonce to use For Sending (NFS)
-- Last Received Packet Signature (LRPS)
-
-
-6. Events
----------
-
-There are three events that SASP process: (1) getting a packet from an underlying protocol (UP packet), (2) getting a packet  from a higher level protocol (HLP packet) as New, and (3) getting a packet  from a higher level protocol (HLP packet) to be Resent.
-
-6.1. Receiving an HLP packet as New
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-A packet from a higher level protocol is received with a status "new". After this packet is encrypted and authentication data is added using a new nonce, a resulting UP packet is to be passed to the underlying protocol for further transmission to ultimately the communication partner.
-
-6.2. Receiving an HLP packet as Repeated
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-A packet from a higher level protocol is received with a status "repeated". A respective UP protocol is to be formed and sent with a nonce used for the last sent packet. It is a responsibility of the higher level protocol [+++check!!!] that the HLP packet is the same as the last sent.
-
-6.3. Receiving a UP packet
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-A packet from an underlying protocol is received. A packet can be:
-  * valid new packet, which means that the packet data passed validation process, and packet nonce VP is greater than the Nonce Lower Watermark;
-  * valid repeated packet, a copy of the last received packet;
-  * old-nonce packet, an otherwise valid packet with a nonce VP less than the Nonce Lower Watermark, which means de-synchronization in communication;
-  * packet with Error "Old Nonce" Message (intended for SASP itself)
-  * invalid packet, in particular, corrupted, an attacker's packet, etc.
-
-
-
-
-7. Event processing
--------------------
-
-To process events the protocol should be in either "idle" state Details of processing are placed below.
-
-7.1. Receiving an HLP packet as New
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-NFS is incremented. HLP packet is encrypted and authenticated using current value of NFS to form a UP packet. UP packet is passed to the underlying protocol.
-
-7.2. Receiving an HLP packet as Repeated
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-HLP packet is encrypted and authenticated using current value of NFS, that is, with a value that has been used while the original packet was sent. Resulting UP packet is passed to the underlying protocol.
-
-7.3. Receiving a UP packet
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-A packet-based authentication is performed.
-
-  * packet-based authentication fails: the packet is silently dropped as being either corrupted or an attacker's packet;
-  * packet-based authentication is passed: it can be either an error message packet directed to SASP itself, or a "regular" packet with payload intended for a higher level protocol.
-
-     * a packet is with Error Old Nonce Message [+++structure and detection]: packet nonce VP is not compared to NLW (reason: replay attack is impossible since NFS cannot be decreased as a result of this message); a value of the lowest possible valid nonce from the packet is compared to the current value of NFS.
-
-         * NFS is less than the value of the lowest possible valid nonce: NFS is set to the value of the lowest possible valid nonce.
-         * NFS is greater than or equal to the value of the lowest possible valid nonce: no changes to NFS is done; the packet is ignored.
-
-     * packets other than Error Old Nonce Message: packet nonce VP is compared to the Nonce Lower Watermark (NLW). Three cases are possible:
-
-        * nonce VP is less than NLW: a packet with Error Old Nonce Message is prepared with the lowest possible valid nonce set to a current value of NLW; the packet is authenticated and passed to the underlying protocol.
-        * nonce VP is equal to NLW: a repeated packet is received: packet signature is compared to LRPS.
-
-            *  packet signature is not equal to LRPS: a potential for an attacker's packet; the packet is silently dropped;
-            *  packet signature is equal to LRPS: an HLP packet with payload of the received packet is passed to the higher level protocol with status "repeated"
-
-        * nonce VP is greater than NLW: a new packet is received: NLW is set to the value of nonce VP of the received packet; LRPS is set to packet signature; an HLP packet with payload of the received packet is passed to the higher level protocol with status "new".
-
-
-8. Payload Size and SASP Packet Size
-------------------------------------
-
-As SASP is using 48-bit (= 6 bytes) nonce, a block cipher (AES128) with a block size of 128 bits (=16 bytes), and tag size is chosen as maximum 128 bits, it means that SASP packet size is always *(6+k\*16+16)=(22+k\*16)*, where *k >= 1*. 
-
-The following table shows relations between SASP packet sizes and SASP payload [1]_:
-
-+-------------------------+------------------------+
-| SASP packet size, bytes | SASP payload, bytes    |
-+=========================+========================+
-| 38                      |  0-16                  |
-+-------------------------+------------------------+
-| 54                      | 17-32                  |
-+-------------------------+------------------------+
-| 70                      | 33-48                  |
-+-------------------------+------------------------+
-| 86                      | 49-64                  |
-+-------------------------+------------------------+
-| 102                     | 65-80                  |
-+-------------------------+------------------------+
-| 118                     | 81-96                  |
-+-------------------------+------------------------+
-
-.. [1] Note that *SASP payload* is not the same as, say, *SAGDP payload* or *SACCP payload*: for example, if SAGDP lies right on top of SASP, then *SAGDP_Payload = SASP_Payload - Size_of_SAGDP_Headers*.
-
-
-9. SASP padding
+5. SASP padding
 ---------------
 
-SASP Encoded-Size
-^^^^^^^^^^^^^^^^^
+5.1. SASP Encoded-Size
+^^^^^^^^^^^^^^^^^^^^^^
 
 In some places of the present document, a notion of 'Encoded-Size' is mentioned. This is a variable-length encoding of sizes (with the idea being somewhat similar to the idea behind UTF-8). Namely:
 
@@ -280,26 +176,133 @@ The following table shows how many Encoded-Size bytes is necessary to encode ran
 
 **Note 2**:  upon necessity this encoding can be extended by analogy to address greater sizes.
 
-SASP payload data structure
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+5.2. SASP data under encryption and payload data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-SASP payload data is organized as follows:
+SASP data under encryption is organized as follows:
 
-**fixed size header** | (opt) **padding size** | **higher protocol data** | (opt) **padding**
+**First Byte** | (opt) **padding size** | **byte sequence** | (opt) **padding**
 
-  * **fixed size header** is a 1 byte (8 bit) field bits of which are used as follows:
-     * **bit 0**: padding size flag, which is set to 1, if padding is present, and 0 otherwise. Presence of padding implies presence of padding size field as well.
-     * **bit 1-4**: reserved and must be set to 0.
-     * **bit 5-7**: used by a higher level protocol; when packet is formed, must be filled with data received from a higher level protocol; when packet data is to be passed to the higher level protocol, must be reported unmodified to higher level protocol, too.
+  * **First Byte** is a 1 byte field that is treated as follows:
+     * **MSB bit**: padding size flag, which is set to 1, if padding is present, and 0 otherwise. Presence of padding implies presence of padding size field as well.
+     * **Remaining 7 bits**: a part of payload.
   * **padding size**: variable size field; this field is present only if padding size flag is set; in this case the field contains encoded padding size; the size of the field can be derived from the field data itself (see SASP Encoded size for details).
-  * **higher protocol data**: variable size field; data that is defined by a higher level protocol.
+  * **byte sequence**: variable size field; data that is defined by a higher level protocol.
   * **padding**: variable size field; this field is present only if padding size flag is set; contains padding up to a target size.
-
-SASP padding
-^^^^^^^^^^^^
+  
+Correspondingly, SASP payload data is
+  * **Remaining 7 bits**
+  * **byte sequence**
+  
+5.3. SASP padding
+^^^^^^^^^^^^^^^^^
 
 If present, padding data should be data generated randomly. Depending on capabilities of the implementing device, upon necessity, this restriction can be relaxed. [TODO: describe approach with generating pseudorandom data using an independent encryption key and a current nonce]
 
+
+
+
+6. SASP data
+------------
+
+SASP is a stateless protocol. For its operations SASP uses the following data:
+
+- Nonce Lower Watermark (NLW)
+- Nonce to use For Sending (NFS)
+- Last Received Packet Signature (LRPS)
+
+
+7. Events
+---------
+
+There are three events that SASP process: (1) getting a packet from an underlying protocol (UP packet), (2) getting a packet  from a higher level protocol (HLP packet) as New, and (3) getting a packet  from a higher level protocol (HLP packet) to be Resent.
+
+7.1. Receiving an HLP packet as New
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A packet from a higher level protocol is received with a status "new". After this packet is encrypted and authentication data is added using a new nonce, a resulting UP packet is to be passed to the underlying protocol for further transmission to ultimately the communication partner.
+
+7.2. Receiving an HLP packet as Repeated
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A packet from a higher level protocol is received with a status "repeated". A respective UP protocol is to be formed and sent with a nonce used for the last sent packet. It is a responsibility of the higher level protocol [+++check!!!] that the HLP packet is the same as the last sent.
+
+7.3. Receiving a UP packet
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A packet from an underlying protocol is received. A packet can be:
+  * valid new packet, which means that the packet data passed validation process, and packet nonce VP is greater than the Nonce Lower Watermark;
+  * valid repeated packet, a copy of the last received packet;
+  * old-nonce packet, an otherwise valid packet with a nonce VP less than the Nonce Lower Watermark, which means de-synchronization in communication;
+  * packet with Error "Old Nonce" Message (intended for SASP itself)
+  * invalid packet, in particular, corrupted, an attacker's packet, etc.
+
+
+
+
+8. Event processing
+-------------------
+
+To process events the protocol should be in either "idle" state Details of processing are placed below.
+
+8.1. Receiving an HLP packet as New
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+NFS is incremented. HLP packet is encrypted and authenticated using current value of NFS to form a UP packet. UP packet is passed to the underlying protocol.
+
+8.2. Receiving an HLP packet as Repeated
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+HLP packet is encrypted and authenticated using current value of NFS, that is, with a value that has been used while the original packet was sent. Resulting UP packet is passed to the underlying protocol.
+
+8.3. Receiving a UP packet
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A packet-based authentication is performed.
+
+  * packet-based authentication fails: the packet is silently dropped as being either corrupted or an attacker's packet;
+  * packet-based authentication is passed: it can be either an error message packet directed to SASP itself, or a "regular" packet with payload intended for a higher level protocol.
+
+     * a packet is with Error Old Nonce Message [+++structure and detection]: packet nonce VP is not compared to NLW (reason: replay attack is impossible since NFS cannot be decreased as a result of this message); a value of the lowest possible valid nonce from the packet is compared to the current value of NFS.
+
+         * NFS is less than the value of the lowest possible valid nonce: NFS is set to the value of the lowest possible valid nonce.
+         * NFS is greater than or equal to the value of the lowest possible valid nonce: no changes to NFS is done; the packet is ignored.
+
+     * packets other than Error Old Nonce Message: packet nonce VP is compared to the Nonce Lower Watermark (NLW). Three cases are possible:
+
+        * nonce VP is less than NLW: a packet with Error Old Nonce Message is prepared with the lowest possible valid nonce set to a current value of NLW; the packet is authenticated and passed to the underlying protocol.
+        * nonce VP is equal to NLW: a repeated packet is received: packet signature is compared to LRPS.
+
+            *  packet signature is not equal to LRPS: a potential for an attacker's packet; the packet is silently dropped;
+            *  packet signature is equal to LRPS: an HLP packet with payload of the received packet is passed to the higher level protocol with status "repeated"
+
+        * nonce VP is greater than NLW: a new packet is received: NLW is set to the value of nonce VP of the received packet; LRPS is set to packet signature; an HLP packet with payload of the received packet is passed to the higher level protocol with status "new".
+
+
+9. Payload Size and SASP Packet Size
+------------------------------------
+
+As SASP is using 48-bit (= 6 bytes) nonce, a block cipher (AES128) with a block size of 128 bits (=16 bytes), and tag size is chosen as maximum 128 bits, it means that SASP packet size is always *(6+k\*16+16)=(22+k\*16)*, where *k >= 1*. 
+
+The following table shows relations between SASP packet sizes and SASP payload [1]_ not including "remaining 7 bits" part (that is, a size of byte sequence part only):
+
++-------------------------+------------------------+
+| SASP packet size, bytes | SASP payload, bytes    |
++=========================+========================+
+| 38                      |  0-15                  |
++-------------------------+------------------------+
+| 54                      | 16-31                  |
++-------------------------+------------------------+
+| 70                      | 32-47                  |
++-------------------------+------------------------+
+| 86                      | 48-63                  |
++-------------------------+------------------------+
+| 102                     | 62-79                  |
++-------------------------+------------------------+
+| 118                     | 80-95                  |
++-------------------------+------------------------+
+
+.. [1] Note that *SASP payload* is not the same as, say, *SAGDP payload* or *SACCP payload*: for example, if SAGDP lies right on top of SASP, then *SAGDP_Payload = SASP_Payload - Size_of_SAGDP_Headers*.
 
 
 
