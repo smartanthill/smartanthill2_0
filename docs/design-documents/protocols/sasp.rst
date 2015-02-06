@@ -27,7 +27,7 @@
 SmartAnthill Security Protocol (SASP)
 =====================================
 
-:Version:   v0.1.3
+:Version:   v0.1.3a
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -44,19 +44,19 @@ SASP (SmartAnthill Security Protocol) aims to provide security guarantees for co
 
      * **HLP packet**: a packet that is sent to or received from a higher-level protocol. HLP packet data is a payload for SASP, as it will be discussed in more details below.
      * **SASP packet**:  a packet that is formed by SASP and is sent to or received from the communication peer (using an underlying protocol).
-     * **Internally valid SASP packet**: a packet that has passed authentication based solely on packet data (see also packet-based authentication).
+     * **Internally valid SASP packet**: a packet that has passed authentication based solely on packet data (see also "intra-packet authentication").
 
 1.2. **SASP Packet structure**
 
 SASP packet structure looks as follows:
 
-**\| SASP Header \| Security Tag \| Data Under Encryption \|**
+**\| SASP Header \| Security Tag \| Encrypted Data \|**
 
 where:
 
   * **SASP Header** is a non-encrypted part of the packet that contains flags and certain bits of the packet nonce. Header takes 6 bytes.
   * **Security Tag**: data related to encryption and authentication process. Security Tag takes 16 bytes.
-  * **Data Under Encryption**: encrypted data, which includes certain SASP information as well as SASP payload.
+  * **Encrypted Data**: encrypted data, which includes certain SASP information as well as SASP payload. The same data before encryption (or after decryption) is referred to as "Data Under Encryption
 
 1.3. **Packet Nonce**: all data used as a packet nonce for purposes of encryption/authentication. PFN consists of: 
 
@@ -72,7 +72,7 @@ where:
 
 1.7. **Packet validation process**: a core task of SASP main purpose of which is to ensure that a packet is actually received is from an intended communication partner, is not modified by a third party on the way, and its content (unless specified otherwise) is protected from reading by not indented parties. On the sending side of communication the packet validation process results in encryption and adding authentication data. On receiving side a process can logically be divided into two steps:
 
-  * **packet-based authentication**, which is done using solely packet data such as respective headers, nonces, tags, etc, and not using NLW;
+  * **intra-packet authentication**, which is done using solely packet data such as respective headers, nonces, tags, etc, and not using NLW;
   * **in-sequence authentication**, which is based on comparison of a packet nonce Varying Part with the Nonce Lower Watermark.
 
 1.8. **Error "Old Nonce" Message**: a packet that represents an "old nonce" error report with the lowest possible value of a valid nonce VP (which is equal to a current value of Nonce Lower Watermark plus 1). This packet can be sent, if an otherwise valid packet is received with an "old" nonce VP, that is, with a nonce VP that is less than the Nonce Lower Watermark.
@@ -296,14 +296,14 @@ HLP packet is encrypted and authenticated using current value of NFS, that is, w
 8.3. Receiving a SASP packet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-On receipt of a SASP packet, first, a packet-based authentication is performed as follows:
+On receipt of a SASP packet, first, an intra-packet authentication is performed as follows:
 
 * TODO!
 
 Then:
 
-  * if packet-based authentication has failed: the packet is silently dropped as being either corrupted or an attacker's packet;
-  * if packet-based authentication is passed: it can be either an error message packet directed to SASP itself, or a "regular" packet with payload intended for a higher level protocol.
+  * if intra-packet authentication has failed: the packet is silently dropped as being either corrupted or an attacker's packet;
+  * if intra-packet authentication is passed: it can be either an error message packet directed to SASP itself, or a "regular" packet with payload intended for a higher level protocol.
 
      + if a packet is with Error Old Nonce Message [+++structure and detection]: packet nonce VP is not compared to NLW (reason: replay attack is impossible since NFS cannot be decreased as a result of this message, and performing comparison may lead to a deadlock); a value of the lowest possible valid nonce from the packet is compared to the current value of NFS.
 
