@@ -27,7 +27,7 @@
 SmartAnthill Security Protocol (SASP)
 =====================================
 
-:Version:   v0.1.1
+:Version:   v0.1.2
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
