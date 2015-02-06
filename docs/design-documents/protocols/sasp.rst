@@ -27,7 +27,7 @@
 SmartAnthill Security Protocol (SASP)
 =====================================
 
-:Version:   v0.1.2a
+:Version:   v0.1.2b
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -388,7 +388,7 @@ Whenever an entity-implementing-SASP (such as "SmartAnthill Central Controller")
 * amount of time dT (in seconds) between backup and restore MUST be calculated
 * if dT is less than *min-backup-restore-time*, it MUST be set to *min-backup-restore-time*; normally *min-backup-restore-time* should be set to a value such as 24 hours.
 * if dT is larger than *max-backup-restore-time*, restore SHOULD be interrupted, the problem SHOULD be explained to the person who's performing restore, and confirmation SHOULD be obtained before proceeding. This is intended to prevent restores with erroneous clock, which might lead to the erroneous exhaustion of the nonce space. Normally, *max-backup-restore-time* should be set to a value such as 30*24 hours.
-* both NLW and NSF, as stored in persistent storage, MUST be increased by a number equal to: *dT\*max_number_of_packets_per_second*, where *max_number_of_packets_per_second* is a constant estimating maximum feasible number of packets which might be sent per second; in general, it depends on the higher-level protocols, but for basic SACCP it usually can be taken between 100'000 (1e5) and 1'000'000 (1e6). This increased number MUST be stored and committed to persistent storage **before** proceeding further.
+* both NLW and NSF, as stored in persistent storage, MUST be increased by a number equal to: *dT\*max_number_of_packets_per_second*. This increased number **MUST be stored and committed to persistent storage before proceeding further**. Here, *max_number_of_packets_per_second* is a constant estimating maximum feasible number of packets which might be sent per second; in general, it depends on the higher-level protocols, but for basic SACCP it usually can be taken between 100'000 (1e5) and 1'000'000 (1e6). 
 
 References
 ----------
