@@ -27,7 +27,7 @@
 Yocto VM
 ========
 
-:Version:   v0.1.7
+:Version:   v0.1.8
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -166,7 +166,7 @@ Currently, Yocto VM may issue the following exceptions:
 Yocto VM End of Execution
 -------------------------
 
-Yocto VM program exits when the sequence of instructions has ended. At this point, an equivalent of \|EXIT\|ISLAST\| is implicitly executed (see description of 'EXIT' instruction below); this causes “reply buffer” to be sent back to the SmartAnt Client, with 'is-last' flag set. Alternatively, an “EXIT” command (see below) may end program execution; in this case, parameter to “EXIT” command specifies which flag is to be used.
+Yocto VM program exits when the sequence of instructions has ended. At this point, an equivalent of **\|EXIT\|<ISLAST>,<0>\|** is implicitly executed (see description of 'EXIT' instruction below); this causes “reply buffer” to be sent back to the SmartAnt Client, with 'is-last' flag set. Alternatively, an “EXIT” instruction (see below) may end program execution explicitly; in this case, parameters to “EXIT” command may specify additional properties as described in "EXIT" instruction description.
 
 Yocto VM Overriding Command
 ---------------------------
@@ -286,10 +286,11 @@ where YOCTOVM_OP_POPREPLIES is a 1-byte opcode (NB: it is the same as YOCTOVM_OP
 
 NB: Yocto VM-One implements POPREPLIES instruction only partially (for 1 value of N-REPLIES); Yocto VM-Tiny supports other values as described below, and behavior for this 1 value of N-REPLIES which is supported by both Yocto VM-One and Yocto VM-Tiny is consistent for any Yocto VM implementation.
 
-**\| YOCTOVM_OP_EXIT \| <REPLY-FLAGS> \|**
+**\| YOCTOVM_OP_EXIT \| <REPLY-FLAGS>,<FORCED-PADDING-FLAG> \| (opt) FORCED-PADDING-TO \|**
 
-where YOCTOVM_OP_EXIT is a 1-byte opcode (NB: it is the same as YOCTOVM_OP_EXIT in Level Tiny), and REPLY-FLAGS is a 1-byte flag taking one of the following values: {NONE,ISFIRST,ISLAST}
-EXIT instruction posts all the replies in the “reply buffer” and terminates the program. Device receiver is kept turned on after the program exits (so the device is able to accept new commands).
+where YOCTOVM_OP_EXIT is a 1-byte opcode (NB: it is the same as YOCTOVM_OP_EXIT in Level Tiny), REPLY-FLAGS is a 2-bit bitfield taking one of the following values: {NONE,ISFIRST,ISLAST}, <FORCED-PADDING-FLAG> is a 1-bit bitfield which stores {0,1}, and FORCED-PADDING-TO is present only if <FORCED-PADDING-FLAG> is equal to 1.
+
+EXIT instruction posts all the replies which are currently in the “reply buffer”, back to SmartAnthill Central Controller, and terminates the program. Device receiver is kept turned on after the program exits (so the device is able to accept new commands).
 
 To enforce “Execution Layer Requirements”, the following SHOULD be enforced for Yocto VM-One and MUST be enforced for other Yocto VM layers:
 
@@ -298,6 +299,12 @@ To enforce “Execution Layer Requirements”, the following SHOULD be enforced 
 * if 'mcusleep-invoked' flag is set, then original command will have ISLAST flag (because of other restrictions; this means violating 'ISLAST' requirement while processing EXIT instruction is not an exception, but an internal assertion which MUST NOT happen); “reply buffer” MUST be non-empty, and EXIT instruction MUST have REPLY-FLAGS == ISFIRST (this is a 'mcusleep-then-wake' pattern)
 
 If any of the restrictions above is not compied with, Yocto VM generates a YOCTOVM_PROGRAMERROR_INVALIDREPLYSEQUENCE exception.
+
+FORCED-PADDING-TO field (if present) specifies 'enforced padding' as described in
+:ref:`sasp` document. Essentially:
+
+* if present, FORCED-PADDING-TO MUST specify length which is equal to or greater than the size of current "reply buffer"
+* if developer wants to avoid information leak from the fact that encrypted messages may have different lengths, she may specify the same FORCED-PADDING-TO for all the replies which should be indistinguishable.
 
 Implementation notes
 ''''''''''''''''''''
