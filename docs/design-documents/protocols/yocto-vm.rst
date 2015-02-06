@@ -27,7 +27,7 @@
 Yocto VM
 ========
 
-:Version:   v0.1.8
+:Version:   v0.1.8a
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -288,7 +288,7 @@ NB: Yocto VM-One implements POPREPLIES instruction only partially (for 1 value o
 
 **\| YOCTOVM_OP_EXIT \| <REPLY-FLAGS>,<FORCED-PADDING-FLAG> \| (opt) FORCED-PADDING-TO \|**
 
-where YOCTOVM_OP_EXIT is a 1-byte opcode (NB: it is the same as YOCTOVM_OP_EXIT in Level Tiny), REPLY-FLAGS is a 2-bit bitfield taking one of the following values: {NONE,ISFIRST,ISLAST}, <FORCED-PADDING-FLAG> is a 1-bit bitfield which stores {0,1}, and FORCED-PADDING-TO is present only if <FORCED-PADDING-FLAG> is equal to 1.
+where YOCTOVM_OP_EXIT is a 1-byte opcode (NB: it is the same as YOCTOVM_OP_EXIT in Level Tiny), REPLY-FLAGS is a 2-bit bitfield taking one of the following values: {NONE,ISFIRST,ISLAST}, <FORCED-PADDING-FLAG> is a 1-bit bitfield which stores {0,1}, and FORCED-PADDING-TO is an Encoded-Size field, which is present only if <FORCED-PADDING-FLAG> is equal to 1.
 
 EXIT instruction posts all the replies which are currently in the “reply buffer”, back to SmartAnthill Central Controller, and terminates the program. Device receiver is kept turned on after the program exits (so the device is able to accept new commands).
 
