@@ -27,7 +27,7 @@
 SmartAnthill Security Protocol (SASP)
 =====================================
 
-:Version:   v0.1.3a
+:Version:   v0.1.3b
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -185,11 +185,11 @@ The following table shows how many Encoded-Size bytes is necessary to encode ran
 | 128-16511          | 2                   |
 +--------------------+---------------------+
 
-**Note 1**: it should be evident that this encoding contains both an addressed size and the size used for storing encoded value. [TODO: ?]
+**Observation 1**: when parsing Encoded-Size, it is possible to find out both "size of Encoding-Size itself", and "size which is encoded by Encoded-Size"
 
-**Note 2**:  upon necessity this encoding can be extended by analogy to address greater sizes.
+**Note 1**:  upon necessity this encoding can be extended by analogy to address greater sizes.
 
-**Note 3**:  unless "enforced padding" (see below) is used, SASP pads data only to the block size; it means that unless "enforced padding" is used, padding size is always <= 15, and therefore Encoded-Size cannot be longer than 1 byte.
+**Note 2**:  unless "enforced padding" (see below) is used, SASP pads data only to the block size; it means that unless "enforced padding" is used, padding size is always <= 15, and therefore Encoded-Size cannot be longer than 1 byte.
 
 5.2. SASP data under encryption and payload
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -226,10 +226,16 @@ If present, padding data SHOULD be generated randomly. Depending on capabilities
 
 In certain scenarios, some information might be extracted from the packet length even though information is encrypted. To support the cases when this is important, SASP supports a concept of "enforced padding", which works as follows:
 
-* When sending a packet, a high-level protocol is allowed to specify size of 'enforced padding'. On receiving such a request, SASP:
+* When sending an HLP, a high-level protocol is allowed to specify *enforce-pad-to*. For each packet length *len*, SASP guarantees that for all the HLPs which have their own size= *len* and are sent without *enforced-pad-to*, or which are sent with *enforced-pad-to* = *len*, the length of SASP packet is exactly the same (therefore, preventing any length-based information leak).
 
-  + checks if, given the size of the packet itself, 'enforced padding' can be satisfied (i.e. that packet is small enough to fit into requested 'enforced padding'); if 'enforced padding' is requested and cannot be satisfied - it MUST cause an error to be returned back to high-level protocol, without further processing of the packet at ll.
-  + pads packet up to requested 'enforced padding'
+To implement it, on receiving such a request SASP MUST do the following:
+
+  + check that *enforce-pad-to* is greater or equal to the size of packet itself. TODO: specify what to do if it is not (probably different for Master and Slave)
+  + calculate *required-size*, the size of the SASP packet which an HLP with a size of *enforce-pad-to* would produce
+  + calculate the size of *enforced-padding* for current packet (so that SASP packet produced from current packet, would have size= *required-size*)
+  + pad packet, using calculated *enforced-padding*, and producing 'enforced-padded' SASP packet
+
+TODO: specify handling of enforce-pad-to for the layers between SASP and SACCP.
 
 6. SASP data
 ------------
@@ -320,6 +326,7 @@ Then:
 
         * if nonce VP is greater than NLW: a new packet is received: NLW is set to the value of nonce VP of the received packet; LRPS is set to packet signature; an HLP packet with payload of the received packet is passed to the higher level protocol with status "new".
 
+TODO!: sending packets (encryption etc.)
 
 9. Payload Size and SASP Packet Size
 ------------------------------------
