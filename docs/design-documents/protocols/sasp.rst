@@ -27,7 +27,7 @@
 SmartAnthill Security Protocol (SASP)
 =====================================
 
-:Version:   v0.1.2b
+:Version:   v0.1.3
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -189,6 +189,8 @@ The following table shows how many Encoded-Size bytes is necessary to encode ran
 
 **Note 2**:  upon necessity this encoding can be extended by analogy to address greater sizes.
 
+**Note 3**:  unless "enforced padding" (see below) is used, SASP pads data only to the block size; it means that unless "enforced padding" is used, padding size is always <= 15, and therefore Encoded-Size cannot be longer than 1 byte.
+
 5.2. SASP data under encryption and payload
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -219,6 +221,15 @@ Higher-level protocol is free to use "partial byte" (7 bits) of SASP payload, or
 
 If present, padding data SHOULD be generated randomly. Depending on capabilities of the implementing device, upon necessity, this requirement MAY be relaxed. [TODO: describe approach with generating pseudorandom data using an independent encryption key and a current nonce]
 
+5.4. SASP enforced padding
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In certain scenarios, some information might be extracted from the packet length even though information is encrypted. To support the cases when this is important, SASP supports a concept of "enforced padding", which works as follows:
+
+* When sending a packet, a high-level protocol is allowed to specify size of 'enforced padding'. On receiving such a request, SASP:
+
+  + checks if, given the size of the packet itself, 'enforced padding' can be satisfied (i.e. that packet is small enough to fit into requested 'enforced padding'); if 'enforced padding' is requested and cannot be satisfied - it MUST cause an error to be returned back to high-level protocol, without further processing of the packet at ll.
+  + pads packet up to requested 'enforced padding'
 
 6. SASP data
 ------------
