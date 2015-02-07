@@ -41,14 +41,14 @@ SmartAnthill 2.0 represents further work on SmartAnthill 1.0, which was designed
 
 .. contents::
 
-I. Aims
--------
+Aims
+----
 
 SmartAnthill aims to create a viable system of control for the Internet of Things (IoT) devices in home and office environments. More secure and more risky environments (such as industrial control, military, etc.) are currently out of scope.
 Due to SmartAnthill roots in hardware hobbyist movement, special attention is to be paid for hobbyist needs.
 
-II. Requirements.
------------------
+Requirements
+------------
 
 SmartAnthill is built around the following requirements. They follow from the aims and generally are not negotiable.
 
@@ -86,29 +86,29 @@ SmartAnthill is built around the following requirements. They follow from the ai
 
 12. **Support both for mass-market devices and for hobbyist devices**. While SmartAnthill is not limited to hobbyists and aims to become a widely-accepted network for controlling IoT and smart homes, it should consider hobbyists as a first-class citizens and pay attention to their needs. In particular, compatibility with existing devices and practices is to be taken seriously, as well as any feedback.
 
-III. SmartAnthill Architecture
-------------------------------
+SmartAnthill Architecture
+-------------------------
 
 .. image:: ../_static/diagrams/smartanthill-overall-architecture-diagram.png
     :alt: SmartAnthill Overall Architecture
 
-III.1 General Architecture
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+General Architecture
+^^^^^^^^^^^^^^^^^^^^
 Simple SmartAnthill system consists of one *SmartAnthill Central Controller* and one or more devices controlled by it (see *SmartAnthill Overall Architecture* diagram above for an example topology).
 
 *SmartAnthill Central Controller* is a relatively complex device (such as PC or credit-card sized computer Raspberry Pi, BeagleBoard or CubieBoard) which normally runs several pieces of software: System Control Software, SmartAnthill Core and SmartAnthill Router.
 
 .. _saoversyscsoft:
 
-III.2 System Control Software
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+System Control Software
+^^^^^^^^^^^^^^^^^^^^^^^
 
 *System Control Software* is intended to be easily customizable according to customer needs. It can be very different, but we aim to support OpenHAB, and to support pretty much any programming languages which can support one of the REST, WebSockets or Sockets. SmartAnthill project as such doesn't provide control software, it is rather a service which can be used by a control software.
 
 .. _saovercore:
 
-III.3 SmartAnthill Core
-^^^^^^^^^^^^^^^^^^^^^^^
+SmartAnthill Core
+^^^^^^^^^^^^^^^^^
 
 *SmartAnthill Core* represents a cross-platform software which is written in Python language and should support the popular operation systems (Mac OS X, Linux (+ARM) and Windows). The requirements of *SmartAnthill Core* by the system resources should by very low:
 
@@ -116,8 +116,8 @@ III.3 SmartAnthill Core
 * < 20Mb RAM for service/daemon
 * < 20Mb of free disk space (the cross-compilers, tool chains and firmware upload software are not included here)
 
-III.3.1. SmartAnthill Core Services
-'''''''''''''''''''''''''''''''''''
+SmartAnthill Core Services
+''''''''''''''''''''''''''
 
 *SmartAnthill Core* operates on PC like a system foreground daemon with the
 following own services:
@@ -133,15 +133,15 @@ following own services:
 
 .. _saovercorefirmbau:
 
-III.3.2. SmartAnthill Firmware Builder and Uploader
-'''''''''''''''''''''''''''''''''''''''''''''''''''
+SmartAnthill Firmware Builder and Uploader
+''''''''''''''''''''''''''''''''''''''''''
 
-@TODO PlatformIO role here should be explained here
+@TODO PlatformIO role should be explained here
 
 .. _saoverrouter:
 
-III.4 SmartAnthill Router
-^^^^^^^^^^^^^^^^^^^^^^^^^
+SmartAnthill Router
+^^^^^^^^^^^^^^^^^^^
 
 *SmartAnthill Router* is responsible for translating IP-based requests into bus-specific requests for :ref:`SmartAnthill Simple Devices <sasimpledev>` (also see document :ref:`saprotostack` for details).
 
@@ -155,8 +155,8 @@ TODO: Master-Slave topology!
 
 .. _saoverdevices:
 
-III.5 SmartAnthill Devices
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+SmartAnthill Devices
+^^^^^^^^^^^^^^^^^^^^
 
 .. image:: ../_static/diagrams/smartanthill-device-diagram.png
     :alt: SmartAnthill Device
@@ -167,8 +167,8 @@ These properties are independent of each other, so it is possible to have all fo
 
 .. _saoverhobdev:
 
-III.5.1. SmartAnthill Hobbyist Device
-'''''''''''''''''''''''''''''''''''''
+SmartAnthill Hobbyist Device
+''''''''''''''''''''''''''''
 
 A diagram of a typical *SmartAnthill Hobbyist Device* is provided in section :ref:`saoverdevices`. SmartAnthill Hobbyist Device consists of an MCU, communication module, and one or more sensors and/or actuators (which are also known as 'ant body parts'). MCU on SmartAnthill Hobbyist Device runs several layers of software:
 
@@ -180,8 +180,8 @@ An important part of *SmartAnthill Hobbyist Device* (which is absent on SmartAnt
 
 .. _saovermmdev:
 
-III.5.2. SmartAnthill Mass-Market Device
-''''''''''''''''''''''''''''''''''''''''
+SmartAnthill Mass-Market Device
+'''''''''''''''''''''''''''''''
 
 A diagram of a typical *SmartAnthill Mass Market Device* is also provided in the section :ref:`saoverdevices`. In addition to the components available on *SmartAnthill Hobbyist Device*, *SmartAnthill Mass-Market Device* additionally includes:
 
@@ -196,23 +196,23 @@ MCU on *SmartAnthill Mass-Market Device* runs several layers of software (note t
 
 .. _sasimpledev:
 
-III.5.3. SmartAnthill Simple Device
-'''''''''''''''''''''''''''''''''''
+SmartAnthill Simple Device
+''''''''''''''''''''''''''
 
 Many of SmartAnthill Devices are expected to have very little resources, and might be unable to implement IP stack. Such devices implement a portion of :ref:`saprotostack`, with *SmartAnthill Router* providing interface to the outside world and conversion between IP-based requests/replies and *Simple Device* requests/replies.
 
-III.5.4. SmartAnthill IP-enabled Device
-'''''''''''''''''''''''''''''''''''''''
+SmartAnthill IP-enabled Device
+''''''''''''''''''''''''''''''
 
 SmartAnthill IP-enabled Device is a device which is able to handle IP requests itself. Such devices can be accessed without the assistance of SmartAnthill Router.
 
 
-III.6 Life Cycle of SmartAnthill Device
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Life Cycle of SmartAnthill Device
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Let's consider how new devices are added and used within a SmartAnthill. Life cycle is a bit different for :ref:`saoverhobdev` and :ref:`saovermmdev`.
 
-III.6.1 Life Cycle of SmartAnthill Hobbyist-Oriented Device
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Life Cycle of SmartAnthill Hobbyist-Oriented Device
+'''''''''''''''''''''''''''''''''''''''''''''''''''
 During it's life within SmartAnthill, a hobbyist-oriented device goes through the following stages:
 
 * **Initial State**. Initially (when shipped to the customer), Hobbyist-oriented SmartAnthill Device doesn't need to contain any program. Program will be generated and device will be programmed as a part of 'Program Generation and Programming' stage. Therefore, programming connector is a must for hobbyist-oriented devices.
@@ -225,8 +225,8 @@ After the device is programmed, it is automatically added to a *SmartAnthill Dat
 
 * **Operation**. After the device is programmed, it can start operation. Device operation involves receiving and executing commands from Central Controller. Operations can be either device-specific (such as “measure temperature and report”), or generic (such as “wait for XXXX seconds and come back for further instructions”).
 
-III.6.2 Life Cycle of SmartAnthill Mass-Market-Oriented Device
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Life Cycle of SmartAnthill Mass-Market-Oriented Device
+''''''''''''''''''''''''''''''''''''''''''''''''''''''
 Mass-market devices are expected to be shipped in already programmed state, with a pre-defined configuration. Expected life cycle of a *SmartAnthill Mass-market-oriented Device* can be described as follows:
 
 * **Initial State**. Initially (when shipped to the customer), SmartAnthill mass-market-oriented device does contain a program which ensures it's operation. Re-programming capability and connector are optional for SmartAnthill mass-market-oriented devices.
@@ -245,8 +245,8 @@ Mass-market devices are expected to be shipped in already programmed state, with
 
 * **Operation**. Operation of Mass-market-oriented device is the same as operation of Hobbyist-oriented device.
 
-III.7 SmartAnthill protocol stack
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SmartAnthill protocol stack
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 SmartAnthill protocol stack is described in detail in a separate document,
 :ref:`saprotostack`.
 
