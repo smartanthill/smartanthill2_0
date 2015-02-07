@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Core Architecture
 ==================================
 
-:Version:   v0.1
+:Version:   v0.1b
 
 *SmartAnthill Core* represents a cross-platform software which is written in Python language and should support the popular operation systems (Mac OS X, Linux (+ARM) and Windows).
 
@@ -126,6 +126,10 @@ SmartAnthill Firmware Builder and Uploader
 
 @TODO PlatformIO role should be explained here
 
+SmartAnthill Database
+---------------------
 
-
-
+* Board settings
+* Pre-configured plugins
+* Application state
+* Configs
