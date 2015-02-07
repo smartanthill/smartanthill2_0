@@ -97,7 +97,7 @@ General Architecture
 ^^^^^^^^^^^^^^^^^^^^
 Simple SmartAnthill system consists of one *SmartAnthill Central Controller* and one or more devices controlled by it (see *SmartAnthill Overall Architecture* diagram above for an example topology).
 
-*SmartAnthill Central Controller* is a relatively complex device (such as PC or credit-card sized computer Raspberry Pi, BeagleBoard or CubieBoard) which normally runs several pieces of software: System Control Software, SmartAnthill Core and SmartAnthill Router.
+*SmartAnthill Central Controller* is a relatively complex device (such as PC or credit-card sized computer Raspberry Pi, BeagleBoard or CubieBoard) which normally runs several pieces of software: System Control Software and SmartAnthill Core.
 
 .. _saoversyscsoft:
 
@@ -105,8 +105,6 @@ System Control Software
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 *System Control Software* is intended to be easily customizable according to customer needs. It can be very different, but we aim to support OpenHAB, and to support pretty much any programming languages which can support one of the REST, WebSockets or Sockets. SmartAnthill project as such doesn't provide control software, it is rather a service which can be used by a control software.
-
-.. _saovercore:
 
 SmartAnthill Core
 ^^^^^^^^^^^^^^^^^
@@ -117,42 +115,7 @@ SmartAnthill Core
 * < 20Mb RAM for service/daemon
 * < 20Mb of free disk space (the cross-compilers, tool chains and firmware upload software are not included here)
 
-SmartAnthill Core Services
-''''''''''''''''''''''''''
-
-*SmartAnthill Core* operates on PC like a system foreground daemon with the
-following own services:
-
-* **Dashboard Service** represents WEB-based GUI (requires browser with enabled JavaScript) which allows:
-
-  + to manage :ref:`saoverdevices` (add, edit or remove them, customise with the specific capabilities/plugins/operations)
-  + to generate and upload device-compatible firmware via "TrainIt" wizard (see explanation below in :ref:`saovercorefirmbau`)
-  + to monitor *SmartAnthill Heterogeneous Network* in the real time (operational state of each device, the number of sent/received messages, errors and etc)
-  + to analyze log messages
-* **Network Service** is based on the :ref:`saprotostack` and operates with the network data (messages, packets, fragments) within *SmartAnthill Heterogeneous Network*.
-* **API Service** is responsible for receiving requests (via REST, WebSockets or Sockets) from *System Control Software* and taking necessary measures to execute them via :ref:`saccp`.
-
-.. _saovercorefirmbau:
-
-SmartAnthill Firmware Builder and Uploader
-''''''''''''''''''''''''''''''''''''''''''
-
-@TODO PlatformIO role should be explained here
-
-.. _saoverrouter:
-
-SmartAnthill Router
-^^^^^^^^^^^^^^^^^^^
-
-*SmartAnthill Router* is responsible for translating IP-based requests into bus-specific requests for :ref:`SmartAnthill Simple Devices <sasimpledev>` (also see document :ref:`saprotostack` for details).
-
-*SmartAnthill Router* operates one or more 'buses'. Each SmartAnthill bus can be either a traditional wired bus (such as CAN bus), or a wireless 'bus'. Wireless SmartAnthill 'buses' do not imply any wired connection, they just represent certain domain of wireless connections; for example, one wireless 'bus' can be a IEEE 802.15.4 'bus' controlling some devices connected via IEEE 802.15.4, and at the same time another wireless 'bus' can be a 431 MHz RF 'bus' controlling some other devices connected via 431 MHz RF.
-Each bus (wired or wireless) has one or more simple devices (such as sensors or actuators) connected to it (in case of wireless buses, the connection is wireless).
-Each device runs an MPU (or in theory CPU), which runs SmartAnthill stack on it (either a reference stack, or some other implementation).
-
-It should be noted that IP-enabled devices do not use SmartAnthill Router to operate; they can and SHOULD be addressed directly via their IP.
-
-TODO: Master-Slave topology!
+More detailed information is described in a separate document, :ref:`sacorearch`.
 
 .. _saoverdevices:
 
@@ -162,6 +125,8 @@ SmartAnthill Devices
 .. image:: ../_static/diagrams/smartanthill-device-diagram.png
     :alt: SmartAnthill Devices
     :target: ../_static/diagrams/smartanthill-device-diagram.png
+
+TODO: Master-Slave topology!
 
 Each *SmartAnthill Device* (also known as 'Ant') is either *SmartAnthill Hobbyist Device*, or a *SmartAnthill Mass-Market Device*. While these devices are similar, there are some differences as outlined below. In addition, in a completely different and independent dimension each SmartAnthill Device is either a "Simple Device", or an "IP-enabled Device".
 

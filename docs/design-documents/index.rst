@@ -29,5 +29,6 @@ Specification
     :maxdepth: 2
 
     Overall Architecture <smartanthill-overall-architecture>
+    Core Architecture <smartanthill-core-architecture>
     protocols/index
     protocols/yocto-vm
