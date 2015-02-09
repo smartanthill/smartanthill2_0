@@ -33,7 +33,7 @@
       <mxCell id="325" value="&lt;div&gt;&lt;font style=&quot;font-size: 16px&quot;&gt;&lt;b&gt;Network&lt;/b&gt; Service&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;SmartAnthill Protocol Library&lt;/font&gt;&lt;/div&gt;" style="whiteSpace=wrap;html=1;fontSize=16;gradientDirection=south;rounded=1;purple;glass=0" parent="301" vertex="1">
          <mxGeometry x="20" y="200" width="455" height="50" as="geometry" />
       </mxCell>
-      <mxCell id="137" value="&lt;div&gt;&lt;font style=&quot;font-size: 16px&quot;&gt;&lt;b&gt;Router&lt;/b&gt; Service&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;span style=&quot;line-height: 20px&quot;&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;Translating IP-based requests into bus-specific requests&lt;/font&gt;&lt;/span&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;" style="whiteSpace=wrap;html=1;fontSize=16;red" parent="301" vertex="1">
+      <mxCell id="137" value="&lt;div&gt;&lt;font style=&quot;font-size: 16px&quot;&gt;&lt;b&gt;SmartAnthill Router&lt;/b&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font&gt;&lt;span style=&quot;line-height: 20px&quot;&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;Translating IP-based requests into bus-specific requests&lt;/font&gt;&lt;/span&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;" style="whiteSpace=wrap;html=1;fontSize=16;red" parent="301" vertex="1">
          <mxGeometry x="20" y="270" width="376" height="50" as="geometry" />
       </mxCell>
       <mxCell id="17" value="SA DB&lt;br&gt;" style="shape=datastore;whiteSpace=wrap;html=1;blue" parent="301" vertex="1">

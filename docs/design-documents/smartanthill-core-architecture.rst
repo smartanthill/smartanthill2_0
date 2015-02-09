@@ -102,10 +102,10 @@ Network Service
 
 @TODO more explanation
 
-.. _sacorearchnetrouter:
+.. _sacorearchrouter:
 
 SmartAnthill Router
-'''''''''''''''''''
+-------------------
 
 *SmartAnthill Router* is responsible for translating IP-based requests into bus-specific requests for :ref:`SmartAnthill Simple Devices <sasimpledev>` (also see document :ref:`saprotostack` for details).
 
