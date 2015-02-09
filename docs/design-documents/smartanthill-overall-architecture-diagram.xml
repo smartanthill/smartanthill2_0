@@ -352,10 +352,10 @@
             <mxPoint x="280" y="200" as="targetPoint" />
          </mxGeometry>
       </mxCell>
-      <mxCell id="403" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=0.2;entryY=0.5;entryPerimeter=0;startArrow=none;startFill=0;startSize=3;endSize=3;fontSize=11" edge="1" parent="1" source="201" target="204">
+      <mxCell id="403" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=0.2;entryY=0.5;entryPerimeter=0;startArrow=none;startFill=0;startSize=3;endSize=5;fontSize=11" edge="1" parent="1" source="201" target="204">
          <mxGeometry relative="1" as="geometry" />
       </mxCell>
-      <mxCell id="404" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=0.2;entryY=0.5;entryPerimeter=0;startArrow=none;startFill=0;startSize=3;endSize=3;fontSize=11" edge="1" parent="1" source="201" target="205">
+      <mxCell id="404" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=0.2;entryY=0.5;entryPerimeter=0;startArrow=none;startFill=0;startSize=3;endSize=5;fontSize=11" edge="1" parent="1" source="201" target="205">
          <mxGeometry relative="1" as="geometry" />
       </mxCell>
       <mxCell id="192" style="rounded=0;html=1;exitX=0;exitY=0.5;startArrow=classic;startFill=1;endArrow=classic;endFill=1;entryX=0.807;entryY=1;entryPerimeter=0" parent="1" source="21" edge="1" target="158">
@@ -383,7 +383,7 @@
          <mxGeometry x="699" y="523" width="70" height="47" as="geometry" />
       </mxCell>
       <mxCell id="410" value="&lt;div&gt;Programming&lt;/div&gt;&lt;div&gt;Interface&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;shadow=1;fontSize=14" vertex="1" parent="1">
-         <mxGeometry x="701" y="400" width="87" height="40" as="geometry" />
+         <mxGeometry x="701" y="400" width="89" height="40" as="geometry" />
       </mxCell>
       <mxCell id="412" value="&lt;b&gt;Web-GUI&lt;/b&gt;&lt;div&gt;&amp;nbsp;SmartAnthill Dashboard&lt;/div&gt;" style="html=1;whiteSpace=wrap;rounded=1;fontSize=14;align=center;turquoise" vertex="1" parent="1">
          <mxGeometry x="538" y="150" width="153" height="90" as="geometry" />
