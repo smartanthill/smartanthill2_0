@@ -58,6 +58,9 @@ In SmartAnthill, each SmartAnthill Device (whether Simple Device or IP-enabled d
 Relation between SmartAnthill protocol stack and OSI/ISO network model
 ----------------------------------------------------------------------
 
+.. note::
+    For more detailed information please scroll table below by horizontal
+
 +--------+--------------+------------------+-----------------------+----------------------+------------------------+----------------------------+------------------------+
 | Layer  | OSI-Model    | SmartAnthill     |     Function          | Implementation       | Implementation         | Implementation             | Implementation         |
 |        |              | Protocol Stack   |                       | on Clients           | on IP-enabled Devices  | on Routers                 | on Simple Devices      |
