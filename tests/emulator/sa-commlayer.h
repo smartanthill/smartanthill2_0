@@ -24,65 +24,15 @@
     DAMAGE
 *******************************************************************************/
 
+#if !defined __SA_COMMLAYER_H__
+#define __SA_COMMLAYER_H__
 
-#include "sa-commlayer.h"
-#include <stdio.h> 
-#include <string.h> // TODO: remove asap (reason: used onle because of strlen() needed to construct an initial example)
+extern char* g_pipeName;
 
-#define BUF_SIZE 512
+bool communicationInitializeAsServer();
+bool communicationInitializeAsClient();
+void communicationTerminate();
+bool sendMessage( const unsigned char * buff, int size );
+int getMessage( unsigned char * buff, int maxSize );
 
-
-int main(int argc, char *argv[])
-{
-	printf("starting CLIENT...\n");
-	printf("==================\n\n");
-
-	char* msg = "Default message from client.";
-
-	bool   fSuccess = false;
-
-	if (argc > 1)
-		msg = argv[1];
-
-	// Try to open a named pipe; wait for it, if necessary. 
-
-	fSuccess = communicationInitializeAsClient();
-	if (!fSuccess)
-		return -1;
-
-
-	do
-	{
-		// Send a message to the pipe server. 
-		int msgSize = strlen(msg) + 1;
-
-		printf("Sending %d byte message: \"%s\"\n", msgSize, msg);
-
-		fSuccess = sendMessage((unsigned char *)msg, msgSize);
-
-		if (!fSuccess)
-		{
-			return -1;
-		}
-
-		printf("\nMessage sent to server, receiving reply as follows:\n");
-
-		unsigned char rwBuff[BUF_SIZE];
-		msgSize = getMessage(rwBuff, BUF_SIZE);
-
-		if (!fSuccess)
-		{
-			return -1;
-		}
-
-		printf("\n<End of message, press X+ENTER to terminate connection and exit or ENTER to continue>");
-		char c = getchar();
-		if (c == 'x' || c == 'X')
-			break;
-	} while (1);
-
-	communicationTerminate();
-
-	return 0;
-}
-
+#endif // __SA_COMMLAYER_H__
