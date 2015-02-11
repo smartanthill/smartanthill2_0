@@ -165,12 +165,13 @@ TODO: exact format of 'Error "Old Nonce" Message'
 5.1. SASP Encoded-Size
 ^^^^^^^^^^^^^^^^^^^^^^
 
-SASP Encoded-Size is a variable-length encoding of sizes (with the idea being somewhat similar to the idea behind UTF-8). Namely:
+SASP Encoded-Size is a variable-length encoding of sizes (with the idea being somewhat similar to the idea behind UTF-8; it is also identical to the Yocto VM Encoded-Size as described in
+:ref:`sayoctovm` ). Namely:
 
 * if first byte of Encoded-Size is c1 <= 127, then the value of Encoded-size is equal to c1
 * if first byte of Encoded-Size is c1 >= 128, then the next byte c2 is needed:
 
-  + if second byte of Encoded-Size is c2 <= 127, then the value of Encoded-Size is equal to *((uint16)(c1&0x7F) | ((uint16)c2 << 7))*.
+  + if second byte of Encoded-Size is c2 <= 127, then the value of Encoded-Size is equal to *128+((uint16)(c1&0x7F) | ((uint16)c2 << 7))*.
   + if second byte of Encoded-Size is c2 >= 128, then SASP receiving side MUST treat such a packet as an invalid (as the one which didn't pass internal validation). c2 >= 128 is reserved for potential future expansion)
 
 
@@ -181,12 +182,10 @@ The following table shows how many Encoded-Size bytes is necessary to encode ran
 +====================+=====================+
 | 0-127              | 1                   |
 +--------------------+---------------------+
-| 0-16511            | 2                   |
+| 128-16511          | 2                   |
 +--------------------+---------------------+
 
 **Observation 1**: when parsing Encoded-Size, it is possible to find out both "size of Encoding-Size itself", and "size which is encoded by Encoded-Size"
-
-**Observation 2**: values less than 128 can be encoded using either one byte (c1 = size), or two bytes ( c1 = size + 128, c2 = 0 ). The second option can be good, if a sum of size to be encoded and number of bytes used for size encoding is equal to 129. 
 
 **Note 1**:  upon necessity this encoding can be extended by analogy to address greater sizes.
 
@@ -197,7 +196,7 @@ The following table shows how many Encoded-Size bytes is necessary to encode ran
 
 SASP data under encryption is organized as follows:
 
-\| **First Byte** \| (opt) **padding size** \| **byte sequence** \| (opt) **padding** \|
+\| **First Byte** \| (opt) **complementary size** \| **byte sequence** \| (opt) **padding** \|
 
 where:
 
@@ -206,9 +205,9 @@ where:
      * **MSB bit**: padding size flag, which is set to 1, if padding is present, and 0 otherwise. Presence of padding implies presence of padding size field as well.
      * **Remaining 7 bits**: a part of payload.
 
-  * **padding size**: variable size field; this field is present only if padding size flag is set; in this case the field contains encoded padding size; the size of the field can be derived from the field data itself (see SASP Encoded size for details).
+  * **complementary size**: variable size field; this field is present only if padding size flag is set; in this case the field contains encoded value of a sum of the size of this field and the size of padding (if any); encoding is done using SASP encoded-size.
   * **byte sequence**: variable size field; data that is defined by a higher level protocol.
-  * **padding**: variable size field; this field is present only if padding size flag is set; contains padding up to a target size.
+  * **padding**: variable size field; this field is present only if padding size flag is set and **complementary size** represents a value greater than 1; contains padding up to a target size.
   
 Correspondingly, SASP payload consists of:
 
