@@ -165,13 +165,12 @@ TODO: exact format of 'Error "Old Nonce" Message'
 5.1. SASP Encoded-Size
 ^^^^^^^^^^^^^^^^^^^^^^
 
-SASP Encoded-Size is a variable-length encoding of sizes (with the idea being somewhat similar to the idea behind UTF-8; it is also identical to the Yocto VM Encoded-Size as described in
-:ref:`sayoctovm` ). Namely:
+SASP Encoded-Size is a variable-length encoding of sizes (with the idea being somewhat similar to the idea behind UTF-8). Namely:
 
 * if first byte of Encoded-Size is c1 <= 127, then the value of Encoded-size is equal to c1
 * if first byte of Encoded-Size is c1 >= 128, then the next byte c2 is needed:
 
-  + if second byte of Encoded-Size is c2 <= 127, then the value of Encoded-Size is equal to *128+((uint16)(c1&0x7F) | ((uint16)c2 << 7))*.
+  + if second byte of Encoded-Size is c2 <= 127, then the value of Encoded-Size is equal to *((uint16)(c1&0x7F) | ((uint16)c2 << 7))*.
   + if second byte of Encoded-Size is c2 >= 128, then SASP receiving side MUST treat such a packet as an invalid (as the one which didn't pass internal validation). c2 >= 128 is reserved for potential future expansion)
 
 
@@ -182,10 +181,12 @@ The following table shows how many Encoded-Size bytes is necessary to encode ran
 +====================+=====================+
 | 0-127              | 1                   |
 +--------------------+---------------------+
-| 128-16511          | 2                   |
+| 0-16511            | 2                   |
 +--------------------+---------------------+
 
 **Observation 1**: when parsing Encoded-Size, it is possible to find out both "size of Encoding-Size itself", and "size which is encoded by Encoded-Size"
+
+**Observation 2**: values less than 128 can be encoded using either one byte (c1 = size), or two bytes ( c1 = size + 128, c2 = 0 ). The second option can be good, if a sum of size to be encoded and number of bytes used for size encoding is equal to 129. 
 
 **Note 1**:  upon necessity this encoding can be extended by analogy to address greater sizes.
 
