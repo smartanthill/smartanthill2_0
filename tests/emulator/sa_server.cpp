@@ -26,13 +26,40 @@
 
 
 #include "sa-commlayer.h"
+#include "sasp_protocol.h"
 #include <stdio.h> 
+#include <assert.h>
+
+
+#include <memory.h> // for memcpy(), memset()
 
 #define BUF_SIZE 512
+unsigned char rwBuff[BUF_SIZE];
+unsigned char data_buff[BUF_SIZE];
+
+
+
+
+int prepareReplyMessage( unsigned char* buffIn, int msgSize, unsigned char* buffOut, int buffOutSize, unsigned char* stack, int stackSize )
+{
+	// buffer assumes to contain an input message; interface is subject to change
+	// by now this fanction has totally fake implementation; we need something to work with
+	// anyway, in a real case there will be some kind of message source, for instance, a controlling application at Master side
+	unsigned char flags = buffIn[0];
+	unsigned char* payload_buff = buffIn + 1;
+	printf("Preparing reply to client message: [0x%02x]\"%s\" [1+%d bytes]\n", flags, payload_buff, msgSize-1 );
+	sprintf( (char*)buffOut + 1, "Server reply; client message: [0x%02x]\"%s\" [1+%d bytes]", flags, payload_buff, msgSize-1 );
+	buffOut[0] = buffIn[0]; // just echo so far
+	int size = 0;
+	while ( (buffOut + 1)[size++] );
+	printf("Reply is about to be sent: \"%s\" [%d bytes]\n", buffOut + 1, size);
+	return size+1;
+}
 
 int main(int argc, char *argv[])
 {
-	printf("starting server...\n");
+	printf("STARTING SERVER...\n");
+	printf("==================\n\n");
 
 	bool   fConnected = false;
 
@@ -43,7 +70,6 @@ int main(int argc, char *argv[])
 
 	printf("Client connected.\n");
 
-	unsigned char rwBuff[BUF_SIZE];
 
 	for (;;)
 	{
@@ -59,15 +85,26 @@ int main(int argc, char *argv[])
 		printf("Message from client received:\n");
 		printf("\"%s\"\n", rwBuff);
 
-		// do some nonsence to imitate processing
-		unsigned char temp;
-		for (int i = 0; i < msgSize / 2 - 1; i++)
-		{
-			temp = rwBuff[i];
-			rwBuff[i] = rwBuff[msgSize - 2 - i];
-			rwBuff[msgSize - i] = temp;
-		}
-		rwBuff[msgSize - 1] = 0;
+		// process received message
+		msgSize = handlerSASP_receive( rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
+		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
+		msgSize = prepareReplyMessage( rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
+		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
+
+		// check block #1
+		unsigned char msgCopy[BUF_SIZE], msgBack[BUF_SIZE];
+		memcpy( msgCopy, rwBuff, msgSize );
+		int msgSizeCopy = msgSize, msgSizeBack;
+
+		msgSize = handlerSASP_send( rwBuff[0], rwBuff+1, msgSize-1, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
+		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
+
+		// check block #2
+		msgSizeBack = handlerSASP_receive( rwBuff, msgSize, msgBack + BUF_SIZE / 4, BUF_SIZE / 4, msgBack + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
+		memcpy( msgBack, msgBack + BUF_SIZE / 4, msgSizeBack );
+		assert( msgSizeCopy == msgSizeBack );
+		for ( int k=0; k<msgSizeCopy; k++ )
+			assert( msgCopy[k] == msgBack[k] );
 
 		// reply
 		bool fSuccess = sendMessage((unsigned char *)rwBuff, msgSize);

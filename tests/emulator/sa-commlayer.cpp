@@ -206,7 +206,7 @@ int getMessage( unsigned char * buff, int maxSize ) // returns -1 on error
 	   // Read from the pipe. 
 		  if ( byteCnt >= msgSize )
 		  {
-			  printf( "\"%s\"\n", buff );
+//			  printf( "\"%s\"\n", buff );
 			  break;
 		  }
  

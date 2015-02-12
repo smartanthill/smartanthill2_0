@@ -26,10 +26,36 @@
 
 
 #include "sa-commlayer.h"
+#include "sasp_protocol.h"
 #include <stdio.h> 
-#include <string.h> // TODO: remove asap (reason: used onle because of strlen() needed to construct an initial example)
+#include <string.h> // TODO: check necessity; currently included because of memset() which can be done manually
+
 
 #define BUF_SIZE 512
+unsigned char rwBuff[BUF_SIZE];
+unsigned char data_buff[BUF_SIZE];
+
+
+int dummy_message_count; // used for fake message generation
+
+int prepareInitialMessage( unsigned char* buff, int buffSize )
+{
+	// by now this fanction has totally fake implementation; we need something to work with
+	// anyway, in a real case there will be some kind of message source, for instance, a controlling application at Master side
+	memset( buff, 'Z', buffSize );
+	sprintf( (char*)buff, "Client message #%d", dummy_message_count++ );
+	int size = 0;
+	while ( buff[size++] );
+	printf("Preparing %d byte message: \"%s\"\n", size, buff);
+	return size;
+}
+
+void postprocessReceivedMessage( unsigned char* buff, int msgSize, int buffSize )
+{
+	// by now this fanction has totally fake implementation; we need something to work with
+	// anyway, in a real case there will be some kind of message source, for instance, a controlling application at Master side
+	printf("Message received: \"%s\" [%d bytes]\n", buff, msgSize);
+}
 
 
 int main(int argc, char *argv[])
@@ -37,12 +63,8 @@ int main(int argc, char *argv[])
 	printf("starting CLIENT...\n");
 	printf("==================\n\n");
 
-	char* msg = "Default message from client.";
-
 	bool   fSuccess = false;
-
-	if (argc > 1)
-		msg = argv[1];
+	int msgSize;
 
 	// Try to open a named pipe; wait for it, if necessary. 
 
@@ -50,24 +72,34 @@ int main(int argc, char *argv[])
 	if (!fSuccess)
 		return -1;
 
-
 	do
 	{
-		// Send a message to the pipe server. 
-		int msgSize = strlen(msg) + 1;
+		msgSize = prepareInitialMessage( rwBuff, BUF_SIZE/2 );
 
-		printf("Sending %d byte message: \"%s\"\n", msgSize, msg);
+		unsigned char msgCopy[BUF_SIZE], msgBack[BUF_SIZE];
+		memcpy(msgCopy, rwBuff, msgSize);
+		int msgSizeCopy = msgSize;
+		int msgSizeBack;
 
-		fSuccess = sendMessage((unsigned char *)msg, msgSize);
+		msgSize = handlerSASP_send( 0, rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
+		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
+
+		msgSizeBack = handlerSASP_receive( rwBuff, msgSize, msgBack, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
+		assert( msgSizeCopy+1 == msgSizeBack );
+		for ( int k=0; k<msgSizeCopy; k++ )
+			assert( msgCopy[k] == msgBack[k+1] );
+
+		// send ... receive ...
+		printf( "raw sent: \"%s\"\n", rwBuff );
+		fSuccess = sendMessage( rwBuff, msgSize );
 
 		if (!fSuccess)
 		{
 			return -1;
 		}
 
-		printf("\nMessage sent to server, receiving reply as follows:\n");
+		printf("\nMessage sent to server [%d bytes]...\n", msgSize );
 
-		unsigned char rwBuff[BUF_SIZE];
 		msgSize = getMessage(rwBuff, BUF_SIZE);
 
 		if (!fSuccess)
@@ -75,11 +107,22 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 
+		printf("\n... Message received from server [%d bytes]:\n", msgSize);
+
+
+		// process received
+		msgSize = handlerSASP_receive( rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
+
+		postprocessReceivedMessage( rwBuff + BUF_SIZE / 4 + 1, msgSize, BUF_SIZE );
+
+		// repeating?..
 		printf("\n<End of message, press X+ENTER to terminate connection and exit or ENTER to continue>");
 		char c = getchar();
 		if (c == 'x' || c == 'X')
 			break;
-	} while (1);
+		printf( "\n\n" );
+	} 
+	while (1);
 
 	communicationTerminate();
 
