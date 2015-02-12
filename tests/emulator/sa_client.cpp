@@ -25,10 +25,10 @@
 *******************************************************************************/
 
 
+#include "sa-common.h"
 #include "sa-commlayer.h"
 #include "sasp_protocol.h"
 #include <stdio.h> 
-#include <string.h> // TODO: check necessity; currently included because of memset() which can be done manually
 
 
 #define BUF_SIZE 512

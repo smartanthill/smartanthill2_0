@@ -25,13 +25,11 @@
 *******************************************************************************/
 
 
+#include "sa-common.h"
 #include "sa-commlayer.h"
 #include "sasp_protocol.h"
 #include <stdio.h> 
-#include <assert.h>
 
-
-#include <memory.h> // for memcpy(), memset()
 
 #define BUF_SIZE 512
 unsigned char rwBuff[BUF_SIZE];

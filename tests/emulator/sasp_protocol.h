@@ -27,8 +27,9 @@
 #if !defined __SASP_PROTOCOL_H__
 #define __SASP_PROTOCOL_H__
 
-#include <stdio.h> 
-#include <assert.h>
+#include "sa-common.h"
+#include "sa-eeprom.h"
+
 
 
 #define SASP_NONCE_SIZE 6
@@ -36,42 +37,49 @@
 #define SASP_ENC_BLOCK_SIZE 16
 #define SASP_TAG_SIZE SASP_ENC_BLOCK_SIZE
 
-#define NONCE_LW_OFFSET 0 // Nonce Lower Watermark
-#define NONCE_LS_OFFSET SASP_NONCE_SIZE // Nonce to use For Sending
-#define LRPS_OFFSET (SASP_NONCE_SIZE+SASP_NONCE_SIZE) // Last Received Packet Signature
-
-//eeprom_write: id, data, size
-//eeprom_read_fixed_size: id, buff, size
-//eeprom_read_size: id; ret: size
-
-#define uint8_t unsigned char
-#define uint16_t unsigned short
+#define DATA_SASP_SIZE (SASP_NONCE_SIZE+SASP_NONCE_SIZE+SASP_TAG_SIZE)
+#define DATA_SASP_NONCE_LW_OFFSET 0 // Nonce Lower Watermark
+#define DATA_SASP_NONCE_LS_OFFSET SASP_NONCE_SIZE // Nonce to use For Sending
+#define DATA_SASP_LRPS_OFFSET (SASP_NONCE_SIZE+SASP_NONCE_SIZE) // Last Received Packet Signature
 
 
-#include <memory.h> // for memcpy(), memset()
 
 
-void SASP_init()
+
+
+void SASP_initAtLifeStart( unsigned char* dataBuff )
 {
-	// in present quick implementation we assume new life start, 
-	// that is, restore from backup, etc are yet to be implemented
-	int i;
-/*	for ( i=NONCE_LW_OFFSET; i<SASP_NONCE_SIZE; i++ )
-		data_buff[i] = 0;
-	for ( i=NONCE_LS_OFFSET; i<SASP_NONCE_SIZE; i++ )
-		data_buff[i] = 0;
-	for ( i=LRPS_OFFSET; i<SASP_TAG_SIZE; i++ )
-		data_buff[i] = 0;*/
+	memset( dataBuff + DATA_SASP_NONCE_LW_OFFSET, 0, SASP_NONCE_SIZE );
+	memset( dataBuff + DATA_SASP_NONCE_LS_OFFSET, 0, SASP_NONCE_SIZE );
+	memset( dataBuff + DATA_SASP_LRPS_OFFSET, 0, SASP_TAG_SIZE );
+
+	eeprom_write( DATA_SASP_NONCE_LW_ID, dataBuff + DATA_SASP_NONCE_LW_OFFSET, SASP_NONCE_SIZE );
+	eeprom_write( DATA_SASP_NONCE_LW_ID, dataBuff + DATA_SASP_NONCE_LW_OFFSET, SASP_NONCE_SIZE );
 }
 
-void NonceLS_increment()
+void SASP_restoreFromBackup( unsigned char* dataBuff )
+{
+	memset( dataBuff + DATA_SASP_LRPS_OFFSET, 0, SASP_TAG_SIZE );
+
+	uint8_t size;
+
+	size = eeprom_read_size( DATA_SASP_NONCE_LW_ID );
+	assert( size == SASP_NONCE_SIZE );
+	eeprom_read_fixed_size( DATA_SASP_NONCE_LW_ID, dataBuff + DATA_SASP_NONCE_LW_OFFSET, size);
+
+	size = eeprom_read_size( DATA_SASP_NONCE_LS_ID );
+	assert( size == SASP_NONCE_SIZE );
+	eeprom_read_fixed_size( DATA_SASP_NONCE_LS_ID, dataBuff + DATA_SASP_NONCE_LS_OFFSET, size);
+}
+
+void NonceLS_increment(  unsigned char* buff )
 {
 	int i;
-/*	for ( i=NONCE_LS_OFFSET; i<SASP_NONCE_SIZE; i++ )
+	for ( i=DATA_SASP_NONCE_LS_OFFSET; i<SASP_NONCE_SIZE; i++ )
 	{
-		data_buff[i] ++;
-		if ( data_buff[i] ) break;
-	}*/
+		buff[i] ++;
+		if ( buff[i] ) break;
+	}
 }
 
 int SASP_calcComplementarySize( int iniSize, int requiredSize )
@@ -239,7 +247,8 @@ int SASP_IntraPacketAuthenticateAndDecrypt( unsigned char* buffIn, int msgSize, 
 
 	if ( msgSize < SASP_HEADER_SIZE + SASP_TAG_SIZE || ( msgSize - (SASP_HEADER_SIZE + SASP_TAG_SIZE) ) % SASP_ENC_BLOCK_SIZE )
 	{
-		printf( "Bad size of packet %d\n", msgSize ); // this is a special case as such packets should not arrive at this level (underlying protocol error?)
+//		printf( "Bad size of packet %d\n", msgSize ); // this is a special case as such packets should not arrive at this level (underlying protocol error?)
+		assert( !(msgSize < SASP_HEADER_SIZE + SASP_TAG_SIZE || ( msgSize - (SASP_HEADER_SIZE + SASP_TAG_SIZE) ) % SASP_ENC_BLOCK_SIZE) );
 		return -1;
 	}
 

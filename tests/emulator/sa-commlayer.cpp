@@ -24,6 +24,7 @@
     DAMAGE
 *******************************************************************************/
 
+#include "sa-common.h"
 #include "sa-commlayer.h"
 #include <stdio.h> 
 
