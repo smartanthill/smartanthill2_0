@@ -32,6 +32,8 @@
 #define DATA_SASP_NONCE_LS_ID 1 // Nonce to use For Sending
 // ...to be continued
 
+#define DATA_CONTINUE_LIFE_ID 0Xff // FAKE data used at simulator startup: if not present, a new life (whatever it means) is started
+
 
 // calls
 void eeprom_write( uint8_t id, uint8_t* data, uint8_t size);

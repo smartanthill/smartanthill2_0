@@ -47,7 +47,7 @@
 
 
 
-void SASP_initAtLifeStart( unsigned char* dataBuff )
+void SASP_initAtLifeStart( uint8_t* dataBuff )
 {
 	memset( dataBuff + DATA_SASP_NONCE_LW_OFFSET, 0, SASP_NONCE_SIZE );
 	memset( dataBuff + DATA_SASP_NONCE_LS_OFFSET, 0, SASP_NONCE_SIZE );
@@ -57,7 +57,7 @@ void SASP_initAtLifeStart( unsigned char* dataBuff )
 	eeprom_write( DATA_SASP_NONCE_LW_ID, dataBuff + DATA_SASP_NONCE_LW_OFFSET, SASP_NONCE_SIZE );
 }
 
-void SASP_restoreFromBackup( unsigned char* dataBuff )
+void SASP_restoreFromBackup( uint8_t* dataBuff )
 {
 	memset( dataBuff + DATA_SASP_LRPS_OFFSET, 0, SASP_TAG_SIZE );
 
@@ -72,7 +72,7 @@ void SASP_restoreFromBackup( unsigned char* dataBuff )
 	eeprom_read_fixed_size( DATA_SASP_NONCE_LS_ID, dataBuff + DATA_SASP_NONCE_LS_OFFSET, size);
 }
 
-void NonceLS_increment(  unsigned char* buff )
+void NonceLS_increment(  uint8_t* buff )
 {
 	int i;
 	for ( i=DATA_SASP_NONCE_LS_OFFSET; i<SASP_NONCE_SIZE; i++ )
@@ -90,7 +90,7 @@ int SASP_calcComplementarySize( int iniSize, int requiredSize )
 	return freeSpaceSize; 
 }
 
-int SASP_encodeSize( int size, unsigned char* buff )
+int SASP_encodeSize( int size, uint8_t* buff )
 {
 	if ( size < 128 )
 	{
@@ -99,13 +99,13 @@ int SASP_encodeSize( int size, unsigned char* buff )
 	}
 	else
 	{
-		buff[0] = ((unsigned char)size & 0x7F) + 128;
+		buff[0] = ((uint8_t)size & 0x7F) + 128;
 		buff[1] = (size - 128) >> 7;
 		return 2;
 	}
 }
 
-int SASP_decodeSize( unsigned char* buff )
+int SASP_decodeSize( uint8_t* buff )
 {
 	if ( ( buff[ 0 ] & 128 ) == 0 )
 	{
@@ -118,7 +118,7 @@ int SASP_decodeSize( unsigned char* buff )
 	}
 }
 
-int SASP_getSizeUsedForEncoding( unsigned char* buff )
+int SASP_getSizeUsedForEncoding( uint8_t* buff )
 {
 	if ( ( buff[ 0 ] & 128 ) == 0 )
 		return 1;
@@ -129,7 +129,7 @@ int SASP_getSizeUsedForEncoding( unsigned char* buff )
 	}
 }
 
-int SASP_EncryptAndAddAuthenticationData( unsigned char first_byte, unsigned char* buffIn, int msgSize, unsigned char* buffOut, int buffOutSize, unsigned char* stack, int stackSize )
+int SASP_EncryptAndAddAuthenticationData( uint8_t first_byte, uint8_t* buffIn, int msgSize, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize )
 {
 	// present implementation assumes that the message ia followed by a nonce with a first byte having its MSB to Master/Slave distinguishing bit:
 	// message_byte_sequence | Master/Slave | nonce
@@ -148,7 +148,7 @@ int SASP_EncryptAndAddAuthenticationData( unsigned char first_byte, unsigned cha
 	int ins_pos = SASP_HEADER_SIZE + SASP_TAG_SIZE;
 	int paddingAddedSize = 0;
 
-	unsigned char c = 0; // dummy tag
+	uint8_t c = 0; // dummy tag
 
 	// 1. Calculate and encode complementary size; Form the first block
 	int compl_size = SASP_calcComplementarySize( msgSize + 1, msgSize + 1 );
@@ -181,7 +181,7 @@ int SASP_EncryptAndAddAuthenticationData( unsigned char first_byte, unsigned cha
 	if ( !singleBlock )
 	{
 		// 2. process each next full block of the message 
-		unsigned char* restOfMsg = buffIn + (SASP_ENC_BLOCK_SIZE-encoding_size-1);
+		uint8_t* restOfMsg = buffIn + (SASP_ENC_BLOCK_SIZE-encoding_size-1);
 		int restOfMsgSize = msgSize - (SASP_ENC_BLOCK_SIZE-encoding_size-1);
 		for ( j=0; j<restOfMsgSize/SASP_ENC_BLOCK_SIZE; j++ )
 		{
@@ -237,7 +237,7 @@ int SASP_EncryptAndAddAuthenticationData( unsigned char first_byte, unsigned cha
 	return ins_pos;
 }
 
-int SASP_IntraPacketAuthenticateAndDecrypt( unsigned char* buffIn, int msgSize, unsigned char* buffOut, int buffOutSize, unsigned char* stack, int stackSize )
+int SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* buffIn, int msgSize, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize )
 {
 	// input data structure: header | tag | encrypted data
 	// Therefore, msgSize is expected to be SASP_HEADER_SIZE + SASP_TAG_SIZE + k * SASP_ENC_BLOCK_SIZE
@@ -260,7 +260,7 @@ int SASP_IntraPacketAuthenticateAndDecrypt( unsigned char* buffIn, int msgSize, 
 	// FAKE IMPLEMENTATION 
 
 	int i, j;
-	unsigned char c = 0;
+	uint8_t c = 0;
 	int compl_size = 0;
 	bool tagOK = true;
 
@@ -353,7 +353,7 @@ int SASP_IntraPacketAuthenticateAndDecrypt( unsigned char* buffIn, int msgSize, 
 	return tagOK ? byte_seq_size + 1 : -1;
 }
 
-int handlerSASP_send( unsigned char first_byte, unsigned char* buffIn, int msgSize, unsigned char* buffOut, int buffOutSize, unsigned char* stack, int stackSize )
+int handlerSASP_send( uint8_t first_byte, uint8_t* buffIn, int msgSize, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
 {
 	// 1. TODO: do initial preparations
 
@@ -363,7 +363,7 @@ int handlerSASP_send( unsigned char first_byte, unsigned char* buffIn, int msgSi
 	return retSize;
 }
 
-int handlerSASP_receive( unsigned char* buffIn, int msgSize, unsigned char* buffOut, int buffOutSize, unsigned char* stack, int stackSize )
+int handlerSASP_receive( uint8_t* buffIn, int msgSize, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
 {
 	// 1. Perform intra-packet authentication
 	int retSize = SASP_IntraPacketAuthenticateAndDecrypt( buffIn, msgSize, buffOut, buffOutSize, stack, stackSize );

@@ -81,10 +81,10 @@ int main(int argc, char *argv[])
 		int msgSizeCopy = msgSize;
 		int msgSizeBack;
 
-		msgSize = handlerSASP_send( 0, rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
+		msgSize = handlerSASP_send( 0, rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4, data_buff + DADA_OFFSET_SASP );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
 
-		msgSizeBack = handlerSASP_receive( rwBuff, msgSize, msgBack, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
+		msgSizeBack = SASP_IntraPacketAuthenticateAndDecrypt( rwBuff, msgSize, msgBack, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
 		assert( msgSizeCopy+1 == msgSizeBack );
 		for ( int k=0; k<msgSizeCopy; k++ )
 			assert( msgCopy[k] == msgBack[k+1] );
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
 
 
 		// process received
-		msgSize = handlerSASP_receive( rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
+		msgSize = handlerSASP_receive( rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4, data_buff + DADA_OFFSET_SASP );
 
 		postprocessReceivedMessage( rwBuff + BUF_SIZE / 4 + 1, msgSize, BUF_SIZE );
 

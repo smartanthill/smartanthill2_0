@@ -43,4 +43,10 @@
 #define MASTER_SLAVE_BIT 0
 #endif
 
+// offsets in data segment of particular handler data
+// note: internal structure is defined by a correspondent handler (see respective .h files for details)
+// TODO: think about more reliable mechanism
+#define DADA_OFFSET_SASP 0
+#define DADA_OFFSET_SAGDP 28
+
 #endif // __SA_COMMON_H__
