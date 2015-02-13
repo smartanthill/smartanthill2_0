@@ -72,14 +72,42 @@ void SASP_restoreFromBackup( uint8_t* dataBuff )
 	eeprom_read_fixed_size( DATA_SASP_NONCE_LS_ID, dataBuff + DATA_SASP_NONCE_LS_OFFSET, size);
 }
 
-void NonceLS_increment(  uint8_t* buff )
+void SASP_NonceLS_increment(  uint8_t* nonce )
 {
 	int i;
-	for ( i=DATA_SASP_NONCE_LS_OFFSET; i<SASP_NONCE_SIZE; i++ )
+	for ( i=0; i<SASP_NONCE_SIZE; i++ )
 	{
-		buff[i] ++;
-		if ( buff[i] ) break;
+		nonce[i] ++;
+		if ( nonce[i] ) break;
 	}
+}
+
+uint8_t SASP_NonceCompare( uint8_t* nonce1, uint8_t* nonce2 )
+{
+	if ( (nonce1[SASP_NONCE_SIZE-1]&0x7F) > (nonce2[SASP_NONCE_SIZE-1]&0x7F) ) return 1;
+	if ( (nonce1[SASP_NONCE_SIZE-1]&0x7F) < (nonce2[SASP_NONCE_SIZE-1]&0x7F) ) return -1;
+	int i;
+	for ( i=SASP_NONCE_SIZE-2; i>=0; i-- )
+	{
+		if ( nonce1[i] > nonce2[i] ) return 1;
+		if ( nonce1[i] < nonce2[i] ) return -1;
+	}
+	return 0;
+}
+
+bool SASP_NonceIsIntendedForSasp(  uint8_t* nonce )
+{
+	return nonce[SASP_NONCE_SIZE-1] & 0x80;
+}
+
+void SASP_NonceSetIntendedForSaspFlag(  uint8_t* nonce )
+{
+	nonce[SASP_NONCE_SIZE-1] |= 0x80;
+}
+
+void SASP_NonceClearForSaspFlag(  uint8_t* nonce )
+{
+	nonce[SASP_NONCE_SIZE-1] &= 0x7F;
 }
 
 int SASP_calcComplementarySize( int iniSize, int requiredSize )
@@ -129,13 +157,10 @@ int SASP_getSizeUsedForEncoding( uint8_t* buff )
 	}
 }
 
-int SASP_EncryptAndAddAuthenticationData( uint8_t first_byte, uint8_t* buffIn, int msgSize, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize )
+int SASP_EncryptAndAddAuthenticationData( uint8_t first_byte, uint8_t* buffIn, int msgSize, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, const uint8_t* nonce )
 {
-	// present implementation assumes that the message ia followed by a nonce with a first byte having its MSB to Master/Slave distinguishing bit:
-	// message_byte_sequence | Master/Slave | nonce
-	// msgSize covers only the size of message_byte_sequence
-	// that is, free space starts at msgSize + SASP_NONCE_SIZE
-	// Master/Slave | nonce concatenation is used as a full nonce
+	// msgSize covers the size of message_byte_sequence
+	// (byte with MASTER_SLAVE_BIT) | nonce concatenation is used as a full nonce
 	// the output is formed as follows: nonce | tag | encrypted data
 
 	// data under encryption is as follows: first_byte | (opt) padding_size | message_byte_sequence | (opt) padding
@@ -231,8 +256,7 @@ int SASP_EncryptAndAddAuthenticationData( uint8_t first_byte, uint8_t* buffIn, i
 		(buffOut + SASP_HEADER_SIZE)[i] = c;
 
 	// 5. construct header:
-	for ( i=0; i<SASP_HEADER_SIZE; i++)
-		buffOut[i] = buffIn[msgSize+1+i];
+	memcpy( buffOut, nonce, SASP_NONCE_SIZE );
 
 	return ins_pos;
 }
@@ -353,12 +377,12 @@ int SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* buffIn, int msgSize, uint8_
 	return tagOK ? byte_seq_size + 1 : -1;
 }
 
-int handlerSASP_send( uint8_t first_byte, uint8_t* buffIn, int msgSize, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
+int handlerSASP_send( bool repeated, uint8_t first_byte, uint8_t* buffIn, int msgSize, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
 {
-	// 1. TODO: do initial preparations
+	if ( !repeated )
+		SASP_NonceLS_increment( data + DATA_SASP_NONCE_LS_OFFSET );
 
-	// 2. form outgoing packet
-	int retSize = SASP_EncryptAndAddAuthenticationData( first_byte, buffIn, msgSize, buffOut, buffOutSize, stack, stackSize );
+	int retSize = SASP_EncryptAndAddAuthenticationData( first_byte, buffIn, msgSize, buffOut, buffOutSize, stack, stackSize, data+DATA_SASP_NONCE_LS_OFFSET );
 
 	return retSize;
 }
@@ -370,9 +394,47 @@ int handlerSASP_receive( uint8_t* buffIn, int msgSize, uint8_t* buffOut, int buf
 	if ( retSize == -1)
 		return -1;
 
-	// 2. TODO: do a lot of other funny things 
+	// 2. Is it an Error Old Nonce Message
+	if ( SASP_NonceIsIntendedForSasp( buffIn ) )
+	{
+		// Recommended value of NLS starts from the second byte of the message; we should update NLS, if the recommended value is greater
+		uint8_t nonceCmp = SASP_NonceCompare( data+DATA_SASP_NONCE_LW_OFFSET, buffOut+2 ); // skipping First Byte and reserved byte
+		if ( nonceCmp < 0 )
+		{
+			SASP_NonceClearForSaspFlag( buffOut+1 );
+			memcpy( data+DATA_SASP_NONCE_LS_OFFSET, buffOut+1, SASP_NONCE_SIZE );
+			// TODO: shuold we do anything else?
+		}
+		return -1;
+	}
 
+	// 3. Compare nonces...
+	uint8_t nonceCmp = SASP_NonceCompare( data+DATA_SASP_NONCE_LW_OFFSET, buffIn );
+	if ( nonceCmp < 1 ) // error message must be prepared
+	{
+		uint8_t* ins_ptr = buffIn;
+		*(ins_ptr++) = 0;
+		memcpy( ins_ptr, data+DATA_SASP_NONCE_LW_OFFSET, SASP_NONCE_SIZE );
+		ins_ptr += SASP_NONCE_SIZE;
+		int retSize = SASP_EncryptAndAddAuthenticationData( 0, buffIn, msgSize, buffOut, buffOutSize, stack, stackSize, data );
+		SASP_NonceSetIntendedForSaspFlag( buffOut );
+		// TODO: which way to report???
+		return retSize;
+	}
+	else if ( nonceCmp == 0 )
+	{
+		bool same = memcmp( data+DATA_SASP_LRPS_OFFSET, buffIn+SASP_HEADER_SIZE, SASP_TAG_SIZE );
+		if (!same)
+			return -1;
+		// TODO: any further processing?
+		// TODO: which way do we report that the packet is repeated?
+		return retSize;
+	}
 
+	// 4. Finally, we have a brand new packet
+	memcpy( data+DATA_SASP_NONCE_LW_OFFSET, buffIn, SASP_NONCE_SIZE ); // update Nonce Low Watermark
+	memcpy( data+DATA_SASP_LRPS_OFFSET, buffIn+SASP_HEADER_SIZE, SASP_TAG_SIZE ); // save packet signature
+	// TODO: which way do we report that the packet is repeated?
 	return retSize;
 }
 

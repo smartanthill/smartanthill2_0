@@ -29,7 +29,7 @@
 #define __SA_COMMON_H__
 
 // common includes
-#include <memory.h> // for memcpy(), memset()
+#include <memory.h> // for memcpy(), memset(), memcmp(). Note: their implementation may or may not be more effective than just by-byte operation on a particular target platform
 #include <assert.h>
 
 // data types

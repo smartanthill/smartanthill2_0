@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 		int msgSizeCopy = msgSize;
 		int msgSizeBack;
 
-		msgSize = handlerSASP_send( 0, rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4, data_buff + DADA_OFFSET_SASP );
+		msgSize = handlerSASP_send( false, 0, rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4, data_buff + DADA_OFFSET_SASP );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
 
 		msgSizeBack = SASP_IntraPacketAuthenticateAndDecrypt( rwBuff, msgSize, msgBack, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );

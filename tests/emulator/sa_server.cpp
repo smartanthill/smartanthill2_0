@@ -85,6 +85,10 @@ int main(int argc, char *argv[])
 
 		// process received message
 		msgSize = handlerSASP_receive( rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4, data_buff + DADA_OFFSET_SASP );
+		if ( msgSize == -1 )
+		{
+			printf( "BAD MESSAGE_RECEIVED\n" );
+		}
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
 		msgSize = prepareReplyMessage( rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
@@ -94,7 +98,7 @@ int main(int argc, char *argv[])
 		memcpy( msgCopy, rwBuff, msgSize );
 		int msgSizeCopy = msgSize, msgSizeBack;
 
-		msgSize = handlerSASP_send( rwBuff[0], rwBuff+1, msgSize-1, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4, data_buff + DADA_OFFSET_SASP );
+		msgSize = handlerSASP_send( false, rwBuff[0], rwBuff+1, msgSize-1, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4, data_buff + DADA_OFFSET_SASP );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
 
 		// check block #2
