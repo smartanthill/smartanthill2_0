@@ -30,6 +30,13 @@
 #include "sa-common.h"
 #include "sa-eeprom.h"
 
+#ifdef DEBUG_PRINTING
+#include <stdio.h>
+#define PRINTF printf
+#else // DEBUG_PRINTING
+#define PRINTF
+#endif // DEBUG_PRINTING
+
 
 #define SASP_RET_IGNORE 0 // not authenticated, etc
 #define SASP_RET_TO_HIGHER_NEW 1 // new packet
@@ -296,7 +303,7 @@ bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* sizeInOut, uint8_t* buffIn
 
 	if ( msgSize < SASP_HEADER_SIZE + SASP_TAG_SIZE || ( msgSize - (SASP_HEADER_SIZE + SASP_TAG_SIZE) ) % SASP_ENC_BLOCK_SIZE )
 	{
-//		printf( "Bad size of packet %d\n", msgSize ); // this is a special case as such packets should not arrive at this level (underlying protocol error?)
+//		PRINTF( "Bad size of packet %d\n", msgSize ); // this is a special case as such packets should not arrive at this level (underlying protocol error?)
 		assert( !(msgSize < SASP_HEADER_SIZE + SASP_TAG_SIZE || ( msgSize - (SASP_HEADER_SIZE + SASP_TAG_SIZE) ) % SASP_ENC_BLOCK_SIZE) );
 		return false;
 	}
@@ -422,35 +429,49 @@ uint8_t handlerSASP_receive( uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffO
 	// 1. Perform intra-packet authentication
 	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize );
 	if ( !ipaad )
+	{
+		PRINTF( "handlerSASP_receive(): BAD PACKET RECEIVED\n" );
 		return SASP_RET_IGNORE;
+	}
 
 	// 2. Is it an Error Old Nonce Message
 	if ( SASP_NonceIsIntendedForSasp( buffIn ) )
 	{
+		uint8_t* nls = data+DATA_SASP_NONCE_LS_OFFSET;
+		uint8_t* new_nls = buffOut+2;
+		PRINTF( "handlerSASP_receive(): packet for SASP received...\n" );
+		PRINTF( "   current  NLS: %02x %02x %02x %02x %02x %02x\n", nls[0], nls[1], nls[2], nls[3], nls[4], nls[5] );
+		PRINTF( "   proposed NLS: %02x %02x %02x %02x %02x %02x\n", new_nls[0], new_nls[1], new_nls[2], new_nls[3], new_nls[4], new_nls[5] );
 		// Recommended value of NLS starts from the second byte of the message; we should update NLS, if the recommended value is greater
-		uint8_t nonceCmp = SASP_NonceCompare( data+DATA_SASP_NONCE_LW_OFFSET, buffOut+2 ); // skipping First Byte and reserved byte
+		int8_t nonceCmp = SASP_NonceCompare( nls, new_nls ); // skipping First Byte and reserved byte
 		if ( nonceCmp < 0 )
 		{
-			SASP_NonceClearForSaspFlag( buffOut+1 );
-			memcpy( data+DATA_SASP_NONCE_LS_OFFSET, buffOut+1, SASP_NONCE_SIZE );
+			SASP_NonceClearForSaspFlag( new_nls );
+			memcpy( nls, new_nls, SASP_NONCE_SIZE );
+			SASP_NonceLS_increment( nls );
 			// TODO: shuold we do anything else?
+			return SASP_RET_TO_HIGHER_LAST_SEND_FAILED;
 		}
 		return SASP_RET_IGNORE;
 	}
 
 	// 3. Compare nonces...
-	uint8_t nonceCmp = SASP_NonceCompare( buffIn, data+DATA_SASP_NONCE_LW_OFFSET );
-	if ( nonceCmp < 1 ) // error message must be prepared
+	uint8_t* nlw = data+DATA_SASP_NONCE_LW_OFFSET;
+	int8_t nonceCmp = SASP_NonceCompare( buffIn, nlw );
+	if ( nonceCmp < 0 ) // error message must be prepared
 	{
+		PRINTF( "handlerSASP_receive(): old nonce; packet for SASP is being prepared...\n" );
+		PRINTF( "   nonce received: %02x %02x %02x %02x %02x %02x\n", buffIn[0], buffIn[1], buffIn[2], buffIn[3], buffIn[4], buffIn[5] );
+		PRINTF( "   current    NLW: %02x %02x %02x %02x %02x %02x\n", nlw[0], nlw[1], nlw[2], nlw[3], nlw[4], nlw[5] );
 		uint8_t* ins_ptr = stack;
 		*(ins_ptr++) = 0; // First Byte
 		*(ins_ptr++) = 0; // Reserved Byte
-		memcpy( ins_ptr, data+DATA_SASP_NONCE_LW_OFFSET, SASP_NONCE_SIZE );
+		memcpy( ins_ptr, nlw, SASP_NONCE_SIZE );
 		ins_ptr += SASP_NONCE_SIZE;
 		sizeInOut[0] = SASP_NONCE_SIZE+2;
+		sizeInOut[1] = 0;
 		SASP_EncryptAndAddAuthenticationData( sizeInOut, stack, buffOut, buffOutSize, ins_ptr, stackSize-SASP_NONCE_SIZE-2, data );
 		SASP_NonceSetIntendedForSaspFlag( buffOut );
-		// TODO: which way to report???
 		return SASP_RET_TO_LOWER;
 	}
 	else if ( nonceCmp == 0 )
@@ -459,7 +480,6 @@ uint8_t handlerSASP_receive( uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffO
 		if (!same)
 			return SASP_RET_IGNORE;
 		// TODO: any further processing?
-		// TODO: which way do we report that the packet is repeated?
 		return SASP_RET_TO_HIGHER_REPEATED;
 	}
 

@@ -117,6 +117,7 @@ int main(int argc, char *argv[])
 		{
 			if ( ret_code == SASP_RET_TO_HIGHER_LAST_SEND_FAILED )
 			{
+				printf( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
 				// quick simulation of a part of SAGDP responsibilities: a copy of the last message sent message
 				memcpy( rwBuff, msgLastSent, msgSize );
 				memcpy( sizeInOut, sizeInOutLastSent, 2 );
@@ -162,11 +163,9 @@ int main(int argc, char *argv[])
 			printf("\nMessage replied to client, reply is:\n");
 			printf("\"%s\"\n", rwBuff);
 		}
-		else if ( ret_code == SASP_RET_TO_HIGHER_LAST_SEND_FAILED )
-		{
-		}
 		else if ( ret_code == SASP_RET_TO_LOWER )
 		{
+			printf( "OLD NONCE detected\n" );
 			bool fSuccess = sendMessage((unsigned char *)rwBuff, msgSize);
 			if (!fSuccess)
 			{

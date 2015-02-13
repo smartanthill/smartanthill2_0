@@ -77,6 +77,11 @@ int main(int argc, char *argv[])
 	uint8_t* stack = sizeInOut + 2; // first two bytes are used for sizeInOut
 	int stackSize = BUF_SIZE / 4 - 2;
 
+	// quick simulation of a part of SAGDP responsibilities: a copy of the last message sent message
+	unsigned char msgLastSent[BUF_SIZE], sizeInOutLastSent[2];
+	loadSizeInOut( sizeInOutLastSent, 0 );
+	bool resendLastMsg = false;
+
 	// debug objects
 	unsigned char msgCopy[BUF_SIZE], msgBack[BUF_SIZE], sizeInOutCopy[2], sizeInOutBack[2];
 	int msgSizeCopy, msgSizeBack;
@@ -94,8 +99,22 @@ int main(int argc, char *argv[])
 
 	do
 	{
-		msgSize = prepareInitialMessage( rwBuff, BUF_SIZE/2 );
-		loadSizeInOut( sizeInOut, msgSize );
+		if ( resendLastMsg )
+		{
+			// quick simulation of a part of SAGDP responsibilities: a copy of the last message sent message
+			memcpy( rwBuff, msgLastSent, msgSize );
+			memcpy( sizeInOut, sizeInOutLastSent, 2 );
+			msgSize = sizeInOutToInt( sizeInOut );
+		}
+		else
+		{
+			msgSize = prepareInitialMessage( rwBuff, BUF_SIZE/2 );
+			loadSizeInOut( sizeInOut, msgSize );
+			// quick simulation of a part of SAGDP responsibilities: a copy of the last message sent message
+			memcpy( msgLastSent, rwBuff, msgSize );
+			memcpy( sizeInOutLastSent, sizeInOut, 2 );
+		}
+		resendLastMsg = false;
 
 		// check block #1: copy the message
 		memcpy(msgCopy, rwBuff, msgSize);
@@ -156,6 +175,18 @@ int main(int argc, char *argv[])
 		}
 		else if ( ret_code == SASP_RET_TO_LOWER )
 		{
+			printf( "OLD NONCE detected\n" );
+			bool fSuccess = sendMessage((unsigned char *)rwBuff, msgSize);
+			if (!fSuccess)
+			{
+				return -1;
+			}
+			printf("\nError Message replied to server\n");
+		}
+		else if (ret_code == SASP_RET_TO_HIGHER_LAST_SEND_FAILED)
+		{
+			printf( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
+			resendLastMsg = true;
 		}
 		else
 		{
