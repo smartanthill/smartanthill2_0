@@ -42,12 +42,14 @@ int prepareInitialMessage( unsigned char* buff, int buffSize )
 {
 	// by now this fanction has totally fake implementation; we need something to work with
 	// anyway, in a real case there will be some kind of message source, for instance, a controlling application at Master side
-	memset( buff, 'Z', buffSize );
+	buff[0] = 0; // First Byte
+	buff++;
+	memset( buff, 'Z', buffSize-1 );
 	sprintf( (char*)buff, "Client message #%d", dummy_message_count++ );
 	int size = 0;
 	while ( buff[size++] );
-	printf("Preparing %d byte message: \"%s\"\n", size, buff);
-	return size;
+	printf("Preparing 1+%d byte message: \"%s\"\n", size, buff);
+	return size+1;
 }
 
 void postprocessReceivedMessage( unsigned char* buff, int msgSize, int buffSize )
@@ -58,10 +60,28 @@ void postprocessReceivedMessage( unsigned char* buff, int msgSize, int buffSize 
 }
 
 
+
+// Temporary solutuion to work with sizes
+// TODO: implement an actual mechanism
+int sizeInOutToInt( const uint8_t* sizeInOut )		{int size = sizeInOut[1];size <<= 8;size = sizeInOut[0];return size;}
+void loadSizeInOut( uint8_t* sizeInOut, int size )	{sizeInOut[1] = size >> 8; sizeInOut[0] = size & 0xFF;}
+
+
 int main(int argc, char *argv[])
 {
 	printf("starting CLIENT...\n");
 	printf("==================\n\n");
+
+	// TODO: revise approach below
+	uint8_t* sizeInOut = rwBuff + 3 * BUF_SIZE / 4;
+	uint8_t* stack = sizeInOut + 2; // first two bytes are used for sizeInOut
+	int stackSize = BUF_SIZE / 4 - 2;
+
+	// debug objects
+	unsigned char msgCopy[BUF_SIZE], msgBack[BUF_SIZE], sizeInOutCopy[2], sizeInOutBack[2];
+	int msgSizeCopy, msgSizeBack;
+
+
 
 	bool   fSuccess = false;
 	int msgSize;
@@ -75,19 +95,26 @@ int main(int argc, char *argv[])
 	do
 	{
 		msgSize = prepareInitialMessage( rwBuff, BUF_SIZE/2 );
+		loadSizeInOut( sizeInOut, msgSize );
 
-		unsigned char msgCopy[BUF_SIZE], msgBack[BUF_SIZE];
+		// check block #1: copy the message
 		memcpy(msgCopy, rwBuff, msgSize);
-		int msgSizeCopy = msgSize;
-		int msgSizeBack;
+		loadSizeInOut( sizeInOutCopy, msgSize );
 
-		msgSize = handlerSASP_send( false, 0, rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4, data_buff + DADA_OFFSET_SASP );
+		uint8_t ret_code = handlerSASP_send( false, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+		assert( ret_code == SASP_RET_TO_LOWER ); // is anything else possible?
+		msgSize = sizeInOutToInt( sizeInOut );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
 
-		msgSizeBack = SASP_IntraPacketAuthenticateAndDecrypt( rwBuff, msgSize, msgBack, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
-		assert( msgSizeCopy+1 == msgSizeBack );
+		// check block #2: ensure SASP block is done well
+		memcpy( sizeInOutBack, sizeInOut, 2 );
+		bool checkOK = SASP_IntraPacketAuthenticateAndDecrypt( sizeInOutBack, rwBuff, msgBack, BUF_SIZE / 4, stack, stackSize );
+		assert( checkOK );
+		assert( sizeInOutCopy[0] == sizeInOutBack[0] && sizeInOutCopy[1] == sizeInOutBack[1] );
+		msgSizeCopy = sizeInOutToInt( sizeInOutCopy );
+		msgBack[0] &= 0x7F; // get rid of SASP bit
 		for ( int k=0; k<msgSizeCopy; k++ )
-			assert( msgCopy[k] == msgBack[k+1] );
+			assert( msgCopy[k] == msgBack[k] );
 
 		// send ... receive ...
 		printf( "raw sent: \"%s\"\n", rwBuff );
@@ -106,21 +133,36 @@ int main(int argc, char *argv[])
 		{
 			return -1;
 		}
+		loadSizeInOut( sizeInOut, msgSize );
 
 		printf("\n... Message received from server [%d bytes]:\n", msgSize);
 
 
 		// process received
-		msgSize = handlerSASP_receive( rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4, data_buff + DADA_OFFSET_SASP );
+		ret_code = handlerSASP_receive( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+		if ( ret_code == SASP_RET_IGNORE )
+		{
+			printf( "BAD MESSAGE_RECEIVED\n" );
+		}
+		else if ( ret_code == SASP_RET_TO_HIGHER_NEW || ret_code == SASP_RET_TO_HIGHER_REPEATED )
+		{
+			postprocessReceivedMessage( rwBuff + BUF_SIZE / 4 + 1, msgSize, BUF_SIZE );
+			// repeating?..
+			printf("\n<End of message, press X+ENTER to terminate connection and exit or ENTER to continue>");
+			char c = getchar();
+			if (c == 'x' || c == 'X')
+				break;
+			printf( "\n\n" );
+		}
+		else if ( ret_code == SASP_RET_TO_LOWER )
+		{
+		}
+		else
+		{
+			assert(0);
+		}
 
-		postprocessReceivedMessage( rwBuff + BUF_SIZE / 4 + 1, msgSize, BUF_SIZE );
 
-		// repeating?..
-		printf("\n<End of message, press X+ENTER to terminate connection and exit or ENTER to continue>");
-		char c = getchar();
-		if (c == 'x' || c == 'X')
-			break;
-		printf( "\n\n" );
 	} 
 	while (1);
 

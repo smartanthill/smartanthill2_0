@@ -54,10 +54,31 @@ int prepareReplyMessage( unsigned char* buffIn, int msgSize, unsigned char* buff
 	return size+1;
 }
 
+// Temporary solutuion to work with sizes
+// TODO: implement an actual mechanism
+int sizeInOutToInt( const uint8_t* sizeInOut )		{int size = sizeInOut[1];size <<= 8;size = sizeInOut[0];return size;}
+void loadSizeInOut( uint8_t* sizeInOut, int size )	{sizeInOut[1] = size >> 8; sizeInOut[0] = size & 0xFF;}
+
+
+
 int main(int argc, char *argv[])
 {
 	printf("STARTING SERVER...\n");
 	printf("==================\n\n");
+
+	// TODO: revise approach below
+	uint8_t* sizeInOut = rwBuff + 3 * BUF_SIZE / 4;
+	uint8_t* stack = sizeInOut + 2; // first two bytes are used for sizeInOut
+	int stackSize = BUF_SIZE / 4 - 2;
+
+	// quick simulation of a part of SAGDP responsibilities: a copy of the last message sent message
+	unsigned char msgLastSent[BUF_SIZE], sizeInOutLastSent[2];
+	loadSizeInOut( sizeInOutLastSent, 0 );
+
+	// debug objects
+	unsigned char msgCopy[BUF_SIZE], msgBack[BUF_SIZE], sizeInOutCopy[2], sizeInOutBack[2];
+	int msgSizeCopy, msgSizeBack;
+
 
 	bool   fConnected = false;
 
@@ -84,38 +105,79 @@ int main(int argc, char *argv[])
 		printf("\"%s\"\n", rwBuff);
 
 		// process received message
-		msgSize = handlerSASP_receive( rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4, data_buff + DADA_OFFSET_SASP );
-		if ( msgSize == -1 )
+		loadSizeInOut( sizeInOut, msgSize );
+		uint8_t ret_code = handlerSASP_receive( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+		msgSize = sizeInOutToInt( sizeInOut );
+		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
+		if ( ret_code == SASP_RET_IGNORE )
 		{
 			printf( "BAD MESSAGE_RECEIVED\n" );
 		}
-		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
-		msgSize = prepareReplyMessage( rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
-		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
-
-		// check block #1
-		unsigned char msgCopy[BUF_SIZE], msgBack[BUF_SIZE];
-		memcpy( msgCopy, rwBuff, msgSize );
-		int msgSizeCopy = msgSize, msgSizeBack;
-
-		msgSize = handlerSASP_send( false, rwBuff[0], rwBuff+1, msgSize-1, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, rwBuff + 3 * BUF_SIZE / 4, BUF_SIZE / 4, data_buff + DADA_OFFSET_SASP );
-		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
-
-		// check block #2
-		msgSizeBack = SASP_IntraPacketAuthenticateAndDecrypt( rwBuff, msgSize, msgBack + BUF_SIZE / 4, BUF_SIZE / 4, msgBack + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
-		memcpy( msgBack, msgBack + BUF_SIZE / 4, msgSizeBack );
-		assert( msgSizeCopy == msgSizeBack );
-		for ( int k=0; k<msgSizeCopy; k++ )
-			assert( msgCopy[k] == msgBack[k] );
-
-		// reply
-		bool fSuccess = sendMessage((unsigned char *)rwBuff, msgSize);
-		if (!fSuccess)
+		else if ( ret_code == SASP_RET_TO_HIGHER_NEW || ret_code == SASP_RET_TO_HIGHER_REPEATED || ret_code == SASP_RET_TO_HIGHER_LAST_SEND_FAILED )
 		{
-			return -1;
+			if ( ret_code == SASP_RET_TO_HIGHER_LAST_SEND_FAILED )
+			{
+				// quick simulation of a part of SAGDP responsibilities: a copy of the last message sent message
+				memcpy( rwBuff, msgLastSent, msgSize );
+				memcpy( sizeInOut, sizeInOutLastSent, 2 );
+				msgSize = sizeInOutToInt( sizeInOut );
+			}
+			else
+			{
+				msgSize = prepareReplyMessage( rwBuff, msgSize, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize );
+				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
+				loadSizeInOut( sizeInOut, msgSize );
+			}
+
+			// quick simulation of a part of SAGDP responsibilities: a copy of the last message sent message
+			memcpy( msgLastSent, rwBuff, msgSize );
+			memcpy( sizeInOutLastSent, sizeInOut, 2 );
+
+
+			// check block #1: copy the message
+			memcpy( msgCopy, rwBuff, msgSize );
+			loadSizeInOut( sizeInOutCopy, msgSize );
+
+			// call SASP handler
+			ret_code = handlerSASP_send( false, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+			assert( ret_code == SASP_RET_TO_LOWER ); // is anything else possible?
+			msgSize = sizeInOutToInt( sizeInOut );
+			memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
+
+			// check block #2
+			memcpy( sizeInOutBack, sizeInOut, 2 );
+			bool checkOK = SASP_IntraPacketAuthenticateAndDecrypt( sizeInOutBack, rwBuff, msgBack, BUF_SIZE / 4, msgBack + 3 * BUF_SIZE / 4, BUF_SIZE / 4 );
+			assert( checkOK );
+			assert( sizeInOutCopy[0] == sizeInOutBack[0] && sizeInOutCopy[1] == sizeInOutBack[1] );
+			msgSizeCopy = sizeInOutToInt( sizeInOut );
+			for ( int k=0; k<msgSizeCopy; k++ )
+				assert( msgCopy[k] == msgBack[k] );
+
+			// reply
+			bool fSuccess = sendMessage((unsigned char *)rwBuff, msgSize);
+			if (!fSuccess)
+			{
+				return -1;
+			}
+			printf("\nMessage replied to client, reply is:\n");
+			printf("\"%s\"\n", rwBuff);
 		}
-		printf("\nMessage replied to client, reply is:\n");
-		printf("\"%s\"\n", rwBuff);
+		else if ( ret_code == SASP_RET_TO_HIGHER_LAST_SEND_FAILED )
+		{
+		}
+		else if ( ret_code == SASP_RET_TO_LOWER )
+		{
+			bool fSuccess = sendMessage((unsigned char *)rwBuff, msgSize);
+			if (!fSuccess)
+			{
+				return -1;
+			}
+			printf("\nError Message replied to client\n");
+		}
+		else
+		{
+			assert(0);
+		}
 
 	}
 

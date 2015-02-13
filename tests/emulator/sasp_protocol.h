@@ -31,6 +31,13 @@
 #include "sa-eeprom.h"
 
 
+#define SASP_RET_IGNORE 0 // not authenticated, etc
+#define SASP_RET_TO_HIGHER_NEW 1 // new packet
+#define SASP_RET_TO_HIGHER_REPEATED 2 // repeated packet
+#define SASP_RET_TO_HIGHER_LAST_SEND_FAILED 3 // sending of last packet failed (for instance, old nonce)
+#define SASP_RET_TO_LOWER 4 // for error messaging
+
+
 
 #define SASP_NONCE_SIZE 6
 #define SASP_HEADER_SIZE SASP_NONCE_SIZE
@@ -82,15 +89,15 @@ void SASP_NonceLS_increment(  uint8_t* nonce )
 	}
 }
 
-uint8_t SASP_NonceCompare( uint8_t* nonce1, uint8_t* nonce2 )
+int8_t SASP_NonceCompare( uint8_t* nonce1, uint8_t* nonce2 )
 {
 	if ( (nonce1[SASP_NONCE_SIZE-1]&0x7F) > (nonce2[SASP_NONCE_SIZE-1]&0x7F) ) return 1;
 	if ( (nonce1[SASP_NONCE_SIZE-1]&0x7F) < (nonce2[SASP_NONCE_SIZE-1]&0x7F) ) return -1;
 	int i;
 	for ( i=SASP_NONCE_SIZE-2; i>=0; i-- )
 	{
-		if ( nonce1[i] > nonce2[i] ) return 1;
-		if ( nonce1[i] < nonce2[i] ) return -1;
+		if ( nonce1[i] > nonce2[i] ) return int8_t(1);
+		if ( nonce1[i] < nonce2[i] ) return int8_t(-1);
 	}
 	return 0;
 }
@@ -157,7 +164,7 @@ int SASP_getSizeUsedForEncoding( uint8_t* buff )
 	}
 }
 
-int SASP_EncryptAndAddAuthenticationData( uint8_t first_byte, uint8_t* buffIn, int msgSize, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, const uint8_t* nonce )
+void SASP_EncryptAndAddAuthenticationData( uint8_t* sizeInOut, uint8_t* _buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, const uint8_t* nonce )
 {
 	// msgSize covers the size of message_byte_sequence
 	// (byte with MASTER_SLAVE_BIT) | nonce concatenation is used as a full nonce
@@ -166,7 +173,16 @@ int SASP_EncryptAndAddAuthenticationData( uint8_t first_byte, uint8_t* buffIn, i
 	// data under encryption is as follows: first_byte | (opt) padding_size | message_byte_sequence | (opt) padding
 	// (padding_size size + padding size) is encoded using SASP Encoded-Size
 
-	// SEMI-FAKE IMPLEMENTATION 
+	// SEMI-FAKE IMPLEMENTATION
+	
+	// TODO: proper size handling
+	int msgSize = sizeInOut[1];
+	msgSize <<= 8;
+	msgSize += sizeInOut[0];
+
+	uint8_t first_byte = _buffIn[0];
+	uint8_t*buffIn = _buffIn+1;
+	msgSize -= 1; // now measuring all message but First Byte
 
 	int i,j;
 	bool singleBlock;
@@ -258,22 +274,31 @@ int SASP_EncryptAndAddAuthenticationData( uint8_t first_byte, uint8_t* buffIn, i
 	// 5. construct header:
 	memcpy( buffOut, nonce, SASP_NONCE_SIZE );
 
-	return ins_pos;
+	// TODO: proper size handling
+	sizeInOut[1] = ins_pos >> 8;
+	sizeInOut[0] = ins_pos & 0xFF;
 }
 
-int SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* buffIn, int msgSize, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize )
+bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize )
 {
 	// input data structure: header | tag | encrypted data
 	// Therefore, msgSize is expected to be SASP_HEADER_SIZE + SASP_TAG_SIZE + k * SASP_ENC_BLOCK_SIZE
 	// Structure of output buffer: first_byte | byte_sequence
 	// return value: if passed, size of byte_sequence + 1
 	//               if failed, -1
+	
+	
+	// TODO: proper size handling
+	int msgSize = sizeInOut[1];
+	msgSize <<= 8;
+	msgSize = sizeInOut[0];
+
 
 	if ( msgSize < SASP_HEADER_SIZE + SASP_TAG_SIZE || ( msgSize - (SASP_HEADER_SIZE + SASP_TAG_SIZE) ) % SASP_ENC_BLOCK_SIZE )
 	{
 //		printf( "Bad size of packet %d\n", msgSize ); // this is a special case as such packets should not arrive at this level (underlying protocol error?)
 		assert( !(msgSize < SASP_HEADER_SIZE + SASP_TAG_SIZE || ( msgSize - (SASP_HEADER_SIZE + SASP_TAG_SIZE) ) % SASP_ENC_BLOCK_SIZE) );
-		return -1;
+		return false;
 	}
 
 	int enc_data_size = msgSize - (SASP_HEADER_SIZE + SASP_TAG_SIZE);
@@ -373,26 +398,31 @@ int SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* buffIn, int msgSize, uint8_
 	for ( i=0; i<SASP_TAG_SIZE; i++)
 		tagOK = tagOK && (buffIn + SASP_HEADER_SIZE)[i] == c;
 
+	byte_seq_size++;
 
-	return tagOK ? byte_seq_size + 1 : -1;
+	// TODO: proper size handling
+	sizeInOut[1] = byte_seq_size >> 8;
+	sizeInOut[0] = byte_seq_size & 0xFF;
+
+	return tagOK;
 }
 
-int handlerSASP_send( bool repeated, uint8_t first_byte, uint8_t* buffIn, int msgSize, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
+uint8_t handlerSASP_send( bool repeated, uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
 {
 	if ( !repeated )
 		SASP_NonceLS_increment( data + DATA_SASP_NONCE_LS_OFFSET );
 
-	int retSize = SASP_EncryptAndAddAuthenticationData( first_byte, buffIn, msgSize, buffOut, buffOutSize, stack, stackSize, data+DATA_SASP_NONCE_LS_OFFSET );
+	SASP_EncryptAndAddAuthenticationData( sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, data+DATA_SASP_NONCE_LS_OFFSET );
 
-	return retSize;
+	return SASP_RET_TO_LOWER;
 }
 
-int handlerSASP_receive( uint8_t* buffIn, int msgSize, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
+uint8_t handlerSASP_receive( uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
 {
 	// 1. Perform intra-packet authentication
-	int retSize = SASP_IntraPacketAuthenticateAndDecrypt( buffIn, msgSize, buffOut, buffOutSize, stack, stackSize );
-	if ( retSize == -1)
-		return -1;
+	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize );
+	if ( !ipaad )
+		return SASP_RET_IGNORE;
 
 	// 2. Is it an Error Old Nonce Message
 	if ( SASP_NonceIsIntendedForSasp( buffIn ) )
@@ -405,37 +435,39 @@ int handlerSASP_receive( uint8_t* buffIn, int msgSize, uint8_t* buffOut, int buf
 			memcpy( data+DATA_SASP_NONCE_LS_OFFSET, buffOut+1, SASP_NONCE_SIZE );
 			// TODO: shuold we do anything else?
 		}
-		return -1;
+		return SASP_RET_IGNORE;
 	}
 
 	// 3. Compare nonces...
-	uint8_t nonceCmp = SASP_NonceCompare( data+DATA_SASP_NONCE_LW_OFFSET, buffIn );
+	uint8_t nonceCmp = SASP_NonceCompare( buffIn, data+DATA_SASP_NONCE_LW_OFFSET );
 	if ( nonceCmp < 1 ) // error message must be prepared
 	{
-		uint8_t* ins_ptr = buffIn;
-		*(ins_ptr++) = 0;
+		uint8_t* ins_ptr = stack;
+		*(ins_ptr++) = 0; // First Byte
+		*(ins_ptr++) = 0; // Reserved Byte
 		memcpy( ins_ptr, data+DATA_SASP_NONCE_LW_OFFSET, SASP_NONCE_SIZE );
 		ins_ptr += SASP_NONCE_SIZE;
-		int retSize = SASP_EncryptAndAddAuthenticationData( 0, buffIn, msgSize, buffOut, buffOutSize, stack, stackSize, data );
+		sizeInOut[0] = SASP_NONCE_SIZE+2;
+		SASP_EncryptAndAddAuthenticationData( sizeInOut, stack, buffOut, buffOutSize, ins_ptr, stackSize-SASP_NONCE_SIZE-2, data );
 		SASP_NonceSetIntendedForSaspFlag( buffOut );
 		// TODO: which way to report???
-		return retSize;
+		return SASP_RET_TO_LOWER;
 	}
 	else if ( nonceCmp == 0 )
 	{
 		bool same = memcmp( data+DATA_SASP_LRPS_OFFSET, buffIn+SASP_HEADER_SIZE, SASP_TAG_SIZE );
 		if (!same)
-			return -1;
+			return SASP_RET_IGNORE;
 		// TODO: any further processing?
 		// TODO: which way do we report that the packet is repeated?
-		return retSize;
+		return SASP_RET_TO_HIGHER_REPEATED;
 	}
 
 	// 4. Finally, we have a brand new packet
 	memcpy( data+DATA_SASP_NONCE_LW_OFFSET, buffIn, SASP_NONCE_SIZE ); // update Nonce Low Watermark
 	memcpy( data+DATA_SASP_LRPS_OFFSET, buffIn+SASP_HEADER_SIZE, SASP_TAG_SIZE ); // save packet signature
 	// TODO: which way do we report that the packet is repeated?
-	return retSize;
+	return SASP_RET_TO_HIGHER_NEW;
 }
 
 #endif // __SASP_PROTOCOL_H__

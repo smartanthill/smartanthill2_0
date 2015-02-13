@@ -34,6 +34,7 @@
 
 // data types
 #define uint8_t unsigned char
+#define int8_t char
 #define uint16_t unsigned short
 
 // Master/Slave distinguishing bit; USED_AS_MASTER is assumed to be a preprocessor definition if necessary
