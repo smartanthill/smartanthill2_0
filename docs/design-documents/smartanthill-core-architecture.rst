@@ -22,6 +22,8 @@
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE
 
+.. |PIO| replace:: `PlatformIO <http://platformio.org>`__
+
 .. _sacorearch:
 
 SmartAnthill 2.0 Core Architecture
@@ -61,10 +63,11 @@ pieces of own services.
 
 API Service
 ```````````
-*API Service* is responsible for receiving requests (via REST, WebSockets or Sockets) from *System Control Software* and taking necessary measures to execute them via :ref:`saccp`.
+*API Service* is responsible for receiving requests (via REST, WebSocket or Socket) from *System Control Software* and taking necessary measures to execute them via :ref:`saccp`.
 
 @TODO more explanation
 
+.. _sacorearchdashser:
 
 Dashboard Service
 `````````````````
@@ -82,8 +85,8 @@ Device Service
 ``````````````
 
 * SmartAnthill Device Abstraction Layer (SADAL)
-* Request/Event Handler,
-* :ref:`sacorearchfbandu` via PlatformIO
+* Request/Response/Event Handler
+* :ref:`sacorearchfbandu` via |PIO|
 
 @TODO more explanation
 
@@ -128,10 +131,12 @@ It should be noted that IP-enabled devices do not use SmartAnthill Router to ope
 SmartAnthill Firmware Builder and Uploader
 ------------------------------------------
 
-* Supported devices (@TODO)
-* Supported embedded platforms (@TODO)
+* `Supported boards/devices <http://platformio.org/#!/boards>`_
+* `Supported development platforms <http://platformio.org/#!/platforms>`_
 
-@TODO PlatformIO role should be explained here
+*SmartAnthill Firmware Builder* and Uploader is implemented on top of |PIO|.
+
+@TODO |PIO| role should be explained here
 
 SmartAnthill Database
 ---------------------
