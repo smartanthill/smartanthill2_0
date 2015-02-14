@@ -42,6 +42,14 @@ The requirements of *SmartAnthill Core* by the system resources should by very l
 * < 20Mb RAM for service/daemon
 * < 20Mb of free disk space (the cross-compilers, tool chains and firmware upload software are not included here)
 
+
+SmartAnthill Core Architecture
+------------------------------
+
+.. image:: ../_static/diagrams/smartanthill-core-architecture-diagram.png
+    :alt: SmartAnthill Core Architecture
+    :target: ../_static/diagrams/smartanthill-core-architecture-diagram.png
+
 SmartAnthill Core Services
 --------------------------
 
@@ -78,7 +86,6 @@ Device Service
 * :ref:`sacorearchfbandu` via PlatformIO
 
 @TODO more explanation
-
 
 Message Queuing Service
 ```````````````````````
