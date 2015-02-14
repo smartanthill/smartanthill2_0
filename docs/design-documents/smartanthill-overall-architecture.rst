@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Overall Architecture
 =====================================
 
-:Version:   v0.3c
+:Version:   v0.3d
 
 **SmartAnthill** is an open IoT system which allows easy control over multiple microcontroller-powered devices, creating a home- or office-wide heterogeneous network out of these devices.
 
@@ -174,6 +174,18 @@ SmartAnthill Router
 
 *SmartAnthill Router* is responsible for handling so-called SmartAnthill Simple Devices (see below; in a nutshell - SmartAnthill Simple Device is not able to run it's own IP stack), and providing them with a virtual IP address (or more precisely - either a separate IP address, or dedicated port on one of *SmartAnthill Central Controller's* IP addresses). While SmartAnthill Simple Device itself knows nothing about IP, SmartAnthill Router completely encapsulates all connected SmartAnthill Simple Devices, so from the point of view of the outside world, these SmartAnthill Simple Devices are completely indistinguishable from fully-fledged SmartAnthill IP-Enabled Devices.
 
+SmartAnthill Database (SA DB)
+'''''''''''''''''''''''''''''
+
+*SmartAnthill Database* (SA DB) is a database which stores all the information about SmartAnthill Devices within specific SmartAnthill System. SA DB is used by most of *SmartAnthill Core* components.
+
+*SmartAnthill Database* is specific to the Central Controller and SHOULD NOT be shared. In SA DB, at least the following information is stored: 
+
+* device addresses (bus-specific for Simple Devices and IPs for IP-enabled devices)
+* credentials (i.e. symmetric keys)
+* configuration (i.e. which device is connected to which pins)
+* device capabilities (i.e. amount of RAM/PROM/EEPROM available, MPU capabilities etc.)
+
 .. _saoverdevices:
 
 SmartAnthill Devices
@@ -246,7 +258,7 @@ During it's life within SmartAnthill, a hobbyist-oriented device goes through th
 
 * **Program Generation and Programming**. Program generation and programming is performed by :ref:`sacorearchfbandu` automagically based on configuration specified in a previous step. Generated program includes a SmartAnthill stack, credentials necessary to authenticate the device to the network and vice versa (as described in SATP section below, authentication is done via symmetric keys), and subprograms necessary to handle devices specified in a previous step. Currently SmartAnthill supports either UART-programmed devices, or SIP-programmed devices [TODO:check]
 
-After the device is programmed, it is automatically added to a *SmartAnthill Database* of available devices (this database is stored on Central Controller and SHOULD NOT be shared). In this database, at least the following information is stored: device addresses (bus-specific for Simple Devices and IPs for IP-enabled devices), credentials (i.e. symmetric keys), configuration (i.e. which device is connected to which pins), and device capabilities (i.e. amount of RAM/PROM/EEPROM available, MPU capabilities etc.)
+After the device is programmed, it is automatically added to a *SmartAnthill Database* of available devices.
 
 * **Operation**. After the device is programmed, it can start operation. Device operation involves receiving and executing commands from Central Controller. Operations can be either device-specific (such as “measure temperature and report”), or generic (such as “wait for XXXX seconds and come back for further instructions”).
 
@@ -256,7 +268,7 @@ Mass-market devices are expected to be shipped in already programmed state, with
 
 * **Initial State**. Initially (when shipped to the customer), SmartAnthill mass-market-oriented device contains a program which ensures it's operation. Re-programming capability and connector are optional for SmartAnthill mass-market-oriented devices.
 
-* **“Pairing” with Central Controller**. "Pairing" includes Central Controller (controlled via *SmartAnthill Dashboard*) generating and exchanging credentials with device, querying device configuration and capabilities, and entering credentials, configuration and capabilities into SmartAnthill Database.
+* **“Pairing” with Central Controller**. "Pairing" includes Central Controller (controlled via *SmartAnthill Dashboard*) generating and exchanging credentials with device, querying device configuration and capabilities, and entering credentials, configuration and capabilities into *SmartAnthill Database*.
 
   - Physically, “pairing” can be done in several different ways [TODO: check feasibility of each]:
 
