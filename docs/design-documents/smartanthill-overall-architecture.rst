@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Overall Architecture
 =====================================
 
-:Version:   v0.3b
+:Version:   v0.3c
 
 **SmartAnthill** is an open IoT system which allows easy control over multiple microcontroller-powered devices, creating a home- or office-wide heterogeneous network out of these devices.
 
@@ -115,29 +115,57 @@ SmartAnthill Architecture
     :alt: SmartAnthill Overall Architecture
     :target: ../_static/diagrams/smartanthill-overall-architecture-diagram.png
 
-General Architecture
-^^^^^^^^^^^^^^^^^^^^
-Simple SmartAnthill system consists of one *SmartAnthill Central Controller* and one or more devices controlled by it (see *SmartAnthill Overall Architecture* diagram above for an example topology).
+Simple Topology
+^^^^^^^^^^^^^^^
+Simple SmartAnthill system consists of one *SmartAnthill Central Controller* and one or more SmartAnthill Devices (also known as "Ants") controlled by it (see *Sample SmartAnthill Single-Node System* diagram above for an example topology).
 
-*SmartAnthill Central Controller* is a relatively complex device (such as PC or credit-card sized computer Raspberry Pi, BeagleBoard or CubieBoard) which normally runs several pieces of software: System Control Software and SmartAnthill Core.
+*SmartAnthill Central Controller* is a relatively complex device (such as PC or credit-card sized computer Raspberry Pi, BeagleBoard or CubieBoard) which normally runs several pieces of software, including operating system TCP/IP stack, 3rd-party System Control Software, and SmartAnthill Core.
 
 .. _saoversyscsoft:
 
 System Control Software
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-*System Control Software* is intended to be easily customizable according to customer needs. It can be very different, but we aim to support OpenHAB, and to support pretty much any programming languages which can support one of the REST, WebSockets or Sockets. SmartAnthill project as such doesn't provide control software, it is rather a service which can be used by a control software.
+*System Control Software* is intended to be easily customizable according to customer needs. It can be very different, but we aim to support OpenHAB, and to support DYI programming with pretty much any programming language which can support one of the REST, WebSockets or Sockets. SmartAnthill project as such doesn't provide control software, it is rather a service which can be used by a control software.
 
 SmartAnthill Core
 ^^^^^^^^^^^^^^^^^
 
-*SmartAnthill Core* represents a cross-platform software which is written in Python language and should support the popular operation systems (Mac OS X, Linux (+ARM) and Windows). The requirements of *SmartAnthill Core* by the system resources should by very low:
+*SmartAnthill Core* represents a cross-platform software which is written in Python language and supports all the popular server/desktop operation systems: Mac OS X, Linux (x86 or ARM), and Windows. System requirements of *SmartAnthill Core* are very low for a modern server-side application:
 
 * < 1% CPU in IDLE mode
 * < 20Mb RAM for service/daemon
-* < 20Mb of free disk space (the cross-compilers, tool chains and firmware upload software are not included here)
+* < 20Mb of free disk space (cross-compilers, tool chains, and firmware upload software are not included here)
 
-More detailed information is described in a separate document, :ref:`sacorearch`.
+More detailed information on SmartAnthill Core is provided in a separate document, :ref:`sacorearch`.
+
+API Service
+'''''''''''
+
+*API Service* is responsible for supporting multiple protocols (such as REST, Websocket, or plain socket) and converting them into requests to the other parts of SmartAnthill.
+
+Dashboard Service
+'''''''''''''''''
+
+*Dashboard Service* is responsible for providing UI for the SmartAnthill administrator. It allows to:
+
+* administer SmartAnthill Core (control services running, view logs etc.)
+* configure and program/"pair" SmartAnthill Devices so they can be used with specific SmartAnthill system (see *Life Cycle of SmartAnthill Device* below for details on configuring, programming, and "pairing")
+
+Device Service
+''''''''''''''
+
+*Device Service* provides device abstraction to the rest of SmartAnthill Core, allowing to handle different devices in a consistent manner.
+
+Device Firmware Module
+''''''''''''''''''''''
+
+*Device Firmware Module* is used for *SmartAnthill Hobbyist Devices* (see on them below). Device Firmware Module is responsible for generating device firmware (for specific device, based on configuration entered via Dashboard), and for programming it. Device Firmware Module is implemented on top of `PlatformIO <http://platformio.org>`_.
+
+SmartAnthill Router
+'''''''''''''''''''
+
+*SmartAnthill Router* is responsible for handling so-called SmartAnthill Simple Devices (see below; in a nutshell - SmartAnthill Simple Device is not able to run it's own IP stack), and providing them with a virtual IP address (or more precisely - either a separate IP address, or dedicated port on one of *SmartAnthill Central Controller's* IP addresses). While SmartAnthill Simple Device itself knows nothing about IP, SmartAnthill Router completely encapsulates all connected SmartAnthill Simple Devices, so from the point of view of the outside world, these SmartAnthill Simple Devices are completely indistinguishable from fully-fledged SmartAnthill IP-Enabled Devices.
 
 .. _saoverdevices:
 
@@ -150,20 +178,20 @@ SmartAnthill Devices
 
 TODO: Master-Slave topology!
 
-Each *SmartAnthill Device* (also known as 'Ant') is either *SmartAnthill Hobbyist Device*, or a *SmartAnthill Mass-Market Device*. While these devices are similar, there are some differences as outlined below. In addition, in a completely different and independent dimension each SmartAnthill Device is either a "Simple Device", or an "IP-enabled Device".
+Each *SmartAnthill Device* (also known as 'Ant') is either *SmartAnthill Hobbyist Device*, or a *SmartAnthill Mass-Market Device*. While these devices are similar, there are some differences as outlined below. In addition, in a completely different and independent dimension each SmartAnthill Device is either a *Simple Device*, or an *IP-enabled Device*.
 
-These properties are independent of each other, so it is possible to have all four different types of devices: SmartAnthill Hobbyist Simple Device, SmartAnthill Hobbyist IP-enabled Device, SmartAnthill Mass-Market Simple Device, and SmartAnthill Mass-Market IP-enabled Device.
+These properties are independent of each other, so it is possible to have all four different types of devices: *SmartAnthill Hobbyist Simple Device*, *SmartAnthill Hobbyist IP-enabled Device*, *SmartAnthill Mass-Market Simple Device*, and *SmartAnthill Mass-Market IP-enabled Device*.
 
 .. _saoverhobdev:
 
 SmartAnthill Hobbyist Device
 ''''''''''''''''''''''''''''
 
-A diagram of a typical *SmartAnthill Hobbyist Device* is provided in section :ref:`saoverdevices`. SmartAnthill Hobbyist Device consists of an MCU, communication module, and one or more sensors and/or actuators (which are also known as 'ant body parts'). MCU on SmartAnthill Hobbyist Device runs several layers of software:
+A diagram of a typical *SmartAnthill Hobbyist Device* is provided in section :ref:`saoverdevices`. SmartAnthill Hobbyist Device consists of an MCU, persistent storage (such as EEPROM or Flash), communication module, and one or more sensors and/or actuators (which are also known as 'ant body parts'). TODO: add persistent storage to the diagram. MCU on SmartAnthill Hobbyist Device runs several layers of software:
 
 * **SmartAnthill-Generated Software** it is system-specific, i.e. it is generated for each system
 * **Device-Specific Plugins** for each type of sensor or actuator present
-* :ref:`saprotostack` protocol stack is generic, i.e. it is intended to be pretty much the same for all SmartAnthill Devices
+* :ref:`saprotostack`; it is generic, i.e. it is intended to be pretty much the same for all SmartAnthill Devices. :ref:`saprotostack` uses persistent storage, in particular, to provide security guarantees.
 
 An important part of *SmartAnthill Hobbyist Device* (which is absent on SmartAnthill Mass-Market Devices) is programming interface; for example, it can be some kind of SPI, UART or USB.
 
@@ -174,8 +202,9 @@ SmartAnthill Mass-Market Device
 
 A diagram of a typical *SmartAnthill Mass Market Device* is also provided in the section :ref:`saoverdevices`. In addition to the components available on *SmartAnthill Hobbyist Device*, *SmartAnthill Mass-Market Device* additionally includes:
 
-* **Persistent Storage** (such as EEPROM) to store system-specific data. System-specific data contains things such as bus-specific addresses and security keys; it is obtained during "pairing" process which is described below
 * **"Pairing" Interface** and **"Pairing" Module** responsible for handling "pairing" interface. "pairing" interface is used during "pairing" process as described below, and can be, for example, NFC or USB interface to handle USB stick.
+
+In addition, **Persistent Storage** on Mass-Market Devices stores *System-specific Data*. *System-specific Data* contains information such as bus-specific addresses and security keys; it is obtained during "pairing" process which is described below
 
 MCU on *SmartAnthill Mass-Market Device* runs several layers of software (note the differences from :ref:`saoverhobdev`):
 
@@ -206,11 +235,11 @@ During it's life within SmartAnthill, a hobbyist-oriented device goes through th
 
 * **Initial State**. Initially (when shipped to the customer), Hobbyist-oriented SmartAnthill Device doesn't need to contain any program. Program will be generated and device will be programmed as a part of 'Program Generation and Programming' stage. Therefore, programming connector is a must for hobbyist-oriented devices.
 
-* **Specifying Configuration**. Done by a user (hobbyist) using a *SmartAnthill Dashboard*. User selects board type and then specifies connections of sensors or actuators to different pins of the board. For example, one hobbyist might specify that she has [TODO] board and has a LED connected to pin 1, a temperature sensor connected to pins 2 through 5, and a DAC connected to pins 7 to 10.
+* **Specifying Configuration**. Configuration is specified by a user (hobbyist) using a *SmartAnthill Dashboard*. User selects board type and then specifies connections of sensors or actuators to different pins of the board. For example, one hobbyist might specify that she has [TODO] board and has a LED connected to pin 1, a temperature sensor connected to pins 2 through 5, and a DAC connected to pins 7 to 10.
 
-* **Program Generation and Programming**. Done by *SmartAnthill Dashboard* automagically based on configuration specified in a previous step. Generated program includes a SmartAnthill stack, credentials necessary to authenticate the device to the network and vice versa (as described in SATP section below, authentication is done via symmetric keys), and subprograms necessary to handle devices specified in a previous step. Currently SmartAnthill supports either UART-programmed devices, or SIP-programmed devices [TODO:check]
+* **Program Generation and Programming**. Program generation and programming is performed by *SmartAnthill Dashboard* automagically based on configuration specified in a previous step. Generated program includes a SmartAnthill stack, credentials necessary to authenticate the device to the network and vice versa (as described in SATP section below, authentication is done via symmetric keys), and subprograms necessary to handle devices specified in a previous step. Currently SmartAnthill supports either UART-programmed devices, or SIP-programmed devices [TODO:check]
 
-After the device is programmed, it is automatically added to a *SmartAnthill Database* of available devices (this database is stored on Central Controller and is not intended to be shared). In this database, at least the following information is stored: credentials (i.e. symmetric keys), configuration (i.e. which device is connected to which pins), and device capabilities (i.e. amount of RAM/PROM/EEPROM available, MPU type/capabilities etc.)
+After the device is programmed, it is automatically added to a *SmartAnthill Database* of available devices (this database is stored on Central Controller and SHOULD NOT be shared). In this database, at least the following information is stored: device addresses (bus-specific for Simple Devices and IPs for IP-enabled devices), credentials (i.e. symmetric keys), configuration (i.e. which device is connected to which pins), and device capabilities (i.e. amount of RAM/PROM/EEPROM available, MPU capabilities etc.)
 
 * **Operation**. After the device is programmed, it can start operation. Device operation involves receiving and executing commands from Central Controller. Operations can be either device-specific (such as “measure temperature and report”), or generic (such as “wait for XXXX seconds and come back for further instructions”).
 
@@ -218,9 +247,9 @@ Life Cycle of SmartAnthill Mass-Market-Oriented Device
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''
 Mass-market devices are expected to be shipped in already programmed state, with a pre-defined configuration. Expected life cycle of a *SmartAnthill Mass-market-oriented Device* can be described as follows:
 
-* **Initial State**. Initially (when shipped to the customer), SmartAnthill mass-market-oriented device does contain a program which ensures it's operation. Re-programming capability and connector are optional for SmartAnthill mass-market-oriented devices.
+* **Initial State**. Initially (when shipped to the customer), SmartAnthill mass-market-oriented device contains a program which ensures it's operation. Re-programming capability and connector are optional for SmartAnthill mass-market-oriented devices.
 
-* **“Pairing” with Central Controller**. This includes Central Controller generating and exchanging credentials with device, querying device configuration and capabilities, and entering credentials, configuration and capabilities into SmartAnthill Database.
+* **“Pairing” with Central Controller**. "Pairing" includes Central Controller (controlled via *SmartAnthill Dashboard*) generating and exchanging credentials with device, querying device configuration and capabilities, and entering credentials, configuration and capabilities into SmartAnthill Database.
 
   - Physically, “pairing” can be done in several different ways [TODO: check feasibility of each]:
 
