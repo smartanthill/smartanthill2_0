@@ -23,6 +23,7 @@ CubieBoard), with an optional access via Internet.
 
 * `Specification <http://docs.smartanthill.org/en/latest/design-documents/index.html>`_
     - `Overall Architecture <http://docs.smartanthill.org/en/latest/design-documents/smartanthill-overall-architecture.html>`_
+    - `Core Architecture <http://docs.smartanthill.org/en/latest/design-documents/smartanthill-core-architecture.html>`_
     - `Protocols <http://docs.smartanthill.org/en/latest/design-documents/protocols/index.html>`_
     - `Yocto VM <http://docs.smartanthill.org/en/latest/design-documents/protocols/yocto-vm.html>`_
 * `Reference Implementation <http://docs.smartanthill.org/en/latest/design-documents/reference-implementation/index.html>`_
