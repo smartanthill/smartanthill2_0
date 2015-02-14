@@ -139,6 +139,13 @@ SmartAnthill Core
 
 More detailed information on SmartAnthill Core is provided in a separate document, :ref:`sacorearch`.
 
+SmartAnthill Core Architecture
+''''''''''''''''''''''''''''''
+
+.. image:: ../_static/diagrams/smartanthill-core-architecture-diagram.png
+    :alt: SmartAnthill Core Architecture
+    :target: ../_static/diagrams/smartanthill-core-architecture-diagram.png
+
 API Service
 '''''''''''
 
