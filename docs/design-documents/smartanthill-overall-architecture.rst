@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Overall Architecture
 =====================================
 
-:Version:   v0.3a
+:Version:   v0.3b
 
 **SmartAnthill** is an open IoT system which allows easy control over multiple microcontroller-powered devices, creating a home- or office-wide heterogeneous network out of these devices.
 
@@ -48,11 +48,9 @@ Sales pitch (not to be taken seriously)
 
 - Sir, better you should ask "What doesn't it do?"
 
-  It crypts, flips, scripts, and strips,
-
-  It loops, groups, hooks, and schnooks,
-
-  It chases, races, faces, and places!
+  | *It crypts, flips, scripts, and strips,*
+  | *It loops, groups, hooks, and schnooks,*
+  | *It chases, races, faces, and places!*
 
   No home or maximum security prison should be without one!
 
@@ -62,7 +60,7 @@ Sales pitch (not to be taken seriously)
 
   But that's not all! SmartAnthill will go to great lengths to make sure that your devices don't misuse any watts and milliamp-hours you give them! It will enable suitable devices to run a year or even more when being fed just once! No energy-saving trick in the book is left without SmartAnthill's attention - from sleep to hibernation, from minimizing data being transmitted to minimizing time when RF oscillator is on (whatever that is)!
 
-  What else you, a true manager of your house, can possibly want? You'll get your devices motivated, under tight control, using only very minimum amount of food, and with plausible deniability on top! What are you thinking about? Order your very own SmartAnthill today, and we'll provide 50% discount from your DIY setup price! That's right, if you order SmartAnthill today, you'll be able to pay yourself twice less for setting SmartAnthill up!
+  What else you, a true manager of your house, can possibly want? You'll get your devices motivated, under tight control, using only very minimum amount of food, and with plausible deniability on top! What are you thinking about? Download your very own SmartAnthill today, and we'll provide 50% discount from your DIY setup price! That's right, if you install SmartAnthill today, you'll be able to pay yourself twice less for setting SmartAnthill up!
 
 
 Aims
