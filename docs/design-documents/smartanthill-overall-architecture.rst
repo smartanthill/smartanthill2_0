@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Overall Architecture
 =====================================
 
-:Version:   v0.3d
+:Version:   v0.3e
 
 **SmartAnthill** is an open IoT system which allows easy control over multiple microcontroller-powered devices, creating a home- or office-wide heterogeneous network out of these devices.
 
@@ -172,7 +172,9 @@ Device Firmware Module
 SmartAnthill Router
 '''''''''''''''''''
 
-*SmartAnthill Router* is responsible for handling so-called SmartAnthill Simple Devices (see below; in a nutshell - SmartAnthill Simple Device is not able to run it's own IP stack), and providing them with a virtual IP address (or more precisely - either a separate IP address, or dedicated port on one of *SmartAnthill Central Controller's* IP addresses). While SmartAnthill Simple Device itself knows nothing about IP, SmartAnthill Router completely encapsulates all connected SmartAnthill Simple Devices, so from the point of view of the outside world, these SmartAnthill Simple Devices are completely indistinguishable from fully-fledged SmartAnthill IP-Enabled Devices.
+*SmartAnthill Router* is responsible for handling so-called *SmartAnthill Simple Devices* (see below; in a nutshell - *SmartAnthill Simple Device* is not able to run it's own IP stack). 
+
+*SmartAnthill Router* provides *SmartAnthill Simple Devices* with a virtual IP address (or more precisely - either with a separate IP address, or with a dedicated port on one of *SmartAnthill Central Controller's* IP addresses). While *SmartAnthill Simple Device* itself knows nothing about IP, *SmartAnthill Router* completely encapsulates all connected *SmartAnthill Simple Devices*, so from the point of view of the outside world, these *SmartAnthill Simple Devices* are completely indistinguishable from fully-fledged SmartAnthill IP-Enabled Devices.
 
 SmartAnthill Database (SA DB)
 '''''''''''''''''''''''''''''
@@ -236,12 +238,12 @@ MCU on *SmartAnthill Mass-Market Device* runs several layers of software (note t
 SmartAnthill Simple Device
 ''''''''''''''''''''''''''
 
-Many of SmartAnthill Devices are expected to have very little resources, and might be unable to implement IP stack. Such devices implement a portion of :ref:`saprotostack`, with *SmartAnthill Router* providing interface to the outside world and conversion between IP-based requests/replies and *Simple Device* requests/replies.
+Many of SmartAnthill Devices are expected to have very little resources, and might be unable to implement IP stack. Such devices are known as *SmartAnthill Simple Devices*; they implement a portion of :ref:`saprotostack`, with *SmartAnthill Router* providing interface to the outside world and conversion between IP-based requests/replies and *Simple Device* requests/replies.
 
 SmartAnthill IP-enabled Device
 ''''''''''''''''''''''''''''''
 
-SmartAnthill IP-enabled Device is a device which is able to handle IP requests itself. Such devices can be accessed without the assistance of SmartAnthill Router.
+*SmartAnthill IP-enabled Device* is a device which is able to handle IP requests itself. For example, if *SmartAnthill IP-enabled Device* uses IEEE 802.15.4 for communication, it may implement `6LoWPAN <http://en.wikipedia.org/wiki/6LoWPAN>`_ and IP stack with at least UDP support (TCP stack, which is more resource-intensive than UDP/IP stack, is optional for SmartAnthill IP-enabled Devices). *SmartAnthill IP-enabled Devices* can and should be accessed without the assistance of *SmartAnthill Router*.
 
 
 Life Cycle of SmartAnthill Device
