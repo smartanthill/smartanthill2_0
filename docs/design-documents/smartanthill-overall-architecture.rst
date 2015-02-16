@@ -139,13 +139,6 @@ SmartAnthill Core
 
 More detailed information on SmartAnthill Core is provided in a separate document, :ref:`sacorearch`.
 
-SmartAnthill Core Architecture
-''''''''''''''''''''''''''''''
-
-.. image:: ../_static/diagrams/smartanthill-core-architecture-diagram.png
-    :alt: SmartAnthill Core Architecture
-    :target: ../_static/diagrams/smartanthill-core-architecture-diagram.png
-
 API Service
 '''''''''''
 
@@ -172,7 +165,7 @@ Device Firmware Module
 SmartAnthill Router
 '''''''''''''''''''
 
-*SmartAnthill Router* is responsible for handling so-called *SmartAnthill Simple Devices* (see below; in a nutshell - *SmartAnthill Simple Device* is not able to run it's own IP stack). 
+*SmartAnthill Router* is responsible for handling so-called *SmartAnthill Simple Devices* (see below; in a nutshell - *SmartAnthill Simple Device* is not able to run it's own IP stack).
 
 *SmartAnthill Router* provides *SmartAnthill Simple Devices* with a virtual IP address (or more precisely - either with a separate IP address, or with a dedicated port on one of *SmartAnthill Central Controller's* IP addresses). While *SmartAnthill Simple Device* itself knows nothing about IP, *SmartAnthill Router* completely encapsulates all connected *SmartAnthill Simple Devices*, so from the point of view of the outside world, these *SmartAnthill Simple Devices* are completely indistinguishable from fully-fledged SmartAnthill IP-Enabled Devices.
 
@@ -181,7 +174,7 @@ SmartAnthill Database (SA DB)
 
 *SmartAnthill Database* (SA DB) is a database which stores all the information about SmartAnthill Devices within specific SmartAnthill System. SA DB is used by most of *SmartAnthill Core* components.
 
-*SmartAnthill Database* is specific to the Central Controller and SHOULD NOT be shared. In SA DB, at least the following information is stored: 
+*SmartAnthill Database* is specific to the Central Controller and SHOULD NOT be shared. In SA DB, at least the following information is stored:
 
 * device addresses (bus-specific for Simple Devices and IPs for IP-enabled devices)
 * credentials (i.e. symmetric keys)
