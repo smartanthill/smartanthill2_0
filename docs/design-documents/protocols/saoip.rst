@@ -27,7 +27,7 @@
 SmartAnthill-over-IP Protocol (SAoIP)
 =====================================
 
-:Version:   v0.1
+:Version:   v0.1.1
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -64,37 +64,38 @@ SAoIP Aggregation is an OPTIONAL feature of SAoIP which allows to reduce number 
 
 If SAoIP Aggregation is not in use, then Destination-IP field MUST NOT be present in the data transferred (for example, for SAoUDP, SAOUDP_HEADER_AGGREGATE MUST NOT be present). If *SmartAnthill Router* receives a packet on a non-aggregated port, and the packet has Destination-IP field, it SHOULD drop this packet as an invalid one.
 
+Reverse Parsing and Reverse-Encoded-Size
+----------------------------------------
+
+To comply with requirements of SAScP (TODO: SAScp), headers in SAoIP are usually located in the end of the packet. As a result, parsing should be performed starting from the end of the packet. To facilitate such a 'reverse parsing', 'Reverse-Encoded-Size' encoding is used; Reverse-Encoded-Size<max=n> encoding is identical to Encoded-Size<max=2> encoding as defined in :ref:`saprotostack` document, except that all the bytes are written (and parsed) in the reverse order.
+
 SAoUDP
 ------
 
 SAoUDP is one of SAoIP flavours. SAoUDP packet looks as follows:
 
-**\| Headers \| SAoIP-Payload \|**
+**\| SAoIP-Payload \| Headers \|**
 
 
 where Headers are optional headers for the SAoUDP; the idea of SAoUDP Headers is remotely similar to that of IP optional headers. If receiver gets a message with some of Headers which are not known to it, it MUST ignore the header and SHOULD sent a TODO packet (vaguely similar to ICMP 'Parameter Problem' message) back to the sender. 
 
 The last Header is always a SAOUDP_HEADER_LAST_HEADER header. Therefore, if there are no extensions, SAoUDP packet looks as **\| Header-Type=SAOUDP_HEADER_LAST_HEADER \| Data-Length=0 \| SAoIP-Payload \|**.
 
-All Headers have the following format: 
+All Headers (except for LAST_HEADER, which is described below) have the following format: 
 
-**\| Header-Type \| Data-Length \| Data \|**
+**\| Data \| Data-Length \| Header-Type \|**
 
-where Header-Type is a 2-byte field, Data-Length is a 2-byte field, and Data is a variable-length field which has Data-Length size.
+where Header-Type is an Reverse-Encoded-Int<max=2> field, Data-Length is also a Reverse-Encoded-Int<max=2> field, and Data is a variable-length field which has Data-Length size.
 
 Currently supported extensions are:
 
-**\| SAODUP_HEADER_AGGREGATE \| Data-Length=16 \| Destination-IPv6 \|**
+**\| Destination-IPv6 \| Data-Length=16 \| SAODUP_HEADER_AGGREGATE \|**
 
 where Destination-IPv6 is a 16-byte field containing IPv6 address. The meaning and handling of Destination-IPv6 field is described in "SAoIP Aggregation and Destination-IPv6 field" section above.
 
-**\| SAODUP_HEADER_SASP_RECRYPT \| Data-Length=0 \|**
+**\| SAODUP_HEADER_LAST_HEADER \|**
 
-SAODUP_HEADER_SASP_RECRYPT indicates that at the SASP level, the packet is encrypted with a key of the *SmartAnthill Router* rather than with a key of *SmartAnthill Device*. In this case *SmartAnthill Router* MUST decrypt the key using it's own key, validate it's authenticity (TODO: exact actions if it doesn't validate), and encrypt it with a key of destination *SmartAnthill Device*. TODO: packets on their way back??
-
-**\| SAODUP_HEADER_LAST_HEADER \| Data-Length=0 \|**
-
-SAODUP_HEADER_LAST_HEADER is always the last header in the header list. Indicates that immediately after this header, SAoIP-Payload field is located.
+SAODUP_HEADER_LAST_HEADER is always the last header in the header list. Indicates that immediately after this header, SAoIP-Payload field is located. Note that LAST_HEADER doesn't have a 'Data-Length' field.
 
 SAoUDP and UDP
 ^^^^^^^^^^^^^^
@@ -106,7 +107,7 @@ As we see it, SAoUDP (when used with the rest of the SmartAnthill Protocol Stack
 SAoUDP Packet Sizes and Payloads
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To comply with RFC 5405, SAoUDP SHOULD restrict maximum IP packet to the size of 576 bytes [1]_. Taking into account IP and UDP headers, it means that SAoUDP packet SHOULD be restricted to `576-60-8=508` bytes, and taking into account maximum size of supported SAoUDP headers, SAoIP-Payload for SAoUDP SHOULD be restricted to 508-28=480. This is a value which SHOULD be used for calculations of the maximum *Client_Side_SACCP_payload* as used in :ref:`saprotostack` document. For example, if SAoUDP payload size is typical 480 bytes (as calculated above), then corresponding maximum SASP payload is 463bytes+7bits, maximum SAGDP payload is 457 bytes, and maximum SACCP payload (and therefore *Client_Side_SACCP_payload*) is also 457 bytes. TODO: check exact numbers. 
+To comply with RFC 5405, SAoUDP SHOULD restrict maximum IP packet to the size of 576 bytes [1]_. Taking into account IP and UDP headers, it means that SAoUDP packet SHOULD be restricted to `576-60-8=508` bytes, and taking into account maximum size of supported SAoUDP headers, SAoIP-Payload for SAoUDP SHOULD be restricted to 508-TODO=TODO. This is a value which SHOULD be used for calculations of the maximum *Client_Side_SACCP_payload* as used in :ref:`saprotostack` document. For example, if SAoUDP payload size is typical TODO bytes (as calculated above), then corresponding maximum SASP payload is 463bytes+7bits, maximum SAGDP payload is 457 bytes, and maximum SACCP payload (and therefore *Client_Side_SACCP_payload*) is also TODO bytes.
 
 .. [1] Strictly speaking, RFC 5405 says that MTU should be less than `min(576,first-hop-MTU)`; if first-hop-MTU on an interface which SmartAnthill Client uses, is less than 576, maximum SACCP payload SHOULD be recalculated accordingly; note that due to the block nature of SASP, dependency between SAoUDP payload and SACCP payload in not exactly linear and needs to be re-calculated carefully; however, MTU being less than 576 is very unusual these days.
 
