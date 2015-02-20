@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.2a
+:Version:   v0.2.2b
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *document, please make sure to read it before proceeding.*
@@ -151,6 +151,72 @@ One of DeviceCapabilities fields is SACCP_GUARANTEED_PAYLOAD (which is conceptua
 In SmartAnthill, fragmentation and re-assembly is a responsibility of SADLP-\* family of protocols. If implemented, it may allow device to increase reported (and sent/received) SACCP_GUARANTEED_PAYLOAD. 
 
 All SmartAnthill Protocols, except for SADLP-\*, MUST support SACCP payload sizes of at least 384 bytes. Therefore, after obtaining Device Capabilities for a SmartAnthill Device, SmartAnthill Client MAY calculate *min(DeviceCapabilities.SACCP_GUARANTEED_PAYLOAD,384)* to determine SACCP payload size which is guaranteed to be delivered to the Device. Alternatively, SmartAnthill MAY calculate *min(DeviceCapabilities.SACCP_GUARANTEED_PAYLOAD,Client_Side_SACCP_Payload)* for the same purpose (here Client_Side_SACCP_Payload will depend on SAoIP protocol in use).
+
+SmartAnthill Encoded-Int
+------------------------
+
+In several places in SmartAnthill Protocol Stack, there is a need to encode integers, which happen to be small most of the time (one such example is sizes, another example is some kinds of incrementally-increased ids). To encode them efficiently, SmartAnthill Protocol Stack uses a compact encoding, which encodes small integers with smaller number of bytes.
+
+Encoded-Int is a variable-length encoding of integers (with the idea being somewhat similar to the idea behind UTF-8). Namely:
+
+* if the first byte of Encoded-Int is c1 <= 127, then the value of Encoded-Int is equal to c1
+* if the first byte of Encoded-Int is c1 >= 128, then the next byte c2 is needed:
+
+  + if the second byte of Encoded-Int is c2 <= 127, then the value of Encoded-Int is equal to *128+((uint16)(c1&0x7F) | ((uint16)c2 << 7))*.
+  + if the second byte of Encoded-Int is c2 >= 128, then the next byte c3 is needed:
+    
+    * if the third byte of Encoded-Int is c3 <= 127, then the value of Encoded-Int is equal to *16512+((uint16)(c1&0x7F) | ((uint16)(c2&0x7F) << 7)) | ((uint16)c3 << 7))* (note that 16512 is 2^7+2^14).
+    * if the third byte of Encoded-Int is c3 >= 128, then the next byte c4 is needed:
+
+      + if the fourth byte of Encoded-Int is c4 <= 127, then the value of Encoded-Int is equal to *2113664+((uint16)(c1&0x7F) | ((uint16)(c2&0x7F) << 7)) | ((uint16)(c3&0x7F) << 7)) | ((uint16)c4 << 7))* (note that 2113664 is 2^7+2^14+2^21).
+      + if the fourth byte of Encoded-Int is c4 >= 128, then the next byte c5 is needed:
+
+        * if the fifth byte of Encoded-Int is c5 <= 127, then the value of Encoded-Int is equal to *270549120+((uint16)(c1&0x7F) | ((uint16)(c2&0x7F) << 7)) | ((uint16)(c3&0x7F) << 7)) | ((uint16)(c4&0x7F) << 7)) | ((uint16)c5 << 7))* (note that 270549120 is 2^7+2^14+2^21+2^28).
+        * if the fifth byte of Encoded-Int is c5 >= 128, then the next byte c6 is needed:
+
+          + if the sixth byte of Encoded-Int is c6 <= 127, then the value of Encoded-Int is equal to *34630287488+((uint16)(c1&0x7F) | ((uint16)(c2&0x7F) << 7)) | ((uint16)(c3&0x7F) << 7)) | ((uint16)(c4&0x7F) << 7)) | ((uint16)(c5&0x7F) << 7)) | ((uint16)c6 << 7))*.
+          + if the sixth byte of Encoded-Int is c6 >= 128, then the next byte c7 is needed:
+
+            + if the seventh byte of Encoded-Int is c7 <= 127, then the value of Encoded-Int is equal to *4432676798592+((uint16)(c1&0x7F) | ((uint16)(c2&0x7F) << 7)) | ((uint16)(c3&0x7F) << 7)) | ((uint16)(c4&0x7F) << 7)) | ((uint16)(c5&0x7F) << 7)) | ((uint16)(c6&0x7F) << 7)) | ((uint16)c7 << 7))*.
+            + if the seventh byte of Encoded-Int is c7 >= 128, then the next byte c8 is needed:
+
+              + if the eighth byte of Encoded-Int is c7 <= 127, then the value of Encoded-Int is equal to *567382630219904+((uint16)(c1&0x7F) | ((uint16)(c2&0x7F) << 7)) | ((uint16)(c3&0x7F) << 7)) | ((uint16)(c4&0x7F) << 7)) | ((uint16)(c5&0x7F) << 7)) | ((uint16)(c6&0x7F) << 7)) | ((uint16)(c7&0x7F) << 7)) | ((uint16)c8 << 7))*.
+              + if the eighth byte of Encoded-Int is c8 >= 128, then it is an invalid Encoded-Int encoding (as currently maximum supported value of "max=" parameter is 8, see below). High bit of Encoded-Int's eighth byte c8 is reserved for future expansion.
+
+The following table shows how many Encoded-Int bytes is necessary to encode ranges of Encoded-Int values:
+
++-----------------------+---------------------+
+| Encoded-Int Values    | Encoded-Int Bytes   |
++=======================+=====================+
+| 0-127                 | 1                   |
++-----------------------+---------------------+
+| 128-16 511            | 2                   |
++-----------------------+---------------------+
+| 16 512-2 113 663      | 3                   |
++-----------------------+---------------------+
+| 2 113 664-270 549 119 | 4                   |
++-----------------------+---------------------+
+| 270 549 120-          | 5                   |
+| 34 630 287 487        |                     |
++-----------------------+---------------------+
+| 34 630 287 487-       | 6                   |
+| 4 432 676 798 591     |                     |
++-----------------------+---------------------+
+| 4 432 676 798 592-    | 7                   |
+| 567 382 630 219 903   |                     |
++-----------------------+---------------------+
+| 567 382 630 219 904-  | 8                   |
+| 72 624 976 668 147 839|                     |
++-----------------------+---------------------+
+
+Encoded-Int<max=>
+^^^^^^^^^^^^^^^^^
+
+Wherever SmartAnthill specification mentions Encoded-Int, it MUST specify it in the form of Encoded-Int<max=...>. "max=" parameter specifies maximum number of bytes which can appear in this place. For example, Encoded-Int<max=2> specifies that maximum two bytes of Encoded-Int can appear at the specified place, and therefore than values over 16511 cannot be encoded. It also implies that the result of such Encoded-Int<max=2> always fits into 2 bytes (for example, into uint16_t).
+
+Currently supported values of "max=" parameter are from 1 to 8.
+
+When parsing Encoded-Int, if high bit in the last-possible byte is 1, then Encoded-Int is considered invalid. Handling of invalid Encoded-Ints SHOULD be specified in the appropriate place of documentation.
 
 Layering remarks
 ----------------

@@ -27,7 +27,7 @@
 SmartAnthill Security Protocol (SASP)
 =====================================
 
-:Version:   v0.1.3b
+:Version:   v0.1.3c
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -166,36 +166,7 @@ TODO: exact format of 'Error "Old Nonce" Message'
 5. SASP padding
 ---------------
 
-5.1. SASP Encoded-Size
-^^^^^^^^^^^^^^^^^^^^^^
-
-SASP Encoded-Size is a variable-length encoding of sizes (with the idea being somewhat similar to the idea behind UTF-8; it is also identical to the Yocto VM Encoded-Size as described in
-:ref:`sayoctovm` ). Namely:
-
-* if first byte of Encoded-Size is c1 <= 127, then the value of Encoded-size is equal to c1
-* if first byte of Encoded-Size is c1 >= 128, then the next byte c2 is needed:
-
-  + if second byte of Encoded-Size is c2 <= 127, then the value of Encoded-Size is equal to *128+((uint16)(c1&0x7F) | ((uint16)c2 << 7))*.
-  + if second byte of Encoded-Size is c2 >= 128, then SASP receiving side MUST treat such a packet as an invalid (as the one which didn't pass internal validation). c2 >= 128 is reserved for potential future expansion)
-
-
-The following table shows how many Encoded-Size bytes is necessary to encode ranges of Encoded-Size values:
-
-+--------------------+---------------------+
-| Encoded-Size Values| Encoded-Size Bytes  |
-+====================+=====================+
-| 0-127              | 1                   |
-+--------------------+---------------------+
-| 128-16511          | 2                   |
-+--------------------+---------------------+
-
-**Observation 1**: when parsing Encoded-Size, it is possible to find out both "size of Encoding-Size itself", and "size which is encoded by Encoded-Size"
-
-**Note 1**:  upon necessity this encoding can be extended by analogy to address greater sizes.
-
-**Note 2**:  unless "enforced padding" (see below) is used, SASP pads data only to the block size; it means that unless "enforced padding" is used, padding size is always <= 15, and therefore Encoded-Size cannot be longer than 1 byte.
-
-5.2. SASP data under encryption and payload
+5.1. SASP data under encryption and payload
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 SASP data under encryption is organized as follows:
@@ -209,7 +180,8 @@ where:
      * **MSB bit**: padding size flag, which is set to 1, if padding is present, and 0 otherwise. Presence of padding implies presence of padding size field as well.
      * **Remaining 7 bits**: a part of payload.
 
-  * **complementary size**: variable size field; this field is present only if padding size flag is set; in this case the field contains encoded value of a sum of the size of this field and the size of padding (if any); encoding is done using SASP encoded-size.
+  * **complementary size**: SmartAnthill Encoded-Int<max=2> variable-size field, as described in :ref:`saprotostack`; this field is present only if padding size flag is set; in this case the field contains encoded value of a sum of the size of this field and the size of padding (if any). If Encoded-Int has an invalid value (as defined in :ref:`saprotostack`), then SASP receiving side MUST treat such a packet as an invalid (as the one which didn't pass internal validation). Note:  unless "enforced padding" (see below) is used, SASP pads data only to the block size; it means that unless "enforced padding" is used, padding size is always <= 15, and therefore Encoded-Int cannot be longer than 1 byte.
+
   * **byte sequence**: variable size field; data that is defined by a higher level protocol.
   * **padding**: variable size field; this field is present only if padding size flag is set and **complementary size** represents a value greater than 1; contains padding up to a target size.
   
@@ -220,12 +192,12 @@ Correspondingly, SASP payload consists of:
 
 Higher-level protocol is free to use "partial byte" (7 bits) of SASP payload, or to ignore it; however, this "partial byte" might be useful, for example, to store some bitflags of higher-level protocol, which may allow to save 1 byte of payload.
   
-5.3. SASP padding data
+5.2. SASP padding data
 ^^^^^^^^^^^^^^^^^^^^^^
 
 If present, padding data SHOULD be generated randomly. Depending on capabilities of the implementing device, upon necessity, this requirement MAY be relaxed. [TODO: describe approach with generating pseudorandom data using an independent encryption key and a current nonce]
 
-5.4. SASP enforced padding
+5.3. SASP enforced padding
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In certain scenarios, some information might be extracted from the packet length even though information is encrypted. To support the cases when this is important, SASP supports a concept of "enforced padding", which works as follows:

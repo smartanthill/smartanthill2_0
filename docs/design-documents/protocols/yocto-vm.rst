@@ -27,7 +27,7 @@
 Yocto VM
 ========
 
-:Version:   v0.1.8a
+:Version:   v0.1.9
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -83,8 +83,7 @@ Error code == 255 is reserved for Yocto VM exceptions (see below) and SHOULD NOT
 Packet Chains
 -------------
 
-In SACCP (and in Yocto VM as an implementation of SACCP), all interactions between SmartAnthill Client and SmartAnthill Device are considered as “packet chains”, when one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever Yocto VM issues a packet to an underlying protocol, it needs to specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication. See 
-:ref:`saprotostack` document for more details on "packet chains".
+In SACCP (and in Yocto VM as an implementation of SACCP), all interactions between SmartAnthill Client and SmartAnthill Device are considered as “packet chains”, when one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever Yocto VM issues a packet to an underlying protocol, it needs to specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication. See :ref:`saprotostack` document for more details on "packet chains".
 
 Device Capabilities
 -------------------
@@ -153,7 +152,7 @@ The structure of the reply means that it will be interpreted as a reply with err
 Currently, Yocto VM may issue the following exceptions:
 
 * YOCTO_VM_INVALID_INSTRUCTION */\* Note that this exception may also be issued when an instruction is encountered which is legal in general, but is not supported by current level of Yocto VM. \*/*
-* YOCTOVM_INVALIDENCODEDSIZE
+* YOCTOVM_INVALIDENCODEDSIZE */\* Issued whenever Encoded-Int<max=...> is an invalid encoding, as defined in* :ref:`saprotostack` document *\*/*
 * YOCTOVM_PLUGINERROR
 * YOCTOVM_INVALIDPARAMETER
 * YOCTOVM_INVALIDREPLYOFFSET
@@ -172,29 +171,6 @@ Yocto VM Overriding Command
 ---------------------------
 
 If there is a new command incoming from SmartAnthill Client, while Yocto VM is executing a current program, Yocto VM will (at the very first opportunity) automatically abort execution of the current program, and starts executing the new one. This behaviour is consistent with the concept of “SmartAnthill Client always knows better” which is used throughout the SmartAnthill protocol stack. Such command may be used, for example, by SmartAnthill Client to abort execution of a long-running request and ask SmartAnthill Device to do something else.
-
-Yocto VM Encoded-Size
----------------------
-
-In some places of the present document, a notion of 'Encoded-Size' is mentioned. This is a variable-length encoding of sizes (with the idea being somewhat similar to the idea behind UTF-8). Namely:
-
-* if first byte of Encoded-Size is c1 <= 127, then the value of Encoded-size is equal to c1
-* if first byte of Encoded-Size is c1 >= 128, then the next byte c2 is needed:
-
-  + if second byte of Encoded-Size is c2 <= 127, then the value of Encoded-Size is equal to *128+((uint16)(c1&0x7F) | ((uint16)c2 << 7))*.
-  + if second byte of Encoded-Size is c2 >= 128, this is currently a YOCTOVM_INVALIDENCODEDSIZE exception (c2 >= 128 is reserved for potential future expansion)
-
-
-The following table shows how many Encoded-Size bytes is necessary to encode ranges of Encoded-Size values:
-
-+--------------------+---------------------+
-| Encoded-Size Values| Encoded-Size Bytes  |
-+====================+=====================+
-| 0-127              | 1                   |
-+--------------------+---------------------+
-| 128-16512          | 2                   |
-+--------------------+---------------------+
-
 
 Yocto VM Levels
 ---------------
@@ -238,21 +214,21 @@ Here:
 * YOCTOVM_BASIC_EXPR_STACK_SIZE is a 1-byte field, equal to YOCTOVM_EXPR_STACK_SIZE (see below for details). If YOCTOVM_EXPR_STACK_SIZE is more than 255, then YOCTOVM_BASIC_EXPR_STACK_SIZE MUST be set to 255, and real YOCTOVM_EXPR_STACK_SIZE SHOULD be reported in YOCTOVM_EXTENDED_EXPR_STACK_SIZE field.
 * <YOCTOVM_BASIC_MAX_PSEUDOTHREADS> is a 4-bit bitfield, equal to YOCTOVM_MAX_PSEUDOTHREADS (see below for details). If YOCTOVM_MAX_PSEUDOTHREADS is more than 15, then <YOCTOVM_BASIC_MAX_PSEUDOTHREADS> MUST be set to 15, and real YOCTOVM_MAX_PSEUDOTHREADS SHOULD be reported in YOCTOVM_EXTENDED_MAX_PSEUDOTHREADS field.
 * <RESERVED-\*-BITS> and <RESERVED-\*-BYTES> fields are reserved for future use and MUST be set to 0.
-* SACCP_EXTENDED_GUARANTEED_PAYLOAD is a 2-byte field specifying guaranteed size of SACCP payload which is supported by current device (see SACCP_GUARANTEED_PAYLOAD above for details; unlike SACCP_GUARANTEED_PAYLOAD, SACCP_EXTENDED_GUARANTEED_PAYLOAD is capped at 65535 rather than at 255). SACCP_EXTENDED_GUARANTEED_PAYLOAD field MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
-* YOCTOVM_EXTENDED_REPLY_STACK_SIZE is a 2-byte field specifying YOCTOVM_REPLY_STACK_SIZE (unlike <YOCTOVM_BASIC_REPLY_STACK_SIZE> bitfield, YOCTOVM_EXTENDED_REPLY_STACK_SIZE is capped at 65535 rather than at 31). YOCTOVM_EXTENDED_REPLY_STACK_SIZE MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
-* YOCTOVM_EXTENDED_EXPR_STACK_SIZE is a 2-byte field specifying YOCTOVM_EXPR_STACK_SIZE (unlike YOCTOVM_BASIC_EXPR_STACK_SIZE field, YOCTOVM_EXTENDED_EXPR_STACK_SIZE is capped at 65535 rather than at 255). YOCTOVM_EXTENDED_EXPR_STACK_SIZE field MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
-* YOCTOVM_EXTENDED_MAX_PSEUDOTHREADS is a 2-byte field specifying YOCTOVM_MAX_PSEUDOTHREADS (unlike YOCTOVM_BASIC_MAX_PSEUDOTHREADS field, YOCTOVM_EXTENDED_MAX_PSEUDOTHREADS is capped at 65535 rather than at 15). YOCTOVM_EXTENDED_MAX_PSEUDOTHREADS field MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
+* SACCP_EXTENDED_GUARANTEED_PAYLOAD is an Encoded-Int<max=2> field (as defined in :ref:`saprotostack` document) specifying guaranteed size of SACCP payload which is supported by current device (see SACCP_GUARANTEED_PAYLOAD above for details; unlike SACCP_GUARANTEED_PAYLOAD, SACCP_EXTENDED_GUARANTEED_PAYLOAD is capped at 65535 rather than at 255). SACCP_EXTENDED_GUARANTEED_PAYLOAD field MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
+* YOCTOVM_EXTENDED_REPLY_STACK_SIZE is an Encoded-Int<max=2> field (as defined in :ref:`saprotostack` document) specifying YOCTOVM_REPLY_STACK_SIZE (unlike <YOCTOVM_BASIC_REPLY_STACK_SIZE> bitfield, YOCTOVM_EXTENDED_REPLY_STACK_SIZE is capped at 65535 rather than at 31). YOCTOVM_EXTENDED_REPLY_STACK_SIZE MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
+* YOCTOVM_EXTENDED_EXPR_STACK_SIZE is an Encoded-Int<max=2> field (as defined in :ref:`saprotostack` document) specifying YOCTOVM_EXPR_STACK_SIZE (unlike YOCTOVM_BASIC_EXPR_STACK_SIZE field, YOCTOVM_EXTENDED_EXPR_STACK_SIZE is capped at 65535 rather than at 255). YOCTOVM_EXTENDED_EXPR_STACK_SIZE field MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
+* YOCTOVM_EXTENDED_MAX_PSEUDOTHREADS is an Encoded-Int<max=2> field (as defined in :ref:`saprotostack` document) specifying YOCTOVM_MAX_PSEUDOTHREADS (unlike YOCTOVM_BASIC_MAX_PSEUDOTHREADS field, YOCTOVM_EXTENDED_MAX_PSEUDOTHREADS is capped at 65535 rather than at 15). YOCTOVM_EXTENDED_MAX_PSEUDOTHREADS field MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
 
 
 **\| YOCTOVM_OP_EXEC \| BODYPART-ID \| DATA-SIZE \| DATA \|**
 
-where YOCTOVM_OP_EXEC is 1-byte opcode, BODYPART-ID is 1-byte id of the bodypart to be used, DATA-SIZE is an Encoded-Size length of DATA field, and DATA in an opaque data to be passed to the plugin associated with body part identified by BODYPART-ID; DATA field has size DATA-SIZE.
+where YOCTOVM_OP_EXEC is 1-byte opcode, BODYPART-ID is 1-byte id of the bodypart to be used, DATA-SIZE is an Encoded-Int<max=2> (as defined in :ref:`saprotostack` document) length of DATA field, and DATA in an opaque data to be passed to the plugin associated with body part identified by BODYPART-ID; DATA field has size DATA-SIZE.
 EXEC instruction invokes a plug-in which corresponds to BODYPART-ID, and passes DATA of DATA-SIZE  size to this plug-in. Plug-in always adds a reply to the reply-buffer; reply size may vary, but MUST be at least 1 byte in length; otherwise it is a YOCTOVM_PLUGINERROR exception.
 
 
 **\| YOCTOVM_OP_PUSHREPLY \| DATA-SIZE \| DATA \|**
 
-where YOCTOVM_OP_PUSHREPLY is a 1-byte opcode, DATA-SIZE is an Encoded-Size length of DATA field, and DATA is opaque data to be pushed to reply buffer.
+where YOCTOVM_OP_PUSHREPLY is a 1-byte opcode, DATA-SIZE is an Encoded-Int<max=2> (as defined in :ref:`saprotostack` document) length of DATA field, and DATA is opaque data to be pushed to reply buffer.
 PUSHREPLY instruction pushes an additional reply with DATA in it to reply buffer.
 
 **\| YOCTOVM_OP_TRANSMITTER \| <ONOFF> \|**
@@ -263,12 +239,12 @@ TRANSMITTER instruction turns transmitter on or off, according to the value of <
 
 **\| YOCTOVM_OP_SLEEP \| MSEC-DELAY \|**
 
-where YOCTOVM_OP_SLEEP is a 1-byte opcode, and MSEC-DELAY is a 2-byte unsigned integer.
-Pauses execution for approximately MSEC-DELAY milliseconds.
+where YOCTOVM_OP_SLEEP is a 1-byte opcode, and MSEC-DELAY is an Encoded-Int<max=4> field (as defined in :ref:`saprotostack` document).
+Pauses execution for approximately MSEC-DELAY milliseconds. Exact delay times are not guaranteed; specifically, SLEEP instruction MAY take significantly longer than requested.
 
 **\| YOCTOVM_OP_MCUSLEEP \| SEC-DELAY \| <TRANSMITTERONWHENBACK>,<MAYDROPEARLIERINSTRUCTIONS> \|**
 
-where YOCTOVM_OP_MCUSLEEP is a 1-byte opcode, SEC-DELAY is a 2-byte unsigned integer, and <TRANSMITTERONWHENBACK> and <MAYDROPEARLIERINSTRUCTIONS> are 1-bit bitfields, each taking values {0,1}.
+where YOCTOVM_OP_MCUSLEEP is a 1-byte opcode, SEC-DELAY is an Encoded-Int<max=4> field (as defined in :ref:`saprotostack` document), and <TRANSMITTERONWHENBACK> and <MAYDROPEARLIERINSTRUCTIONS> are 1-bit bitfields, each taking values {0,1}.
 MCUSLEEP instruction puts MCU into sleep-with-timer mode for approximately SEC-DELAY seconds. If sleep-with-timer mode is not available with current MCU, then such an instruction still may be sent to such a device, as a means of long delay, and SmartAnthill device MUST process it just by waiting for specified time. <TRANSMITTERONWHENBACK> specifies if device transmitter should be turned on after MCUSLEEP, and <MAYDROPEARLIERINSTRUCTIONS> is an optimization flag which specifies if MCUSLEEP is allowed to drop the portion of the YoctoVM program which is located before MCUSLEEP, when going to sleep (this may allow to provide certain savings, see below).
 
 As MCUSLEEP may disable device receiver, Yocto VM enforces relevant “Execution Layer Restrictions” when MCUSLEEP is invoked; to ensure consistent behavior between MCUs, these restriction MUST be enforced regardless of MCUSLEEP really disabling device receiver. Therefore (NB: these checks SHOULD be implemented for YoctoVM-One; they MUST be implemented for all Yocto-VM levels other than YoctoVM-One):
@@ -288,7 +264,7 @@ NB: Yocto VM-One implements POPREPLIES instruction only partially (for 1 value o
 
 **\| YOCTOVM_OP_EXIT \| <REPLY-FLAGS>,<FORCED-PADDING-FLAG> \| (opt) FORCED-PADDING-TO \|**
 
-where YOCTOVM_OP_EXIT is a 1-byte opcode (NB: it is the same as YOCTOVM_OP_EXIT in Level Tiny), REPLY-FLAGS is a 2-bit bitfield taking one of the following values: {NONE,ISFIRST,ISLAST}, <FORCED-PADDING-FLAG> is a 1-bit bitfield which stores {0,1}, and FORCED-PADDING-TO is an Encoded-Size field, which is present only if <FORCED-PADDING-FLAG> is equal to 1.
+where YOCTOVM_OP_EXIT is a 1-byte opcode (NB: it is the same as YOCTOVM_OP_EXIT in Level Tiny), REPLY-FLAGS is a 2-bit bitfield taking one of the following values: {NONE,ISFIRST,ISLAST}, <FORCED-PADDING-FLAG> is a 1-bit bitfield which stores {0,1}, and FORCED-PADDING-TO is an Encoded-Int<max=2> (as defined in :ref:`saprotostack` document) field, which is present only if <FORCED-PADDING-FLAG> is equal to 1.
 
 EXIT instruction posts all the replies which are currently in the “reply buffer”, back to SmartAnthill Central Controller, and terminates the program. Device receiver is kept turned on after the program exits (so the device is able to accept new commands).
 
@@ -490,7 +466,7 @@ Yocto VM-Medium adds support for registers, call stack, and parallel execution.
 
 **\| YOCTOVM_OP_PARALLEL \| N-PSEUDO-THREADS \| PSEUDO-THREAD-1-INSTRUCTIONS-SIZE \| PSEUDO-THREAD-1-INSTRUCTIONS \| ... \| PSEUDO-THREAD-N-INSTRUCTIONS-SIZE \| PSEUDO-THREAD-N-INSTRUCTIONS \|**
 
-where YOCTOVM_OP_PARALLEL is 1-byte opcode, N-PSEUDO-THREADS is a number of "pseudo-threads" requested, 'PSEUDO-THREAD-X-INSTRUCTIONS-SIZE' is Encoded-Size size of PSEUDO-THREAD-X-INSTRUCTIONS, and PSEUDO-THREAD-X-INSTRUCTIONS is a sequence of Yocto VM commands which belong to the pseudo-thread #X. Within PSEUDO-THREAD-X-INSTRUCTIONS, all commands of Yocto VM are allowed, with an exception of PARALLEL, EXIT and any jump instruction which leads outside of the current pseudo-thread.
+where YOCTOVM_OP_PARALLEL is 1-byte opcode, N-PSEUDO-THREADS is a number of "pseudo-threads" requested, 'PSEUDO-THREAD-X-INSTRUCTIONS-SIZE' is Encoded-Int<max=2> (as defined in :ref:`saprotostack` document) size of PSEUDO-THREAD-X-INSTRUCTIONS, and PSEUDO-THREAD-X-INSTRUCTIONS is a sequence of Yocto VM commands which belong to the pseudo-thread #X. Within PSEUDO-THREAD-X-INSTRUCTIONS, all commands of Yocto VM are allowed, with an exception of PARALLEL, EXIT and any jump instruction which leads outside of the current pseudo-thread.
 
 PARALLEL instruction starts processing of several pseudo-threads. PARALLEL instruction is considered completed when all the pseudo-threads reach the end of their respective instructions. Normally, it is implemented via state machines (see 
 :ref:`sarefimplmcusoftarch` document for details), so it is functionally equivalent to "green threads" (and not to "native threads").
