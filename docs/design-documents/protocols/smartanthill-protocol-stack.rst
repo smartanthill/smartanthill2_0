@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.2c
+:Version:   v0.2.2d
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *document, please make sure to read it before proceeding.*
@@ -178,36 +178,39 @@ Encoded-Int is a variable-length encoding of integers (with the idea being somew
  
 The following table shows how many Encoded-Int bytes is necessary to encode ranges of Encoded-Int values:
 
-+-----------------------+---------------------+
-| Encoded-Int Values    | Encoded-Int Bytes   |
-+=======================+=====================+
-| 0-127                 | 1                   |
-+-----------------------+---------------------+
-| 128-16 511            | 2                   |
-+-----------------------+---------------------+
-| 16 512-2 113 663      | 3                   |
-+-----------------------+---------------------+
-| 2 113 664-270 549 119 | 4                   |
-+-----------------------+---------------------+
-| 270 549 120-          | 5                   |
-| 34 630 287 487        |                     |
-+-----------------------+---------------------+
-| 34 630 287 487-       | 6                   |
-| 4 432 676 798 591     |                     |
-+-----------------------+---------------------+
-| 4 432 676 798 592-    | 7                   |
-| 567 382 630 219 903   |                     |
-+-----------------------+---------------------+
-| 567 382 630 219 904-  | 8                   |
-| 72 624 976 668 147 839|                     |
-+-----------------------+---------------------+
++-------------------------+---------------------+------------------+------------------+
+| Encoded-Int Values      | Encoded-Int Bytes   | Fully Covers     | Result fits in   |
++=========================+=====================+==================+==================+
+| 0-127                   | 1                   | 7 bits           | 1 byte           |
++-------------------------+---------------------+------------------+------------------+
+| 128-16 511              | 2                   | 14 bits          | 2 bytes          |
++-------------------------+---------------------+------------------+------------------+
+| 16 512-2 113 663        | 3                   | 21 bits          | 3 bytes          |
++-------------------------+---------------------+------------------+------------------+
+| 2 113 664-270 549 119   | 4                   | 28 bits          | 4 bytes          |
++-------------------------+---------------------+------------------+------------------+
+| 270 549 120-            | 5                   | 35 bits          | 5 bytes          |
+| 34 630 287 487          |                     |                  |                  |
++-------------------------+---------------------+------------------+------------------+
+| 34 630 287 487-         | 6                   | 42 bits          | 6 bytes          |
+| 4 432 676 798 591       |                     |                  |                  |
++-------------------------+---------------------+------------------+------------------+
+| 4 432 676 798 592-      | 7                   | 49 bits          | 7 bytes          |
+| 567 382 630 219 903     |                     |                  |                  |
++-------------------------+---------------------+------------------+------------------+
+| 567 382 630 219 904-    | 8                   | 56 bits          | 8 bytes          |
+| 72 624 976 668 147 839  |                     |                  |                  |
++-------------------------+---------------------+------------------+------------------+
+|72 624 976 668 147 840-  | 9                   | 63 bits          | 8 bytes          |
+|9 295 997 013 522 923 648|                     |                  |                  |
++-------------------------+---------------------+------------------+------------------+
 
 Encoded-Int<max=>
 ^^^^^^^^^^^^^^^^^
 
 Wherever SmartAnthill specification mentions Encoded-Int, it MUST specify it in the form of Encoded-Int<max=...>. "max=" parameter specifies maximum number of bytes which can appear in this place. For example, Encoded-Int<max=2> specifies that maximum two bytes of Encoded-Int can appear at the specified place, and therefore than values over 16511 cannot be encoded. It also implies that the result of such Encoded-Int<max=2> always fits into 2 bytes (for example, into uint16_t). The high bit of the last possible byte of Encoded-Int is always 0; this ensures an option for an easy expansion in the future.
 
-Currently supported values of "max=" parameter are from 1 to 8.
+Currently supported values of "max=" parameter are from 1 to 9.
 
 When parsing Encoded-Int, if high bit in the last-possible byte is 1, then Encoded-Int is considered invalid. Handling of invalid Encoded-Ints SHOULD be specified in the appropriate place of documentation.
 
