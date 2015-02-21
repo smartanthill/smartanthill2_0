@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.2d
+:Version:   v0.2.3
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *document, please make sure to read it before proceeding.*
@@ -152,8 +152,13 @@ In SmartAnthill, fragmentation and re-assembly is a responsibility of SADLP-\* f
 
 All SmartAnthill Protocols, except for SADLP-\*, MUST support SACCP payload sizes of at least 384 bytes. Therefore, after obtaining Device Capabilities for a SmartAnthill Device, SmartAnthill Client MAY calculate *min(DeviceCapabilities.SACCP_GUARANTEED_PAYLOAD,384)* to determine SACCP payload size which is guaranteed to be delivered to the Device. Alternatively, SmartAnthill MAY calculate *min(DeviceCapabilities.SACCP_GUARANTEED_PAYLOAD,Client_Side_SACCP_Payload)* for the same purpose (here Client_Side_SACCP_Payload will depend on SAoIP protocol in use).
 
+Stack-Wide Encodings
+--------------------
+
+There are some encodings and encoding conventions which are used throughout SmartAnthill Protocol Stack. 
+
 SmartAnthill Encoded-Int
-------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 In several places in SmartAnthill Protocol Stack, there is a need to encode integers, which happen to be small most of the time (one such example is sizes, another example is some kinds of incrementally-increased ids). To encode them efficiently, SmartAnthill Protocol Stack uses a compact encoding, which encodes small integers with smaller number of bytes.
 
@@ -206,13 +211,22 @@ The following table shows how many Encoded-Int bytes is necessary to encode rang
 +-------------------------+---------------------+------------------+------------------+
 
 Encoded-Int<max=>
-^^^^^^^^^^^^^^^^^
+'''''''''''''''''
 
 Wherever SmartAnthill specification mentions Encoded-Int, it MUST specify it in the form of Encoded-Int<max=...>. "max=" parameter specifies maximum number of bytes which can appear in this place. For example, Encoded-Int<max=2> specifies that maximum two bytes of Encoded-Int can appear at the specified place, and therefore than values over 16511 cannot be encoded. It also implies that the result of such Encoded-Int<max=2> always fits into 2 bytes (for example, into uint16_t). The high bit of the last possible byte of Encoded-Int is always 0; this ensures an option for an easy expansion in the future.
 
 Currently supported values of "max=" parameter are from 1 to 9.
 
 When parsing Encoded-Int, if high bit in the last-possible byte is 1, then Encoded-Int is considered invalid. Handling of invalid Encoded-Ints SHOULD be specified in the appropriate place of documentation.
+
+SmartAnthill Endianness
+^^^^^^^^^^^^^^^^^^^^^^^
+
+In most cases, SmartAnthill Protocol Stack uses SmartAnthill Encoded-Int<max=...> to encode integers. However, there are some cases where we need an exact number of bytes, and have no idea about their statistical distribution. In such cases, using Encoded-Int<> would be a waste. 
+
+In such cases, SmartAnthill uses **SmartAnthill Endianness**, which is **LITTLE-ENDIAN**.
+
+*Rationale for using LITTLE-ENDIAN encoding (rather than "network byte order" which is traditionally big-endian) is based on the observation that the most resource-constrained MPUs out of target group (namely PIC and AVR8), are little-endian. For them, the difference of not doing conversion between protocol-order and MPU-order might be important; as the other MPUs are not that much constrained, we don't expect the cost of conversion to be significant. In other words, this LITTLE-ENDIAN decision to favours poorer-resource MPUs at the cost of richer-resource MPUs.*
 
 Layering remarks
 ----------------

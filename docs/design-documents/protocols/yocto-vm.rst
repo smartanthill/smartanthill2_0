@@ -27,7 +27,7 @@
 Yocto VM
 ========
 
-:Version:   v0.1.9
+:Version:   v0.1.9a
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -346,7 +346,7 @@ Yocto VM-Small, in addition to instructions supported by Yocto VM-Tiny, addition
 
 **\| YOCTOVM_OP_PUSHEXPR_CONSTANT \| CONST \|**
 
-where where YOCTOVM_OP_PUSHEXPR_CONSTANT is 1-byte opcode, and CONST is a 2-byte constant to be pushed to expression stack.
+where where YOCTOVM_OP_PUSHEXPR_CONSTANT is 1-byte opcode, and CONST is a 2-byte constant (encoded using SmartAnthill Endianness as defined in :ref:`saprotostack`) to be pushed to expression stack.
 
 PUSHEXPR_CONSTANT instruction pushes CONST to an expression stack (if expression stack is exceeded, it will cause YOCTOVM_EXPRSTACKOVERFLOW VM exception).
 
@@ -425,7 +425,7 @@ EXPRBINOP instruction pops two topmost values from the expression stack, calcula
 
 **\| YOCTOVM_OP_JMPIFEXPR <SUBCODE> \| THRESHOLD \| DELTA \|**
 
-where <SUBCODE> is one of {LT,GT,EQ,NE}; YOCTOVM_OP_JMPIFEXPR_LT, YOCTOVM_OP_JMPIFEXPR_GT, YOCTOVM_OP_JMPIFEXPR_EQ, and  YOCTOVM_OP_JMPIFEXPR_NE are 1-byte opcodes, THRESHOLD is a 2-byte signed integer, and interpretation of DELTA is similar to that of in JMP description.
+where <SUBCODE> is one of {LT,GT,EQ,NE}; YOCTOVM_OP_JMPIFEXPR_LT, YOCTOVM_OP_JMPIFEXPR_GT, YOCTOVM_OP_JMPIFEXPR_EQ, and  YOCTOVM_OP_JMPIFEXPR_NE are 1-byte opcodes, THRESHOLD is a 2-byte signed integer (encoded using SmartAnthill Endianness as defined in :ref:`saprotostack`), and interpretation of DELTA is similar to that of in JMP description.
 
 +---------+----------------------------------------------------+
 |<SUBCODE>|Jump if                                             |
@@ -443,7 +443,7 @@ JMPIFEXPR <SUBCODE> instruction pops the topmost value from the expression stack
 
 **\| YOCTOVM_OP_JMPIFEXPR_NOPOP <SUBCODE> \| THRESHOLD \| DELTA \|**
 
-where <SUBCODE> is one of {LT,GT,EQ,NE}; YOCTOVM_OP_JMPIFEXPR_NOPOP_LT, YOCTOVM_OP_JMPIFEXPR_NOPOP_GT, YOCTOVM_OP_JMPIFEXPR_NOPOP_EQ, and  YOCTOVM_OP_JMPIFEXPR_NOPOP_NE are 1-byte opcodes, THRESHOLD is a 2-byte signed integer, and interpretation of DELTA is similar to that of in JMP description.
+where <SUBCODE> is one of {LT,GT,EQ,NE}; YOCTOVM_OP_JMPIFEXPR_NOPOP_LT, YOCTOVM_OP_JMPIFEXPR_NOPOP_GT, YOCTOVM_OP_JMPIFEXPR_NOPOP_EQ, and  YOCTOVM_OP_JMPIFEXPR_NOPOP_NE are 1-byte opcodes, THRESHOLD is a 2-byte signed integer (encoded using SmartAnthill Endianness as defined in :ref:`saprotostack`), and interpretation of DELTA is similar to that of in JMP description.
 
 JMPIFEXPR_NOPOP <SUBCODE> instruction peeks the topmost value on the expression stack without popping it, compares it with THRESHOLD according to <SUBCODE>, and updates Program Counter by DELTA if condition specified by comparison is met (as with JMP, DELTA is added to a PC positioned right after current instruction). If expression stack is empty, it will cause a YOCTOVM_EXPRSTACKUNDERFLOW VM exception. For details on <SUBCODE>, see description of JMPIFEXPR <SUBCODE> instruction.
 
