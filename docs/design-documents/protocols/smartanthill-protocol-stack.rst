@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.3
+:Version:   v0.2.4
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *document, please make sure to read it before proceeding.*
@@ -157,34 +157,35 @@ Stack-Wide Encodings
 
 There are some encodings and encoding conventions which are used throughout SmartAnthill Protocol Stack. 
 
-SmartAnthill Encoded-Int
-^^^^^^^^^^^^^^^^^^^^^^^^
+SmartAnthill Encoded-Unsigned-Int
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In several places in SmartAnthill Protocol Stack, there is a need to encode integers, which happen to be small most of the time (one such example is sizes, another example is some kinds of incrementally-increased ids). To encode them efficiently, SmartAnthill Protocol Stack uses a compact encoding, which encodes small integers with smaller number of bytes.
 
-Encoded-Int is a variable-length encoding of integers (with the idea being somewhat similar to the idea behind UTF-8). Namely:
+Encoded-Unsigned-Int is a variable-length encoding of integers (with the idea being somewhat similar to the idea behind UTF-8). Namely:
 
-* if the first byte of Encoded-Int is c1 <= 127, then the value of Encoded-Int is equal to c1
-* if the first byte of Encoded-Int is c1 >= 128, then the next byte c2 is needed:
+* if the first byte of Encoded-Unsigned-Int is c1 <= 127, then the value of Encoded-Unsigned-Int is equal to c1
+* if the first byte of Encoded-Unsigned-Int is c1 >= 128, then the next byte c2 is needed:
 
-  + if the second byte of Encoded-Int is c2 <= 127, then the value of Encoded-Int is equal to *128+((uint16)(c1&0x7F) | ((uint16)c2 << 7))*.
-  + if the second byte of Encoded-Int is c2 >= 128, then the next byte c3 is needed:
+  + if the second byte of Encoded-Unsigned-Int is c2 <= 127, then the value of Encoded-Unsigned-Int is equal to *128+((uint16)(c1&0x7F) | ((uint16)c2 << 7))*.
+  + if the second byte of Encoded-Unsigned-Int is c2 >= 128, then the next byte c3 is needed:
     
-    * if the third byte of Encoded-Int is c3 <= 127, then the value of Encoded-Int is equal to *16512+((uint16)(c1&0x7F) | ((uint16)(c2&0x7F) << 7)) | ((uint16)c3 << 7))* (note that 16512 is 2^7+2^14).
-    * if the third byte of Encoded-Int is c3 >= 128, then the next byte c4 is needed:
+    * if the third byte of Encoded-Unsigned-Int is c3 <= 127, then the value of Encoded-Unsigned-Int is equal to *16512+((uint16)(c1&0x7F) | ((uint16)(c2&0x7F) << 7)) | ((uint16)c3 << 7))* (note that 16512 is 2^7+2^14).
+    * if the third byte of Encoded-Unsigned-Int is c3 >= 128, then the next byte c4 is needed:
 
-      + if the fourth byte of Encoded-Int is c4 <= 127, then the value of Encoded-Int is equal to *2113664+((uint16)(c1&0x7F) | ((uint16)(c2&0x7F) << 7)) | ((uint16)(c3&0x7F) << 7)) | ((uint16)c4 << 7))* (note that 2113664 is 2^7+2^14+2^21).
-      + if the fourth byte of Encoded-Int is c4 >= 128, then the next byte c5 is needed.
+      + if the fourth byte of Encoded-Unsigned-Int is c4 <= 127, then the value of Encoded-Unsigned-Int is equal to *2113664+((uint16)(c1&0x7F) | ((uint16)(c2&0x7F) << 7)) | ((uint16)(c3&0x7F) << 7)) | ((uint16)c4 << 7))* (note that 2113664 is 2^7+2^14+2^21).
+      + if the fourth byte of Encoded-Unsigned-Int is c4 >= 128, then the next byte c5 is needed.
 
         * for nth byte:
 
-          + if the nth byte of Encoded-Int is cn <= 127, then the value of Encoded-Int is equal to *start+((uint16)(c1&0x7F) | ((uint16)(c2&0x7F) << 7)) | ((uint16)(c3&0x7F) << 7)) | ... | ((uint16)(c<n-1>&0x7F) << 7)) | ((uint16)cn << 7))*, where *start=2^7+2^14+...+2^(n-1)*
-          + if the nth byte of Encoded-Int is cn >= 128, then the <n+1>th byte is needed.
+          + if the nth byte of Encoded-Unsigned-Int is cn <= 127, then the value of Encoded-Unsigned-Int is equal to *start+((uint16)(c1&0x7F) | ((uint16)(c2&0x7F) << 7)) | ((uint16)(c3&0x7F) << 7)) | ... | ((uint16)(c<n-1>&0x7F) << 7)) | ((uint16)cn << 7))*, where *start=2^7+2^14+...+2^(n-1)*
+          + if the nth byte of Encoded-Unsigned-Int is cn >= 128, then the <n+1>th byte is needed.
  
-The following table shows how many Encoded-Int bytes is necessary to encode ranges of Encoded-Int values:
+The following table shows how many Encoded-Unsigned-Int bytes is necessary to encode ranges of Encoded-Unsigned-Int values:
 
 +-------------------------+---------------------+------------------+------------------+
-| Encoded-Int Values      | Encoded-Int Bytes   | Fully Covers     | Result fits in   |
+| Encoded-Unsigned-Int    | Encoded-Unsigned-Int| Fully Covers     | Result fits in   |
+| Values                  | Bytes               |                  |                  |
 +=========================+=====================+==================+==================+
 | 0-127                   | 1                   | 7 bits           | 1 byte           |
 +-------------------------+---------------------+------------------+------------------+
@@ -207,22 +208,56 @@ The following table shows how many Encoded-Int bytes is necessary to encode rang
 | 72 624 976 668 147 839  |                     |                  |                  |
 +-------------------------+---------------------+------------------+------------------+
 |72 624 976 668 147 840-  | 9                   | 63 bits          | 8 bytes          |
-|9 295 997 013 522 923 648|                     |                  |                  |
+|9 295 997 013 522 923 647|                     |                  |                  |
 +-------------------------+---------------------+------------------+------------------+
 
-Encoded-Int<max=>
-'''''''''''''''''
+Encoded-Signed-Int
+''''''''''''''''''
 
-Wherever SmartAnthill specification mentions Encoded-Int, it MUST specify it in the form of Encoded-Int<max=...>. "max=" parameter specifies maximum number of bytes which can appear in this place. For example, Encoded-Int<max=2> specifies that maximum two bytes of Encoded-Int can appear at the specified place, and therefore than values over 16511 cannot be encoded. It also implies that the result of such Encoded-Int<max=2> always fits into 2 bytes (for example, into uint16_t). The high bit of the last possible byte of Encoded-Int is always 0; this ensures an option for an easy expansion in the future.
+Encoded-Signed-Int is an encoding for signed integers, derived from Encoded-Unsigned-Int. Encoded-Signed-Int is decoded as Encoded-Unsigned-Int first (NB: actual implementations MAY and probably SHOULD differ), and then, depending on number of bytes in the encoding (when it was treated as Encoded-Unsigned-Int), a certain constant is deducted. For example, if we need Encoded-Signed-Int, have read it as Encoded-Unsigned-Int, and got 1 byte, we need to subtract 64 to get Encoded-Signed-Int. Therefore, Encoded-Signed-Int encoding which consists out of one byte with value 64, means '0'. The following table show the way how to calculate Encoded-Signed-Int (within the table, "EUI" means "value of Encoded-Unsigned-Int"):
+
++---------------------+-------------------+-------------------------+
+| Encoded-Unsigned-Int| Encoded-Signed-Int|Encoded-Signed-Int       |
+| Bytes               |                   |Values                   |
++=====================+===================+=========================+
+| 1                   | EUI - 64          | -64 to 63               |
++---------------------+-------------------+-------------------------+
+| 2                   | EUI - 8256        | -8256 to 8255           |
++---------------------+-------------------+-------------------------+
+| 3                   | EUI - 1056832     | -1056832 to 1056831     |
++---------------------+-------------------+-------------------------+
+| 4                   | EUI - 135274560   | -135274560 to 135274559 |
++---------------------+-------------------+-------------------------+
+| 5                   | EUI - 17315143744 | -17315143744 to         |
+|                     |                   | 17315143743             |
++---------------------+-------------------+-------------------------+
+| 6                   | EUI -             | -2216338399296 to       |
+|                     | 2216338399296     | 2216338399295           |
++---------------------+-------------------+-------------------------+
+| 7                   | EUI -             | -283691315109952 to     |
+|                     | 283691315109952   | 283691315109951         |
++---------------------+-------------------+-------------------------+
+| 8                   | EUI -             | -36312488334073920 to   |
+|                     | 36312488334073920 | 36312488334073919       |
++---------------------+-------------------+-------------------------+
+| 9                   |EUI -              | -4647998506761461824 to |
+|                     |4647998506761461824| 4647998506761461823     |
++---------------------+-------------------+-------------------------+
+
+
+Encoded-\*-Int<max=>
+''''''''''''''''''''
+
+Wherever SmartAnthill specification mentions Encoded-Unsigned-Int or Encoded-Signed-Int, it MUST specify it in the form of *Encoded-Unsigned-Int<max=...>* or *Encoded-Signed-Int<max=...>*. "max=" parameter specifies maximum number of bytes which can appear in this place. For example, Encoded-Unsigned-Int<max=2> specifies that maximum two bytes of Encoded-Unsigned-Int can appear at the specified place, and therefore than values over 16511 cannot be encoded. It also implies that the result of such Encoded-Unsigned-Int<max=2> always fits into 2 bytes (for example, into uint16_t). The high bit of the last possible byte of Encoded-\*-Int is always 0; this ensures an option for an easy expansion in the future.
 
 Currently supported values of "max=" parameter are from 1 to 9.
 
-When parsing Encoded-Int, if high bit in the last-possible byte is 1, then Encoded-Int is considered invalid. Handling of invalid Encoded-Ints SHOULD be specified in the appropriate place of documentation.
+When parsing Encoded-\*-Int, if high bit in the last-possible byte is 1, then Encoded-\*-Int is considered invalid. Handling of invalid Encoded-\*-Ints SHOULD be specified in the appropriate place of documentation.
 
 SmartAnthill Endianness
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-In most cases, SmartAnthill Protocol Stack uses SmartAnthill Encoded-Int<max=...> to encode integers. However, there are some cases where we need an exact number of bytes, and have no idea about their statistical distribution. In such cases, using Encoded-Int<> would be a waste. 
+In most cases, SmartAnthill Protocol Stack uses SmartAnthill Encoded-\*-Int<max=...> to encode integers. However, there are some cases where we need an exact number of bytes, and have no idea about their statistical distribution. In such cases, using Encoded-\*-Int<> would be a waste. 
 
 In such cases, SmartAnthill uses **SmartAnthill Endianness**, which is **LITTLE-ENDIAN**.
 

@@ -27,7 +27,7 @@
 SmartAnthill Security Protocol (SASP)
 =====================================
 
-:Version:   v0.1.3c
+:Version:   v0.1.3d
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -180,7 +180,7 @@ where:
      * **MSB bit**: padding size flag, which is set to 1, if padding is present, and 0 otherwise. Presence of padding implies presence of padding size field as well.
      * **Remaining 7 bits**: a part of payload.
 
-  * **complementary size**: SmartAnthill Encoded-Int<max=2> variable-size field, as described in :ref:`saprotostack`; this field is present only if padding size flag is set; in this case the field contains encoded value of a sum of the size of this field and the size of padding (if any). If Encoded-Int has an invalid value (as defined in :ref:`saprotostack`), then SASP receiving side MUST treat such a packet as an invalid (as the one which didn't pass internal validation). Note:  unless "enforced padding" (see below) is used, SASP pads data only to the block size; it means that unless "enforced padding" is used, padding size is always <= 15, and therefore Encoded-Int cannot be longer than 1 byte.
+  * **complementary size**: SmartAnthill Encoded-Unsigned-Int<max=2> variable-size field, as described in :ref:`saprotostack`; this field is present only if padding size flag is set; in this case the field contains encoded value of a sum of the size of this field and the size of padding (if any). If Encoded-Unsigned-Int has an invalid value (as defined in :ref:`saprotostack`), then SASP receiving side MUST treat such a packet as an invalid (as the one which didn't pass internal validation). Note:  unless "enforced padding" (see below) is used, SASP pads data only to the block size; it means that unless "enforced padding" is used, padding size is always <= 15, and therefore Encoded-Unsigned-Int cannot be longer than 1 byte.
 
   * **byte sequence**: variable size field; data that is defined by a higher level protocol.
   * **padding**: variable size field; this field is present only if padding size flag is set and **complementary size** represents a value greater than 1; contains padding up to a target size.

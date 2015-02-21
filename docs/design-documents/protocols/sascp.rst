@@ -27,7 +27,7 @@
 SmartAnthill Scrambling Protocol (SAScP) and SCRAMBLING procedure
 =================================================================
 
-:Version:   v0.1
+:Version:   v0.1a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -39,10 +39,10 @@ Within SmartAnthill Protocol Stack, SAScP resides below SASP on the way between 
 
 .. contents::
 
-Reverse Parsing and Reverse-Encoded-Int
----------------------------------------
+Reverse Parsing and Reverse-Encoded-Unsigned-Int
+------------------------------------------------
 
-To comply with requirements of SCRAMBLING procedure which are described below, certain headers in SCRAMBLING and associated protocols are located at the end of the packet. As a result, parsing should be performed starting from the end of the packet. To facilitate such a 'reverse parsing', 'Reverse-Encoded-Int' encoding is used; Reverse-Encoded-Int<max=n> encoding is identical to Encoded-Int<max=n> encoding as defined in :ref:`saprotostack` document, except that all the bytes are written (and parsed) in the reverse order.
+To comply with requirements of SCRAMBLING procedure which are described below, certain headers in SCRAMBLING and associated protocols are located at the end of the packet. As a result, parsing should be performed starting from the end of the packet. To facilitate such a 'reverse parsing', 'Reverse-Encoded-Unsigned-Int' encoding is used; Reverse-Encoded-Unsigned-Int<max=n> encoding is identical to Encoded-Unsigned-Int<max=n> encoding as defined in :ref:`saprotostack` document, except that all the bytes are written (and parsed) in the reverse order.
 
 
 SCRAMBLING
@@ -77,7 +77,7 @@ Input of SCRAMBLING procedure is a pre-SCRAMBLING packet. SCRAMBLING procedure w
 
 **\| pre-SCRAMBLING-Data \| Dumb-Checksum \| Padding \| Padding-Size \|**
 
-where Dumb-Checksum is 4-byte DUMB-CHECKSUM of the pre-SCRAMBLING-Data, Padding is optional padding (0 to 15 bytes unless forced-padding is used), Padding-Size is a Reverse-Encoded-Int<max=2>, which specifies amount of padding in use (value of Padding-Size includes both size of Padding and size of Padding-Size itself). Padding-Size is at least 1 byte long, and has a minimum value of 1. Padding SHOULD be cryptographically random. TODO: checksum?
+where Dumb-Checksum is 4-byte DUMB-CHECKSUM of the pre-SCRAMBLING-Data, Padding is optional padding (0 to 15 bytes unless forced-padding is used), Padding-Size is a Reverse-Encoded-Unsigned-Int<max=2>, which specifies amount of padding in use (value of Padding-Size includes both size of Padding and size of Padding-Size itself). Padding-Size is at least 1 byte long, and has a minimum value of 1. Padding SHOULD be cryptographically random. TODO: checksum?
 
 The size of Padding is calculated to ensure that pre-encrypted packet has size of 16*k bytes.
 
@@ -102,7 +102,7 @@ First, SAScP produces an intermediate SAScP packet:
 
 **\| Key-ID \| SAScP-Payload \|**
 
-where Key-ID is an Encoded-Int<max=4> (and normally has meaning of an identifier of the key to be used by SASP on receiving side of communication). 
+where Key-ID is an Encoded-Unsigned-Int<max=4> (and normally has meaning of an identifier of the key to be used by SASP on receiving side of communication). 
 
 Then, SAScP applies SCRAMBLING procedure to the intermediate packet above, to obtain a SAScP packet. This scrambled SAScP packet is ready to be sent over the unprotected channel.
 

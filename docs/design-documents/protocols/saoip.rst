@@ -27,7 +27,7 @@
 SmartAnthill-over-IP Protocol (SAoIP) and SmartAnthill Router
 =============================================================
 
-:Version:   v0.1.3
+:Version:   v0.1.3a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -65,8 +65,8 @@ SAoIP Aggregation is an OPTIONAL feature of SAoIP which allows to reduce number 
 If SAoIP Aggregation is not in use, then Destination-IP field MUST NOT be present in the data transferred (for example, for SAoUDP, SAOUDP_HEADER_AGGREGATE MUST NOT be present). If *SmartAnthill Router* receives a packet on a non-aggregated port, and the packet has Destination-IP field, it SHOULD drop this packet as an invalid one.
 
 
-SAoIP SCRAMBLING, Reverse Parsing, and Reverse-Encoded-Int
-----------------------------------------------------------
+SAoIP SCRAMBLING, Reverse Parsing, and Reverse-Encoded-Unsigned-Int
+-------------------------------------------------------------------
 
 SCRAMBLING is an optional feature of SAoIP. SAoIP SHOULD use SCRAMBLING whenever SAoIP goes over non-secure connection; while not using SCRAMBLING is not a significant security risk, but might reveal some information about packet destination and/or might simplify some DoS attacks. 
 
@@ -74,7 +74,7 @@ For this purpose, any connection SHOULD be considered as non-secure (and therefo
 
 SCRAMBLING requires that both parties share the same symmetric key. **This symmetric key MUST be completely independent and separate from any other keys, in particular, from SASP keys**. SAoIP uses SCRAMBLING procedure as described in :ref:`sascp` document. 
 
-To comply with requirements of SCRAMBLING procedure (as described in :ref:`sascp` document), headers in SAoIP are usually located at the end of the packet. As a result, parsing should be performed starting from the end of the packet. To facilitate such a 'reverse parsing', 'Reverse-Encoded-Int' encoding is used, as described in :ref:`sascp` document. 
+To comply with requirements of SCRAMBLING procedure (as described in :ref:`sascp` document), headers in SAoIP are usually located at the end of the packet. As a result, parsing should be performed starting from the end of the packet. To facilitate such a 'reverse parsing', 'Reverse-Encoded-Unsigned-Int' encoding is used, as described in :ref:`sascp` document. 
 
 SCRAMBLING being optional
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -103,7 +103,7 @@ All Headers (except for LAST_HEADER, which is described below) have the followin
 
 **\| Data \| Data-Length \| Header-Type \|**
 
-where Header-Type is an Reverse-Encoded-Int<max=2> field, Data-Length is also a Reverse-Encoded-Int<max=2> field, and Data is a variable-length field which has Data-Length size.
+where Header-Type is an Reverse-Encoded-Unsigned-Int<max=2> field, Data-Length is also a Reverse-Encoded-Unsigned-Int<max=2> field, and Data is a variable-length field which has Data-Length size.
 
 Currently supported extensions are:
 
