@@ -24,10 +24,10 @@
 
 .. _saoip:
 
-SmartAnthill-over-IP Protocol (SAoIP)
-=====================================
+SmartAnthill-over-IP Protocol (SAoIP) and SmartAnthill Router
+=============================================================
 
-:Version:   v0.1.2
+:Version:   v0.1.3
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -64,48 +64,36 @@ SAoIP Aggregation is an OPTIONAL feature of SAoIP which allows to reduce number 
 
 If SAoIP Aggregation is not in use, then Destination-IP field MUST NOT be present in the data transferred (for example, for SAoUDP, SAOUDP_HEADER_AGGREGATE MUST NOT be present). If *SmartAnthill Router* receives a packet on a non-aggregated port, and the packet has Destination-IP field, it SHOULD drop this packet as an invalid one.
 
-Reverse Parsing and Reverse-Encoded-Size
-----------------------------------------
 
-To comply with requirements of SCRAMBLING, headers in SAoIP are usually located in the end of the packet. As a result, parsing should be performed starting from the end of the packet. To facilitate such a 'reverse parsing', 'Reverse-Encoded-Size' encoding is used; Reverse-Encoded-Size<max=n> encoding is identical to Encoded-Int<max=n> encoding as defined in :ref:`saprotostack` document, except that all the bytes are written (and parsed) in the reverse order.
-
-SAoIP SCRAMBLING
-----------------
+SAoIP SCRAMBLING, Reverse Parsing, and Reverse-Encoded-Int
+----------------------------------------------------------
 
 SCRAMBLING is an optional feature of SAoIP. SAoIP SHOULD use SCRAMBLING whenever SAoIP goes over non-secure connection; while not using SCRAMBLING is not a significant security risk, but might reveal some information about packet destination and/or might simplify some DoS attacks. 
 
 For this purpose, any connection SHOULD be considered as non-secure (and therefore SCRAMBLING SHOULD be used) unless proven secure.
 
-SCRAMBLING requires that both parties share the same symmetric key (which MUST be completely independent and separate from any other keys, in particular, from SASP keys). SCRAMBLING is similar to the scrambling provided by SAScP. SCRAMBLING does not proide strong security guarantees, but it MAY provide some additional protection by hiding certain details. For SCRAMBLING to be efficient, it SHOULD ensure that all the first-16-byte-blocks in it are at least statistically unique. For existing SmartAnthill packets, it can be guaranteed as long as within first 16 bytes of SCRAMBLING packet, there are at least 7 bytes of the SAoIP-Payload. To ensure that this always stands, both SCRAMBLING and SAoIP use unusual packet structure with headers at the end.
+SCRAMBLING requires that both parties share the same symmetric key. **This symmetric key MUST be completely independent and separate from any other keys, in particular, from SASP keys**. SAoIP uses SCRAMBLING procedure as described in :ref:`sascp` document. 
 
-SCRAMBLED pre-encrypted packet has the following format (before encryption): 
+To comply with requirements of SCRAMBLING procedure (as described in :ref:`sascp` document), headers in SAoIP are usually located at the end of the packet. As a result, parsing should be performed starting from the end of the packet. To facilitate such a 'reverse parsing', 'Reverse-Encoded-Int' encoding is used, as described in :ref:`sascp` document. 
 
-**\| SAoIP-PreSCRAMBLED-Packet \| Padding \| Padding-Size \|**
+SCRAMBLING being optional
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
-where Padding is optional padding (0 to 15 bytes unless forced-padding is used), Padding-Size is a Reverse-Encoded-Size<max=2>, which specifies amount of padding in use (value of Padding-Size includes both size of Padding and size of Padding-Size itself). Padding-Size is at least 1 byte long, and has a minimum value of 1. Padding SHOULD be cryptographically random. TODO: checksum?
+In some cases (for example, if all the communications is within Intranet without being passed through wireless links, or performed over TLS), SAoIP MAY omit SCRAMBLING procedure. In fact, if there is no information about SCRAMBLING key for the packet sender, both SmartAnthill Router and SmartAnthill IP-Enabled Device SHOULD try to interpret the packet as the one without SCRAMBLING applied. 
 
-To form a SCRAMBLED packet: 
-
-* amount of padding is calculated (to ensure that SCRAMBLED packet has 16*k size).
-* pre-encrypted packet is formed (according to format above)
-* pre-encrypted packet is encrypted using AES-128 in CBC mode. CBC mode, combined with statistical-uniqueness requirement for 1st block, ensures that SCRAMBLED data is indistinguishable from white noise for a potential attacker.
-* 1 byte with a non-zero value is prepended to indicate that the packet is SCRAMBLED; this 1-byte value SHOULD be random in the range from 1 to 255.
-
-Processing of a SCRAMBLED packet ("DESCRAMBLING") is performed in reverse order.
-
-If optional SCRAMBLING is not used, an UNSCRAMBLED packet is used instead:
-
-**\| UNSCRAMBLED \| SAoIP-PreSCRAMBLED-Packet \|**
-
-where UNSCRAMBLED is 1 byte having value 0x00.
+Formally, within SmartAnthill Protocol Stack omitting SCRAMBLING doesn't affect any security guarantees (as such guarantees are provided by SASP, which is not optional). However, as SCRAMBLING provides some benefits at a very low cost, by default SCRAMBLING procedure SHOULD be applied to all communications which are potentially exposed to the attacker.
 
 SAoUDP
 ------
 
-SAoUDP is one of SAoIP flavours. SAoUDP pre-SCRAMBLED packet looks as follows:
+SAoUDP is one of SAoIP flavours. 
 
-**\| SAoIP-Payload \| Headers \|** (note that before sending to UDP, this pre-SCRAMBLED packet, is either SCRAMBLED, or pre-pended with UNSCRAMBLED byte, as described above)
+SAoUDP pre-SCRAMBLING packet
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+First, SAoUDP forms a SAoUDP pre-SCRAMBLING packet which looks as follows:
+
+**\| SAoIP-Payload \| Headers \|**
 
 where Headers are optional headers for the SAoUDP; the idea of SAoUDP Headers is remotely similar to that of IP optional headers. If receiver gets a message with some of Headers which are not known to it, it MUST ignore the header and SHOULD sent a TODO packet (vaguely similar to ICMP 'Parameter Problem' message) back to the sender. 
 
@@ -127,6 +115,12 @@ where Destination-IPv6 is a 16-byte field containing IPv6 address. The meaning a
 
 SAOUDP_HEADER_LAST_HEADER is always the last header in the header list. Indicates that immediately before this header, SAoIP-Payload field is located. Note that LAST_HEADER doesn't have a 'Data-Length' field.
 
+SAoUDP packet
+^^^^^^^^^^^^^
+
+When SAoUDP pre-SCRAMBLING packet is ready, SAoUDP applies SCRAMBLING procedure to it.
+
+
 SAoUDP and UDP
 ^^^^^^^^^^^^^^
 
@@ -137,7 +131,7 @@ As we see it, SAoUDP (when used with the rest of the SmartAnthill Protocol Stack
 SAoUDP Packet Sizes and Payloads
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To comply with RFC 5405, SAoUDP SHOULD restrict maximum IP packet to the size of 576 bytes [1]_. Taking into account IP and UDP headers, it means that SAoUDP packet SHOULD be restricted to `576-60-8=508` bytes, and taking into account maximum size of supported SAoUDP headers, SAoIP-Payload for SAoUDP SHOULD be restricted to 508-TODO=TODO. This is a value which SHOULD be used for calculations of the maximum *Client_Side_SACCP_payload* as used in :ref:`saprotostack` document. For example, if SAoUDP payload size is typical TODO bytes (as calculated above), then corresponding maximum SASP payload is 463bytes+7bits, maximum SAGDP payload is 457 bytes, and maximum SACCP payload (and therefore *Client_Side_SACCP_payload*) is also TODO bytes.
+To comply with RFC 5405, SAoUDP SHOULD restrict maximum IP packet to the size of 576 bytes [1]_. Taking into account IP and UDP headers, it means that SAoUDP packet SHOULD be restricted to `576-60-8=508` bytes, and taking into account maximum size of supported SAoUDP headers, SAoIP-Payload for SAoUDP SHOULD be restricted to 508-TODO=TODO. This is a value which SHOULD be used for calculations of the maximum *Client_Side_SACCP_payload* as used in :ref:`saprotostack` document. For example, if SAoUDP payload size is typical TODO bytes (as calculated above), then corresponding maximum SASP payload is TODO+7bits, maximum SAGDP payload is TODO bytes, and maximum SACCP payload (and therefore *Client_Side_SACCP_payload*) is also TODO bytes.
 
 .. [1] Strictly speaking, RFC 5405 says that MTU should be less than `min(576,first-hop-MTU)`; if first-hop-MTU on an interface which SmartAnthill Client uses, is less than 576, maximum SACCP payload SHOULD be recalculated accordingly; note that due to the block nature of SASP, dependency between SAoUDP payload and SACCP payload in not exactly linear and needs to be re-calculated carefully; however, MTU being less than 576 is very unusual these days.
 
@@ -149,22 +143,23 @@ SmartAnthill Router is responsible for handling incoming SAoIP packets (for exam
 
 To do this, SmartAnthill Router keeps the following records in SmartAnthill Database (SA DB): 
 
-**\| Device-Key-ID \| IPv6 \| Flavour \| port \| Bus ID \| Intra-Bus ID \| key-ID \|**
+**\| Device-Key-ID \| IPv6 \| SAoIP-Flavour \| port \| Bus ID \| Intra-Bus ID \| key-ID \|**
 
 When an incoming SAoIP packet comes in (to a normal, non-aggregated port, from a certain socket), SmartAnthill Router: 
 
-* DESCRAMBLES incoming packet (using key which is specific to the packet sender), and obtains SAoIP packet
-* finds a row in SA DB based on (IPv6,flavour,port) of the socket where the packet came in (if socket listens on IPv4, IPv4 is first translated into IPv6 using "Stateless IP/ICMP Translation" (SIIT)). TODO: what to do if record is not found
-* if SA DB records contains "re-crypt" information (which is a pair of External-Key and Device-Key), SmartAnthill Router decrypts SASP packet within SAoIP-Payload (using "External Key" from re-crypt information) and encrypts it again (using "Device Key" from re-crypt information)
-* forms a SAScP packet as follows: **\| key-ID \| SAoIP-Payload \|**, where key-ID is taken from SA DB record and encoded as Encoded-Int<max=4> (as defined in :ref:`saprotostack`).
-* encrypts SAScP packet as specified in TODO
-* sends packet to (Bus ID, Intra-Bus-ID)
-* makes a record in a special SA DB table KEY_LEASES, specifying that Device-Key-ID (from SA DB record) corresponds to a reply-to address (i.e. where to send replies). Reply-to address contains at least the following information: (Flavour, IPv6, port, secret key); secret key here is the one which was used for DESCRAMBLING. If there is already a record in KEY_LEASES with the same Device-Key-ID, it is replaced with a new one (and a log record is made about lease being taken over). 
+* finds out an address of the receiving socket: (Flavour,IPv6,port). If socket listens on IPv4, IPv4 is first translated into IPv6 using "Stateless IP/ICMP Translation" (SIIT).
+* finds out a 'from' address of the packet: (Flavour,IPv6,port); normally, it is taken from the incoming packet of SAoIP underlying protocol (for example, from UDP packet itself). If TCP or UDP operates over IPv4, then IPv4 is first translated into IPv6 using "Stateless IP/ICMP Translation" (SIIT).
+* checks if any filtering rules apply to the 'from' address; in the process of this check and if packet is allowed through, SCRAMBLING key MAY be found
+* if SCRAMBLING key has been found during previous step, DESCRAMBLES incoming packet (using SCRAMBLING key), and obtains SAoIP packet
+* finds a row in SA DB based on receiving socket address. TODO: what to do if record is not found
+* if SA DB record contains "re-crypt" information (which is a pair of External-Key and Device-Key), SmartAnthill Router decrypts SASP packet within SAoIP-Payload (using "External Key" from re-crypt information) and encrypts it again (using "Device Key" from re-crypt information)
+* forms a SAScP packet as described in :ref:`sascp` document
+* sends SAScP packet to (Bus ID, Intra-Bus-ID)
+* makes a record in a special SA DB table KEY_LEASES, specifying that Device-Key-ID (from SA DB record) corresponds to a reply-to address (i.e. where to send replies). Reply-to address is the same as 'from' address of the incoming packet, plus also it MAY contain SCRAMBLING-Secret-Key (the same which was used for DESCRAMBLING above). If there is already a record in KEY_LEASES with the same Device-Key-ID, it is replaced with a new one (and a log record is made about lease being taken over). 
 
 When an incoming packet from SADLP-* comes in (from certain Bus-ID and Intra-Bus-ID), SmartAnthill Router:
 
-* uses SAScP to decrypt incoming packet
-* parses it as **\| key-ID \| SAoIP-Payload \|**, where key-ID is an Encoded-Int<max=4>.
+* processes SAScP incoming packet to obtain (SAoIP packet, key-ID), as described in :ref:`sascp` document
 * finds a row in SA DB, based on (Bus ID, Intra-Bus ID, key-ID), and obtains Device-Key-ID
 * finds a row in SA DB table KEY_LEASES, based on Device-Key-ID, and obtains reply-to address TODO: what to do if not found
 * if SA DB records contains "re-crypt" information, SmartAnthill Router decrypts SASP packet within SAoIP-Payload (using "Device Key" from re-crypt information) and encrypts it again (using "External Key" from re-crypt information)
@@ -174,5 +169,4 @@ When an incoming packet from SADLP-* comes in (from certain Bus-ID and Intra-Bus
 
 TODO: reply-to for aggregated requests
 TODO: buffering if there is no TCP connection to reply to
-TODO: forced-padding
 
