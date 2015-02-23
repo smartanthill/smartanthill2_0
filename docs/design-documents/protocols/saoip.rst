@@ -27,7 +27,7 @@
 SmartAnthill-over-IP Protocol (SAoIP) and SmartAnthill Router
 =============================================================
 
-:Version:   v0.1.4
+:Version:   v0.1.5
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -57,12 +57,12 @@ SAoIP Addressing
 
 As with the rest of SmartAnthill Protocol Stack, each SmartAnthill Device in SAoIP is identified by it's own unique address: triplet (IPv6-address:SAoIP-flavour:port-number). 
 
-SAoIP Aggregation and Destination-IPv6 field
---------------------------------------------
+SAoIP Aggregation and Destination-\* fields
+-------------------------------------------
 
-SAoIP Aggregation is an OPTIONAL feature of SAoIP which allows to reduce number of IP addresses/ports necessary for SmartAnthill Router to keep open. If SAoIP aggregation is used, then a special field Destination-IP (which is always a 16-byte IPv6 field), is used to distinguish which of the SmartAnthill Devices the request is addressed to. To use SAoIP Aggregation, SmartAnthill Client should have a mapping between target-device-IP and address-of-SmartAnthill-Router-which-is-ready-to-process-this-IP-device; let's name this mapping *router-address(target-IP-address)*. As soon as this mapping is known, SmartAnthill Client should send requests which are intended to *target-device-IP*, to *router-address(target-IP-address)*, while setting *Destination-IP* field within respective SAoIP header to *target-IP-address*.
+SAoIP Aggregation is an OPTIONAL feature of SAoIP which allows to reduce number of IP addresses/ports necessary for SmartAnthill Router to keep open. If SAoIP aggregation is used, then a triplet of special fields (Flavour,Destination-IP - which is always a 16-byte IPv6 field,Destination-Port), is used to distinguish which of the SmartAnthill Devices the request is addressed to. To use SAoIP Aggregation, SmartAnthill Client should have a mapping between target-device-IP and address-of-SmartAnthill-Router-which-is-ready-to-process-this-IP-device; let's name this mapping *router-address(target-IP-address)*. As soon as this mapping is known, SmartAnthill Client should send requests which are intended to *target-device-IP*, to *router-address(target-IP-address)*, while setting *Destination-IP* field within respective SAoIP header to *target-IP-address*.
 
-If SAoIP Aggregation is not in use, then Destination-IP field MUST NOT be present in the data transferred (for example, for SAoUDP, SAOUDP_HEADER_AGGREGATE MUST NOT be present). If *SmartAnthill Router* receives a packet on a non-aggregated port, and the packet has Destination-IP field, it SHOULD drop this packet as an invalid one.
+If SAoIP Aggregation is not in use, then Destination-IP field MUST NOT be present in the data transferred (for example, for SAoUDP, SAOUDP_HEADER_AGGREGATE MUST NOT be present). If *SmartAnthill Router* receives a packet on a non-aggregated port, and the packet has Destination-IP field, it SHOULD drop this packet as an invalid one (possibly with logging).
 
 
 SAoIP SCRAMBLING, Reverse Parsing, and Reverse-Encoded-Unsigned-Int
@@ -107,9 +107,17 @@ where Header-Type is an Reverse-Encoded-Unsigned-Int<max=2> field, Data-Length i
 
 Currently supported extensions are:
 
-**\| Destination-IPv6 \| Data-Length=16 \| SAOUDP_HEADER_AGGREGATE \|**
+**\| Reply-ID \| Destination-Port \| Destination-IPv6 \| Destination-Flavour \| Data-Length \| SAOUDP_HEADER_AGGREGATE_REQUEST \|**
 
-where Destination-IPv6 is a 16-byte field containing IPv6 address. The meaning and handling of Destination-IPv6 field is described in "SAoIP Aggregation and Destination-IPv6 field" section above.
+where Reply-ID is an Encoded-Unsigned-Int<max=10> field, Destination-Port is a 2-byte field (using SmartAnthill Endianness; despite being a part of reversely parsed header, "Endianness" is still interpreted from the beginning; in other words, parser jumps back by 2 bytes and then interprets 2-byte field as usual 2-byte field accounting for SmartAnthill Endianness), Destination-Flavour is a 1-byte field, Destination-IPv6 is a 16-byte field containing IPv6 address. The meaning and handling of Destination-IPv6, Destination-Flavour, and Destination-Port fields is described in "SAoIP Aggregation and Destination-\* fields" section above. 
+
+SAOUDP_HEADER_AGGREGATE_REQUEST is used only for packets which travel from SmartAnthill Client to SmartAnthill Router. Reply-ID is a field which is returned in the reply (or replies) to this request. 
+
+**\| Reply-ID \| Data-Length \| SAOUDP_HEADER_AGGREGATE_REPLY \|**
+
+where Reply-ID is an Encoded-Unsigned-Int<max=10> field
+
+SAOUDP_HEADER_AGGREGATE_REPLY is used only for packets which travel from SmartAnthill Router to SmartAnthill Client. Reply-ID is a field which was sent in the last SAOUDP_HEADER_AGGREGATE_REQUEST from the SmartAnthill Client. 
 
 **\| SAOUDP_HEADER_LAST_HEADER \|**
 
@@ -163,7 +171,7 @@ When an incoming SAoIP packet comes in (to a normal, non-aggregated port, from a
 * changes ('hacks') SASP packet to use internal-SASP-key-ID instead of external-SASP-key-ID; this can be done without decrypting SASP packet
 * forms a SADLP-\* packet (depending on the bus in use) as described in respective document, using SASP 'hacked' packet as a payload
 * sends SADLP-\* packet to (Bus-ID, Intra-Bus-ID)
-* makes a record in a special SA DB table KEY_LEASES, specifying that Device-Key-ID (from SA DB record) corresponds to a reply-to address (i.e. where to send replies). Reply-to address is the same as 'from' address of the incoming packet. If there is already a record in KEY_LEASES with the same Device-Key-ID, it is replaced with a new one (and a log record is made about lease being taken over). 
+* makes a record in a special SA DB table KEY_LEASES, specifying that Device-Key-ID (from DEVICE_MAPPINGS record) corresponds to a reply-to address (i.e. where to send replies). Reply-to address is the same as 'from' address of the incoming packet. If there is already a record in KEY_LEASES with the same Device-Key-ID, it is replaced with a new one (and a log record is made about lease being taken over). 
 
 When an incoming packet from SADLP-\* comes in (from certain Bus-ID and Intra-Bus-ID), SmartAnthill Router:
 
@@ -178,7 +186,17 @@ When an incoming packet from SADLP-\* comes in (from certain Bus-ID and Intra-Bu
 * if SCRAMBLING-Key is not NULL, SCRAMBLES packet, using SCRAMBLING-Key
 * sends packet to reply-to address
 
-TODO: reply-to for aggregated requests
+Handling SmartAnthill Aggregation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If an incoming SAoIP packet is a valid SmartAnthill Aggregation request, then SmartAnthill Router additionally performs the following steps:
+
+* fills in additional field Aggregation-Reply-ID in KEY_LEASES table (from Reply-ID field in the packet)
+
+If for an incoming SADLP-\* packet an Aggregation-Reply-ID in KEY_LEASES record is not NULL:
+
+* sends a reply as a SmartAnthill Aggregation reply, with Reply-ID set to Aggregation-Reply-ID from KEY_LEASES record
+
 
 TODO: buffering if there is no TCP connection to reply to
 
