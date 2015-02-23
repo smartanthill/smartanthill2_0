@@ -27,13 +27,13 @@
 SmartAnthill-over-IP Protocol (SAoIP) and SmartAnthill Router
 =============================================================
 
-:Version:   v0.1.3a
+:Version:   v0.1.4
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
 SAoIP is a part of SmartAnthill 2.0 protocol stack. It belongs to Layer 4 of OSI/ISO Network Model, and is responsible for transferring SAoIP payload (usually SASP packets) between SmartAnthill Client (normally implemented by SmartAnthill Core) and SmartAnthill Device or SmartAnthill Router.
 
-Within SmartAnthill protocol stack, SAoIP is located right below SASP. SAoIP is used both to communicate to *SmartAnthill IP-Enabled Devices*, and to *SmartAnthill Simple Devices*. However, *SmartAnthill Simple Devices* don't implement IP stack (neither they implement SAoIP). For *SmartAnthill Simple Devices* SAoIP is processed by respective *SmartAnthill Router*, which takes away SAoIP headers (obtaining SAoIP payload, which is normally bare SASP packets), and then wraps this SAoIP payload into respective SADLP-* packets, to be passed to respective *SmartAnthill Simple Device*. 
+Within SmartAnthill protocol stack, SAoIP is located right below SASP. SAoIP is used both to communicate to *SmartAnthill IP-Enabled Devices*, and to *SmartAnthill Simple Devices*. However, *SmartAnthill Simple Devices* don't implement IP stack (neither they implement SAoIP). For *SmartAnthill Simple Devices* SAoIP is processed by respective *SmartAnthill Router*, which takes away SAoIP headers (obtaining SAoIP payload, which is normally bare SASP packets), and then wraps this SAoIP payload into respective SADLP-\* packets, to be passed to respective *SmartAnthill Simple Device*. 
 
 Despite this difference in handling of SAoIP between *SmartAnthill IP-Enabled Devices* and *SmartAnthill Simple Devices*, from the point of view of SmartAnthill Client these SmartAnthill Devices are completely indistinguishable, and both SHOULD be addressed in the very same manner over SAoIP.
 
@@ -72,9 +72,9 @@ SCRAMBLING is an optional feature of SAoIP. SAoIP SHOULD use SCRAMBLING whenever
 
 For this purpose, any connection SHOULD be considered as non-secure (and therefore SCRAMBLING SHOULD be used) unless proven secure.
 
-SCRAMBLING requires that both parties share the same symmetric key. **This symmetric key MUST be completely independent and separate from any other keys, in particular, from SASP keys**. SAoIP uses SCRAMBLING procedure as described in :ref:`sascp` document. 
+SCRAMBLING requires that both parties share the same symmetric key. **This symmetric key MUST be completely independent and separate from any other keys, in particular, from SASP keys**. SAoIP uses SCRAMBLING procedure as described in :ref:`sascrambling` document. 
 
-To comply with requirements of SCRAMBLING procedure (as described in :ref:`sascp` document), headers in SAoIP are usually located at the end of the packet. As a result, parsing should be performed starting from the end of the packet. To facilitate such a 'reverse parsing', 'Reverse-Encoded-Unsigned-Int' encoding is used, as described in :ref:`sascp` document. 
+To comply with requirements of SCRAMBLING procedure (as described in :ref:`sascrambling` document), headers in SAoIP are usually located at the end of the packet. As a result, parsing should be performed starting from the end of the packet. To facilitate such a 'reverse parsing', 'Reverse-Encoded-Unsigned-Int' encoding is used, as described in :ref:`sascrambling` document. 
 
 SCRAMBLING being optional
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -139,34 +139,46 @@ To comply with RFC 5405, SAoUDP SHOULD restrict maximum IP packet to the size of
 SmartAnthill Router
 -------------------
 
-SmartAnthill Router is responsible for handling incoming SAoIP packets (for example, SAoUDP packets) and translate them into SADLP-* packets. 
+SmartAnthill Router is responsible for handling incoming SAoIP packets (for example, SAoUDP packets) and translating them into SADLP-\* packets. 
 
-To do this, SmartAnthill Router keeps the following records in SmartAnthill Database (SA DB): 
+To do this, SmartAnthill Router keeps the following records in SmartAnthill Database (SA DB) table DEVICE_MAPPINGS): 
 
-**\| Device-Key-ID \| IPv6 \| SAoIP-Flavour \| port \| Bus ID \| Intra-Bus ID \| key-ID \|**
+**\| Device-Key-ID \| IPv6 \| SAoIP-Flavour \| port \| SCRAMBLING-Key \| Bus ID \| Intra-Bus ID \| Recrypt-External-Key \| Recrypt-Internal-Key \|**
+
+In addition, there is another SA DB table KEY_MAPPINGS:
+
+**\| Device-Key-ID \| external-SASP-key-ID \| internal-SASP-key-ID \|**
 
 When an incoming SAoIP packet comes in (to a normal, non-aggregated port, from a certain socket), SmartAnthill Router: 
 
 * finds out an address of the receiving socket: (Flavour,IPv6,port). If socket listens on IPv4, IPv4 is first translated into IPv6 using "Stateless IP/ICMP Translation" (SIIT).
 * finds out a 'from' address of the packet: (Flavour,IPv6,port); normally, it is taken from the incoming packet of SAoIP underlying protocol (for example, from UDP packet itself). If TCP or UDP operates over IPv4, then IPv4 is first translated into IPv6 using "Stateless IP/ICMP Translation" (SIIT).
-* checks if any filtering rules apply to the 'from' address; in the process of this check and if packet is allowed through, SCRAMBLING key MAY be found
-* if SCRAMBLING key has been found during previous step, DESCRAMBLES incoming packet (using SCRAMBLING key), and obtains SAoIP packet
-* finds a row in SA DB based on receiving socket address. TODO: what to do if record is not found
-* if SA DB record contains "re-crypt" information (which is a pair of External-Key and Device-Key), SmartAnthill Router decrypts SASP packet within SAoIP-Payload (using "External Key" from re-crypt information) and encrypts it again (using "Device Key" from re-crypt information)
-* forms a SAScP packet as described in :ref:`sascp` document
-* sends SAScP packet to (Bus ID, Intra-Bus-ID)
-* makes a record in a special SA DB table KEY_LEASES, specifying that Device-Key-ID (from SA DB record) corresponds to a reply-to address (i.e. where to send replies). Reply-to address is the same as 'from' address of the incoming packet, plus also it MAY contain SCRAMBLING-Secret-Key (the same which was used for DESCRAMBLING above). If there is already a record in KEY_LEASES with the same Device-Key-ID, it is replaced with a new one (and a log record is made about lease being taken over). 
+* checks if any filtering rules apply to the 'from' address (TODO: define filtering rules a-la IPTables)
+* finds a record in DEVICE_MAPPINGS table, based on (IPv6,Flavour,port); from this record, obtains Device-Key-ID, SCRAMBLING-Key, and (Bus-ID,Intra-Bus-ID) pair
+* if SCRAMBLING-Key is not NULL, DESCRAMBLES incoming packet (using SCRAMBLING-Key)
+* at this point we have a plain (not scrambled) SAoIP packet
+* parses SAoIP packet to get SASP packet, and gets key-ID from SASP packet (it can be extracted without decrypting SASP packet); for SmartAnthill Router, this is external-SASP-key-ID.
+* finds a row in KEY_MAPPINGS based on Device-Key-ID and external-SASP-key-ID; gets internal-SASP-key-ID. TODO: what to do if record is not found
+* if DEVICE_MAPPINGS record found above, contains "re-crypt" information (which is a pair of Recrypt-External-Key and Recrypt-Internal-Key), SmartAnthill Router decrypts SASP packet within SAoIP-Payload (using Recrypt-External-Key) and encrypts it again (using Recrypt-Internal-Key)
+* changes ('hacks') SASP packet to use internal-SASP-key-ID instead of external-SASP-key-ID; this can be done without decrypting SASP packet
+* forms a SADLP-\* packet (depending on the bus in use) as described in respective document, using SASP 'hacked' packet as a payload
+* sends SADLP-\* packet to (Bus-ID, Intra-Bus-ID)
+* makes a record in a special SA DB table KEY_LEASES, specifying that Device-Key-ID (from SA DB record) corresponds to a reply-to address (i.e. where to send replies). Reply-to address is the same as 'from' address of the incoming packet. If there is already a record in KEY_LEASES with the same Device-Key-ID, it is replaced with a new one (and a log record is made about lease being taken over). 
 
-When an incoming packet from SADLP-* comes in (from certain Bus-ID and Intra-Bus-ID), SmartAnthill Router:
+When an incoming packet from SADLP-\* comes in (from certain Bus-ID and Intra-Bus-ID), SmartAnthill Router:
 
-* processes SAScP incoming packet to obtain (SAoIP packet, key-ID), as described in :ref:`sascp` document
-* finds a row in SA DB, based on (Bus ID, Intra-Bus ID, key-ID), and obtains Device-Key-ID
+* processes SADLP-\* incoming packet to obtain SAoIP packet, as described in respective document
+* parses SAoIP packet to get SASP packet, and gets key-ID out of it (this can be done without decrypting SASP packet); for SmartAnthill Router, this is internal-SASP-key-ID
+* finds a row in DEVICE_MAPPINGS table, based on (Bus ID, Intra-Bus ID), and obtains Device-Key-ID and SCRAMBLING-Key TODO: what to do if not found
+* finds a row in KEY_MAPPINGS table, based on (Device-Key-ID, internal-SASP-key-ID), and obtains external-SASP-key-ID TODO: what to do if not found
 * finds a row in SA DB table KEY_LEASES, based on Device-Key-ID, and obtains reply-to address TODO: what to do if not found
-* if SA DB records contains "re-crypt" information, SmartAnthill Router decrypts SASP packet within SAoIP-Payload (using "Device Key" from re-crypt information) and encrypts it again (using "External Key" from re-crypt information)
-* forms a SAoIP packet, using reply-to address
-* SCRAMBLES packet, using a secret key from reply-to address
+* changes ('hacks') SASP packet to use external-SASP-key-ID instead of internal-SASP-key-ID; this can be done without decrypting SASP packet
+* if DEVICE_MAPPINGS record found above, contains "re-crypt" information, SmartAnthill Router decrypts SASP packet within SAoIP-Payload (using Recrypt-Internal-Key) and encrypts it again (using Recrypt-External-Key)
+* forms a SAoIP packet, using reply-to address, and 'hacked' SASP packet as a payload
+* if SCRAMBLING-Key is not NULL, SCRAMBLES packet, using SCRAMBLING-Key
 * sends packet to reply-to address
 
 TODO: reply-to for aggregated requests
+
 TODO: buffering if there is no TCP connection to reply to
 

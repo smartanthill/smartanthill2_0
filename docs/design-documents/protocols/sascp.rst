@@ -22,20 +22,20 @@
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE
 
-.. _sascp:
+.. _sascrambling:
 
-SmartAnthill Scrambling Protocol (SAScP) and SCRAMBLING procedure
-=================================================================
+SmartAnthill SCRAMBLING procedure
+=================================
 
-:Version:   v0.1a
+:Version:   v0.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
-SAScP (SmartAnthill Scrambling Protocol) aims to provide some extra protection when data is transmitted in open (over wireless). **SAScP does not provide security guarantees** in a strict sense, but might hide certain details (such as destination addresses) and does help against certain classes of DoS attacks. Because of the lack of security guarantees, SAScP SHOULD NOT be used as a sole encryption protocol (using it over SASP is fine).
+SmartAnthill SCRAMBLING procedure aims to provide some extra protection when data is transmitted in open (in particular, over wireless or over the Internet). **SCRAMBLING procedure does not provide security guarantees** in a strict sense, but might hide certain details (such as source/destination addresses) and does help against certain classes of DoS attacks. Because of the lack of security guarantees, SCRAMBLING procedure SHOULD NOT be used as a sole encryption protocol (using it over SASP is fine).
 
-SAScP requires both sides to share a secret AES-128 key. **SCRAMBLING key MUST be independent from any other key in the system, in particular, from SASP key.**
+SCRAMBLING procedure requires both sides to share a secret AES-128 key. **SCRAMBLING key MUST be independent from any other key in the system, in particular, from SASP key.**
 
-Within SmartAnthill Protocol Stack, SAScP resides below SASP on the way between SmartAnthill Router and SmartAnthill Simple Device. SAScP as such is not used for communicating with SmartAnthill IP-Enabled Devices; however, SCRAMBLING procedure described in present document, MAY be used by SAoIP protocol as described in :ref:`saoip` document. 
+SCRAMBLING procedure is intended to be used as the outermost packet wrapper which is possible for an underlying protocol. Within SmartAnthill Protocol Stack, SCRAMBLING procedure is OPTIONALLY used by SAoIP protocol as described in :ref:`saoip` document. In addition, SADLP-\* protocols, especially those working over wireless L1 protocols, SHOULD use SCRAMBLING procedure to hide as much information as possible. 
 
 .. contents::
 
@@ -48,11 +48,11 @@ To comply with requirements of SCRAMBLING procedure which are described below, c
 SCRAMBLING
 ----------
 
-SCRAMBLING procedure is a procedure of taking an input packet of arbitrary size, and producing a "scrambled" packet. It is used both by SAScP and by SAoIP.
+SCRAMBLING procedure is a procedure of taking an input packet of arbitrary size, and producing a "scrambled" packet. It is used both by SAoIP and some of SADLP-\*.
 
 SCRAMBLING procedure requires both sides to share a secret AES-128 key. **SCRAMBLING key MUST be independent from any other key in the system, in particular, from SASP key.**
 
-For SCRAMBLING procedure to be efficient, it SHOULD ensure that all the first-16-byte-blocks of pre-SCRAMBLING data, are at least statistically unique. For existing SASP packets, it can be guaranteed as long as within first 16 bytes of pre-SCRAMBLING packet, there are at least 7 bytes of the SASP. To ensure that this always stands, SAoIP uses unusual packet structure with headers at the end; for SAScP, header is fixed-size and is small enough to ensure that the guarantee stands.
+For SCRAMBLING procedure to be efficient, it SHOULD ensure that all the first-16-byte-blocks of pre-SCRAMBLING data, are at least statistically unique. For existing SASP packets, it can be guaranteed as long as within first 16 bytes of pre-SCRAMBLING packet, there are at least 8 first bytes of the SASP. To ensure that this always stands, SAoIP uses unusual packet structure with headers at the end; another way to guarantee it (for example, for a SADLP-\*), is to guarantee that header is **always** less than 8 bytes long.
 
 DUMB-CHECKSUM
 ^^^^^^^^^^^^^
@@ -92,24 +92,4 @@ DESCRAMBLING
 Processing of a SCRAMBLED packet ("DESCRAMBLING") is performed in reverse order compared to SCRAMBLING procedure. If Dumb-Checksum in the packet being descrambled, doesn't match DUMB-CHECKSUM calculated as described above, then DESCRAMBLING procedure returns failire.
 
 TODO: forced-padding (incl. random padding)
-
-SAScP
------
-
-SAScP stands for *SmartAnthill Scrambling Protocol*. It relies heavily on the SCRAMBLING procedure above.
-
-First, SAScP produces an intermediate SAScP packet:
-
-**\| Key-ID \| SAScP-Payload \|**
-
-where Key-ID is an Encoded-Unsigned-Int<max=4> (and normally has meaning of an identifier of the key to be used by SASP on receiving side of communication). 
-
-Then, SAScP applies SCRAMBLING procedure to the intermediate packet above, to obtain a SAScP packet. This scrambled SAScP packet is ready to be sent over the unprotected channel.
-
-SCRAMBLING being optional
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-In some cases (for example, if SmartAnthill Simple Device is not security-critical AND is implemented on a very low-performance hardware, SmartAnthill Router and SmartAnthill Simple Device MAY agree on using SAScP without applying SCRAMBLING procedure. Such an agreement is normally done during programming and/or "pairing" phase of SmartAnthill Device Life Cycle (see :ref:`saoverarch` document for details), and is beyond the scope of present document. 
-
-Formally, within SmartAnthill Protocol Stack omitting SCRAMBLING doesn't affect any security guarantees (as such guarantees are provided by SASP, which is not optional). However, as SCRAMBLING provides some benefits at a very low cost, by default SCRAMBLING procedure SHOULD be applied to all communications unless and until it is proven to be detrimental. 
 
