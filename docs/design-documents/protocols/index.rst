@@ -34,5 +34,5 @@ Protocols
     sagdp
     sasp
     saoip
-    sascp
+    sascrambling
 
