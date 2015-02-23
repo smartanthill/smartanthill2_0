@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.4
+:Version:   v0.2.5
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *document, please make sure to read it before proceeding.*
@@ -170,15 +170,15 @@ Encoded-Unsigned-Int is a variable-length encoding of integers (with the idea be
   + if the second byte of Encoded-Unsigned-Int is c2 <= 127, then the value of Encoded-Unsigned-Int is equal to *128+((uint16)(c1&0x7F) | ((uint16)c2 << 7))*.
   + if the second byte of Encoded-Unsigned-Int is c2 >= 128, then the next byte c3 is needed:
     
-    * if the third byte of Encoded-Unsigned-Int is c3 <= 127, then the value of Encoded-Unsigned-Int is equal to *16512+((uint16)(c1&0x7F) | ((uint16)(c2&0x7F) << 7)) | ((uint16)c3 << 7))* (note that 16512 is 2^7+2^14).
+    * if the third byte of Encoded-Unsigned-Int is c3 <= 127, then the value of Encoded-Unsigned-Int is equal to *16512+((uint32)(c1&0x7F) | ((uint32)(c2&0x7F) << 7)) | ((uint32)c3 << 14))* (note that 16512 is 2^7+2^14).
     * if the third byte of Encoded-Unsigned-Int is c3 >= 128, then the next byte c4 is needed:
 
-      + if the fourth byte of Encoded-Unsigned-Int is c4 <= 127, then the value of Encoded-Unsigned-Int is equal to *2113664+((uint16)(c1&0x7F) | ((uint16)(c2&0x7F) << 7)) | ((uint16)(c3&0x7F) << 7)) | ((uint16)c4 << 7))* (note that 2113664 is 2^7+2^14+2^21).
+      + if the fourth byte of Encoded-Unsigned-Int is c4 <= 127, then the value of Encoded-Unsigned-Int is equal to *2113664+((uint32)(c1&0x7F) | ((uint32)(c2&0x7F) << 7)) | ((uint32)(c3&0x7F) << 14)) | ((uint32)c4 << 21))* (note that 2113664 is 2^7+2^14+2^21).
       + if the fourth byte of Encoded-Unsigned-Int is c4 >= 128, then the next byte c5 is needed.
 
         * for nth byte:
 
-          + if the nth byte of Encoded-Unsigned-Int is cn <= 127, then the value of Encoded-Unsigned-Int is equal to *start+((uint16)(c1&0x7F) | ((uint16)(c2&0x7F) << 7)) | ((uint16)(c3&0x7F) << 7)) | ... | ((uint16)(c<n-1>&0x7F) << 7)) | ((uint16)cn << 7))*, where *start=2^7+2^14+...+2^(n-1)*
+          + if the nth byte of Encoded-Unsigned-Int is cn <= 127, then the value of Encoded-Unsigned-Int is equal to *start+((uintNN)(c1&0x7F) | ((uintNN)(c2&0x7F) << 7)) | ((uintNN)(c3&0x7F) << 14)) | ... | ((uintNN)(c<n-1>&0x7F) << (7*(n-2))))) | ((uintNN)cn << (7*(n-1))))*, where *start=2^7+2^14+...+2^(n-1)*, and uintNN is sufficient to store the result. *NB: in practice, for Encoded-Unsigned-Ints over 4 bytes, implementation is likely to be quite different from, but equivalent to, the formula given*
           + if the nth byte of Encoded-Unsigned-Int is cn >= 128, then the <n+1>th byte is needed.
  
 The following table shows how many Encoded-Unsigned-Int bytes is necessary to encode ranges of Encoded-Unsigned-Int values:
