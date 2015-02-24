@@ -27,7 +27,7 @@
 SmartAnthill SCRAMBLING procedure
 =================================
 
-:Version:   v0.2
+:Version:   v0.3
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -39,23 +39,18 @@ SCRAMBLING procedure is intended to be used as the outermost packet wrapper whic
 
 .. contents::
 
-Reverse Parsing and Reverse-Encoded-Unsigned-Int
-------------------------------------------------
-
-To comply with requirements of SCRAMBLING procedure which are described below, certain headers in SCRAMBLING and associated protocols are located at the end of the packet. As a result, parsing should be performed starting from the end of the packet. To facilitate such a 'reverse parsing', 'Reverse-Encoded-Unsigned-Int' encoding is used; Reverse-Encoded-Unsigned-Int<max=n> encoding is identical to Encoded-Unsigned-Int<max=n> encoding as defined in :ref:`saprotostack` document, except that all the bytes are written (and parsed) in the reverse order.
-
-
-SCRAMBLING
-----------
+Environment
+-----------
 
 SCRAMBLING procedure is a procedure of taking an input packet of arbitrary size, and producing a "scrambled" packet. It is used both by SAoIP and some of SADLP-\*.
 
 SCRAMBLING procedure requires both sides to share a secret AES-128 key. **SCRAMBLING key MUST be independent from any other key in the system, in particular, from SASP key.**
 
-For SCRAMBLING procedure to be efficient, it SHOULD ensure that all the first-16-byte-blocks of pre-SCRAMBLING data, are at least statistically unique. For existing SASP packets, it can be guaranteed as long as within first 16 bytes of pre-SCRAMBLING packet, there are at least 8 first bytes of the SASP. To ensure that this always stands, SAoIP uses unusual packet structure with headers at the end; another way to guarantee it (for example, for a SADLP-\*), is to guarantee that header is **always** less than 8 bytes long.
+For SCRAMBLING procedure to be efficient (in secure sense), caller SHOULD guarantee that there is a 12-byte block within input packet, where such block is at least statistically unique. Offset to such a block within the packet is an input *unique-block-offset* parameter for SCRAMBLING procedure. 
+
 
 DUMB-CHECKSUM
-^^^^^^^^^^^^^
+-------------
 
 DUMB-CHECKSUM is not intended to provide strict consistency guarantees on the data sent. However, in case of a DoS attack, getting through DUMB-CHECKSUM without knowledge of the secret key, is difficult (chances of getting through at least for a dumb DoS attack are less than 10^-9).
 
@@ -69,25 +64,40 @@ DUMB-CHECKSUM is calculated as follows:
 It should be noted that due to the manner how DUMB-CHECKSUM is constructed, it can be considered as four independent 8-bit checksums (C0 is XOR of the bytes #0, #4, #8, ...,  C1 is XOR of the bytes #1, #5, #9, ..., C2 is XOR of the bytes #2, #6, #10, ..., and C3 is XOR of the bytes #3, #7, #11, ...). These four bytes MUST be written in the same order as their original bytes, i.e. as C0 C1 C2 C3. It ensures that DUMB-CHECKSUM is endian-agnostic (i.e. doesn't depend on the endianness).
 
 SCRAMBLING procedure
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 
-Input of SCRAMBLING procedure is a pre-SCRAMBLING packet. SCRAMBLING procedure works as follows:
+Input
+^^^^^
+
+Input of SCRAMBLING procedure is a pre-SCRAMBLING packet, and *unique-block-offset* offset. pre-SCRAMBLING packet can be considered as follows:
+
+**\| pre-unique-pre-SCRAMBLING-Data \| unique-block \| post-unique-pre-SCRAMBLING-Data \|**
+
+where unique-block is always 12 bytes in size, and it's offset from the beginning is specified by *unique-block-offset* parameter, and both pre-unique-pre-SCRAMBLING-Data and post-unique-pre-SCRAMBLING-Data can have 0 size.
+
+If *unique-block-offset+12* goes beyond the end of pre-SCRAMBLING-Data, SCRAMBLING procedure adjusts it to *size(pre_SCRAMBLING_Data)-12*.
+
+TODO: pre-SCRAMBLING-Data < 12
+
+Procedure
+^^^^^^^^^
+
+SCRAMBLING procedure works as follows:
 
 1. Form pre-encrypted packet which has the following format:
 
-**\| pre-SCRAMBLING-Data \| Dumb-Checksum \| Padding \| Padding-Size \|**
+**\| Salt \| unique-block \| Padding-Size \| Padding \| Unique-Block-Offset \| pre-unique-pre-SCRAMBLING-Data \| post-unique-pre-SCRAMBLING-Data \| Dumb-Checksum \|**
 
-where Dumb-Checksum is 4-byte DUMB-CHECKSUM of the pre-SCRAMBLING-Data, Padding is optional padding (0 to 15 bytes unless forced-padding is used), Padding-Size is a Reverse-Encoded-Unsigned-Int<max=2>, which specifies amount of padding in use (value of Padding-Size includes both size of Padding and size of Padding-Size itself). Padding-Size is at least 1 byte long, and has a minimum value of 1. Padding SHOULD be cryptographically random. TODO: checksum?
+where Salt is a 4-byte random field (NB: endianness of Salt doesn't matter), Padding-Size is Encoded-Unsigned-Int<max=2>, Padding is optional padding (0 to 15 bytes unless forced-padding is used), which has size of Padding-Size. Unique-Block-Offset is Encoded-Unsigned-Int<max=2> (equal to *unique-block-offset* parameter*),  Dumb-Checksum is 4-byte DUMB-CHECKSUM of the pre-SCRAMBLING-Data (NB: DUMB-CHECKSUM as described above, is endianness-agnostic). Both Salt and Padding SHOULD be cryptographically random whenever feasible; however, even simple randomicity from triial linear congruential 32-bit pseudo-RNG is acceptable for resource-restricted devices. NB: placing Padding as early in the pre-encrypted packet is intentional, to inject more randomicity into the CBC as early as possible. NB2: Salt is merely an additional precaution measure. 
 
-The size of Padding is calculated to ensure that pre-encrypted packet has size of 16*k bytes.
+The size of Padding is calculated to ensure that pre-encrypted packet has size of 16\*k bytes where k is integer.
 
-
-2. Encrypt pre-encrypted packet with the secret key, using AES-128 in CBC mode. CBC mode, combined with statistical-uniqueness requirement for 1st block, ensures that SCRAMBLED data is indistinguishable from white noise for a potential attacker.
+2. Encrypt pre-encrypted packet with the secret key, using AES-128 in CBC mode. CBC mode, combined with statistical-uniqueness requirement for unique-block, ensures that SCRAMBLED data is indistinguishable from white noise for a potential attacker.
 
 3. Resulting encrypted packet is the output of SCRAMBLING procedure. TODO: 2nd post-encryption padding?
 
 DESCRAMBLING
-^^^^^^^^^^^^
+------------
 
 Processing of a SCRAMBLED packet ("DESCRAMBLING") is performed in reverse order compared to SCRAMBLING procedure. If Dumb-Checksum in the packet being descrambled, doesn't match DUMB-CHECKSUM calculated as described above, then DESCRAMBLING procedure returns failire.
 

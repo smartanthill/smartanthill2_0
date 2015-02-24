@@ -27,7 +27,7 @@
 SmartAnthill-over-IP Protocol (SAoIP) and SmartAnthill Router
 =============================================================
 
-:Version:   v0.1.5
+:Version:   v0.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -65,16 +65,16 @@ SAoIP Aggregation is an OPTIONAL feature of SAoIP which allows to reduce number 
 If SAoIP Aggregation is not in use, then Destination-IP field MUST NOT be present in the data transferred (for example, for SAoUDP, SAOUDP_HEADER_AGGREGATE MUST NOT be present). If *SmartAnthill Router* receives a packet on a non-aggregated port, and the packet has Destination-IP field, it SHOULD drop this packet as an invalid one (possibly with logging).
 
 
-SAoIP SCRAMBLING, Reverse Parsing, and Reverse-Encoded-Unsigned-Int
--------------------------------------------------------------------
+SAoIP SCRAMBLING
+----------------
 
-SCRAMBLING is an optional feature of SAoIP. SAoIP SHOULD use SCRAMBLING whenever SAoIP goes over non-secure connection; while not using SCRAMBLING is not a significant security risk, but might reveal some information about packet destination and/or might simplify some DoS attacks. 
+SCRAMBLING is an optional feature of SAoIP. SAoIP SHOULD use SCRAMBLING whenever SAoIP goes over non-secure connection; while not using SCRAMBLING is not a significant security risk, but might reveal some information about packet destination and/or might simplify certain DoS attacks. 
 
-For this purpose, any connection SHOULD be considered as non-secure (and therefore SCRAMBLING SHOULD be used) unless proven secure.
+For this purpose, any connection SHOULD be considered as exposed (and therefore SCRAMBLING SHOULD be used) unless proven secure.
 
 SCRAMBLING requires that both parties share the same symmetric key. **This symmetric key MUST be completely independent and separate from any other keys, in particular, from SASP keys**. SAoIP uses SCRAMBLING procedure as described in :ref:`sascrambling` document. 
 
-To comply with requirements of SCRAMBLING procedure (as described in :ref:`sascrambling` document), headers in SAoIP are usually located at the end of the packet. As a result, parsing should be performed starting from the end of the packet. To facilitate such a 'reverse parsing', 'Reverse-Encoded-Unsigned-Int' encoding is used, as described in :ref:`sascrambling` document. 
+To comply with requirements of SCRAMBLING procedure (as described in :ref:`sascrambling` document), SAoIP needs to calculate offset of the *unique-block* within SAoIP packet; for SAoIP, it always equals to *unique-block-offset* returned by SASP, and adjusted by position of SASP packet within SAoIP packet.
 
 SCRAMBLING being optional
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -93,40 +93,40 @@ SAoUDP pre-SCRAMBLING packet
 
 First, SAoUDP forms a SAoUDP pre-SCRAMBLING packet which looks as follows:
 
-**\| SAoIP-Payload \| Headers \|**
+**\| Headers \| SAoIP-Payload \|**
 
-where Headers are optional headers for the SAoUDP; the idea of SAoUDP Headers is remotely similar to that of IP optional headers. If receiver gets a message with some of Headers which are not known to it, it MUST ignore the header and SHOULD sent a TODO packet (vaguely similar to ICMP 'Parameter Problem' message) back to the sender. 
+where Headers are optional SAoIP headers; the idea of SAoIP Headers is remotely similar to that of IP optional headers. If receiver gets a message with some of Headers which are not known to it, it MUST ignore the header and SHOULD sent a TODO packet (vaguely similar to ICMP 'Parameter Problem' message) back to the sender. 
 
-The last Header is always a SAOUDP_HEADER_LAST_HEADER header. Therefore, if there are no extensions, SAoUDP packet looks as **\| SAoIP-Payload \| SAOUDP_HEADER_LAST_HEADER \|**.
+The last Header is always a SAOIP_HEADER_LAST_HEADER header. Therefore, if there are no extensions, SAoUDP packet looks as **\| SAOIP_HEADER_LAST_HEADER \| SAoIP-Payload \|  \|**.
 
 All Headers (except for LAST_HEADER, which is described below) have the following format: 
 
-**\| Data \| Data-Length \| Header-Type \|**
+**\| Header-Type \| Data-Length \| Data \|**
 
-where Header-Type is an Reverse-Encoded-Unsigned-Int<max=2> field, Data-Length is also a Reverse-Encoded-Unsigned-Int<max=2> field, and Data is a variable-length field which has Data-Length size.
+where Header-Type is an Encoded-Unsigned-Int<max=2> field, Data-Length is also an Encoded-Unsigned-Int<max=2> field, and Data is a variable-length field which has Data-Length size.
 
 Currently supported extensions are:
 
-**\| Reply-ID \| Destination-Port \| Destination-IPv6 \| Destination-Flavour \| Data-Length \| SAOUDP_HEADER_AGGREGATE_REQUEST \|**
+**\| SAOIP_HEADER_AGGREGATE_REQUEST \| Data-Length \| Destination-Flavour \| Destination-IPv6 \| Destination-Port \| Reply-ID \|**
 
-where Reply-ID is an Encoded-Unsigned-Int<max=10> field, Destination-Port is a 2-byte field (using SmartAnthill Endianness; despite being a part of reversely parsed header, "Endianness" is still interpreted from the beginning; in other words, parser jumps back by 2 bytes and then interprets 2-byte field as usual 2-byte field accounting for SmartAnthill Endianness), Destination-Flavour is a 1-byte field, Destination-IPv6 is a 16-byte field containing IPv6 address. The meaning and handling of Destination-IPv6, Destination-Flavour, and Destination-Port fields is described in "SAoIP Aggregation and Destination-\* fields" section above. 
+where Destination-Flavour is a 1-byte field, Destination-IPv6 is a 16-byte field containing IPv6 address, Destination-Port is a 2-byte field (using SmartAnthill Endianness), and Reply-ID is an Encoded-Unsigned-Int<max=10> field. The meaning and handling of Destination-IPv6, Destination-Flavour, and Destination-Port fields is described in "SAoIP Aggregation and Destination-\* fields" section above. 
 
-SAOUDP_HEADER_AGGREGATE_REQUEST is used only for packets which travel from SmartAnthill Client to SmartAnthill Router. Reply-ID is a field which is returned in the reply (or replies) to this request. 
+SAOIP_HEADER_AGGREGATE_REQUEST is used only for packets which travel from SmartAnthill Client to SmartAnthill Router. Reply-ID is a field which is returned in the reply (or replies) to this request. 
 
-**\| Reply-ID \| Data-Length \| SAOUDP_HEADER_AGGREGATE_REPLY \|**
+**\| SAOUDP_HEADER_AGGREGATE_REPLY \| Data-Length \| Reply-ID \|**
 
 where Reply-ID is an Encoded-Unsigned-Int<max=10> field
 
-SAOUDP_HEADER_AGGREGATE_REPLY is used only for packets which travel from SmartAnthill Router to SmartAnthill Client. Reply-ID is a field which was sent in the last SAOUDP_HEADER_AGGREGATE_REQUEST from the SmartAnthill Client. 
+SAOIP_HEADER_AGGREGATE_REPLY is used only for packets which travel from SmartAnthill Router to SmartAnthill Client. Reply-ID is a field which was sent in the last SAOIP_HEADER_AGGREGATE_REQUEST from the SmartAnthill Client. 
 
-**\| SAOUDP_HEADER_LAST_HEADER \|**
+**\| SAOIP_HEADER_LAST_HEADER \|**
 
-SAOUDP_HEADER_LAST_HEADER is always the last header in the header list. Indicates that immediately before this header, SAoIP-Payload field is located. Note that LAST_HEADER doesn't have a 'Data-Length' field.
+SAOIP_HEADER_LAST_HEADER is always the last header in the header list. Indicates that immediately after this header, SAoIP-Payload field is located. Note that LAST_HEADER doesn't have a 'Data-Length' field.
 
 SAoUDP packet
 ^^^^^^^^^^^^^
 
-When SAoUDP pre-SCRAMBLING packet is ready, SAoUDP applies SCRAMBLING procedure to it.
+When SAoUDP pre-SCRAMBLING packet is ready, SAoUDP applies SCRAMBLING procedure to it to obtain SAoUDP packet.
 
 
 SAoUDP and UDP
