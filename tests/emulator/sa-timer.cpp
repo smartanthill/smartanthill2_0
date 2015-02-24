@@ -24,39 +24,21 @@
     DAMAGE
 *******************************************************************************/
 
+#include "sa-timer.h"
 
-#if !defined __SA_COMMON_H__
-#define __SA_COMMON_H__
 
-// common includes
-#include <memory.h> // for memcpy(), memset(), memcmp(). Note: their implementation may or may not be more effective than just by-byte operation on a particular target platform
-#include <assert.h>
+#ifdef _MSC_VER
 
-// data types
-#define uint8_t unsigned char
-#define int8_t char
-#define uint16_t unsigned short
+#include <Windows.h>
 
-// Master/Slave distinguishing bit; USED_AS_MASTER is assumed to be a preprocessor definition if necessary
-#ifdef USED_AS_MASTER
-#define MASTER_SLAVE_BIT 1
-#else // USED_AS_MASTER
-#define MASTER_SLAVE_BIT 0
+void waitForTimeQuantum()
+{
+	Sleep(1);
+}
+
+unsigned short getTime()
+{
+	return (unsigned short)( GetTickCount() );
+}
+
 #endif
-
-// offsets in data segment of particular handler data
-// note: internal structure is defined by a correspondent handler (see respective .h files for details)
-// TODO: think about more reliable mechanism
-#define DADA_OFFSET_SASP 0
-#define DADA_OFFSET_SAGDP 28
-
-// debug helpers
-
-#ifdef DEBUG_PRINTING
-#include <stdio.h>
-#define PRINTF printf
-#else // DEBUG_PRINTING
-#define PRINTF
-#endif // DEBUG_PRINTING
-
-#endif // __SA_COMMON_H__

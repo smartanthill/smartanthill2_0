@@ -30,14 +30,7 @@
 #include "sa-common.h"
 #include "sa-eeprom.h"
 
-#ifdef DEBUG_PRINTING
-#include <stdio.h>
-#define PRINTF printf
-#else // DEBUG_PRINTING
-#define PRINTF
-#endif // DEBUG_PRINTING
-
-
+// RET codes
 #define SASP_RET_IGNORE 0 // not authenticated, etc
 #define SASP_RET_TO_HIGHER_NEW 1 // new packet
 #define SASP_RET_TO_HIGHER_REPEATED 2 // repeated packet
@@ -45,12 +38,14 @@
 #define SASP_RET_TO_LOWER 4 // for error messaging
 
 
-
+// sizes
 #define SASP_NONCE_SIZE 6
 #define SASP_HEADER_SIZE SASP_NONCE_SIZE
 #define SASP_ENC_BLOCK_SIZE 16
 #define SASP_TAG_SIZE SASP_ENC_BLOCK_SIZE
 
+
+// data structures
 #define DATA_SASP_SIZE (SASP_NONCE_SIZE+SASP_NONCE_SIZE+SASP_TAG_SIZE)
 #define DATA_SASP_NONCE_LW_OFFSET 0 // Nonce Lower Watermark
 #define DATA_SASP_NONCE_LS_OFFSET SASP_NONCE_SIZE // Nonce to use For Sending
