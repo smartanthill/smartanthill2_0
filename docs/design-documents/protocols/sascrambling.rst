@@ -27,7 +27,7 @@
 SmartAnthill SCRAMBLING procedure
 =================================
 
-:Version:   v0.3
+:Version:   v0.3.1
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -46,7 +46,7 @@ SCRAMBLING procedure is a procedure of taking an input packet of arbitrary size,
 
 SCRAMBLING procedure requires both sides to share a secret AES-128 key. **SCRAMBLING key MUST be independent from any other key in the system, in particular, from SASP key.**
 
-For SCRAMBLING procedure to be efficient (in secure sense), caller SHOULD guarantee that there is a 12-byte block within input packet, where such block is at least statistically unique. Offset to such a block within the packet is an input *unique-block-offset* parameter for SCRAMBLING procedure. 
+For SCRAMBLING procedure to be efficient (in secure sense), caller SHOULD guarantee that there is a 8-byte block within input packet, where such block is at least statistically unique. Offset to such a block within the packet is an input *unique-block-offset* parameter for SCRAMBLING procedure. 
 
 
 DUMB-CHECKSUM
@@ -63,6 +63,17 @@ DUMB-CHECKSUM is calculated as follows:
 
 It should be noted that due to the manner how DUMB-CHECKSUM is constructed, it can be considered as four independent 8-bit checksums (C0 is XOR of the bytes #0, #4, #8, ...,  C1 is XOR of the bytes #1, #5, #9, ..., C2 is XOR of the bytes #2, #6, #10, ..., and C3 is XOR of the bytes #3, #7, #11, ...). These four bytes MUST be written in the same order as their original bytes, i.e. as C0 C1 C2 C3. It ensures that DUMB-CHECKSUM is endian-agnostic (i.e. doesn't depend on the endianness).
 
+POOR-MANS PRNG
+--------------
+
+In cases, when obtaining a cryptographically safe random numbers is not feasible (for example, on MPUs), the following "Poor Man's PRNG" MAY be used for padding. 
+
+Each device with Poor-Man's PRNG, has it's own AES-128 secret key (this key MUST NOT be stored outside of the device), and additionally keeps a counter. This counter MUST be kept in a way which guarantees that the same value of the counter is never reused; this includes both having counter of sufficient size, and proper commits to persistent storage to avoid re-use of the counter in case of accidental device reboot. As for commits to persistent storage - two such implementations are discussed in :ref:`sasp` document, in 'Implementation Details' section, with respect to storing nonces.
+
+Then, Poor-Man's PRNG simply encrypts current value of the counter with AES-128, and returns this encrypted value as next 16 bytes of the output.
+
+TODO: Speck cipher instead of AES for both SCRAMBLING and Poor-Man's PRNG? (Speck has been reported to be about 3x faster than AES on MP430)
+
 SCRAMBLING procedure
 --------------------
 
@@ -73,11 +84,11 @@ Input of SCRAMBLING procedure is a pre-SCRAMBLING packet, and *unique-block-offs
 
 **\| pre-unique-pre-SCRAMBLING-Data \| unique-block \| post-unique-pre-SCRAMBLING-Data \|**
 
-where unique-block is always 12 bytes in size, and it's offset from the beginning is specified by *unique-block-offset* parameter, and both pre-unique-pre-SCRAMBLING-Data and post-unique-pre-SCRAMBLING-Data can have 0 size.
+where unique-block is always 8 bytes in size, and it's offset from the beginning is specified by *unique-block-offset* parameter, and both pre-unique-pre-SCRAMBLING-Data and post-unique-pre-SCRAMBLING-Data can have 0 size.
 
-If *unique-block-offset+12* goes beyond the end of pre-SCRAMBLING-Data, SCRAMBLING procedure adjusts it to *size(pre_SCRAMBLING_Data)-12*.
+If *unique-block-offset+8* goes beyond the end of pre-SCRAMBLING-Data, SCRAMBLING procedure adjusts it to *size(pre_SCRAMBLING_Data)-8*.
 
-TODO: pre-SCRAMBLING-Data < 12
+TODO: pre-SCRAMBLING-Data < 8
 
 Procedure
 ^^^^^^^^^
@@ -86,9 +97,9 @@ SCRAMBLING procedure works as follows:
 
 1. Form pre-encrypted packet which has the following format:
 
-**\| Salt \| unique-block \| Padding-Size \| Padding \| Unique-Block-Offset \| pre-unique-pre-SCRAMBLING-Data \| post-unique-pre-SCRAMBLING-Data \| Dumb-Checksum \|**
+**\| Salt \| unique-block \| Padding-Size \| Padding \| Dumb-Checksum \| Unique-Block-Offset \| pre-unique-pre-SCRAMBLING-Data \| post-unique-pre-SCRAMBLING-Data \|**
 
-where Salt is a 4-byte random field (NB: endianness of Salt doesn't matter), Padding-Size is Encoded-Unsigned-Int<max=2>, Padding is optional padding (0 to 15 bytes unless forced-padding is used), which has size of Padding-Size. Unique-Block-Offset is Encoded-Unsigned-Int<max=2> (equal to *unique-block-offset* parameter*),  Dumb-Checksum is 4-byte DUMB-CHECKSUM of the pre-SCRAMBLING-Data (NB: DUMB-CHECKSUM as described above, is endianness-agnostic). Both Salt and Padding SHOULD be cryptographically random whenever feasible; however, even simple randomicity from triial linear congruential 32-bit pseudo-RNG is acceptable for resource-restricted devices. NB: placing Padding as early in the pre-encrypted packet is intentional, to inject more randomicity into the CBC as early as possible. NB2: Salt is merely an additional precaution measure. 
+where Salt is an 8-byte random field (NB: endianness of Salt doesn't matter), Padding-Size is Encoded-Unsigned-Int<max=2>, Padding is optional padding (0 to 15 bytes unless forced-padding is used), which has size of Padding-Size. Unique-Block-Offset is Encoded-Unsigned-Int<max=2> (equal to *unique-block-offset* parameter*),  Dumb-Checksum is 4-byte DUMB-CHECKSUM of the pre-SCRAMBLING-Data (NB: DUMB-CHECKSUM as described above, is endianness-agnostic). Both Salt and Padding SHOULD be cryptographically random (for example, generated by Fortuna RNG) whenever feasible; if this is not feasible, Poor-Man's PRNG (described above) is acceptable. NB: placing Padding as early in the pre-encrypted packet is intentional, to inject more randomicity into the CBC as early as possible. NB2: Salt is merely an additional precaution measure to guarantee statistical uniqueness. 
 
 The size of Padding is calculated to ensure that pre-encrypted packet has size of 16\*k bytes where k is integer.
 
