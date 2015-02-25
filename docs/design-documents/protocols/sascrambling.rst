@@ -27,7 +27,7 @@
 SmartAnthill SCRAMBLING procedure
 =================================
 
-:Version:   v0.3.1
+:Version:   v0.3.1a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -70,7 +70,7 @@ In cases, when obtaining a cryptographically safe random numbers is not feasible
 
 Each device with Poor-Man's PRNG, has it's own AES-128 secret key (this key MUST NOT be stored outside of the device), and additionally keeps a counter. This counter MUST be kept in a way which guarantees that the same value of the counter is never reused; this includes both having counter of sufficient size, and proper commits to persistent storage to avoid re-use of the counter in case of accidental device reboot. As for commits to persistent storage - two such implementations are discussed in :ref:`sasp` document, in 'Implementation Details' section, with respect to storing nonces.
 
-Then, Poor-Man's PRNG simply encrypts current value of the counter with AES-128, and returns this encrypted value as next 16 bytes of the output.
+Then, Poor-Man's PRNG simply encrypts current value of the counter with AES-128, increments counter (see note above about guarantees of no-reuse), and returns encrypted value of the counter as next 16 bytes of the random output.
 
 TODO: Speck cipher instead of AES for both SCRAMBLING and Poor-Man's PRNG? (Speck has been reported to be about 3x faster than AES on MP430)
 
