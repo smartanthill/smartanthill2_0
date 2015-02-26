@@ -24,16 +24,16 @@
 
 .. _sascrambling:
 
-SmartAnthill SCRAMBLING procedure
-=================================
+SmartAnthill SCRAMBLING procedure and SmartAnthill Random Generation
+====================================================================
 
-:Version:   v0.3.1a
+:Version:   v0.4
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
 SmartAnthill SCRAMBLING procedure aims to provide some extra protection when data is transmitted in open (in particular, over wireless or over the Internet). **SCRAMBLING procedure does not provide security guarantees** in a strict sense, but might hide certain details (such as source/destination addresses) and does help against certain classes of DoS attacks. Because of the lack of security guarantees, SCRAMBLING procedure SHOULD NOT be used as a sole encryption protocol (using it over SASP is fine).
 
-SCRAMBLING procedure requires both sides to share a secret AES-128 key. **SCRAMBLING key MUST be independent from any other key in the system, in particular, from SASP key.**
+SCRAMBLING procedure requires both sides to share two secret Speck-96 keys. **SCRAMBLING keys MUST be separate and independent from any other key in the system, in particular, from SASP keys.**
 
 SCRAMBLING procedure is intended to be used as the outermost packet wrapper which is possible for an underlying protocol. Within SmartAnthill Protocol Stack, SCRAMBLING procedure is OPTIONALLY used by SAoIP protocol as described in :ref:`saoip` document. In addition, SADLP-\* protocols, especially those working over wireless L1 protocols, SHOULD use SCRAMBLING procedure to hide as much information as possible. 
 
@@ -44,35 +44,39 @@ Environment
 
 SCRAMBLING procedure is a procedure of taking an input packet of arbitrary size, and producing a "scrambled" packet. It is used both by SAoIP and some of SADLP-\*.
 
-SCRAMBLING procedure requires both sides to share a secret AES-128 key. **SCRAMBLING key MUST be independent from any other key in the system, in particular, from SASP key.**
+SCRAMBLING procedure requires both sides to share two secret Speck-96 keys. **SCRAMBLING key MUST be independent from any other key in the system, in particular, from SASP key.**
 
-For SCRAMBLING procedure to be efficient (in secure sense), caller SHOULD guarantee that there is a 8-byte block within input packet, where such block is at least statistically unique. Offset to such a block within the packet is an input *unique-block-offset* parameter for SCRAMBLING procedure. 
+For SCRAMBLING procedure to be efficient (in secure sense), caller SHOULD guarantee that there is a 12-byte block within input packet, where such block is at least statistically unique. Offset to such a block within the packet is an input *unique-block-offset* parameter for SCRAMBLING procedure. 
 
+SmartAnthill Random Number Generation
+-------------------------------------
 
-DUMB-CHECKSUM
--------------
+All random numbers which are used for SmartAnthill SASP protocol and SCRAMBLING procedure, MUST be generated in the manner described below.
 
-DUMB-CHECKSUM is not intended to provide strict consistency guarantees on the data sent. However, in case of a DoS attack, getting through DUMB-CHECKSUM without knowledge of the secret key, is difficult (chances of getting through at least for a dumb DoS attack are less than 10^-9).
+Poor-Man's PRNG
+^^^^^^^^^^^^^^^
 
-DUMB-CHECKSUM is calculated as follows:
+Each device with Poor-Man's PRNG, has it's own Speck-96, Speck-128, or AES-128 secret key (this key MUST NOT be stored outside of the device), and additionally keeps a counter. This counter MUST be kept in a way which guarantees that the same value of the counter is never reused; this includes both having counter of sufficient size, and proper commits to persistent storage to avoid re-use of the counter in case of accidental device reboot. As for commits to persistent storage - two such implementations are discussed in :ref:`sasp` document, in 'Implementation Details' section, with respect to storing nonces.
 
-* pre-SCRAMBLING data is divided into 32-bit blocks. If the last block is not full, it is zero-padded.
-* initial CHK is set to 0
-* for each 32-bit block, CHK is XORed with the block itself.
-* resulting value is DUMB-CHECKSUM
+Then, Poor-Man's PRNG simply encrypts current value of the counter with Speck-96, Speck-128, or AES-128, increments counter (see note above about guarantees of no-reuse), and returns encrypted value of the counter as next 16 bytes of the random output.
 
-It should be noted that due to the manner how DUMB-CHECKSUM is constructed, it can be considered as four independent 8-bit checksums (C0 is XOR of the bytes #0, #4, #8, ...,  C1 is XOR of the bytes #1, #5, #9, ..., C2 is XOR of the bytes #2, #6, #10, ..., and C3 is XOR of the bytes #3, #7, #11, ...). These four bytes MUST be written in the same order as their original bytes, i.e. as C0 C1 C2 C3. It ensures that DUMB-CHECKSUM is endian-agnostic (i.e. doesn't depend on the endianness).
+Devices without crypto-safe RNG
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-POOR-MANS PRNG
---------------
+Resource-constrained SmartAnthill Devices which don't have their own crypto-safe RNG, SHOULD use Poor-Man's PRNG. 
 
-In cases, when obtaining a cryptographically safe random numbers is not feasible (for example, on MPUs), the following "Poor Man's PRNG" MAY be used for padding. 
+However, such devices with only Poor-Man's PRNG, MUST NOT generate keys.
 
-Each device with Poor-Man's PRNG, has it's own AES-128 secret key (this key MUST NOT be stored outside of the device), and additionally keeps a counter. This counter MUST be kept in a way which guarantees that the same value of the counter is never reused; this includes both having counter of sufficient size, and proper commits to persistent storage to avoid re-use of the counter in case of accidental device reboot. As for commits to persistent storage - two such implementations are discussed in :ref:`sasp` document, in 'Implementation Details' section, with respect to storing nonces.
+Devices with crypto-safe RNG
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Then, Poor-Man's PRNG simply encrypts current value of the counter with AES-128, increments counter (see note above about guarantees of no-reuse), and returns encrypted value of the counter as next 16 bytes of the random output.
+Even if the system where the SmartAnthill stack is running has a supposedly crypto-safe RNG (such as built-in crypto-safe /dev/urandom), SmartAnthill implementations still SHOULD employ Poor-Man's PRNG (as described above) in addition to system-provided crypto-safe PRNG. In such cases, each byte of SmartAnthill RNG (which is provided to the rest of SmartAnthill) SHOULD be a XOR of 1 byte of system-provided crypto-safe PRNG, and 1 byte of Poor-Man's PRNG. 
 
-TODO: Speck cipher instead of AES for both SCRAMBLING and Poor-Man's PRNG? (Speck has been reported to be about 3x faster than AES on MP430)
+The same procedure SHOULD also be used for generating random data which is used for SmartAnthill key generation. 
+
+*Rationale. This approach allows to reduce the impact of catastrophic failures of the system-provided crypto-safe PRNG (for example, it would mitigate effects of the Debian RNG disaster very significantly).*
+
+TODO: define key generation for Poor-Man's PRNG
 
 SCRAMBLING procedure
 --------------------
@@ -84,11 +88,11 @@ Input of SCRAMBLING procedure is a pre-SCRAMBLING packet, and *unique-block-offs
 
 **\| pre-unique-pre-SCRAMBLING-Data \| unique-block \| post-unique-pre-SCRAMBLING-Data \|**
 
-where unique-block is always 8 bytes in size, and it's offset from the beginning is specified by *unique-block-offset* parameter, and both pre-unique-pre-SCRAMBLING-Data and post-unique-pre-SCRAMBLING-Data can have 0 size.
+where unique-block is always 12 bytes in size, and it's offset from the beginning is specified by *unique-block-offset* parameter, and both pre-unique-pre-SCRAMBLING-Data and post-unique-pre-SCRAMBLING-Data can have 0 size.
 
-If *unique-block-offset+8* goes beyond the end of pre-SCRAMBLING-Data, SCRAMBLING procedure adjusts it to *size(pre_SCRAMBLING_Data)-8*.
+If *unique-block-offset+12* goes beyond the end of pre-SCRAMBLING-Data, SCRAMBLING procedure adjusts it to *size(pre_SCRAMBLING_Data)-12*.
 
-TODO: pre-SCRAMBLING-Data < 8
+If pre-SCRAMBLING-Data has size < 12, it is padded to 12 bytes with random data to form unique-block, and Unique-Block-Padded field (described below) is set to size of required padding.
 
 Procedure
 ^^^^^^^^^
@@ -97,20 +101,46 @@ SCRAMBLING procedure works as follows:
 
 1. Form pre-encrypted packet which has the following format:
 
-**\| Salt \| unique-block \| Padding-Size \| Padding \| Dumb-Checksum \| Unique-Block-Offset \| pre-unique-pre-SCRAMBLING-Data \| post-unique-pre-SCRAMBLING-Data \|**
+**\| Salt \| unique-block \| Padding-Size \| Padding \| Unique-Block-Padded \| Unique-Block-Offset \| pre-unique-pre-SCRAMBLING-Data \| post-unique-pre-SCRAMBLING-Data \|**
 
-where Salt is an 8-byte random field (NB: endianness of Salt doesn't matter), Padding-Size is Encoded-Unsigned-Int<max=2>, Padding is optional padding (0 to 15 bytes unless forced-padding is used), which has size of Padding-Size. Unique-Block-Offset is Encoded-Unsigned-Int<max=2> (equal to *unique-block-offset* parameter*),  Dumb-Checksum is 4-byte DUMB-CHECKSUM of the pre-SCRAMBLING-Data (NB: DUMB-CHECKSUM as described above, is endianness-agnostic). Both Salt and Padding SHOULD be cryptographically random (for example, generated by Fortuna RNG) whenever feasible; if this is not feasible, Poor-Man's PRNG (described above) is acceptable. NB: placing Padding as early in the pre-encrypted packet is intentional, to inject more randomicity into the CBC as early as possible. NB2: Salt is merely an additional precaution measure to guarantee statistical uniqueness. 
+where Salt is a 12-byte random field (NB: endianness of Salt doesn't matter), Padding-Size is Encoded-Unsigned-Int<max=2>, Padding is optional padding (0 to 15 bytes unless forced-padding is used), which has size of Padding-Size, Unique-Block-Padded is a 1-byte field (with maximum value of 12) which indicates that unique-block itself has been padded, and size of this padding (which happens only if size of pre-SCRAMBLING-Data is < 12). Unique-Block-Offset is Encoded-Unsigned-Int<max=2> (equal to *unique-block-offset* parameter*). Both Salt and Padding SHOULD be cryptographically random (for example, generated by Fortuna RNG) whenever feasible; if this is not feasible, Poor-Man's PRNG (described above) is acceptable. NB: placing Padding as early in the pre-encrypted packet is intentional, to inject more randomicity into the CBC as early as possible. NB2: Salt is merely an additional precaution measure to guarantee statistical uniqueness. 
 
 The size of Padding is calculated to ensure that pre-encrypted packet has size of 16\*k bytes where k is integer.
 
-2. Encrypt pre-encrypted packet with the secret key, using AES-128 in CBC mode. CBC mode, combined with statistical-uniqueness requirement for unique-block, ensures that SCRAMBLED data is indistinguishable from white noise for a potential attacker.
+2. Encrypt pre-encrypted packet with the secret key, using Speck-96 (with 96-bit block size) in CBC mode, and first Speck-96 key. CBC mode, combined with statistical-uniqueness requirement for unique-block, ensures that SCRAMBLED data is indistinguishable from white noise for a potential attacker.
 
-3. Resulting encrypted packet is the output of SCRAMBLING procedure. TODO: 2nd post-encryption padding?
+3. Calculate CBC-MAC of the block, using Speck-96 (with 96-bit block size) and second Speck-96 key.
+
+4. Form output packet as follows:
+
+**\| Encrypted-Packet \| CBC-MAC \|**
+
+where CBC-MAC is 12-byte CBC-MAC field.
 
 DESCRAMBLING
 ------------
 
-Processing of a SCRAMBLED packet ("DESCRAMBLING") is performed in reverse order compared to SCRAMBLING procedure. If Dumb-Checksum in the packet being descrambled, doesn't match DUMB-CHECKSUM calculated as described above, then DESCRAMBLING procedure returns failire.
+Processing of a SCRAMBLED packet ("DESCRAMBLING") is performed in reverse order compared to SCRAMBLING procedure. If CBC-MAC in the packet being descrambled, doesn't validate, then DESCRAMBLING procedure returns failire without any further processing of the packet. 
 
-TODO: forced-padding (incl. random padding)
+VARIATIONS
+----------
+
+If resources of the SmartAnthill Device are limited (or device is performing secure function), SmartAnthill Device and SmartAnthill Controller MAY agree on using a different flavour of Speck algorithm (such an agreement SHOULD happen during "pairing" or "programming" as described in :ref:`saoverarch` document). However, in secure environments (for example, if at least one of SmartAnthill Devices on the same wireless bus is performing a security-related function) it is important to ensure that all devices produce the packets of the same length. 
+
+Allowed combinations for Speck parameters and SCRAMBLING parameters are the following:
+
++--------------------+-------------------------+-----------+-------------------+-------------+
+| Speck block size   | Speck key length        | Salt Size | Unique Block Size | Remarks     |
++====================+=========================+===========+===================+=============+
+|128 bit             |128 bit                  | 16 bytes  | 16 bytes          | Improved    |
++--------------------+-------------------------+-----------+-------------------+-------------+
+| 96 bit             | 96 bit                  | 12 bytes  | 12 bytes          | Default     |
++--------------------+-------------------------+-----------+-------------------+-------------+
+| 48 bit             | 72 bit                  |  6 bytes  |  6 bytes          | Reduced     |
++--------------------+-------------------------+-----------+-------------------+-------------+
+| 32 bit             | 64 bit                  |  4 bytes  |  4 bytes          | Minimal     |
++--------------------+-------------------------+-----------+-------------------+-------------+
+
+
+TODO: forced-padding (incl. random-size padding)
 
