@@ -106,7 +106,7 @@ int8_t SASP_NonceCompare( uint8_t* nonce1, uint8_t* nonce2 )
 
 bool SASP_NonceIsIntendedForSasp(  uint8_t* nonce )
 {
-	return nonce[SASP_NONCE_SIZE-1] & 0x80;
+	return nonce[SASP_NONCE_SIZE-1] & ((uint8_t)0x80);
 }
 
 void SASP_NonceSetIntendedForSaspFlag(  uint8_t* nonce )
@@ -166,7 +166,7 @@ int SASP_getSizeUsedForEncoding( uint8_t* buff )
 	}
 }
 
-void SASP_EncryptAndAddAuthenticationData( uint8_t* sizeInOut, uint8_t* _buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, const uint8_t* nonce )
+void SASP_EncryptAndAddAuthenticationData( uint8_t* pid, uint8_t* sizeInOut, uint8_t* _buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, const uint8_t* nonce )
 {
 	// msgSize covers the size of message_byte_sequence
 	// (byte with MASTER_SLAVE_BIT) | nonce concatenation is used as a full nonce
@@ -276,18 +276,24 @@ void SASP_EncryptAndAddAuthenticationData( uint8_t* sizeInOut, uint8_t* _buffIn,
 	// 5. construct header:
 	memcpy( buffOut, nonce, SASP_NONCE_SIZE );
 
+	// 6. save PID
+	memcpy( pid, nonce, SASP_NONCE_SIZE );
+	pid[ SASP_NONCE_SIZE - 1] = (pid[ SASP_NONCE_SIZE - 1] & 0x7F) | ( ( 1 - MASTER_SLAVE_BIT ) << 7 );
+
 	// TODO: proper size handling
 	sizeInOut[1] = ins_pos >> 8;
 	sizeInOut[0] = ins_pos & 0xFF;
 }
 
-bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize )
+bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* pid, uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize )
 {
 	// input data structure: header | tag | encrypted data
 	// Therefore, msgSize is expected to be SASP_HEADER_SIZE + SASP_TAG_SIZE + k * SASP_ENC_BLOCK_SIZE
-	// Structure of output buffer: first_byte | byte_sequence
-	// return value: if passed, size of byte_sequence + 1
+	// Structure of output buffer: PID | first_byte | byte_sequence
+	// return value: if passed, size of SASP_NONCE_SIZE + 1 + byte_sequence
 	//               if failed, -1
+	//
+	// Packet ID (PID) is formed from Nonce VP and Peer-Distinguishing Flag of the incoming packet
 	
 	
 	// TODO: proper size handling
@@ -307,6 +313,10 @@ bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* sizeInOut, uint8_t* buffIn
 	int byte_seq_size, byte_seq_size_remaining;
 	int ins_pos = 0;
 	int read_pos = SASP_HEADER_SIZE + SASP_TAG_SIZE;
+
+	// load PID
+	memcpy( pid, buffIn, SASP_NONCE_SIZE );
+	pid[ SASP_NONCE_SIZE - 1] = (pid[ SASP_NONCE_SIZE - 1] & 0x7F) | ( ( 1 - MASTER_SLAVE_BIT ) << 7 );
 
 	// FAKE IMPLEMENTATION 
 
@@ -409,20 +419,20 @@ bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* sizeInOut, uint8_t* buffIn
 	return tagOK;
 }
 
-uint8_t handlerSASP_send( bool repeated, uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
+uint8_t handlerSASP_send( bool repeated, uint8_t* pid, uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
 {
 	if ( !repeated )
 		SASP_NonceLS_increment( data + DATA_SASP_NONCE_LS_OFFSET );
 
-	SASP_EncryptAndAddAuthenticationData( sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, data+DATA_SASP_NONCE_LS_OFFSET );
+	SASP_EncryptAndAddAuthenticationData( pid, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, data+DATA_SASP_NONCE_LS_OFFSET );
 
 	return SASP_RET_TO_LOWER;
 }
 
-uint8_t handlerSASP_receive( uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
+uint8_t handlerSASP_receive( uint8_t* pid, uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
 {
 	// 1. Perform intra-packet authentication
-	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize );
+	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( pid, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize );
 	if ( !ipaad )
 	{
 		PRINTF( "handlerSASP_receive(): BAD PACKET RECEIVED\n" );
@@ -465,13 +475,13 @@ uint8_t handlerSASP_receive( uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffO
 		ins_ptr += SASP_NONCE_SIZE;
 		sizeInOut[0] = SASP_NONCE_SIZE+2;
 		sizeInOut[1] = 0;
-		SASP_EncryptAndAddAuthenticationData( sizeInOut, stack, buffOut, buffOutSize, ins_ptr, stackSize-SASP_NONCE_SIZE-2, data );
+		SASP_EncryptAndAddAuthenticationData( pid, sizeInOut, stack, buffOut, buffOutSize, ins_ptr, stackSize-SASP_NONCE_SIZE-2, data );
 		SASP_NonceSetIntendedForSaspFlag( buffOut );
 		return SASP_RET_TO_LOWER;
 	}
 	else if ( nonceCmp == 0 )
 	{
-		bool same = memcmp( data+DATA_SASP_LRPS_OFFSET, buffIn+SASP_HEADER_SIZE, SASP_TAG_SIZE );
+		bool same = memcmp( data+DATA_SASP_LRPS_OFFSET, buffIn+SASP_HEADER_SIZE, SASP_TAG_SIZE ) == 0;
 		if (!same)
 			return SASP_RET_IGNORE;
 		// TODO: any further processing?

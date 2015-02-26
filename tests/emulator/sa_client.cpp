@@ -79,6 +79,8 @@ int main(int argc, char *argv[])
 	uint8_t* stack = sizeInOut + 2; // first two bytes are used for sizeInOut
 	int stackSize = BUF_SIZE / 4 - 2;
 
+	uint8_t pid[ SASP_NONCE_SIZE ];
+
 	// quick simulation of a part of SAGDP responsibilities: a copy of the last message sent message
 	unsigned char msgLastSent[BUF_SIZE], sizeInOutLastSent[2];
 	loadSizeInOut( sizeInOutLastSent, 0 );
@@ -122,14 +124,14 @@ int main(int argc, char *argv[])
 		memcpy(msgCopy, rwBuff, msgSize);
 		loadSizeInOut( sizeInOutCopy, msgSize );
 
-		uint8_t ret_code = handlerSASP_send( false, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+		uint8_t ret_code = handlerSASP_send( false, pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
 		assert( ret_code == SASP_RET_TO_LOWER ); // is anything else possible?
 		msgSize = sizeInOutToInt( sizeInOut );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
 
 		// check block #2: ensure SASP block is done well
 		memcpy( sizeInOutBack, sizeInOut, 2 );
-		bool checkOK = SASP_IntraPacketAuthenticateAndDecrypt( sizeInOutBack, rwBuff, msgBack, BUF_SIZE / 4, stack, stackSize );
+		bool checkOK = SASP_IntraPacketAuthenticateAndDecrypt( pid, sizeInOutBack, rwBuff, msgBack, BUF_SIZE / 4, stack, stackSize );
 		assert( checkOK );
 		assert( sizeInOutCopy[0] == sizeInOutBack[0] && sizeInOutCopy[1] == sizeInOutBack[1] );
 		msgSizeCopy = sizeInOutToInt( sizeInOutCopy );
@@ -160,7 +162,7 @@ int main(int argc, char *argv[])
 
 
 		// process received
-		ret_code = handlerSASP_receive( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+		ret_code = handlerSASP_receive( pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
 		if ( ret_code == SASP_RET_IGNORE )
 		{
 			printf( "BAD MESSAGE_RECEIVED\n" );
