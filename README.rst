@@ -9,10 +9,10 @@ SmartAnthill 2.0
 .. image:: https://gemnasium.com/smartanthill/smartanthill1_0.svg
     :target: https://gemnasium.com/smartanthill/smartanthill1_0
     :alt: Dependency Status
-.. image:: https://pypip.in/version/smartanthill/badge.png
+.. image:: https://pypip.in/version/smartanthill/badge.png?style=flat
     :target: https://pypi.python.org/pypi/smartanthill/
     :alt: Latest Version
-.. image:: https://pypip.in/license/smartanthill/badge.png?v2
+.. image:: https://pypip.in/license/smartanthill/badge.png?style=flat
     :target: https://pypi.python.org/pypi/smartanthill/
     :alt:  License
 
