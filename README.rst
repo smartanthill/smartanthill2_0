@@ -1,6 +1,21 @@
 SmartAnthill 2.0
 ================
 
+.. image:: https://travis-ci.org/smartanthill/smartanthill2_0.svg?branch=develop
+    :target: https://travis-ci.org/smartanthill/smartanthill2_0
+    :alt: Build Status
+.. image:: https://coveralls.io/repos/smartanthill/smartanthill2_0/badge.svg
+    :target: https://coveralls.io/r/smartanthill/smartanthill2_0
+.. image:: https://gemnasium.com/smartanthill/smartanthill1_0.svg
+    :target: https://gemnasium.com/smartanthill/smartanthill1_0
+    :alt: Dependency Status
+.. image:: https://pypip.in/version/smartanthill/badge.png
+    :target: https://pypi.python.org/pypi/smartanthill/
+    :alt: Latest Version
+.. image:: https://pypip.in/license/smartanthill/badge.png?v2
+    :target: https://pypi.python.org/pypi/smartanthill/
+    :alt:  License
+
 **SmartAnthill** is an open IoT system which allows easy control over multiple
 microcontroller-powered devices, creating a home- or office-wide heterogeneous
 network out of these devices.
