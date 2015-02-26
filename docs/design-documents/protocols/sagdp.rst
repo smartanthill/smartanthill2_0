@@ -308,7 +308,7 @@ An UP packet is formed wherein HLP packet becomes a payload data, and a header c
 
 TODO: pls check additionally!!!!
 
-The LSP is sent to the underlying protocol. Timer is set to RSP.
+The LSP is sent to the underlying protocol. Timer is set to RSP. SAGDP changes its state to wait-PID.
 
 5.2.4. Receiving an HLP packet that is "first"; or an UP packet with flag "New-Packet"; or Receiving PID
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
