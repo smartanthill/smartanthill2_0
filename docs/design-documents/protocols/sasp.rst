@@ -70,7 +70,7 @@ where:
 
 1.4. **Packet ID (PID)**: a unique identifier of a packet, when such ID is required. 
 	 
-	 **PID** is formed using Nonce VP and Peer-Distinguishing Flag and must be packet as a 6-byte sequence b0 \| b1 \| ... \| b5 in the order of increasing of their addresses in memory so that *b0 = (uint8)(Nonce_VP); b1 = (uint8)(Nonce_VP >> 8); b2 = (uint8)(Nonce_VP >> 16); b3 = (uint8)(Nonce_VP >> 24); b4 = (uint8)(Nonce_VP >> 32); b5 = (uint8)(Nonce_VP >> 40) \| (Peer_Distinguishing_Flag << 7); *.
+	 **PID** is formed using Nonce VP and Peer-Distinguishing Flag and must be packet as a 6-byte sequence b0 \| b1 \| ... \| b5 in the order of increasing of their addresses in memory so that *b0 = (uint8)(Nonce_VP); b1 = (uint8)(Nonce_VP >> 8); b2 = (uint8)(Nonce_VP >> 16); b3 = (uint8)(Nonce_VP >> 24); b4 = (uint8)(Nonce_VP >> 32); b5 = (uint8)(Nonce_VP >> 40) \| (Peer_Distinguishing_Flag << 7);*.
 
 1.5. **Nonce Lower Watermark (NLW)**: a value supported by a packet receiving side that is used to determine whether a value of Packet Nonce VP (i) has never been used before (if a new packet is received); (ii) has been used with the last received packet (for instance, in case of packet resending); or (iii) a de-synchronization in communication has happened.
 
