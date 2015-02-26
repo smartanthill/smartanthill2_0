@@ -303,8 +303,15 @@ An UP packet is formed wherein HLP packet becomes a payload data, and a header c
 
 An UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is not set, "is-last" is not set) and the packet PPID that is equal to LSPID. The UP packet is sent to the underlying protocol. SAGDP changes its state to "idle".
 
-5.2.3. Receiving an HLP packet that is "first"; or an UP packet with flag "New-Packet"; or an UP packet with flag "Resent-Packet"; or Receiving PID
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+5.2.3. Receiving a UP packet with flag "Resent-Packet"
+''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+TODO: pls check additionally!!!!
+
+The LSP is sent to the underlying protocol. Timer is set to RSP.
+
+5.2.4. Receiving an HLP packet that is "first"; or an UP packet with flag "New-Packet"; or Receiving PID
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 TODO: pls check that the intended meaning didn't change
 
@@ -365,7 +372,12 @@ Processing of this event is different at Mater's and Slave's side in a part when
 5.4.2. Receiving an UP packet with flag "Resent-Packet"
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-The LSP is sent to the underlying protocol. Timer is set to RSP.
+TODO: pls check additionally (old version: "The LSP is sent to the underlying protocol. Timer is set to RSP."; reason to change: in wait-remote SAGDP can only get a new packet as then it will transit to wait-local state)!!!!
+
+TODO: when checked, merge with 5.4.4.
+
+If this events happens in wait-remote state, consistency of data processing is broken. If implemented on Master, an error must be reported to the higher level protocol, and SAGDP transits to "idle" state. If implemented on Slave, system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
+
 
 5.4.3. Timer
 ''''''''''''
@@ -375,7 +387,7 @@ The LSP is sent to the underlying protocol. Timer is set to RSP.
 5.4.4. Receiving an HLP packet that is "first"; or receiving an HLP packet that is "intermediate"; or receiving an HLP packet that is "terminating"
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-If any of these events happen in wait-remote state, consistency of data processing is broken. If implemented on Master, an error must e reported to the higher level protocol, and SAGDP transits to "idle" state. If implemented on Slave, system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
+If any of these events happen in wait-remote state, consistency of data processing is broken. If implemented on Master, an error must be reported to the higher level protocol, and SAGDP transits to "idle" state. If implemented on Slave, system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
 
 5.4.5. Receiving PID
 ''''''''''''''''''''
