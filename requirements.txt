@@ -1,0 +1,3 @@
+platformio
+twisted==14.0.0
+pyserial==2.7

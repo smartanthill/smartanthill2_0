@@ -1,0 +1,58 @@
+{
+  "logger":
+  {
+    "level": "INFO"
+  },
+
+  "services":
+  {
+    "litemq":
+    {
+      "enabled": true,
+      "priority": 1,
+      "options":
+      {
+        "resend_delay": 1,
+        "resend_max": 10
+      }
+    },
+
+    "device":
+    {
+      "enabled": false,
+      "priority": 2,
+      "options": {}
+    },
+
+    "network":
+    {
+      "enabled": true,
+      "priority": 3,
+      "options": {}
+    },
+
+    "api":
+    {
+      "enabled": true,
+      "priority": 4,
+      "options":
+      {
+        "rest":
+        {
+          "enabled": true,
+          "port": 8131
+        }
+      }
+    },
+
+    "dashboard":
+    {
+      "enabled": true,
+      "priority": 5,
+      "options":
+      {
+        "port": 8138
+      }
+    }
+  }
+}

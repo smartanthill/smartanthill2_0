@@ -1,0 +1,44 @@
+{
+  "services": {
+    "device": {
+      "enabled": true, 
+      "options": {
+        "devices": {
+          "128": {
+            "boardId": "Arduino_Pro16MHzATmega168", 
+            "id": 128, 
+            "name": "My Arduino", 
+            "network": {
+              "router": "serial:port=/dev/tty.SLAB_USBtoUART:baudrate=9600"
+            }, 
+            "operationIds": [
+              0, 
+              137, 
+              138, 
+              139, 
+              140
+            ]
+          }, 
+          "13": {
+            "boardId": "TI_LPmsp430g2553", 
+            "id": 13, 
+            "name": "MSP430", 
+            "network": {
+              "router": "serial:port=/dev/cu.uart-1CFF4676258F4543"
+            }, 
+            "operationIds": [
+              0, 
+              137, 
+              138, 
+              139, 
+              140, 
+              141, 
+              142, 
+              143
+            ]
+          }
+        }
+      }
+    }
+  }
+}
