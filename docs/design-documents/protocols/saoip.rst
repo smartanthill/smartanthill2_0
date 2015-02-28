@@ -27,7 +27,7 @@
 SmartAnthill-over-IP Protocol (SAoIP) and SmartAnthill Router
 =============================================================
 
-:Version:   v0.2.1
+:Version:   v0.2.1a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -178,6 +178,8 @@ SAoTLSoTCP
 ----------
 
 SAoTLSoTCP is one of SAoIP flavours, which operates over TLS which runs over TCP. Normally, SmartAnthill Client acts as a TCP client, and SmartAnthill Device (or SmartAnthill Router) acts as a TCP server (i.e. listens on a TCP socket). SAoTLSoTCP operates exactly as SAoTCP, with the only difference being that SAoTLSoTCP uses "TLS over TCP" as it's underlying protocol. 
+
+TODO: TLS specifics (which TLS versions are allowed/recommended)
 
 TODO: dual connections (take-over?) - for SAoTCP
 
