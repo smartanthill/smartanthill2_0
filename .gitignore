@@ -1,4 +1,9 @@
+*.egg-info
 *.pyc
 .coverage
 .tox/*
 docs/_build/*
+htmlcov/*
+dropin.cache
+.pioenvs
+.sconsign.dblite

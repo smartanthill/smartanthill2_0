@@ -217,8 +217,6 @@ which is to be added to the header of a packet that is to be forwarded to underl
 4. Events
 ---------
 
-All events may be separated into three groups: (1) getting a packet from an underlying protocol (UP packet), (2) getting a packet  from a higher level protocol (HLP packet), and (3) timer event.
-
 Here is a full list of events.
 
 4.1. Receiving an UP packet with flag "New-Packet"
@@ -227,28 +225,30 @@ A packet that has not been received ever before arrives. Unless an error in chai
 
 4.2. Receiving an UP packet with flag "Resent-Packet"
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-A packet that is identical to last received packet arrives. Regularly it can happen, if a communication partner has not received the last sent packet. This event is initiated by an underlying protocol. In general, a last sent
+A packet that is identical to last received packet arrives. Regularly it can happen, if a communication partner has not received the last sent packet. This event is initiated by an underlying protocol. In general, a last sent packet must be re-sent.
 
-4.3. Receiving an HLP packet that is "first", or is "intermediate", or is "terminating"
+4.3. Receiving a request to resend LSP
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If, for any reason, an underlying protocol determins that the last sent packet did not go through, it may request to re-send the last sent packet.
+
+4.4. Receiving an HLP packet that is "first", or is "intermediate", or is "terminating"
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 TODO: pls check that the intended meaning didn't change
 
-A packet from an higher level protocol has been received with a respective status in chain. This packet is to be pre-processed and passed to an underlying protocol to be ultimately sent to a communication partner device.
+A packet from a higher level protocol has been received with a respective status in chain. This packet is to be pre-processed and passed to an underlying protocol to be ultimately sent to a communication partner device.
 
-4.4. Receiving PID
+4.5. Receiving PID
 ^^^^^^^^^^^^^^^^^^
 See comments to "wait-PID" state.
 
-4.5. Timer
+4.6. Timer
 ^^^^^^^^^^
 In the context of SAGDP timer event is used for packet resending, if a response has not been received within certain time.
 
 
 5. Event processing
 -------------------
-
-In short, to process events from the first group (receiving an UP packet) the protocol should be in either "idle" or "wait-remote" state. To process events from the second group (receiving an HLP packet) the protocol should be in either "idle" or "wait-local" state. To process timer events the protocol should be in "wait-remote" state. Detailed description is placed below.
 
 
 5.1. Processing events in idle state
@@ -276,7 +276,7 @@ Processing of this event is different at Mater's and Slave's side in a part when
 
 An UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is set, "is-last" is not set) and the packet PPID that is equal to LRPID. The UP packet is saved as LSP. Timer is set to RSP. The UP packet is sent to the underlying protocol. SAGDP changes its state to "wait-PID".
 
-5.1.3. Receiving an UP packet with flag "Resent-Packet"; or an HLP packet that is "intermediate"; or an HLP packet that is "terminating"
+5.1.3. Receiving an UP packet with flag "Resent-Packet"; or Receiving a request to resend LSP; or an HLP packet that is "intermediate"; or an HLP packet that is "terminating"
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 TODO: pls check that the intended meaning didn't change
@@ -303,14 +303,19 @@ An UP packet is formed wherein HLP packet becomes a payload data, and a header c
 
 An UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is not set, "is-last" is not set) and the packet PPID that is equal to LSPID. The UP packet is sent to the underlying protocol. SAGDP changes its state to "idle".
 
-5.2.3. Receiving an HLP packet that is "first"; or an UP packet with flag "New-Packet"; or an UP packet with flag "Resent-Packet"; or Receiving PID
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+5.2.3. Receiving a UP packet with flag "Resent-Packet"
+''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+The packet is ignored. SAGDP does not change its state.
+
+5.2.4. Receiving an HLP packet that is "first"; or an UP packet with flag "New-Packet"; or Receiving PID; or Receiving a request to resend LSP
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 TODO: pls check that the intended meaning didn't change
 
 If any of these events happen in wait-local state, consistency of data processing is broken. If implemented on Master, an error must e reported to the higher level protocol, and SAGDP transits to "idle" state. If implemented on Slave, system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
 
-5.2.4. Timer
+5.2.5. Timer
 ''''''''''''
 
 Ignored in this state.
@@ -329,8 +334,8 @@ LSPID is set to the received PID.  SAGDP changes its state to "wait-remote".
 
 Ignored in this state.
 
-5.3.3. Receiving an HLP packet that is "first"; or receiving an HLP packet that is "intermediate"; or receiving an HLP packet that is "terminating"
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+5.3.3. Receiving an HLP packet that is "first"; or receiving an HLP packet that is "intermediate"; or receiving an HLP packet that is "terminating"; or Receiving a request to resend LSP; or receiving an UP packet with flag "New-Packet"; or receiving an UP packet with flag "Resent-Packet"
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 If any of these events happen in wait-remote state, consistency of data processing is broken. If implemented on Master, an error must e reported to the higher level protocol, and SAGDP transits to "idle" state. If implemented on Slave, system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
 
@@ -362,10 +367,11 @@ Processing of this event is different at Mater's and Slave's side in a part when
      * PPID is equal to LSPID (received packet is a response to the last sent packet): payload of the packet is reported to a higher level protocol with its status in chain, and SAGDP changes its state to idle.
      * PPID is not equal to LSPID (chain is broken): system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
 
-5.4.2. Receiving an UP packet with flag "Resent-Packet"
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+5.4.2. Receiving an UP packet with flag "Resent-Packet"; or Receiving a request to resend LSP
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-The LSP is sent to the underlying protocol. Timer is set to RSP.
+The LSP is sent to the underlying protocol. Timer is reset [TODO: details on timer reset here and at all applicable places]
+
 
 5.4.3. Timer
 ''''''''''''
@@ -375,7 +381,7 @@ The LSP is sent to the underlying protocol. Timer is set to RSP.
 5.4.4. Receiving an HLP packet that is "first"; or receiving an HLP packet that is "intermediate"; or receiving an HLP packet that is "terminating"
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-If any of these events happen in wait-remote state, consistency of data processing is broken. If implemented on Master, an error must e reported to the higher level protocol, and SAGDP transits to "idle" state. If implemented on Slave, system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
+If any of these events happen in wait-remote state, consistency of data processing is broken. If implemented on Master, an error must be reported to the higher level protocol, and SAGDP transits to "idle" state. If implemented on Slave, system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
 
 5.4.5. Receiving PID
 ''''''''''''''''''''
