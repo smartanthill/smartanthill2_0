@@ -27,7 +27,7 @@
 SmartAnthill-over-IP Protocol (SAoIP) and SmartAnthill Router
 =============================================================
 
-:Version:   v0.2
+:Version:   v0.2.1
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -83,21 +83,16 @@ In some cases (for example, if all the communications is within Intranet without
 
 Formally, within SmartAnthill Protocol Stack omitting SCRAMBLING doesn't affect any security guarantees (as such guarantees are provided by SASP, which is not optional). However, as SCRAMBLING provides some benefits at a very low cost, by default SCRAMBLING procedure SHOULD be applied to all communications which are potentially exposed to the attacker.
 
-SAoUDP
-------
+SAoIP Pre-Packet
+----------------
 
-SAoUDP is one of SAoIP flavours. 
-
-SAoUDP pre-SCRAMBLING packet
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-First, SAoUDP forms a SAoUDP pre-SCRAMBLING packet which looks as follows:
+All SAoIP flavours are using so-called "SAoIP Pre-Packet". SAoIP pre-packet is not sent directly over UDP or TCP, but is used as a building block for other packets as described below. SAoIP pre-packet has the following format: 
 
 **\| Headers \| SAoIP-Payload \|**
 
 where Headers are optional SAoIP headers; the idea of SAoIP Headers is remotely similar to that of IP optional headers. If receiver gets a message with some of Headers which are not known to it, it MUST ignore the header and SHOULD sent a TODO packet (vaguely similar to ICMP 'Parameter Problem' message) back to the sender. 
 
-The last Header is always a SAOIP_HEADER_LAST_HEADER header. Therefore, if there are no extensions, SAoUDP packet looks as **\| SAOIP_HEADER_LAST_HEADER \| SAoIP-Payload \|  \|**.
+The last Header is always a SAOIP_HEADER_LAST_HEADER header. Therefore, if there are no extensions, SAoIP pre-packet looks as **\| SAOIP_HEADER_LAST_HEADER \| SAoIP-Payload \|  \|**.
 
 All Headers (except for LAST_HEADER, which is described below) have the following format: 
 
@@ -113,7 +108,7 @@ where Destination-Flavour is a 1-byte field, Destination-IPv6 is a 16-byte field
 
 SAOIP_HEADER_AGGREGATE_REQUEST is used only for packets which travel from SmartAnthill Client to SmartAnthill Router. Reply-ID is a field which is returned in the reply (or replies) to this request. 
 
-**\| SAOUDP_HEADER_AGGREGATE_REPLY \| Data-Length \| Reply-ID \|**
+**\| SAOIP_HEADER_AGGREGATE_REPLY \| Data-Length \| Reply-ID \|**
 
 where Reply-ID is an Encoded-Unsigned-Int<max=10> field
 
@@ -123,18 +118,22 @@ SAOIP_HEADER_AGGREGATE_REPLY is used only for packets which travel from SmartAnt
 
 SAOIP_HEADER_LAST_HEADER is always the last header in the header list. Indicates that immediately after this header, SAoIP-Payload field is located. Note that LAST_HEADER doesn't have a 'Data-Length' field.
 
+SAoUDP
+------
+
+SAoUDP is one of SAoIP flavours, which operates over UDP.
+
 SAoUDP packet
 ^^^^^^^^^^^^^
 
-When SAoUDP pre-SCRAMBLING packet is ready, SAoUDP applies SCRAMBLING procedure to it to obtain SAoUDP packet.
-
+To form SAoUDP packet, SAoUDP handler first creates a SAoIP pre-packet (which is described above). Then, this SAoIP pre-packet is SCRAMBLED (using SCRAMBLING procedure) to obtain SAoUDP packet. Then, SAoUDP packet is sent as a UDP datagram.
 
 SAoUDP and UDP
 ^^^^^^^^^^^^^^
 
 SAoUDP packet uses UDP as an underlying transport; as such, it also (implicitly) contains standard 8-byte UDP headers as described in RFC 768. SAoUDP only uses unicast UDP. 
 
-As we see it, SAoUDP (when used with the rest of the SmartAnthill Protocol Stack) is compliant with RFC5405 ("Unicast UDP Usage Guidelines for Application Designers"), and is therefore formally suitable for use in public Internet. However, for practical reasons (especially because of UDP-hostile firewalls, and because of not-properly-implemented or unsupported UDP NAT on many routers), use of SAoUDP on public Internet is discouraged. Use of SAoUDP in LANs or Intranets is perfectly fine (it is also fine for the Internet - that is, if you can make it work for your router/firewall).
+As we see it, SAoUDP (when used with the rest of the SmartAnthill Protocol Stack) is compliant with RFC5405 ("Unicast UDP Usage Guidelines for Application Designers"), and is therefore formally suitable for use in public Internet. However, for practical reasons (because of UDP-hostile firewalls, because of not-properly-implemented or unsupported UDP NAT on many routers, and because of potential for DoS attacks unless SCRAMBLING is used), use of SAoUDP on public Internet is discouraged. Use of SAoUDP in LANs or Intranets is perfectly fine. 
 
 SAoUDP Packet Sizes and Payloads
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -142,6 +141,47 @@ SAoUDP Packet Sizes and Payloads
 To comply with RFC 5405, SAoUDP SHOULD restrict maximum IP packet to the size of 576 bytes [1]_. Taking into account IP and UDP headers, it means that SAoUDP packet SHOULD be restricted to `576-60-8=508` bytes, and taking into account maximum size of supported SAoUDP headers, SAoIP-Payload for SAoUDP SHOULD be restricted to 508-TODO=TODO. This is a value which SHOULD be used for calculations of the maximum *Client_Side_SACCP_payload* as used in :ref:`saprotostack` document. For example, if SAoUDP payload size is typical TODO bytes (as calculated above), then corresponding maximum SASP payload is TODO+7bits, maximum SAGDP payload is TODO bytes, and maximum SACCP payload (and therefore *Client_Side_SACCP_payload*) is also TODO bytes.
 
 .. [1] Strictly speaking, RFC 5405 says that MTU should be less than `min(576,first-hop-MTU)`; if first-hop-MTU on an interface which SmartAnthill Client uses, is less than 576, maximum SACCP payload SHOULD be recalculated accordingly; note that due to the block nature of SASP, dependency between SAoUDP payload and SACCP payload in not exactly linear and needs to be re-calculated carefully; however, MTU being less than 576 is very unusual these days.
+
+SAoTCP
+------
+
+SAoTCP is one of SAoIP flavours, which operates over TCP. Normally, SmartAnthill Client acts as a TCP client, and SmartAnthill Device (or SmartAnthill Router) acts as a TCP server (i.e. listens on a TCP socket).
+
+SAoTCP pseudo-packet
+^^^^^^^^^^^^^^^^^^^^
+
+As TCP doesn't support a concept of packets directly (it is a stream-based rather than a datagram-based), SAoTCP uses "pseudo-packets" to send data over TCP. 
+
+To form SAoTCP pseudo-packet, SAoTCP handler first creates a SAoIP pre-packet (which is described above). Then, this SAoIP pre-packet is SCRAMBLED (using SCRAMBLING procedure).
+
+Then, size of SCRAMBLED SAoIP pre-packet is calculated, and encoded as Encoded-Size<max=2>. Then, this size itself is SCRAMBLED. Note that this SCRAMBLED-Size data always has size of 2 blocks of the cipher which is used for SCRAMBLING.
+
+Then, SAoTCP pseudo-packet is formed as follows:
+
+**\| SCRAMBLED-Size \| SCRAMBLED-SAoIP-Prepacket \|**
+
+Then, SAoTCP pseudo-packet can be sent over TCP.
+
+SAoTCP stream decoding
+''''''''''''''''''''''
+
+As even size is scrambled, the whole TCP stream looks as a white noise. To decode SAoTCP stream, the procedure looks as follows:
+
+* take first two blocks of the stream, where each block corresponds to the block size of the cipher in use for SCRAMBLING. 
+* we know that these two blocks represent SCRAMBLED-Size field
+* this SCRAMBLED-Size field is de-SCRAMBLED, and we obtain size of the SCRAMBLED-SAoIP-Prepacket
+* now, we can de-SCRAMBLE SCRAMBLED-SAoIP-Prepacket
+
+To ensure proper error recovery, receiving side of SAoTCP implementation MUST forcibly break a TCP connection as soon as any of the de-SCRAMBLING operations for packets received over this TCP connection fail. This forced break of TCP connection SHOULD be implemented with RST sent back and without wait (see lingering options of TCP socket for implementation details). After such a forced-break, SmartAnthill Client SHOULD re-establish a TCP connection.
+
+SAoTLSoTCP
+----------
+
+SAoTLSoTCP is one of SAoIP flavours, which operates over TLS which runs over TCP. Normally, SmartAnthill Client acts as a TCP client, and SmartAnthill Device (or SmartAnthill Router) acts as a TCP server (i.e. listens on a TCP socket). SAoTLSoTCP operates exactly as SAoTCP, with the only difference being that SAoTLSoTCP uses "TLS over TCP" as it's underlying protocol. 
+
+TODO: dual connections (take-over?) - for SAoTCP
+
+TODO: QoS (retransmit times?) - for all SAoIP
 
 
 SmartAnthill Router
