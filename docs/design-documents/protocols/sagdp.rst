@@ -27,7 +27,7 @@
 SmartAnthill Guaranteed Delivery Protocol (SAGDP)
 =================================================
 
-:Version:   v0.1a
+:Version:   v0.1b
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -277,7 +277,7 @@ Processing of this event is different at Mater's and Slave's side in a part when
 An UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is set, "is-last" is not set) and the packet PPID that is equal to LRPID. The UP packet is saved as LSP. Timer is set to RSP. The UP packet is sent to the underlying protocol. SAGDP changes its state to "wait-PID".
 
 5.1.3. Receiving an UP packet with flag "Resent-Packet"; or Receiving a request to resend LSP; or an HLP packet that is "intermediate"; or an HLP packet that is "terminating"
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 TODO: pls check that the intended meaning didn't change
 
