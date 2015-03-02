@@ -27,7 +27,7 @@
 SmartAnthill-over-IP Protocol (SAoIP) and SmartAnthill Router
 =============================================================
 
-:Version:   v0.2.1a
+:Version:   v0.2.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -68,11 +68,11 @@ If SAoIP Aggregation is not in use, then Destination-IP field MUST NOT be presen
 SAoIP SCRAMBLING
 ----------------
 
-SCRAMBLING is an optional feature of SAoIP. SAoIP SHOULD use SCRAMBLING whenever SAoIP goes over non-secure connection; while not using SCRAMBLING is not a significant security risk, but might reveal some information about packet destination and/or might simplify certain DoS attacks. 
+SCRAMBLING is an optional feature of SAoIP. SAoIP SHOULD use SCRAMBLING whenever SAoIP goes over non-secure connection; while not using SCRAMBLING is not a significant security risk, but might reveal some information about packet destination and/or might simplify certain DoS attacks. For the purpose, any connection SHOULD be considered as exposed (and therefore SCRAMBLING procedure SHOULD be used) unless proven secure; in particular, all connections which go over Wi-Fi or over the Internet, SHOULD be considered as exposed.
 
-For this purpose, any connection SHOULD be considered as exposed (and therefore SCRAMBLING SHOULD be used) unless proven secure.
+SAoIP uses SCRAMBLING procedure as described in :ref:`sascrambling` document. 
 
-SCRAMBLING requires that both parties share the same symmetric key. **This symmetric key MUST be completely independent and separate from any other keys, in particular, from SASP keys**. SAoIP uses SCRAMBLING procedure as described in :ref:`sascrambling` document. 
+SCRAMBLING requires that both parties share the same symmetric key (which normally consists out of two Speck-96 keys, as described in :ref:`sascrambling` document). **This symmetric key MUST be completely independent and separate from any other keys, in particular, from SASP keys**. 
 
 To comply with requirements of SCRAMBLING procedure (as described in :ref:`sascrambling` document), SAoIP needs to calculate offset of the *unique-block* within SAoIP packet; for SAoIP, it always equals to *unique-block-offset* returned by SASP, and adjusted by position of SASP packet within SAoIP packet.
 
@@ -147,30 +147,13 @@ SAoTCP
 
 SAoTCP is one of SAoIP flavours, which operates over TCP. Normally, SmartAnthill Client acts as a TCP client, and SmartAnthill Device (or SmartAnthill Router) acts as a TCP server (i.e. listens on a TCP socket).
 
-SAoTCP pseudo-packet
-^^^^^^^^^^^^^^^^^^^^
+SAoTCP "Streamed SCRAMBLING"
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-As TCP doesn't support a concept of packets directly (it is a stream-based rather than a datagram-based), SAoTCP uses "pseudo-packets" to send data over TCP. 
-
-To form SAoTCP pseudo-packet, SAoTCP handler first creates a SAoIP pre-packet (which is described above). Then, this SAoIP pre-packet is SCRAMBLED (using SCRAMBLING procedure).
-
-Then, size of SCRAMBLED SAoIP pre-packet is calculated, and encoded as Encoded-Size<max=2>. Then, this size itself is SCRAMBLED. Note that this SCRAMBLED-Size data always has size of 2 blocks of the cipher which is used for SCRAMBLING.
-
-Then, SAoTCP pseudo-packet is formed as follows:
-
-**\| SCRAMBLED-Size \| SCRAMBLED-SAoIP-Prepacket \|**
-
-Then, SAoTCP pseudo-packet can be sent over TCP.
+As SAoTCP is a stream, it uses "Streamed SCRAMBLING" procedure as described in :ref:`sascrambling` document, sending *Streamed-SCRAMBLING pseudo-packets* formed by "Streamed SCRAMBLING", over TCP.
 
 SAoTCP stream decoding
 ''''''''''''''''''''''
-
-As even size is scrambled, the whole TCP stream looks as a white noise. To decode SAoTCP stream, the procedure looks as follows:
-
-* take first two blocks of the stream, where each block corresponds to the block size of the cipher in use for SCRAMBLING. 
-* we know that these two blocks represent SCRAMBLED-Size field
-* this SCRAMBLED-Size field is de-SCRAMBLED, and we obtain size of the SCRAMBLED-SAoIP-Prepacket
-* now, we can de-SCRAMBLE SCRAMBLED-SAoIP-Prepacket
 
 To ensure proper error recovery, receiving side of SAoTCP implementation MUST forcibly break a TCP connection as soon as any of the de-SCRAMBLING operations for packets received over this TCP connection fail. This forced break of TCP connection SHOULD be implemented with RST sent back and without wait (see lingering options of TCP socket for implementation details). After such a forced-break, SmartAnthill Client SHOULD re-establish a TCP connection.
 

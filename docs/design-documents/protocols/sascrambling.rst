@@ -27,7 +27,7 @@
 SmartAnthill SCRAMBLING procedure and SmartAnthill Random Generation
 ====================================================================
 
-:Version:   v0.4
+:Version:   v0.4.1
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -107,9 +107,9 @@ where Salt is a 12-byte random field (NB: endianness of Salt doesn't matter), Pa
 
 The size of Padding is calculated to ensure that pre-encrypted packet has size of 16\*k bytes where k is integer.
 
-2. Encrypt pre-encrypted packet with the secret key, using Speck-96 (with 96-bit block size) in CBC mode, and first Speck-96 key. CBC mode, combined with statistical-uniqueness requirement for unique-block, ensures that SCRAMBLED data is indistinguishable from white noise for a potential attacker.
+2. Encrypt pre-encrypted packet with the secret key, using Speck-96 (with 96-bit block size) in CBC mode, first Speck-96 key, and using random 96-bit IV (which MUST be fully random, in particular, different from Salt). CBC mode, combined with statistical-uniqueness requirement for unique-block, ensures that SCRAMBLED data is indistinguishable from white noise for a potential attacker.
 
-3. Calculate CBC-MAC of the block, using Speck-96 (with 96-bit block size) and second Speck-96 key.
+3. Calculate CBC-MAC of the encrypted packet, using Speck-96 (with 96-bit block size) and second Speck-96 key.
 
 4. Form output packet as follows:
 
@@ -120,7 +120,39 @@ where CBC-MAC is 12-byte CBC-MAC field.
 DESCRAMBLING
 ------------
 
-Processing of a SCRAMBLED packet ("DESCRAMBLING") is performed in reverse order compared to SCRAMBLING procedure. If CBC-MAC in the packet being descrambled, doesn't validate, then DESCRAMBLING procedure returns failire without any further processing of the packet. 
+Processing of a SCRAMBLED packet ("DESCRAMBLING") is performed in reverse order compared to SCRAMBLING procedure. 
+
+If CBC-MAC in the packet being descrambled, doesn't validate, then DESCRAMBLING procedure returns failire without any further processing of the packet. 
+
+CBC decryption SHOULD be done with an arbitrary IV (for example, all-zero IV); this will lead to incorrect decryption of *Salt* field (which we don't care about anyway), but will keep all the other blocks intact.
+
+"Streamed" SCRAMBLING
+---------------------
+
+There are cases, where SCRAMBLED data is intended to be sent over stream (such as TCP stream), other than in individual datagrams. In such cases, "Streamed" SCRAMBLING may be used. "Streamed" SCRAMBLING (which takes pre-SCRAMBLED as it's input) is defined as follows:
+
+* pre-SCRAMBLED packet is SCRAMBLED as described in SCRAMBLING procedure above, forming *SCRAMBLED-Data packet*
+* size of *SCRAMBLED-Data packet* is calculated, and encoded as Encoded-Size<max=2>
+* this size itself is SCRAMBLED (again, as described in SCRAMBLING procedure above), forming *SCRAMBLED-Size*. Note that this *SCRAMBLED-Size* data always has size of two 12-byte blocks.
+* *Streamed-SCRAMBLING pseudo-packet* is formed as follows:
+
+**\| SCRAMBLED-Size \| SCRAMBLED-Data packet \|**
+
+This *Streamed-SCRAMBLING pseudo-packet* can be sent over the stream. As even packet size is scrambled, the whole stream looks as a white noise (NB: some information can be still extracted by attacker from timing and division of the stream into packets). 
+
+"Streamed" DESCRAMBLING
+^^^^^^^^^^^^^^^^^^^^^^^
+
+To decode "Streamed"-SCRAMBLED stream, the procedure looks as follows:
+
+* take first two 12-byte blocks of the stream
+* we know that these two blocks represent SCRAMBLED-Size field
+* this SCRAMBLED-Size field is de-SCRAMBLED, and we obtain size of the *SCRAMBLED-Data Packet*
+* now, we can de-SCRAMBLE *SCRAMBLED-Data Packet*
+* repeat the procedure from the very beginning
+
+To ensure proper error recovery, receiving side of "Streamed"-SCRAMBLED stream MUST forcibly break an underlying stream (such as TCP connection) as soon as any of the de-SCRAMBLING operations for packets received over this underlying connection fail. 
+
 
 VARIATIONS
 ----------
