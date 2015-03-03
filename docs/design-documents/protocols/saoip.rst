@@ -27,7 +27,7 @@
 SmartAnthill-over-IP Protocol (SAoIP) and SmartAnthill Router
 =============================================================
 
-:Version:   v0.2.2
+:Version:   v0.2.3
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -155,16 +155,20 @@ As SAoTCP is a stream, it uses "Streamed SCRAMBLING" procedure as described in :
 SAoTCP stream decoding
 ''''''''''''''''''''''
 
-To ensure proper error recovery, receiving side of SAoTCP implementation MUST forcibly break a TCP connection as soon as any of the de-SCRAMBLING operations for packets received over this TCP connection fail. This forced break of TCP connection SHOULD be implemented with RST sent back and without wait (see lingering options of TCP socket for implementation details). After such a forced-break, SmartAnthill Client SHOULD re-establish a TCP connection.
+SAoTCP stream is decoded as "Streamed SCRAMBLED" stream as described in :ref:`sascrambling` document.
+
+To ensure proper error recovery, receiving side of SAoTCP implementation MUST forcibly break a TCP connection as soon as any of the de-SCRAMBLING operations for packets received over this TCP connection fail. This forced break of TCP connection SHOULD be implemented with RST packet sent back and without wait (see lingering options of TCP socket for implementation details). After such a forced-break, SmartAnthill Client SHOULD re-establish a TCP connection.
+
 
 SAoTLSoTCP
 ----------
 
 SAoTLSoTCP is one of SAoIP flavours, which operates over TLS which runs over TCP. Normally, SmartAnthill Client acts as a TCP client, and SmartAnthill Device (or SmartAnthill Router) acts as a TCP server (i.e. listens on a TCP socket). SAoTLSoTCP operates exactly as SAoTCP, with the only difference being that SAoTLSoTCP uses "TLS over TCP" as it's underlying protocol. 
 
-TODO: TLS specifics (which TLS versions are allowed/recommended)
+TLS Versions
+^^^^^^^^^^^^
 
-TODO: dual connections (take-over?) - for SAoTCP
+SAoTLSoTCP implementations MUST use at least SSL v3, and SHOULD use at least version TLS 1.1. In addition, they MUST disable fallback to SSL v2.0 and below, and SHOULD disable fallback to all versions below TLS 1.1 (this includes all SSL versions, and TLS 1.0). 
 
 TODO: QoS (retransmit times?) - for all SAoIP
 
@@ -196,7 +200,7 @@ When an incoming SAoIP packet comes in (to a normal, non-aggregated port, from a
 * changes ('hacks') SASP packet to use internal-SASP-key-ID instead of external-SASP-key-ID; this can be done without decrypting SASP packet
 * forms a SADLP-\* packet (depending on the bus in use) as described in respective document, using SASP 'hacked' packet as a payload
 * sends SADLP-\* packet to (Bus-ID, Intra-Bus-ID)
-* makes a record in a special SA DB table KEY_LEASES, specifying that Device-Key-ID (from DEVICE_MAPPINGS record) corresponds to a reply-to address (i.e. where to send replies). Reply-to address is the same as 'from' address of the incoming packet. If there is already a record in KEY_LEASES with the same Device-Key-ID, it is replaced with a new one (and a log record is made about lease being taken over). 
+* makes a record in a special SA DB table KEY_LEASES, specifying that Device-Key-ID (from DEVICE_MAPPINGS record) corresponds to a reply-to address (i.e. where to send replies). Reply-to address depends on the SAoIP flavour: for SAoUDP it is the same as 'from' address of the incoming packet, and for SAoTCP/SAoTLSoTCP it is socket handle (NB: when implementing SmartAnthill Router, implementation SHOULD NOT store KEY_LEASES entries with reply-to as a socket handle, to physical DB; instead, these records SHOULD be kept in-memory; in addition, implementation SHOULD monitor sockets and remove those records which have their sockets closed for any reason). If there is already a record in KEY_LEASES with the same Device-Key-ID, it is replaced with a new one (and a log record is made about lease being taken over, as this is a potential security event). 
 
 When an incoming packet from SADLP-\* comes in (from certain Bus-ID and Intra-Bus-ID), SmartAnthill Router:
 
@@ -222,6 +226,4 @@ If for an incoming SADLP-\* packet an Aggregation-Reply-ID in KEY_LEASES record 
 
 * sends a reply as a SmartAnthill Aggregation reply, with Reply-ID set to Aggregation-Reply-ID from KEY_LEASES record
 
-
-TODO: buffering if there is no TCP connection to reply to
 
