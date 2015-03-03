@@ -40,33 +40,30 @@ unsigned char data_buff[BUF_SIZE];
 
 int dummy_message_count; // used for fake message generation
 
-int prepareInitialMessage( unsigned char* buff, int buffSize )
+uint8_t prepareInitialMessage( uint16_t* sizeInOut, unsigned char* buff, uint16_t max_size )
 {
 	// by now this fanction has totally fake implementation; we need something to work with
 	// anyway, in a real case there will be some kind of message source, for instance, a controlling application at Master side
+	uint16_t buffSize = *sizeInOut;
 	buff[0] = 0; // First Byte
 	buff++;
-	memset( buff, 'Z', buffSize-1 );
+	memset( buff, 'Z', max_size-1 );
 	sprintf( (char*)buff, "Client message #%d", dummy_message_count++ );
-	int size = 0;
+	uint16_t size = 0;
 	while ( buff[size++] );
 	printf("Preparing 1+%d byte message: \"%s\"\n", size, buff);
-	return size+1;
+	*sizeInOut = size + 1;
+	return 1;
 }
 
-void postprocessReceivedMessage( unsigned char* buff, int msgSize, int buffSize )
+uint8_t postprocessReceivedMessage( uint16_t* sizeInOut, unsigned char* buff )
 {
 	// by now this fanction has totally fake implementation; we need something to work with
 	// anyway, in a real case there will be some kind of message source, for instance, a controlling application at Master side
-	printf("Message received: \"%s\" [%d bytes]\n", buff, msgSize);
+	printf("Message received: \"%s\" [%d bytes]\n", buff, *sizeInOut);
+	return 1;
 }
 
-
-
-// Temporary solutuion to work with sizes
-// TODO: implement an actual mechanism
-int sizeInOutToInt( const uint8_t* sizeInOut )		{int size = sizeInOut[1];size <<= 8;size = sizeInOut[0];return size;}
-void loadSizeInOut( uint8_t* sizeInOut, int size )	{sizeInOut[1] = size >> 8; sizeInOut[0] = size & 0xFF;}
 
 
 int main(int argc, char *argv[])
@@ -75,25 +72,26 @@ int main(int argc, char *argv[])
 	printf("==================\n\n");
 
 	// TODO: revise approach below
-	uint8_t* sizeInOut = rwBuff + 3 * BUF_SIZE / 4;
-	uint8_t* stack = sizeInOut + 2; // first two bytes are used for sizeInOut
+	uint16_t* sizeInOut = (uint16_t*)(rwBuff + 3 * BUF_SIZE / 4);
+	uint8_t* stack = (uint8_t*)sizeInOut + 2; // first two bytes are used for sizeInOut
 	int stackSize = BUF_SIZE / 4 - 2;
 
 	uint8_t pid[ SASP_NONCE_SIZE ];
 
 	// quick simulation of a part of SAGDP responsibilities: a copy of the last message sent message
-	unsigned char msgLastSent[BUF_SIZE], sizeInOutLastSent[2];
-	loadSizeInOut( sizeInOutLastSent, 0 );
+	unsigned char msgLastSent[BUF_SIZE];
+	uint16_t sizeInOutLastSent;
+	sizeInOutLastSent = 0;
 	bool resendLastMsg = false;
 
 	// debug objects
-	unsigned char msgCopy[BUF_SIZE], msgBack[BUF_SIZE], sizeInOutCopy[2], sizeInOutBack[2];
+	unsigned char msgCopy[BUF_SIZE], msgBack[BUF_SIZE];
+	uint16_t sizeInOutCopy, sizeInOutBack;
 	int msgSizeCopy, msgSizeBack;
 
 
 
 	bool   fSuccess = false;
-	int msgSize;
 
 	// Try to open a named pipe; wait for it, if necessary. 
 
@@ -106,59 +104,41 @@ int main(int argc, char *argv[])
 		if ( resendLastMsg )
 		{
 			// quick simulation of a part of SAGDP responsibilities: a copy of the last message sent message
-			memcpy( rwBuff, msgLastSent, msgSize );
-			memcpy( sizeInOut, sizeInOutLastSent, 2 );
-			msgSize = sizeInOutToInt( sizeInOut );
+			memcpy( rwBuff, msgLastSent, *sizeInOut );
+			*sizeInOut = sizeInOutLastSent;
 		}
 		else
 		{
-			msgSize = prepareInitialMessage( rwBuff, BUF_SIZE/2 );
-			loadSizeInOut( sizeInOut, msgSize );
+			prepareInitialMessage( sizeInOut, rwBuff, BUF_SIZE/2 );
 			// quick simulation of a part of SAGDP responsibilities: a copy of the last message sent message
-			memcpy( msgLastSent, rwBuff, msgSize );
-			memcpy( sizeInOutLastSent, sizeInOut, 2 );
+			memcpy( msgLastSent, rwBuff, *sizeInOut );
+			sizeInOutLastSent = *sizeInOut;
 		}
 		resendLastMsg = false;
 
-		// check block #1: copy the message
-		memcpy(msgCopy, rwBuff, msgSize);
-		loadSizeInOut( sizeInOutCopy, msgSize );
-
 		uint8_t ret_code = handlerSASP_send( false, pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
 		assert( ret_code == SASP_RET_TO_LOWER ); // is anything else possible?
-		msgSize = sizeInOutToInt( sizeInOut );
-		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
-
-		// check block #2: ensure SASP block is done well
-		memcpy( sizeInOutBack, sizeInOut, 2 );
-		bool checkOK = SASP_IntraPacketAuthenticateAndDecrypt( pid, sizeInOutBack, rwBuff, msgBack, BUF_SIZE / 4, stack, stackSize );
-		assert( checkOK );
-		assert( sizeInOutCopy[0] == sizeInOutBack[0] && sizeInOutCopy[1] == sizeInOutBack[1] );
-		msgSizeCopy = sizeInOutToInt( sizeInOutCopy );
-		msgBack[0] &= 0x7F; // get rid of SASP bit
-		for ( int k=0; k<msgSizeCopy; k++ )
-			assert( msgCopy[k] == msgBack[k] );
+		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 
 		// send ... receive ...
 		printf( "raw sent: \"%s\"\n", rwBuff );
-		fSuccess = sendMessage( rwBuff, msgSize );
+		ret_code = sendMessage( sizeInOut, rwBuff );
 
 		if (!fSuccess)
 		{
 			return -1;
 		}
 
-		printf("\nMessage sent to server [%d bytes]...\n", msgSize );
+		printf("\nMessage sent to server [%d bytes]...\n", *sizeInOut );
 
-		msgSize = getMessage(rwBuff, BUF_SIZE);
+		ret_code = getMessage(sizeInOut, rwBuff, BUF_SIZE);
 
-		if (!fSuccess)
+		if ( ret_code != COMMLAYER_RET_OK )
 		{
 			return -1;
 		}
-		loadSizeInOut( sizeInOut, msgSize );
 
-		printf("\n... Message received from server [%d bytes]:\n", msgSize);
+		printf("\n... Message received from server [%d bytes]:\n", *sizeInOut );
 
 
 		// process received
@@ -169,7 +149,7 @@ int main(int argc, char *argv[])
 		}
 		else if ( ret_code == SASP_RET_TO_HIGHER_NEW || ret_code == SASP_RET_TO_HIGHER_REPEATED )
 		{
-			postprocessReceivedMessage( rwBuff + BUF_SIZE / 4 + 1, msgSize, BUF_SIZE );
+			postprocessReceivedMessage( sizeInOut, rwBuff + BUF_SIZE / 4 + 1 );
 			// repeating?..
 			printf("\n<End of message, press X+ENTER to terminate connection and exit or ENTER to continue>");
 			char c = getchar();
@@ -180,8 +160,8 @@ int main(int argc, char *argv[])
 		else if ( ret_code == SASP_RET_TO_LOWER )
 		{
 			printf( "OLD NONCE detected\n" );
-			bool fSuccess = sendMessage((unsigned char *)rwBuff, msgSize);
-			if (!fSuccess)
+			ret_code = sendMessage( sizeInOut, rwBuff );
+			if ( ret_code != COMMLAYER_RET_OK )
 			{
 				return -1;
 			}

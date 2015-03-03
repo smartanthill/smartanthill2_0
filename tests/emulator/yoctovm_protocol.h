@@ -24,19 +24,26 @@
     DAMAGE
 *******************************************************************************/
 
-#if !defined __SA_COMMLAYER_H__
-#define __SA_COMMLAYER_H__
 
+// NOTE: at present
+// this implementation is fake in all parts except simulation of 
+// general operations with packets
+// necessary for testing of underlying levels
+////////////////////////////////////////////////////////////////
+
+
+#if !defined __YOCTOVM_PROTOCOL_H__
+#define __YOCTOVM_PROTOCOL_H__
+
+#include "sa-common.h"
+#include "sa-eeprom.h"
 
 // RET codes
-#define COMMLAYER_RET_FAILED 0 // not authenticated, etc
-#define COMMLAYER_RET_OK 1 // new packet
+#define YOCTOVM_FAILED 0 // sunject for system reset
+#define YOCTOVM_OK 1 // if terminating packet received
+#define YOCTOVM_PASS_LOWER 2
+
+uint8_t yocto_process( uint16_t* sizeInOut, unsigned char* buffIn, unsigned char* buffOut/*, int buffOutSize, unsigned char* stack, int stackSize*/ );
 
 
-bool communicationInitializeAsServer();
-bool communicationInitializeAsClient();
-void communicationTerminate();
-uint8_t sendMessage( uint16_t* msgSize, const unsigned char * buff );
-uint8_t getMessage( uint16_t* msgSize, unsigned char * buff, int maxSize );
-
-#endif // __SA_COMMLAYER_H__
+#endif // __YOCTOVM_PROTOCOL_H__

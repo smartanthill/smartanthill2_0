@@ -40,11 +40,12 @@ unsigned char data_buff[BUF_SIZE];
 
 
 
-int prepareReplyMessage( unsigned char* buffIn, int msgSize, unsigned char* buffOut, int buffOutSize, unsigned char* stack, int stackSize )
+uint8_t prepareReplyMessage( uint16_t* sizeInOut, unsigned char* buffIn, unsigned char* buffOut/*, int buffOutSize, unsigned char* stack, int stackSize*/ )
 {
 	// buffer assumes to contain an input message; interface is subject to change
 	// by now this fanction has totally fake implementation; we need something to work with
 	// anyway, in a real case there will be some kind of message source, for instance, a controlling application at Master side
+	uint16_t msgSize = *sizeInOut;
 	unsigned char flags = buffIn[0];
 	unsigned char* payload_buff = buffIn + 1;
 	printf("Preparing reply to client message: [0x%02x]\"%s\" [1+%d bytes]\n", flags, payload_buff, msgSize-1 );
@@ -53,13 +54,9 @@ int prepareReplyMessage( unsigned char* buffIn, int msgSize, unsigned char* buff
 	int size = 0;
 	while ( (buffOut + 1)[size++] );
 	printf("Reply is about to be sent: \"%s\" [%d bytes]\n", buffOut + 1, size);
-	return size+1;
+	*sizeInOut = size+1;
+	return 1;
 }
-
-// Temporary solutuion to work with sizes
-// TODO: implement an actual mechanism
-int sizeInOutToInt( const uint8_t* sizeInOut )		{int size = sizeInOut[1];size <<= 8;size = sizeInOut[0];return size;}
-void loadSizeInOut( uint8_t* sizeInOut, int size )	{sizeInOut[1] = size >> 8; sizeInOut[0] = size & 0xFF;}
 
 
 
@@ -69,55 +66,125 @@ int main(int argc, char *argv[])
 	printf("==================\n\n");
 
 	// TODO: revise approach below
-	uint8_t* sizeInOut = rwBuff + 3 * BUF_SIZE / 4;
-	uint8_t* stack = sizeInOut + 2; // first two bytes are used for sizeInOut
+	uint16_t* sizeInOut = (uint16_t*)(rwBuff + 3 * BUF_SIZE / 4);
+	uint8_t* stack = (uint8_t*)sizeInOut + 2; // first two bytes are used for sizeInOut
 	int stackSize = BUF_SIZE / 4 - 2;
 
 	uint8_t pid[ SASP_NONCE_SIZE ];
 
 	// quick simulation of a part of SAGDP responsibilities: a copy of the last message sent message
-	unsigned char msgLastSent[BUF_SIZE], sizeInOutLastSent[2];
-	loadSizeInOut( sizeInOutLastSent, 0 );
+	unsigned char msgLastSent[BUF_SIZE];
+	uint8_t sizeInOutLastSent = 0;
 
-	// debug objects
-	unsigned char msgCopy[BUF_SIZE], msgBack[BUF_SIZE], sizeInOutCopy[2], sizeInOutBack[2];
-	int msgSizeCopy;
+	uint8_t ret_code;
 
 
 	bool   fConnected = false;
 
 
-	printf("\nPipe Server: Main thread awaiting client connection on %s\n", g_pipeName);
+	printf("\nPipe Server: Main thread awaiting client connection... %s\n" );
 	if (!communicationInitializeAsServer())
 		return -1;
 
 	printf("Client connected.\n");
 
-
+	// MAIN LOOP
 	for (;;)
 	{
-		int msgSize = getMessage(rwBuff, BUF_SIZE);
-		if (msgSize == -1)
+getmsg:
+		// 1. Get message from comm peer
+		ret_code = getMessage( sizeInOut, rwBuff, BUF_SIZE);
+		if ( ret_code != COMMLAYER_RET_OK )
 		{
 			printf("\n\nWAITING FOR A NEW CLIENT...\n\n");
 			if (!communicationInitializeAsServer()) // regardles of errors... quick and dirty solution so far
 				return -1;
-			continue;
+			goto getmsg;
 		}
+		printf("Message from client received\n");
 
-		printf("Message from client received:\n");
-		printf("\"%s\"\n", rwBuff);
-
-		// process received message
-		loadSizeInOut( sizeInOut, msgSize );
+rectosasp:
+		// 2. Pass to SASP
 		uint8_t ret_code = handlerSASP_receive( pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
-		msgSize = sizeInOutToInt( sizeInOut );
-		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, msgSize );
-		if ( ret_code == SASP_RET_IGNORE )
+		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+
+		switch ( ret_code )
 		{
-			printf( "BAD MESSAGE_RECEIVED\n" );
+			case SASP_RET_IGNORE:
+			{
+				printf( "BAD MESSAGE_RECEIVED\n" );
+				goto getmsg;
+				break;
+			}
+			case SASP_RET_TO_HIGHER_NEW:
+			{
+				// regular processing will be done below in the next block
+				break;
+			}
+			case SASP_RET_TO_HIGHER_REPEATED:
+			{
+				// goto ...
+				break;
+			}
+			case SASP_RET_TO_HIGHER_LAST_SEND_FAILED:
+			{
+				printf( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
+				// goto ...
+				break;
+			}
+			default:
+			{
+				// unexpected ret_code
+				printf( "Unexpected ret_code %d\n", ret_code );
+				assert( 0 );
+				break;
+			}
 		}
-		else if ( ret_code == SASP_RET_TO_HIGHER_NEW || ret_code == SASP_RET_TO_HIGHER_REPEATED || ret_code == SASP_RET_TO_HIGHER_LAST_SEND_FAILED )
+
+		// 3. pass to SAGDP a new packet
+		ret_code = handlerSAGDP_receiveNewUP( pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
+		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+
+		switch ( ret_code )
+		{
+#ifdef USED_AS_MASTER
+			case SAGDP_RET_OK:
+			{
+				printf( "master received unexpected packet. ignored\n" );
+				goto getmsg;
+				break;
+			}
+#else
+			case SAGDP_RET_SYS_CORRUPTED:
+			{
+				// TODO: reinitialize all
+				goto getmsg;
+				break;
+			}
+#endif
+			case SASP_RET_TO_HIGHER_REPEATED:
+			{
+				// goto ...
+				break;
+			}
+			default:
+			{
+				// unexpected ret_code
+				printf( "Unexpected ret_code %d\n", ret_code );
+				assert( 0 );
+				break;
+			}
+		}
+
+processcmd:
+		// 4. Process received command
+		ret_code = prepareReplyMessage( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
+		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+
+		// 5. Send results to SAGDP
+
+#if 0
+		else if ( ret_code ==  || ret_code ==  || ret_code ==  )
 		{
 			if ( ret_code == SASP_RET_TO_HIGHER_LAST_SEND_FAILED )
 			{
@@ -181,7 +248,7 @@ int main(int argc, char *argv[])
 		{
 			assert(0);
 		}
-
+#endif // 0
 	}
 
 	return 0;

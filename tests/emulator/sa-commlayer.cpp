@@ -126,13 +126,13 @@ void communicationTerminate()
    hPipe = INVALID_HANDLE_VALUE;
 }
 
-bool sendMessage( const unsigned char * buff, int size )
+uint8_t sendMessage( uint16_t* msgSize, const unsigned char * buff )
 {
    BOOL   fSuccess = FALSE; 
    DWORD  cbWritten; 
 	unsigned char sizePacked[2];
-	sizePacked[0] = size & 0xFF;
-	sizePacked[1] = (size>>8) & 0xFF;
+	sizePacked[0] = *msgSize & 0xFF;
+	sizePacked[1] = (*msgSize>>8) & 0xFF;
 
    fSuccess = WriteFile( 
       hPipe,                  // pipe handle 
@@ -144,31 +144,31 @@ bool sendMessage( const unsigned char * buff, int size )
    if ( ! fSuccess) 
    {
       printf( "WriteFile to pipe failed. GLE=%d\n", GetLastError() ); 
-      return false;
+      return COMMLAYER_RET_FAILED;
    }
 
    fSuccess = WriteFile( 
       hPipe,                  // pipe handle 
       buff,             // message 
-      size,              // message length 
+      *msgSize,              // message length 
       &cbWritten,             // bytes written 
       NULL);                  // not overlapped 
 
    if ( ! fSuccess) 
    {
       printf( "WriteFile to pipe failed. GLE=%d\n", GetLastError() ); 
-      return false;
+      return COMMLAYER_RET_FAILED;
    }
 
-   return true;
+   return COMMLAYER_RET_OK;
 }
 
-int getMessage( unsigned char * buff, int maxSize ) // returns -1 on error
+uint8_t getMessage( uint16_t* msgSize, unsigned char * buff, int maxSize ) // returns false on error
 {
    BOOL   fSuccess = FALSE; 
    DWORD  cbRead; 
-   int msgSize = -1; 
    int byteCnt = 0;
+   *msgSize = -1;
 
    do
    {
@@ -190,9 +190,9 @@ int getMessage( unsigned char * buff, int maxSize ) // returns -1 on error
 
 		  if ( byteCnt == 2 )
 		  {
-			  msgSize = buff[1];
-			  msgSize <<= 8;
-			  msgSize += buff[0];
+			  *msgSize = buff[1];
+			  *msgSize <<= 8;
+			  *msgSize += buff[0];
 			  break;
 		  }
 	   } 
@@ -205,7 +205,7 @@ int getMessage( unsigned char * buff, int maxSize ) // returns -1 on error
 	   do 
 	   { 
 	   // Read from the pipe. 
-		  if ( byteCnt >= msgSize )
+		  if ( byteCnt >= *msgSize )
 		  {
 //			  printf( "\"%s\"\n", buff );
 			  break;
@@ -229,7 +229,7 @@ int getMessage( unsigned char * buff, int maxSize ) // returns -1 on error
    }
    while (1);
 
-   return msgSize;
+   return *msgSize == -1 ? COMMLAYER_RET_FAILED : COMMLAYER_RET_OK;
 }
 
 #else // _MSC_VER

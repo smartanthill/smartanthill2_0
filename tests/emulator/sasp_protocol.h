@@ -166,7 +166,7 @@ int SASP_getSizeUsedForEncoding( uint8_t* buff )
 	}
 }
 
-void SASP_EncryptAndAddAuthenticationData( uint8_t* pid, uint8_t* sizeInOut, uint8_t* _buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, const uint8_t* nonce )
+void SASP_EncryptAndAddAuthenticationData( uint8_t* pid, uint16_t* sizeInOut, uint8_t* _buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, const uint8_t* nonce )
 {
 	// msgSize covers the size of message_byte_sequence
 	// (byte with MASTER_SLAVE_BIT) | nonce concatenation is used as a full nonce
@@ -178,9 +178,7 @@ void SASP_EncryptAndAddAuthenticationData( uint8_t* pid, uint8_t* sizeInOut, uin
 	// SEMI-FAKE IMPLEMENTATION
 	
 	// TODO: proper size handling
-	int msgSize = sizeInOut[1];
-	msgSize <<= 8;
-	msgSize += sizeInOut[0];
+	uint16_t msgSize = *sizeInOut;
 
 	uint8_t first_byte = _buffIn[0];
 	uint8_t*buffIn = _buffIn+1;
@@ -188,7 +186,7 @@ void SASP_EncryptAndAddAuthenticationData( uint8_t* pid, uint8_t* sizeInOut, uin
 
 	int i,j;
 	bool singleBlock;
-	int ins_pos = SASP_HEADER_SIZE + SASP_TAG_SIZE;
+	uint16_t ins_pos = SASP_HEADER_SIZE + SASP_TAG_SIZE;
 	int paddingAddedSize = 0;
 
 	uint8_t c = 0; // dummy tag
@@ -281,11 +279,10 @@ void SASP_EncryptAndAddAuthenticationData( uint8_t* pid, uint8_t* sizeInOut, uin
 	pid[ SASP_NONCE_SIZE - 1] = (pid[ SASP_NONCE_SIZE - 1] & 0x7F) | ( ( 1 - MASTER_SLAVE_BIT ) << 7 );
 
 	// TODO: proper size handling
-	sizeInOut[1] = ins_pos >> 8;
-	sizeInOut[0] = ins_pos & 0xFF;
+	*sizeInOut = ins_pos;
 }
 
-bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* pid, uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize )
+bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* pid, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize )
 {
 	// input data structure: header | tag | encrypted data
 	// Therefore, msgSize is expected to be SASP_HEADER_SIZE + SASP_TAG_SIZE + k * SASP_ENC_BLOCK_SIZE
@@ -297,9 +294,7 @@ bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* pid, uint8_t* sizeInOut, u
 	
 	
 	// TODO: proper size handling
-	int msgSize = sizeInOut[1];
-	msgSize <<= 8;
-	msgSize = sizeInOut[0];
+	uint16_t msgSize = *sizeInOut;
 
 
 	if ( msgSize < SASP_HEADER_SIZE + SASP_TAG_SIZE || ( msgSize - (SASP_HEADER_SIZE + SASP_TAG_SIZE) ) % SASP_ENC_BLOCK_SIZE )
@@ -309,10 +304,10 @@ bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* pid, uint8_t* sizeInOut, u
 		return false;
 	}
 
-	int enc_data_size = msgSize - (SASP_HEADER_SIZE + SASP_TAG_SIZE);
-	int byte_seq_size, byte_seq_size_remaining;
-	int ins_pos = 0;
-	int read_pos = SASP_HEADER_SIZE + SASP_TAG_SIZE;
+	uint16_t enc_data_size = msgSize - (SASP_HEADER_SIZE + SASP_TAG_SIZE);
+	uint16_t byte_seq_size, byte_seq_size_remaining;
+	uint16_t ins_pos = 0;
+	uint16_t read_pos = SASP_HEADER_SIZE + SASP_TAG_SIZE;
 
 	// load PID
 	memcpy( pid, buffIn, SASP_NONCE_SIZE );
@@ -413,13 +408,34 @@ bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* pid, uint8_t* sizeInOut, u
 	byte_seq_size++;
 
 	// TODO: proper size handling
-	sizeInOut[1] = byte_seq_size >> 8;
-	sizeInOut[0] = byte_seq_size & 0xFF;
+	*sizeInOut = byte_seq_size;
 
 	return tagOK;
 }
 
-uint8_t handlerSASP_send( bool repeated, uint8_t* pid, uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
+void DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( bool repeated, uint8_t* pid, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, const uint8_t* nonce )
+{
+	uint16_t inisz = *sizeInOut, encr_sz, decr_sz;
+	uint8_t inimsg[1024]; memcpy( inimsg, buffIn, *sizeInOut );
+	uint8_t checkedMsg[1024];
+	uint8_t dbg_stack[1024];
+	uint8_t dbg_pid[6];
+
+	// do required job
+	SASP_EncryptAndAddAuthenticationData( pid, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, nonce );
+
+	// check results
+	encr_sz = *sizeInOut;
+	decr_sz = encr_sz;
+	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( dbg_pid, &decr_sz, buffOut, checkedMsg, buffOutSize, dbg_stack, 512 );
+	assert( ipaad );
+	assert( decr_sz == inisz );
+	checkedMsg[0] &= 0x7F; // get rid of SASP bit
+	for ( int k=0; k<decr_sz; k++ )
+		assert( inimsg[k] == checkedMsg[k] );
+}
+
+uint8_t handlerSASP_send( bool repeated, uint8_t* pid, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
 {
 	if ( !repeated )
 		SASP_NonceLS_increment( data + DATA_SASP_NONCE_LS_OFFSET );
@@ -429,7 +445,7 @@ uint8_t handlerSASP_send( bool repeated, uint8_t* pid, uint8_t* sizeInOut, uint8
 	return SASP_RET_TO_LOWER;
 }
 
-uint8_t handlerSASP_receive( uint8_t* pid, uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
+uint8_t handlerSASP_receive( uint8_t* pid, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
 {
 	// 1. Perform intra-packet authentication
 	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( pid, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize );
