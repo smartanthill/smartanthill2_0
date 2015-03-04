@@ -27,7 +27,7 @@
 SmartAnthill-over-IP Protocol (SAoIP) and SmartAnthill Router
 =============================================================
 
-:Version:   v0.2.3
+:Version:   v0.2.4
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -92,7 +92,7 @@ All SAoIP flavours are using so-called "SAoIP Pre-Packet". SAoIP pre-packet is n
 
 where Headers are optional SAoIP headers; the idea of SAoIP Headers is remotely similar to that of IP optional headers. If receiver gets a message with some of Headers which are not known to it, it MUST ignore the header and SHOULD sent a TODO packet (vaguely similar to ICMP 'Parameter Problem' message) back to the sender. 
 
-The last Header is always a SAOIP_HEADER_LAST_HEADER header. Therefore, if there are no extensions, SAoIP pre-packet looks as **\| SAOIP_HEADER_LAST_HEADER \| SAoIP-Payload \|  \|**.
+The last Header is always a SAOIP_HEADER_LAST_HEADER header. Therefore, if there are no headers, SAoIP pre-packet looks as **\| SAOIP_HEADER_LAST_HEADER \| SAoIP-Payload \|  \|**.
 
 All Headers (except for LAST_HEADER, which is described below) have the following format: 
 
@@ -100,7 +100,11 @@ All Headers (except for LAST_HEADER, which is described below) have the followin
 
 where Header-Type is an Encoded-Unsigned-Int<max=2> field, Data-Length is also an Encoded-Unsigned-Int<max=2> field, and Data is a variable-length field which has Data-Length size.
 
-Currently supported extensions are:
+Currently supported headers are:
+
+**\| SAOIP_HEADER_INTERNAL \| Data-Length=0 \|**
+
+INTERNAL header indicates that this SAoIP pre-packet is internal to SAoIP, and therefore a packet MUST NOT be provided to application layer. SAoIP-Payload MUST NOT be present in packets with INTERNAL header. INTERNAL SAoIP header is normally used in conjunction with other headers (such as SAOTCP_HEADER_KEEPALIVE, described below).
 
 **\| SAOIP_HEADER_AGGREGATE_REQUEST \| Data-Length \| Destination-Flavour \| Destination-IPv6 \| Destination-Port \| Reply-ID \|**
 
@@ -157,20 +161,44 @@ SAoTCP stream decoding
 
 SAoTCP stream is decoded as "Streamed SCRAMBLED" stream as described in :ref:`sascrambling` document.
 
-To ensure proper error recovery, receiving side of SAoTCP implementation MUST forcibly break a TCP connection as soon as any of the de-SCRAMBLING operations for packets received over this TCP connection fail. This forced break of TCP connection SHOULD be implemented with RST packet sent back and without wait (see lingering options of TCP socket for implementation details). After such a forced-break, SmartAnthill Client SHOULD re-establish a TCP connection.
+To ensure proper error recovery, receiving side of SAoTCP implementation MUST forcibly break a TCP connection as soon as any of the de-SCRAMBLING operations for packets received over this TCP connection fail. See below on specifics of TCP "forced-break".
 
+SAoTCP re-establishing connection
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When SAoTCP client detects that TCP connection to the SAoTCP server is broken (or initiates break of TCP connection itself), it SHOULD re-establish TCP connection.
+
+SAoTCP forced-break
+^^^^^^^^^^^^^^^^^^^
+
+In some cases, current specification requires one side of SAoTCP communication to "force-break" underlying TCP connection. In such cases, this forced break of TCP connection SHOULD be implemented with RST packet sent back and without wait (see lingering options of TCP socket for implementation details). After such "force-break", SAoTCP client SHOULD re-establish TCP connection.
+
+SAoTCP Keep-Alive
+^^^^^^^^^^^^^^^^^
+
+Due to exponential back-off, TCP can end up in a state when TCP connection is technically alive, but retransmit timeouts are in hours, making TCP connection (while technically in connected state) practically unusable for SmartAnthill purposes. TCP keep-alive feature doesn't help (by default, even if enabled, timeout for TCP keep-alive is set to two hours). To address it, SAoTCP has it's own Keep-Alive feature.
+
+For each SAoTCP channel, there is a parameter TAU, measured in seconds. Very roughly, it specifies maximum delays which SAoTCP aims to provide. TAU MUST NOT be less than 15 seconds. By default, TAU is set to 3 minutes. 
+
+Every TAU/5 seconds, both SAoTCP server and SAoTCP client MUST send at least some packet. If there is no regular packet to be sent, SAoTCP SHOULD send a SAoTCP Keep-Alive packet. SAoTCP Keep-Alive packet is formed based on SAoTCP Keep-Alive pre-packet, which is formed as follows:
+
+* SAoTCP Keep-Alive pre-packet MUST NOT have SAoIP-Payload
+* SAoTCP Keep-Alive pre-packet MUST have SAOIP_HEADER_INTERNAL header (as described above)
+* SAoTCP Keep-Alive pre-packet MUST have SAOTCP_HEADER_KEEPALIVE header:
+
+**\| SAOTCP_HEADER_KEEPALIVE \| Data-Length=0 \|**
+
+If there is no packet for TAU seconds, SAoTCP client or SAoTCP server SHOULD force-break TCP connection. See above on specifics of TCP "forced-break".
 
 SAoTLSoTCP
 ----------
 
-SAoTLSoTCP is one of SAoIP flavours, which operates over TLS which runs over TCP. Normally, SmartAnthill Client acts as a TCP client, and SmartAnthill Device (or SmartAnthill Router) acts as a TCP server (i.e. listens on a TCP socket). SAoTLSoTCP operates exactly as SAoTCP, with the only difference being that SAoTLSoTCP uses "TLS over TCP" as it's underlying protocol. 
+SAoTLSoTCP is one of SAoIP flavours, which operates over TLS which runs over TCP. Normally, SmartAnthill Client acts as a TCP client, and SmartAnthill Device (or SmartAnthill Router) acts as a TCP server (i.e. listens on a TCP socket). SAoTLSoTCP operates exactly as SAoTCP (including SAoTCP Keep-Alive), with the only difference being that SAoTLSoTCP uses "TLS over TCP" as it's underlying protocol. 
 
 TLS Versions
 ^^^^^^^^^^^^
 
 SAoTLSoTCP implementations MUST use at least SSL v3, and SHOULD use at least version TLS 1.1. In addition, they MUST disable fallback to SSL v2.0 and below, and SHOULD disable fallback to all versions below TLS 1.1 (this includes all SSL versions, and TLS 1.0). 
-
-TODO: QoS (retransmit times?) - for all SAoIP
 
 
 SmartAnthill Router
