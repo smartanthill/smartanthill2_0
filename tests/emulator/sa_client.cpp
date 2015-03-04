@@ -95,6 +95,7 @@ int main(int argc, char *argv[])
 		return -1;
 
 	ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
+	memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 	goto entry;
 
 	// MAIN LOOP
@@ -102,15 +103,16 @@ int main(int argc, char *argv[])
 	{
 getmsg:
 		// 1. Get message from comm peer
+		printf("Waiting for a packet from server...\n");
 		ret_code = getMessage( sizeInOut, rwBuff, BUF_SIZE);
 		if ( ret_code != COMMLAYER_RET_OK )
 		{
-			printf("\n\nWAITING FOR A NEW CLIENT...\n\n");
-			if (!communicationInitializeAsServer()) // regardles of errors... quick and dirty solution so far
+			printf("\n\nWAITING FOR ESTABLISHING COMMUNICATION WITH SERVER...\n\n");
+			if (!communicationInitializeAsClient()) // regardles of errors... quick and dirty solution so far
 				return -1;
 			goto getmsg;
 		}
-		printf("Message from client received\n");
+		printf("Message from server received\n");
 
 rectosasp:
 		// 2. Pass to SASP
@@ -143,7 +145,9 @@ rectosasp:
 			case SASP_RET_TO_HIGHER_LAST_SEND_FAILED:
 			{
 				printf( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
-				// goto ...
+				ret_code = handlerSAGDP_receiveRequestResendLSP( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+				goto saspsend;
 				break;
 			}
 			default:
@@ -193,7 +197,8 @@ rectosasp:
 processcmd:
 		// 4. Process received command (yoctovm)
 		ret_code = master_continue( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
-entry:	memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+entry:	
 
 		switch ( ret_code )
 		{
@@ -264,6 +269,7 @@ entry:	memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 		}
 
 		// SASP
+saspsend:
 		ret_code = handlerSASP_send( false, pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 
@@ -312,8 +318,16 @@ sendmsg:
 			{
 				return -1;
 			}
-			printf("\nMessage replied to client\n");
+			printf("\nMessage sent to comm peer\n");
 
+
+			// for testing purposes
+			if ( !isChainContinued() )
+			{
+				ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
+				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+				goto entry;
+			}
 	}
 #if 0
 	do

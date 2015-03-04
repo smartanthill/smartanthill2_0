@@ -41,6 +41,11 @@
 #define SAGDP_P_STATUS_FIRST 1
 #define SAGDP_P_STATUS_TERMINATING 2
 
+// Pure Testing Block
+bool chainContinued;
+bool isChainContinued() {return chainContinued; }
+// End of Pure Testing Block 
+
 #if !defined USED_AS_MASTER
 
 uint8_t yocto_process( uint16_t* sizeInOut, unsigned char* buffIn, unsigned char* buffOut/*, int buffOutSize, unsigned char* stack, int stackSize*/ )
@@ -67,17 +72,16 @@ uint8_t yocto_process( uint16_t* sizeInOut, unsigned char* buffIn, unsigned char
 	first_byte &= SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING; // to use only respective bits
 	if ( first_byte == SAGDP_P_STATUS_TERMINATING )
 	{
+		chainContinued = false;
 		return YOCTOVM_OK;
 	}
 
 	// fake implementation: should this packet be terminal?
-	if ( second_byte )
-	{
-		second_byte--;
-		first_byte = SAGDP_P_STATUS_INTERMEDIATE;
-	}
-	else
+	if ( second_byte <= 1 )
 		first_byte = SAGDP_P_STATUS_TERMINATING;
+	else
+		first_byte = SAGDP_P_STATUS_INTERMEDIATE;
+	second_byte--;
 
 	// prepare outgoing packet
 	buffOut[0] = first_byte;
@@ -96,6 +100,7 @@ uint8_t yocto_process( uint16_t* sizeInOut, unsigned char* buffIn, unsigned char
 	PRINTF( "Yocto: Packet sent    : [%d][%d][0x%x%x%x%x][0x%x%x%x%x]%s\n", first_byte, second_byte, buffOut[2], buffOut[3], buffOut[4], buffOut[5], buffOut[6], buffOut[7], buffOut[8], buffOut[9], tail );
 
 	// return status
+	chainContinued = true;
 	return YOCTOVM_PASS_LOWER;
 }
 
@@ -108,9 +113,13 @@ uint8_t master_start( uint16_t* sizeInOut, unsigned char* buffIn, unsigned char*
 	// Initial number of packets in the chain is currently entered manually by a tester
 
 	uint8_t first_byte = SAGDP_P_STATUS_FIRST;
-	uint8_t second_byte = getchar() - '0';
-	if ( second_byte == 0xda )
-		second_byte = 2;
+	uint8_t second_byte = 0;
+	while ( second_byte == 0 || second_byte == '\n' )
+		second_byte = getchar();
+	if ( second_byte == 'x' )
+		return YOCTOVM_FAILED;
+	second_byte -= '0';
+	chainContinued = true;
 
 	// prepare outgoing packet
 	buffOut[0] = first_byte;
@@ -155,13 +164,17 @@ uint8_t master_continue( uint16_t* sizeInOut, unsigned char* buffIn, unsigned ch
 	}
 
 	// fake implementation: should this packet be terminal?
-	if ( second_byte )
+	if ( second_byte <= 1 )
 	{
-		second_byte--;
-		first_byte = SAGDP_P_STATUS_INTERMEDIATE;
+		first_byte = SAGDP_P_STATUS_TERMINATING;
+		chainContinued = false;
 	}
 	else
-		first_byte = SAGDP_P_STATUS_TERMINATING;
+	{
+		first_byte = SAGDP_P_STATUS_INTERMEDIATE;
+		chainContinued = true;
+	}
+	second_byte--;
 
 	// prepare outgoing packet
 	buffOut[0] = first_byte;

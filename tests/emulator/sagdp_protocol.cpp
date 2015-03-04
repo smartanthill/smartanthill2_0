@@ -55,8 +55,8 @@ uint8_t handlerSAGDP_timer( uint8_t* sizeInOut, uint8_t* buffOut, int buffOutSiz
 	uint8_t state = *( data + DATA_SAGDP_STATE_OFFSET );
 	if ( state == SAGDP_STATE_WAIT_REMOTE )
 	{
-		uint16_t lsm_size = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
-		memcpy( buffOut, lsm, lsm_size );
+		*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+		memcpy( buffOut, lsm, *sizeInOut );
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_PID; // note that PID can be changed!
 		return SAGDP_RET_TO_LOWER_REPEATED;
 	}
@@ -190,8 +190,8 @@ uint8_t handlerSAGDP_receiveRepeatedUP( uint8_t* pid, uint8_t* sizeInOut, uint8_
 	uint8_t state = *( data + DATA_SAGDP_STATE_OFFSET );
 	if ( state == SAGDP_STATE_WAIT_REMOTE )
 	{
-		uint16_t lsm_size = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
-		memcpy( buffOut, lsm, lsm_size );
+		*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+		memcpy( buffOut, lsm, *sizeInOut );
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_PID; // note that PID can be changed!
 		return SAGDP_RET_TO_LOWER_REPEATED;
 	}
@@ -202,15 +202,15 @@ uint8_t handlerSAGDP_receiveRepeatedUP( uint8_t* pid, uint8_t* sizeInOut, uint8_
 	}
 }
 
-uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
+uint8_t handlerSAGDP_receiveRequestResendLSP( uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
 {
 	// SAGDP can legitimately receive a repeated packet in wait-remote state (the other side sounds like "we have not received anything from you; please resend, only then we will probably send you something new")
 	// LSP must be resent
 	uint8_t state = *( data + DATA_SAGDP_STATE_OFFSET );
 	if ( state == SAGDP_STATE_WAIT_REMOTE )
 	{
-		uint16_t lsm_size = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
-		memcpy( buffOut, lsm, lsm_size );
+		*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+		memcpy( buffOut, lsm, *sizeInOut );
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_PID; // note that PID can be changed!
 		return SAGDP_RET_TO_LOWER_REPEATED;
 	}
@@ -253,11 +253,16 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t*
 		memcpy( writeptr, buffIn+1, *sizeInOut );
 		*sizeInOut += SAGDP_LRECEIVED_PID_SIZE;
 
+		// save a copy
+		*(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET) = *sizeInOut;
+		memcpy( lsm, buffOut, *sizeInOut );
+
 		// request set timer
 		setIniLTO( data + DATA_SAGDP_LTO_OFFSET );
 		*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
 
-		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_PID;
+//		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_PID;
+		*( data + DATA_SAGDP_STATE_OFFSET ) = packet_status == SAGDP_P_STATUS_TERMINATING ? SAGDP_STATE_IDLE : SAGDP_STATE_WAIT_PID;
 		return SAGDP_RET_TO_LOWER_NEW;
 	}
 	else if ( state == SAGDP_STATE_WAIT_LOCAL )
@@ -279,11 +284,16 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t*
 		memcpy( writeptr, buffIn+1, *sizeInOut );
 		*sizeInOut += SAGDP_LRECEIVED_PID_SIZE;
 
+		// save a copy
+		*(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET) = *sizeInOut;
+		memcpy( lsm, buffOut, *sizeInOut );
+
 		// request set timer
 		setIniLTO( data + DATA_SAGDP_LTO_OFFSET );
 		*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
 
-		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_PID;
+//		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_PID;
+		*( data + DATA_SAGDP_STATE_OFFSET ) = packet_status == SAGDP_P_STATUS_TERMINATING ? SAGDP_STATE_IDLE : SAGDP_STATE_WAIT_PID;
 		return SAGDP_RET_TO_LOWER_NEW;
 	}
 	else // invalid states
@@ -301,6 +311,10 @@ uint8_t handlerSAGDP_receivePID( uint8_t* pid, uint8_t* data )
 	{
 		memcpy( data + DATA_SAGDP_LSENT_PID_OFFSET, pid, SAGDP_LSENT_PID_SIZE );
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_REMOTE;
+		return SAGDP_RET_OK;
+	}
+	else if ( state == SAGDP_STATE_IDLE ) // ignore
+	{
 		return SAGDP_RET_OK;
 	}
 	else // invalid states

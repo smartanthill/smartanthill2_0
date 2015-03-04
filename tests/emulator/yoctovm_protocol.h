@@ -50,4 +50,8 @@ uint8_t master_start( uint16_t* sizeInOut, unsigned char* buffIn, unsigned char*
 uint8_t master_continue( uint16_t* sizeInOut, unsigned char* buffIn, unsigned char* buffOut/*, int buffOutSize, unsigned char* stack, int stackSize*/ );
 #endif // USED_AS_MASTER
 
+// Pure Testing Block
+bool isChainContinued();
+// End of Pure Testing Block 
+
 #endif // __YOCTOVM_PROTOCOL_H__
