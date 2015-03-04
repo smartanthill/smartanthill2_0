@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="siteApp" ng-controller="SiteController">
+  <head>
+    <meta charset="utf-8">
+    <title ng-bind-template="SmartAnthill: {{ currentPage || 'Error: Page not found'}}"></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+    <!-- build:css(.) styles/vendor.css -->
+    <!-- bower:css -->
+    <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css" />
+    <link rel="stylesheet" href="bower_components/angular-ui-select/dist/select.css" />
+    <link rel="stylesheet" href="bower_components/AngularJS-Toaster/toaster.css" />
+    <link rel="stylesheet" href="bower_components/components-font-awesome/css/font-awesome.css" />
+    <link rel="stylesheet" href="bower_components/ng-table/ng-table.css" />
+    <!-- endbower -->
+    <!-- endbuild -->
+    <!-- build:css(.tmp) styles/main.css -->
+    <link rel="stylesheet" href="styles/main.css">
+    <!-- endbuild -->
+  </head>
+  <body>
+    <!--[if lt IE 9]>
+      <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+    <![endif]-->
+
+    <div class="container">
+      <header>
+        <nav class="navbar navbar-inverse" role="navigation">
+          <div class="container-fluid">
+            <div class="navbar-header">
+              <a class="navbar-brand" href="#/">SmartAnthill</a>
+            </div>
+
+            <div class="collapse navbar-collapse">
+              <ul class="nav navbar-nav">
+                <li ng-class="{active: isRouteActive('/devices')}"><a href="#/devices"><i class="fa fa-gamepad fa-lg"></i>Devices</a></li>
+                <li ng-class="{active: isRouteActive('/network')}"><a href="#/network"><i class="fa fa-globe fa-lg"></i>Network</a></li>
+                <li ng-class="{active: isRouteActive('/console')}"><a href="#/console"><i class="fa fa-terminal fa-lg"></i>Console</a></li>
+                <li ng-class="{active: isRouteActive('/settings')}"><a href="#/settings"><i class="fa fa-cogs fa-lg"></i>Settings</a></li>
+              </ul>
+
+              <ul class="nav navbar-nav navbar-right">
+                <li class="dropdown">
+                  <a href="#" class="dropdown-toggle" data-toggle="dropdown">Help <span class="caret"></span></a>
+                  <ul class="dropdown-menu" role="menu">
+                    <li><a href="http://docs.smartanthill.org" target="_blank"><i class="fa fa-book"></i>&nbsp;Documentation</a></li>
+                    <li><a href="https://github.com/smartanthill/smartanthill2_0" target="_blank"><i class="fa fa-github"></i>&nbsp;Source Code</a></li>
+                    <li><a href="https://github.com/smartanthill/smartanthill2_0/issues" target="_blank"><i class="fa fa-question-circle"></i>&nbsp;Issues</a></li>
+                    <li class="divider"></li>
+                    <li><a href="http://smartanthill.org" target="_blank"><i class="fa fa-home"></i>&nbsp; Website</a></li>
+                    <li><a href="https://twitter.com/smartanthill" target="_blank"><i class="fa fa-twitter"></i>&nbsp; Twitter</a></li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+
+          </div>
+        </nav>
+      </header>
+
+      <toaster-container></toaster-container>
+
+      <div ng-view=""></div>
+
+      <footer>
+        <p>
+          <span class="glyphicon glyphicon-copyright-mark"></span> Copyright 2015, OLogN Technologies AG.
+        </p>
+      </footer>
+
+    </div>
+
+    <!-- build:js(.) scripts/vendor.js -->
+    <!-- bower:js -->
+    <script src="bower_components/angular/angular.js"></script>
+    <script src="bower_components/angular-resource/angular-resource.js"></script>
+    <script src="bower_components/angular-sanitize/angular-sanitize.js"></script>
+    <script src="bower_components/angular-animate/angular-animate.js"></script>
+    <script src="bower_components/angular-touch/angular-touch.js"></script>
+    <script src="bower_components/angular-route/angular-route.js"></script>
+    <script src="bower_components/angular-bootstrap/ui-bootstrap-tpls.js"></script>
+    <script src="bower_components/angular-ui-select/dist/select.js"></script>
+    <script src="bower_components/AngularJS-Toaster/toaster.js"></script>
+    <script src="bower_components/ng-table/ng-table.js"></script>
+    <!-- endbower -->
+    <!-- endbuild -->
+
+    <!-- build:js({.tmp,app}) scripts/scripts.js -->
+    <script src="scripts/app.js"></script>
+    <script src="scripts/directives/misc.js"></script>
+    <script src="scripts/controllers/dashboard.js"></script>
+    <script src="scripts/controllers/devices.js"></script>
+    <script src="scripts/controllers/network.js"></script>
+    <script src="scripts/controllers/console.js"></script>
+    <script src="scripts/controllers/settings.js"></script>
+    <!-- endbuild -->
+  </body>
+</html>
