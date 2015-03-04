@@ -27,7 +27,7 @@
 SmartAnthill-over-IP Protocol (SAoIP) and SmartAnthill Router
 =============================================================
 
-:Version:   v0.2.4
+:Version:   v0.2.4a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -171,7 +171,9 @@ When SAoTCP client detects that TCP connection to the SAoTCP server is broken (o
 SAoTCP forced-break
 ^^^^^^^^^^^^^^^^^^^
 
-In some cases, current specification requires one side of SAoTCP communication to "force-break" underlying TCP connection. In such cases, this forced break of TCP connection SHOULD be implemented with RST packet sent back and without wait (see lingering options of TCP socket for implementation details). After such "force-break", SAoTCP client SHOULD re-establish TCP connection.
+In some cases, current specification requires one side of SAoTCP communication to "force-break" underlying TCP connection. In such cases, this forced break of TCP connection SHOULD be implemented with RST packet sent back and without wait. After such "force-break", SAoTCP client SHOULD re-establish TCP connection.
+
+When using standard Berkeley socket API, sending RST packet (so-called "hard/abortive close") is usually achieved via specifying SO_LINGER option to setsockopt() function, with linger->l_onoff set to non-zero and linger->l_linger set to zero. 
 
 SAoTCP Keep-Alive
 ^^^^^^^^^^^^^^^^^
