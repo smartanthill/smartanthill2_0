@@ -43,7 +43,11 @@
 #define YOCTOVM_OK 1 // if terminating packet received
 #define YOCTOVM_PASS_LOWER 2
 
+#if !defined USED_AS_MASTER
 uint8_t yocto_process( uint16_t* sizeInOut, unsigned char* buffIn, unsigned char* buffOut/*, int buffOutSize, unsigned char* stack, int stackSize*/ );
-
+#else // USED_AS_MASTER
+uint8_t master_start( uint16_t* sizeInOut, unsigned char* buffIn, unsigned char* buffOut/*, int buffOutSize, unsigned char* stack, int stackSize*/ );
+uint8_t master_continue( uint16_t* sizeInOut, unsigned char* buffIn, unsigned char* buffOut/*, int buffOutSize, unsigned char* stack, int stackSize*/ );
+#endif // USED_AS_MASTER
 
 #endif // __YOCTOVM_PROTOCOL_H__

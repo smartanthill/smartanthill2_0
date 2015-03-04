@@ -35,7 +35,8 @@
 #define SASP_RET_TO_HIGHER_NEW 1 // new packet
 #define SASP_RET_TO_HIGHER_REPEATED 2 // repeated packet
 #define SASP_RET_TO_HIGHER_LAST_SEND_FAILED 3 // sending of last packet failed (for instance, old nonce)
-#define SASP_RET_TO_LOWER 4 // for error messaging
+#define SASP_RET_TO_LOWER_REGULAR 4 // for regular sending
+#define SASP_RET_TO_LOWER_ERROR 5 // for error messaging
 
 
 // sizes
@@ -276,7 +277,7 @@ void SASP_EncryptAndAddAuthenticationData( uint8_t* pid, uint16_t* sizeInOut, ui
 
 	// 6. save PID
 	memcpy( pid, nonce, SASP_NONCE_SIZE );
-	pid[ SASP_NONCE_SIZE - 1] = (pid[ SASP_NONCE_SIZE - 1] & 0x7F) | ( ( 1 - MASTER_SLAVE_BIT ) << 7 );
+	pid[ SASP_NONCE_SIZE - 1] = (pid[ SASP_NONCE_SIZE - 1] & 0x7F) | ( ( MASTER_SLAVE_BIT ) << 7 );
 
 	// TODO: proper size handling
 	*sizeInOut = ins_pos;
@@ -311,7 +312,7 @@ bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* pid, uint16_t* sizeInOut, 
 
 	// load PID
 	memcpy( pid, buffIn, SASP_NONCE_SIZE );
-	pid[ SASP_NONCE_SIZE - 1] = (pid[ SASP_NONCE_SIZE - 1] & 0x7F) | ( ( 1 - MASTER_SLAVE_BIT ) << 7 );
+	pid[ SASP_NONCE_SIZE - 1] = (pid[ SASP_NONCE_SIZE - 1] & 0x7F) | ( ( 1 - MASTER_SLAVE_BIT ) << 7 ); // of the comm peer
 
 	// FAKE IMPLEMENTATION 
 
@@ -430,9 +431,11 @@ void DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( bool repeated, uint8_t* 
 	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( dbg_pid, &decr_sz, buffOut, checkedMsg, buffOutSize, dbg_stack, 512 );
 	assert( ipaad );
 	assert( decr_sz == inisz );
+	assert( memcmp( pid, dbg_pid, 6 ) );
 	checkedMsg[0] &= 0x7F; // get rid of SASP bit
 	for ( int k=0; k<decr_sz; k++ )
 		assert( inimsg[k] == checkedMsg[k] );
+	PRINTF( "handlerSASP_send(): PID: %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 }
 
 uint8_t handlerSASP_send( bool repeated, uint8_t* pid, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
@@ -442,13 +445,14 @@ uint8_t handlerSASP_send( bool repeated, uint8_t* pid, uint16_t* sizeInOut, uint
 
 	SASP_EncryptAndAddAuthenticationData( pid, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, data+DATA_SASP_NONCE_LS_OFFSET );
 
-	return SASP_RET_TO_LOWER;
+	return SASP_RET_TO_LOWER_REGULAR;
 }
 
 uint8_t handlerSASP_receive( uint8_t* pid, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
 {
 	// 1. Perform intra-packet authentication
 	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( pid, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize );
+	PRINTF( "handlerSASP_receive(): PID: %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 	if ( !ipaad )
 	{
 		PRINTF( "handlerSASP_receive(): BAD PACKET RECEIVED\n" );
@@ -493,7 +497,7 @@ uint8_t handlerSASP_receive( uint8_t* pid, uint16_t* sizeInOut, uint8_t* buffIn,
 		sizeInOut[1] = 0;
 		SASP_EncryptAndAddAuthenticationData( pid, sizeInOut, stack, buffOut, buffOutSize, ins_ptr, stackSize-SASP_NONCE_SIZE-2, data );
 		SASP_NonceSetIntendedForSaspFlag( buffOut );
-		return SASP_RET_TO_LOWER;
+		return SASP_RET_TO_LOWER_ERROR;
 	}
 	else if ( nonceCmp == 0 )
 	{

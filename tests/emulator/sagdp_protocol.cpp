@@ -96,8 +96,9 @@ uint8_t handlerSAGDP_receiveNewUP( uint8_t* pid, uint16_t* sizeInOut, uint8_t* b
 		else // allowed combination: packet_status == SAGDP_P_STATUS_FIRST in SAGDP_STATE_IDLE
 		{
 			memcpy( data + DATA_SAGDP_LRECEIVED_PID_OFFSET, pid, SAGDP_LRECEIVED_PID_SIZE );
-			*sizeInOut -= 1 + SAGDP_LRECEIVED_PID_SIZE;
-			memcpy( buffOut, buffIn + 1 + SAGDP_LRECEIVED_PID_SIZE, *sizeInOut );
+			*sizeInOut -= SAGDP_LRECEIVED_PID_SIZE;
+			buffOut[0] = packet_status;
+			memcpy( buffOut + 1, buffIn + 1 + SAGDP_LRECEIVED_PID_SIZE, *sizeInOut-1 );
 
 			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_LOCAL;
 			return SAGDP_RET_TO_HIGHER;
@@ -117,6 +118,9 @@ uint8_t handlerSAGDP_receiveNewUP( uint8_t* pid, uint16_t* sizeInOut, uint8_t* b
 		}
 		else // allowed combination: packet_status == SAGDP_P_STATUS_INTERMEDIATE in SAGDP_STATE_WAIT_REMOTE
 		{
+			uint8_t* pidlsent = data + DATA_SAGDP_LSENT_PID_OFFSET;
+			PRINTF( "handlerSAGDP_receiveNewUP(): PID last sent         : %x%x%x%x%x%x\n", pidlsent[0], pidlsent[1], pidlsent[2], pidlsent[3], pidlsent[4], pidlsent[5] );
+			PRINTF( "handlerSAGDP_receiveNewUP(): PID reply-to in packet: %x%x%x%x%x%x\n", buffIn[1], buffIn[2], buffIn[3], buffIn[4], buffIn[5], buffIn[6] );
 			bool isreply = memcmp( buffIn + 1, data + DATA_SAGDP_LSENT_PID_OFFSET, SAGDP_LSENT_PID_SIZE ) == 0;
 			if ( !isreply ) // silently ignore
 			{
@@ -124,12 +128,16 @@ uint8_t handlerSAGDP_receiveNewUP( uint8_t* pid, uint16_t* sizeInOut, uint8_t* b
 			}
 			// for non-terminating, save packet ID
 			if ( packet_status == SAGDP_P_STATUS_INTERMEDIATE )
+			{
+				PRINTF( "handlerSAGDP_receiveHLP(): PID of packet (LRECEIVED): %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 				memcpy( data + DATA_SAGDP_LRECEIVED_PID_OFFSET, pid, SAGDP_LRECEIVED_PID_SIZE );
+			}
 			// form a packet for higher level
-			*sizeInOut -= 1 + SAGDP_LRECEIVED_PID_SIZE;
-			memcpy( buffOut, buffIn + 1 + SAGDP_LRECEIVED_PID_SIZE, *sizeInOut );
+			*sizeInOut -= SAGDP_LRECEIVED_PID_SIZE;
+			buffOut[0] = packet_status;
+			memcpy( buffOut + 1, buffIn + 1 + SAGDP_LRECEIVED_PID_SIZE, *sizeInOut - 1 );
 
-			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_LOCAL;
+			*( data + DATA_SAGDP_STATE_OFFSET ) = packet_status == SAGDP_P_STATUS_INTERMEDIATE ? SAGDP_STATE_WAIT_LOCAL : SAGDP_STATE_IDLE;
 			return SAGDP_RET_TO_HIGHER;
 		}
 #else // USED_AS_MASTER not ndefined
@@ -141,6 +149,9 @@ uint8_t handlerSAGDP_receiveNewUP( uint8_t* pid, uint16_t* sizeInOut, uint8_t* b
 		}
 		else // intermediate or terminating
 		{
+			uint8_t* pidlsent = data + DATA_SAGDP_LSENT_PID_OFFSET;
+			PRINTF( "handlerSAGDP_receiveNewUP(): PID last sent         : %x%x%x%x%x%x\n", pidlsent[0], pidlsent[1], pidlsent[2], pidlsent[3], pidlsent[4], pidlsent[5] );
+			PRINTF( "handlerSAGDP_receiveNewUP(): PID reply-to in packet: %x%x%x%x%x%x\n", buffIn[1], buffIn[2], buffIn[3], buffIn[4], buffIn[5], buffIn[6] );
 			bool isreply = memcmp( buffIn + 1, data + DATA_SAGDP_LSENT_PID_OFFSET, SAGDP_LSENT_PID_SIZE ) == 0;
 			if ( !isreply ) // silently ignore
 			{
@@ -150,12 +161,16 @@ uint8_t handlerSAGDP_receiveNewUP( uint8_t* pid, uint16_t* sizeInOut, uint8_t* b
 			}
 			// for non-terminating, save packet ID
 			if ( packet_status == SAGDP_P_STATUS_INTERMEDIATE )
+			{
+				PRINTF( "handlerSAGDP_receiveHLP(): PID of packet (LRECEIVED): %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 				memcpy( data + DATA_SAGDP_LRECEIVED_PID_OFFSET, pid, SAGDP_LRECEIVED_PID_SIZE );
+			}
 			// form a packet for higher level
-			*sizeInOut -= 1 + SAGDP_LRECEIVED_PID_SIZE;
-			memcpy( buffOut, buffIn + 1 + SAGDP_LRECEIVED_PID_SIZE, *sizeInOut );
+			*sizeInOut -= SAGDP_LRECEIVED_PID_SIZE;
+			buffOut[0] = packet_status;
+			memcpy( buffOut + 1, buffIn + 1 + SAGDP_LRECEIVED_PID_SIZE, *sizeInOut - 1 );
 
-			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_LOCAL;
+			*( data + DATA_SAGDP_STATE_OFFSET ) = packet_status == SAGDP_P_STATUS_INTERMEDIATE ? SAGDP_STATE_WAIT_LOCAL : SAGDP_STATE_IDLE;
 			return SAGDP_RET_TO_HIGHER;
 		}
 #endif
@@ -206,9 +221,9 @@ uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* sizeInOut, uint8_t* buffI
 	}
 }
 
-uint8_t handlerSAGDP_receiveHLP( uint8_t packet_status, uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
+uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
 {
-	// Important: sizeInOut is a size of the message (not including any representation of its status in the chain); returned size: sizeInOut += 1 + SAGDP_LRECEIVED_PID_SIZE
+	// Important: sizeInOut is a size of the message; returned size: sizeInOut += SAGDP_LRECEIVED_PID_SIZE
 	//
 	// there are two states when SAGDP can legitimately receive a packet from a higher level: idle (packet is first in the chain), and wait-local (any subsequent packet)
 	// the packet is processed and passed for further sending; SAGDP waits for its PID and thus transits to SAGDP_STATE_WAIT_PID
@@ -217,6 +232,8 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t packet_status, uint8_t* timeout, uint16
 	//
 
 	uint8_t state = *( data + DATA_SAGDP_STATE_OFFSET );
+	uint8_t packet_status = buffIn[0];
+
 	if ( state == SAGDP_STATE_IDLE )
 	{
 		if ( ( packet_status & SAGDP_P_STATUS_FIRST ) == 0 || ( packet_status & SAGDP_P_STATUS_TERMINATING ) )
@@ -229,10 +246,12 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t packet_status, uint8_t* timeout, uint16
 		uint8_t* writeptr = buffOut;
 		assert( ( packet_status & ( ~( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) ) == 0 ); // TODO: can we rely on sanity of the caller?
 		*(writeptr++) = ( packet_status & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) );
+		uint8_t* pid = data + DATA_SAGDP_LRECEIVED_PID_OFFSET;
+		PRINTF( "handlerSAGDP_receiveHLP(): PID reply-to (LRECEIVED): %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 		memcpy( writeptr, data + DATA_SAGDP_LRECEIVED_PID_OFFSET, SAGDP_LRECEIVED_PID_SIZE );
 		writeptr += SAGDP_LRECEIVED_PID_SIZE;
-		memcpy( writeptr, buffIn, *sizeInOut );
-		*sizeInOut += 1 + SAGDP_LRECEIVED_PID_SIZE;
+		memcpy( writeptr, buffIn+1, *sizeInOut );
+		*sizeInOut += SAGDP_LRECEIVED_PID_SIZE;
 
 		// request set timer
 		setIniLTO( data + DATA_SAGDP_LTO_OFFSET );
@@ -253,10 +272,12 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t packet_status, uint8_t* timeout, uint16
 		uint8_t* writeptr = buffOut;
 		assert( ( packet_status & ( ~( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) ) == 0 ); // TODO: can we rely on sanity of the caller?
 		*(writeptr++) = ( packet_status & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) );
+		uint8_t* pid = data + DATA_SAGDP_LRECEIVED_PID_OFFSET;
+		PRINTF( "handlerSAGDP_receiveHLP(): PID reply-to: %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 		memcpy( writeptr, data + DATA_SAGDP_LRECEIVED_PID_OFFSET, SAGDP_LRECEIVED_PID_SIZE );
 		writeptr += SAGDP_LRECEIVED_PID_SIZE;
-		memcpy( writeptr, buffIn, *sizeInOut );
-		*sizeInOut += 1 + SAGDP_LRECEIVED_PID_SIZE;
+		memcpy( writeptr, buffIn+1, *sizeInOut );
+		*sizeInOut += SAGDP_LRECEIVED_PID_SIZE;
 
 		// request set timer
 		setIniLTO( data + DATA_SAGDP_LTO_OFFSET );
@@ -272,12 +293,13 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t packet_status, uint8_t* timeout, uint16
 	}
 }
 
-uint8_t handlerSAGDP_receivePID( uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
+uint8_t handlerSAGDP_receivePID( uint8_t* pid, uint8_t* data )
 {
+	PRINTF( "handlerSAGDP_receivePID(): PID: %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 	uint8_t state = *( data + DATA_SAGDP_STATE_OFFSET );
 	if ( state == SAGDP_STATE_WAIT_PID )
 	{
-		memcpy( data + DATA_SAGDP_LSENT_PID_OFFSET, buffIn, SAGDP_LSENT_PID_SIZE );
+		memcpy( data + DATA_SAGDP_LSENT_PID_OFFSET, pid, SAGDP_LSENT_PID_SIZE );
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_REMOTE;
 		return SAGDP_RET_OK;
 	}

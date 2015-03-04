@@ -52,6 +52,8 @@
 
 // debug helpers
 
+#define DEBUG_PRINTING
+
 #ifdef DEBUG_PRINTING
 #include <stdio.h>
 #define PRINTF printf

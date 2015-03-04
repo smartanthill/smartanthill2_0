@@ -229,7 +229,7 @@ uint8_t getMessage( uint16_t* msgSize, unsigned char * buff, int maxSize ) // re
    }
    while (1);
 
-   return *msgSize == -1 ? COMMLAYER_RET_FAILED : COMMLAYER_RET_OK;
+   return *msgSize == (uint16_t)(-1) ? COMMLAYER_RET_FAILED : COMMLAYER_RET_OK;
 }
 
 #else // _MSC_VER

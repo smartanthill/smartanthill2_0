@@ -41,7 +41,7 @@
 
 // SAGDP States
 #define SAGDP_STATE_NOT_INITIALIZED 0
-#define SAGDP_STATE_IDLE 1
+#define SAGDP_STATE_IDLE 0 // TODO: implement transition from non_initialized to idle state or ensure there is no difference in states
 #define SAGDP_STATE_WAIT_PID 2
 #define SAGDP_STATE_WAIT_REMOTE 3
 #define SAGDP_STATE_WAIT_LOCAL 4
@@ -77,8 +77,8 @@ uint8_t handlerSAGDP_timer( uint8_t* sizeInOut, uint8_t* buffOut, int buffOutSiz
 uint8_t handlerSAGDP_receiveNewUP( uint8_t* pid, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data );
 uint8_t handlerSAGDP_receiveRepeatedUP( uint8_t* pid, uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
 uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
-uint8_t handlerSAGDP_receiveHLP( uint8_t packet_status, uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
-uint8_t handlerSAGDP_receivePID( uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data );
+uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
+uint8_t handlerSAGDP_receivePID( uint8_t* PID, uint8_t* data );
 
 
 #endif // __SAGDP_PROTOCOL_H__

@@ -30,33 +30,16 @@
 #include "sa-timer.h"
 #include "sasp_protocol.h"
 #include "sagdp_protocol.h"
+#include "yoctovm_protocol.h"
 #include <stdio.h> 
 
 
 #define BUF_SIZE 512
 unsigned char rwBuff[BUF_SIZE];
 unsigned char data_buff[BUF_SIZE];
+unsigned char msgLastSent[BUF_SIZE];
+uint8_t pid[ SASP_NONCE_SIZE ];
 
-
-
-
-uint8_t prepareReplyMessage( uint16_t* sizeInOut, unsigned char* buffIn, unsigned char* buffOut/*, int buffOutSize, unsigned char* stack, int stackSize*/ )
-{
-	// buffer assumes to contain an input message; interface is subject to change
-	// by now this fanction has totally fake implementation; we need something to work with
-	// anyway, in a real case there will be some kind of message source, for instance, a controlling application at Master side
-	uint16_t msgSize = *sizeInOut;
-	unsigned char flags = buffIn[0];
-	unsigned char* payload_buff = buffIn + 1;
-	printf("Preparing reply to client message: [0x%02x]\"%s\" [1+%d bytes]\n", flags, payload_buff, msgSize-1 );
-	sprintf( (char*)buffOut + 1, "Server reply; client message: [0x%02x]\"%s\" [1+%d bytes]", flags, payload_buff, msgSize-1 );
-	buffOut[0] = buffIn[0]; // just echo so far
-	int size = 0;
-	while ( (buffOut + 1)[size++] );
-	printf("Reply is about to be sent: \"%s\" [%d bytes]\n", buffOut + 1, size);
-	*sizeInOut = size+1;
-	return 1;
-}
 
 
 
@@ -70,11 +53,8 @@ int main(int argc, char *argv[])
 	uint8_t* stack = (uint8_t*)sizeInOut + 2; // first two bytes are used for sizeInOut
 	int stackSize = BUF_SIZE / 4 - 2;
 
-	uint8_t pid[ SASP_NONCE_SIZE ];
 
 	// quick simulation of a part of SAGDP responsibilities: a copy of the last message sent message
-	unsigned char msgLastSent[BUF_SIZE];
-	uint8_t sizeInOutLastSent = 0;
 
 	uint8_t ret_code;
 
@@ -105,7 +85,7 @@ getmsg:
 
 rectosasp:
 		// 2. Pass to SASP
-		uint8_t ret_code = handlerSASP_receive( pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+		ret_code = handlerSASP_receive( pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 
 		switch ( ret_code )
@@ -114,6 +94,11 @@ rectosasp:
 			{
 				printf( "BAD MESSAGE_RECEIVED\n" );
 				goto getmsg;
+				break;
+			}
+			case SASP_RET_TO_LOWER_ERROR:
+			{
+				goto sendmsg;
 				break;
 			}
 			case SASP_RET_TO_HIGHER_NEW:
@@ -162,9 +147,9 @@ rectosasp:
 				break;
 			}
 #endif
-			case SASP_RET_TO_HIGHER_REPEATED:
+			case SAGDP_RET_TO_HIGHER:
 			{
-				// goto ...
+				// regular processing will be done below in the next block
 				break;
 			}
 			default:
@@ -177,11 +162,122 @@ rectosasp:
 		}
 
 processcmd:
-		// 4. Process received command
-		ret_code = prepareReplyMessage( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
+		// 4. Process received command (yoctovm)
+		ret_code = yocto_process( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 
-		// 5. Send results to SAGDP
+		switch ( ret_code )
+		{
+			case YOCTOVM_PASS_LOWER:
+			{
+				// regular processing will be done below in the next block
+				break;
+			}
+			case YOCTOVM_OK:
+			{
+				goto getmsg;
+				break;
+			}
+			case YOCTOVM_FAILED:
+			{
+				// TODO: process reset
+				goto getmsg;
+				break;
+			}
+			default:
+			{
+				// unexpected ret_code
+				printf( "Unexpected ret_code %d\n", ret_code );
+				assert( 0 );
+				break;
+			}
+		}
+
+			
+			
+		// 5. SAGDP
+		uint8_t timer_val;
+		ret_code = handlerSAGDP_receiveHLP( &timer_val, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+
+		switch ( ret_code )
+		{
+			case SAGDP_RET_TO_LOWER_NEW:
+			{
+				// regular processing will be done below in the next block
+				// set timer
+				break;
+			}
+			case SAGDP_RET_OK: // TODO: is it possible here?
+			{
+				goto getmsg;
+				break;
+			}
+			case SAGDP_RET_TO_LOWER_REPEATED: // TODO: is it possible here?
+			{
+				// TODO: process reset
+				goto getmsg;
+				break;
+			}
+			default:
+			{
+				// unexpected ret_code
+				printf( "Unexpected ret_code %d\n", ret_code );
+				assert( 0 );
+				break;
+			}
+		}
+
+		// SASP
+		ret_code = handlerSASP_send( false, pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+
+		switch ( ret_code )
+		{
+			case SASP_RET_TO_LOWER_REGULAR:
+			{
+				// regular processing will be done below in the next block
+				break;
+			}
+			default:
+			{
+				// unexpected ret_code
+				printf( "Unexpected ret_code %d\n", ret_code );
+				assert( 0 );
+				break;
+			}
+		}
+
+		ret_code = handlerSAGDP_receivePID( pid, data_buff + DADA_OFFSET_SAGDP );
+		switch ( ret_code )
+		{
+			case SAGDP_RET_OK:
+			{
+				// regular processing will be done below in the next block
+				break;
+			}
+			case SAGDP_RET_SYS_CORRUPTED:
+			{
+				// TODO: process reset
+				goto getmsg;
+				break;
+			}
+			default:
+			{
+				// unexpected ret_code
+				printf( "Unexpected ret_code %d\n", ret_code );
+				assert( 0 );
+				break;
+			}
+		}
+
+sendmsg:
+			ret_code = sendMessage( sizeInOut, rwBuff );
+			if (ret_code != COMMLAYER_RET_OK )
+			{
+				return -1;
+			}
+			printf("\nMessage replied to client\n");
 
 #if 0
 		else if ( ret_code ==  || ret_code ==  || ret_code ==  )
