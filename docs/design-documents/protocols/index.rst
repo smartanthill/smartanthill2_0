@@ -29,7 +29,7 @@ Protocols
     :maxdepth: 2
 
     smartanthill-protocol-stack
-    yocto-vm
+    zepto-vm
     saccp
     sagdp
     sasp

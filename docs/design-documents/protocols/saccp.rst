@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.1.5
+:Version:   v0.1.5a
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -35,7 +35,7 @@ SmartAnthill Command&Control Protocol (SACCP)
 
 SACCP is a part of SmartAnthill 2.0 protocol stack. It belongs to Level 7 of OSI/ISO Network Model, and is responsible for allowing SmartAnthill Client (usually implemented by SmartAnthill Central Controller) to control SmartAnthill Device.
 
-Within SmartAnthill protocol stack, SACCP is located on top of SAGDP. On the side of SmartAnthill Device, SACCP is implemented by Yocto VM. On the side of SmartAnthill Client, SACCP is implemented by Control Program.
+Within SmartAnthill protocol stack, SACCP is located on top of SAGDP. On the side of SmartAnthill Device, SACCP is implemented by Zepto VM. On the side of SmartAnthill Client, SACCP is implemented by Control Program.
 
 As well as it's underlying protocol (which is usually SAGDP), SACCP is an asymmetric protocol; it means that behaviour of SACCP is somewhat different for SmartAnthill Device and SmartAnthill Client. For the purposes of SACCP underlying protocol,  SmartAnthill Client is considered “master device”, and SmartAnthill Device is considered “slave device”.
 
@@ -119,20 +119,19 @@ SACCP reply packets have the following structure:
 Device Pins SHOULD NOT be Addressed Directly within Execution-Layer-Program
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Execution-Layer-Program may contain EXEC instructions (see
-:ref:`sayoctovm` document for details). These EXEC instructions address a certain 'ant body part', and pass opaque data to the corresponding plugin. While the data passed to the plugin is opaque, it SHOULD NOT contain any device pins in it; which device pins are used by the plugin on this specific device, is considered a part of 'body part configuration' and is stored within MCU.
+Execution-Layer-Program may contain EXEC instructions (see :ref:`sazeptovm` document for details). These EXEC instructions address a certain 'ant body part', and pass opaque data to the corresponding plugin. While the data passed to the plugin is opaque, it SHOULD NOT contain any device pins in it; which device pins are used by the plugin on this specific device, is considered a part of 'body part configuration' and is stored within MCU.
 
 Therefore, data within EXEC instruction normally does *not* contain pins, but contains only a BODYPART-ID and an action. For example, a command to plugin which turns on connected LED, SHOULD
 look as **\|EXEC\|BODYPART-ID\|ON\|**, where ON is a 1-byte taking values '0' and '1', indicating "what to do with LED". All mappings of BODYPART-ID to pins SHOULD be described as plugin_config parameter of plugin_handler(), as described in 
 :ref:`sarefimplmcusoftarch` document.
 
-TODO: ?describe same thing in 'Yocto VM'?
+TODO: ?describe same thing in 'Zepto VM'?
 
 Execution Layer and Control Program
 -----------------------------------
 
-Whenever SmartAnthill Device receives a SACCP command packet, SACCP invokes Execution Layer  and passes received Execution-Layer-Program to it. After Execution Layer has finished it's execution, SACCP passes the reply back to the SmartAnthill Client. One example of a valid Execution Layer is Yocto VM which is described in a separate document, 
-:ref:`sayoctovm` .
+Whenever SmartAnthill Device receives a SACCP command packet, SACCP invokes Execution Layer  and passes received Execution-Layer-Program to it. After Execution Layer has finished it's execution, SACCP passes the reply back to the SmartAnthill Client. One example of a valid Execution Layer is Zepto VM which is described in a separate document, 
+:ref:`sazeptovm` .
 
 Within SmartAnthill system, Execution Layer exists only on the side of SmartAnthill Device (and not on the side of SmartAnthill Client). It's counterpart on the side of SmartAnthill Client is Control Program.
 

@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.5
+:Version:   v0.2.5a
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *document, please make sure to read it before proceeding.*
@@ -67,7 +67,7 @@ Relation between SmartAnthill protocol stack and OSI/ISO network model
 |        |              |                  |                       |                      |                        +---------------+------------+                        |
 |        |              |                  |                       |                      |                        | IP side       | SA side    |                        |
 +========+==============+==================+=======================+======================+========================+===============+============+========================+
-| 7      | Application  | SACCP            | Device Control        | Control Program      | Yocto VM               | --                         | Yocto VM               |
+| 7      | Application  | SACCP            | Device Control        | Control Program      | Zepto VM               | --                         | Zepto VM               |
 +--------+--------------+------------------+-----------------------+----------------------+------------------------+----------------------------+------------------------+
 | 6      | Presentation | --               |                       |                      |                        |                            |                        |
 +--------+--------------+------------------+-----------------------+----------------------+------------------------+----------------------------+------------------------+
@@ -98,7 +98,7 @@ Relation between SmartAnthill protocol stack and OSI/ISO network model
 
 SmartAnthill protocol stack consists of the following protocols:
 
-* **SACCP** – SmartAnthill Command&Control Protocol. Corresponds to Layer 7 of OSI/ISO network model. On the SmartAnthill Device side, is implemented by Yocto VM, which handles generic commands and routes device-specific commands to device-specific plug-ins.
+* **SACCP** – SmartAnthill Command&Control Protocol. Corresponds to Layer 7 of OSI/ISO network model. On the SmartAnthill Device side, is implemented by Zepto VM, which handles generic commands and routes device-specific commands to device-specific plug-ins.
 
 * **SAGDP** – SmartAnthill Guaranteed Delivery Protocol. Belongs to Layer 5 of OSI/ISO network model. Provides guaranteed command/reply delivery. Flow control is implemented, but is quite rudimentary (only one outstanding packet is normally allowed for each virtual link, see details below). On the other hand, SAGDP provides efficient support for scenarios such as temporary disabling receiver on the SmartAnthill Device side; such scenarios are very important to ensure energy efficiency.
 
@@ -143,8 +143,8 @@ In SmartAnthill, SACCP MUST allow sending commands with at-least-8-bytes payload
 
 * to obtain Device Capabilities information about SmartAnthill Device from SmartAnthill DB (see 
   :ref:`saoverarch` document for details) at the time of SmartAnthill Device programming or "pairing". This method is currently beyond the scope of SmartAnthill Protocols (TODO: should we add it?).
-* to obtain Device Capabilities information via Yocto VM DEVICECAPS instruction (see
-  :ref:`sayoctovm` document for details). When Client doesn't have information about Device, it's SACCP request with Yocto VM's DEVICECAPS instruction MUST be <= 8 bytes in size; Yocto VM's SACCP  reply to a DEVICECAPS instruction MAY be larger than 8 bytes if it is specified in the instruction (and if is Device itself is capable of sending it).
+* to obtain Device Capabilities information via Zepto VM DEVICECAPS instruction (see
+  :ref:`sazeptovm` document for details). When Client doesn't have information about Device, it's SACCP request with Zepto VM's DEVICECAPS instruction MUST be <= 8 bytes in size; Zepto VM's SACCP  reply to a DEVICECAPS instruction MAY be larger than 8 bytes if it is specified in the instruction (and if is Device itself is capable of sending it).
 
 One of DeviceCapabilities fields is SACCP_GUARANTEED_PAYLOAD (which is conceptually similar to MTU from IP stack, but includes header sizes to provide information which is appropriate for Layer 7). When SmartAnthill Device fills in SACCP_GUARANTEED_PAYLOAD in response to Device Capabilities request, it MUST take into account capabilities of it's L1/L2 protocol; that is, if a SmartAnthill Device supports IEEE 802.15.4 and L2 protocol which doesn't perform packet fragmentation and re-assembly, then the Device won't be able to send/receive payloads which are roughly 80 bytes in size (exact size depends on headers and needs to be calculated depending on protocol specifics), and it MUST NOT report DeviceCapabilities.SACCP_GUARANTEED_PAYLOAD which is more than this amount.
 
