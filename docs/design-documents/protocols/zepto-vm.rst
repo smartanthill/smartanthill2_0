@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.1.10a
+:Version:   v0.1.10b
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -468,8 +468,7 @@ Zepto VM-Medium adds support for registers, call stack, and parallel execution.
 
 where ZEPTOVM_OP_PARALLEL is 1-byte opcode, N-PSEUDO-THREADS is a number of "pseudo-threads" requested, 'PSEUDO-THREAD-X-INSTRUCTIONS-SIZE' is Encoded-Unsigned-Int<max=2> (as defined in :ref:`saprotostack` document) size of PSEUDO-THREAD-X-INSTRUCTIONS, and PSEUDO-THREAD-X-INSTRUCTIONS is a sequence of Zepto VM commands which belong to the pseudo-thread #X. Within PSEUDO-THREAD-X-INSTRUCTIONS, all commands of Zepto VM are allowed, with an exception of PARALLEL, EXIT and any jump instruction which leads outside of the current pseudo-thread.
 
-PARALLEL instruction starts processing of several pseudo-threads. PARALLEL instruction is considered completed when all the pseudo-threads reach the end of their respective instructions. Normally, it is implemented via state machines (see 
-:ref:`sarefimplmcusoftarch` document for details), so it is functionally equivalent to "green threads" (and not to "native threads").
+PARALLEL instruction starts processing of several pseudo-threads. PARALLEL instruction is considered completed when all the pseudo-threads reach the end of their respective instructions. Normally, it is implemented via state machines (see :ref:`sazeptoos` document for details), so it is functionally equivalent to "green threads" (and not to "native threads").
 
 When PARALLEL instruction execution is started, original "reply buffer" is "frozen" and cannot be accessed by any of the pseudo-threads; each pseudo-thread has it's own "reply buffer" which is empty at the beginning of the pseudo-thread execution. After PARALLEL instruction is completed (i.e. all pseudo-threads have been terminated), the original "reply buffer" which existed before PARALLEL instruction has started, is restored, and all the pseudo-thread "reply buffers" which existed right before after respective pseudo-threads are terminated, are added to the end of the original "reply buffer"; this allows to have instructions such as EXEC and PUSHREPLY within the pseudo-threads; this adding of pseudo-thread "reply buffers" to the end of original "reply buffer" always happens in order of pseudo-thread descriptions within the PARALLEL instruction (and is therefore does *not* depend on the race conditions between different pseudo-threads).
 
@@ -489,8 +488,7 @@ Implementation notes
 To implement Zepto VM-Medium, in addition to PC, reply-offset-stack, and expression stack as required by Zepto VM-Small, the following changes need to be made:
 
 * PC for each pseudo-threads needs to be maintained; maximum number of pseudo-threads is a ZEPTOVM_MAX_PSEUDOTHREADS parameter of Zepto VM-Medium (which is stored in SmartAnthill DB on SmartAnthill Client and reported via "Device Capabilities" request).
-* expression stack needs to be replaced with an array of expression stacks (to accommodate PARALLEL instruction); in practice, it is normally implemented by extending expression stack (say, doubling it) and keeping track of sub-expression stacks via array of offsets (with size of ZEPTOVM_MAX_PSEUDOTHREADS) within the expression stack. See 
-  :ref:`sarefimplmcusoftarch` document for details.
+* expression stack needs to be replaced with an array of expression stacks (to accommodate PARALLEL instruction); in practice, it is normally implemented by extending expression stack (say, doubling it) and keeping track of sub-expression stacks via array of offsets (with size of ZEPTOVM_MAX_PSEUDOTHREADS) within the expression stack. See :ref:`sazeptoos` document for details.
 * to support replies being pushed to "reply buffer" in parallel, an additional array of 2-byte offsets of current replies needs to be maintained, with a size of ZEPTOVM_MAX_PSEUDOTHREADS.
 
 Memory overhead

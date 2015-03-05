@@ -22,17 +22,23 @@
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE
 
-.. _sarefimplmcusoftarch:
+.. _sazeptoos:
 
-SmartAnthill Reference Implementation: MCU Software Architecture
-================================================================
+SmartAnthill Zepto OS
+=====================
 
-:Version:   v0.2.3c
+:Version:   v0.2.3e
 
-*NB: this document relies on certain terms and concepts introduced in*
-:ref:`saoverarch` *document, please make sure to read it before proceeding.*
+*NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
-SmartAnthill project is intended to operate on MCUs which are extremely resource-constrained. In particular, currently we're aiming to run SmartAnthill on MCUs with as little as 512 bytes of RAM. This makes the task of implementing SmartAnthill on such MCUs rather non-trivial. Present document aims to describe our approach to implementing SmartAnthill on MCU side. It should be noted that what is described here is merely our approach to a reference SmartAnthill implementation; it is not the only possible approach, and any other implementation which is compliant with SmartAnthill protocol specification, is welcome (as long as it can run on target MCUs and meet energy consumption and other requirements).
+SmartAnthill project is intended to operate on MCUs which are extremely resource-constrained. In particular, currently we're aiming to run SmartAnthill on MCUs with as little as 512 bytes of RAM. This makes the task of implementing SmartAnthill on such MCUs rather non-trivial. Present document aims to describe our approach to implementing SmartAnthill on MCU side, named 'Zepto OS'. It should be noted that what is described here is merely our approach to a reference SmartAnthill implementation; it is not the only possible approach, and any other implementation which is compliant with SmartAnthill protocol specification, is welcome (as long as it can run on target MCUs and meet energy consumption and other requirements).
+
+"Zepto OS" is a network-oriented secure operating system, intended to run on extremely resource-constrained devices. It implements necessary parts of :ref:`saprotostack`, including :ref:`sazeptovm`.
+
+“Zepto” is a prefix in the metric system (SI system) which denotes a factor of 10^-21. This is 10^12 times less than “nano”, a billion times less than “pico”, and a million times less than “femto”. As of now, 'zepto' is the second smallest prefix in SI system (we didn't take the smallest one, because there is always room for improvement).
+
+Zepto VM is the smallest OS we were able to think about, with an emphasis of using as less RAM as possible. Nevertheless, it has network support (more specifically, it supports necessary parts of :ref:`saprotostack`), strong encryption support (both AES-128 and Speck), and "green threads". All of this in as low as 512 bytes of RAM. To achieve it, Zepto OS has quite a specific design.
+
 
 .. contents::
 
@@ -45,17 +51,15 @@ Assumptions (=mother of all screw-ups)
 4. This limit is usually per-writing-location and EEPROM writings are done with some granularity which is less than whole EEPROM size. One expected granularity size is 32 bits-per-write; if EEPROM on MCU has such a granularity, it means that even we're writing one byte, we're actually writing 4 bytes (and reducing the number of available writes for all 4 bytes).
 5. There are MCUs out there which allow to switch to “sleep” mode
 6. During such “MCU sleep”, RAM may or may not be preserved (NB: if RAM is preserved, it usually means higher energy consumption)
-7. During such “MCU sleep”, receiver may or may not be turned off (NB: this issue is addressed in detail in 
-   :ref:`saprotostack` and 
-   :ref:`sagdp` documents).
+7. During such “MCU sleep”, receiver may or may not be turned off (NB: this issue is addressed in detail in :ref:`saprotostack` and :ref:`sagdp` documents).
 
 Layers and Libraries
 --------------------
 
 Reference implementation of SmartAnthill on MCU is divided into two parts:
 
-* SmartAnthill reference implementation as such (the same for all MCUs)
-* MCU- and device-dependent libraries
+* Zepto OS kernel (the same for all MCUs)
+* MCU- and device-dependent libraries (Hardware Abstraction Layer, HAL)
 
 Memory Architecture
 -------------------
@@ -71,7 +75,7 @@ SmartAnthill memory architecture is designed as follows:
 "Main Loop" a.k.a. "Main Pump"
 ------------------------------
 
-SmartAnthill on MCU is implemented as a "main loop", which calls different functions and performs other tasks as follows:
+Zepto OS is implemented as a "main loop", which calls different functions and performs other tasks as follows:
 
 * first, "main loop" calls a function [TODO](void\* data, uint16 datasz), which waits for an incoming packet and fills *data* with an incoming packet. This function is a part of device-specific library. If incoming packets can arrive while the "main loop" is running, i.e. asynchronously, they need to be handled in a separate buffer and handled separately, but otherwise "main loop" can pass a pointer to the beginning of the “command buffer” to this function call.
 * then, "main loop" calls one “receiving” protocol handler (such as “receiving” portion of SADLP-CAN), with the following prototype: **protocol_handler(const void\* src,uint16 src_size,void\* dst, uint16\* dst_size);** In fact, for this call "main loop" uses both *src* and *dst* which reside within “command buffer”, *src* coming from the “command buffer” start, and *dst=src+src_size*.
@@ -202,6 +206,26 @@ EEPROM Handling
 ---------------
 
 TODO
+
+
+Running on top of another OS
+----------------------------
+
+Zepto OS is written in generic C code, and can be compiled and run as an application on top of another OS, as long as Zepto OS HAL is implemented. As of now, Zepto OS can run on top of Windows, we also plan to add support for Linux and Mac OS X.
+
+Hardware Abstraction Layer (HAL)
+--------------------------------
+
+HAL is intended to enable Zepto OS to run on different architectures. Below is the list of functions which HAL needs to provide:
+
+TODO: error codes
+
+**int get_incoming_packet(void\* buf, size_t* bufSize);**
+
+where bufSize is an inout parameter, taking original buffer size and returning packet size back. get_incoming_packet() returns error code (TODO: codes)
+
+TODO: more and more and more
+
 
 Plugin API
 ----------

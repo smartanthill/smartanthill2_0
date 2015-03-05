@@ -28,5 +28,5 @@ Reference Implementation
 .. toctree::
     :maxdepth: 2
 
-    MCU Software Architecture <mcu/smartanthill-reference-mcu-software-architecture>
+    Zepto OS <zepto-os>
 
