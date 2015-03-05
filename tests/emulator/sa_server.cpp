@@ -48,21 +48,21 @@ int main(int argc, char *argv[])
 	printf("STARTING SERVER...\n");
 	printf("==================\n\n");
 
-	// TODO: revise approach below
+	// in this preliminary implementation all memory segments are kept separately
+	// All memory objects are listed below
+	// TODO: revise memory management
 	uint16_t* sizeInOut = (uint16_t*)(rwBuff + 3 * BUF_SIZE / 4);
 	uint8_t* stack = (uint8_t*)sizeInOut + 2; // first two bytes are used for sizeInOut
 	int stackSize = BUF_SIZE / 4 - 2;
+	uint8_t timer_val;
+	uint16_t wake_time;
+	// TODO: revise time/timer management
 
-
-	// quick simulation of a part of SAGDP responsibilities: a copy of the last message sent message
 
 	uint8_t ret_code;
 
 
-	bool   fConnected = false;
-
-
-	printf("\nPipe Server: Main thread awaiting client connection... %s\n" );
+	printf("\nAwaiting client connection... \n" );
 	if (!communicationInitializeAsServer())
 		return -1;
 
@@ -73,20 +73,43 @@ int main(int argc, char *argv[])
 	{
 getmsg:
 		// 1. Get message from comm peer
-		ret_code = getMessage( sizeInOut, rwBuff, BUF_SIZE);
+/*		ret_code = getMessage( sizeInOut, rwBuff, BUF_SIZE);
 		if ( ret_code != COMMLAYER_RET_OK )
 		{
 			printf("\n\nWAITING FOR A NEW CLIENT...\n\n");
 			if (!communicationInitializeAsServer()) // regardles of errors... quick and dirty solution so far
 				return -1;
 			goto getmsg;
+		}*/
+		ret_code = tryGetMessage( sizeInOut, rwBuff, BUF_SIZE);
+		while ( ret_code == COMMLAYER_RET_PENDING )
+		{
+			waitForTimeQuantum();
+			if ( timer_val && getTime() >= wake_time )
+			{
+				printf( "no reply received; the last message (if any) will be resent by timer\n" );
+				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+				goto saspsend;
+				break;
+			}
+			ret_code = tryGetMessage( sizeInOut, rwBuff, BUF_SIZE);
+		}
+		if ( ret_code != COMMLAYER_RET_OK )
+		{
+			printf("\n\nWAITING FOR ESTABLISHING COMMUNICATION WITH SERVER...\n\n");
+			if (!communicationInitializeAsClient()) // regardles of errors... quick and dirty solution so far
+				return -1;
+			goto getmsg;
 		}
 		printf("Message from client received\n");
+		printf( "size: %d\n", *sizeInOut );
 
 rectosasp:
 		// 2. Pass to SASP
 		ret_code = handlerSASP_receive( pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+		printf( "size: %d\n", *sizeInOut );
 
 		switch ( ret_code )
 		{
@@ -108,13 +131,18 @@ rectosasp:
 			}
 			case SASP_RET_TO_HIGHER_REPEATED:
 			{
-				// goto ...
+				printf( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
+				ret_code = handlerSAGDP_receiveRepeatedUP( &timer_val, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+				goto saspsend;
 				break;
 			}
 			case SASP_RET_TO_HIGHER_LAST_SEND_FAILED:
 			{
 				printf( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
-				// goto ...
+				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+				goto saspsend;
 				break;
 			}
 			default:
@@ -127,8 +155,9 @@ rectosasp:
 		}
 
 		// 3. pass to SAGDP a new packet
-		ret_code = handlerSAGDP_receiveNewUP( pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
+		ret_code = handlerSAGDP_receiveNewUP( &timer_val, pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+		printf( "size: %d\n", *sizeInOut );
 
 		switch ( ret_code )
 		{
@@ -165,6 +194,7 @@ processcmd:
 		// 4. Process received command (yoctovm)
 		ret_code = yocto_process( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+		printf( "size: %d\n", *sizeInOut );
 
 		switch ( ret_code )
 		{
@@ -199,6 +229,7 @@ processcmd:
 		uint8_t timer_val;
 		ret_code = handlerSAGDP_receiveHLP( &timer_val, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+		printf( "size: %d\n", *sizeInOut );
 
 		switch ( ret_code )
 		{
@@ -229,8 +260,10 @@ processcmd:
 		}
 
 		// SASP
+saspsend:
 		ret_code = handlerSASP_send( false, pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+		printf( "size: %d\n", *sizeInOut );
 
 		switch ( ret_code )
 		{

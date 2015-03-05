@@ -48,13 +48,20 @@ void cappedExponentiateLTO( uint8_t* lto )
 	*lto = (uint8_t)_lto;
 }
 
+void cancelLTO( uint8_t* lto )
+{
+	*lto = 0;
+}
 
 
-uint8_t handlerSAGDP_timer( uint8_t* sizeInOut, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
+
+uint8_t handlerSAGDP_timer( uint8_t* timeout, uint8_t* sizeInOut, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
 {
 	uint8_t state = *( data + DATA_SAGDP_STATE_OFFSET );
 	if ( state == SAGDP_STATE_WAIT_REMOTE )
 	{
+		cappedExponentiateLTO( data + DATA_SAGDP_LTO_OFFSET );
+		*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
 		*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
 		memcpy( buffOut, lsm, *sizeInOut );
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_PID; // note that PID can be changed!
@@ -66,7 +73,7 @@ uint8_t handlerSAGDP_timer( uint8_t* sizeInOut, uint8_t* buffOut, int buffOutSiz
 	}
 }
 
-uint8_t handlerSAGDP_receiveNewUP( uint8_t* pid, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
+uint8_t handlerSAGDP_receiveNewUP( uint8_t* timeout, uint8_t* pid, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
 {
 	// sizeInOut represents a size of UP packet
 	// A new packet can come either in idle (beginning of a chain), or in wait-remote (continuation of a chain) state.
@@ -95,6 +102,8 @@ uint8_t handlerSAGDP_receiveNewUP( uint8_t* pid, uint16_t* sizeInOut, uint8_t* b
 #endif
 		else // allowed combination: packet_status == SAGDP_P_STATUS_FIRST in SAGDP_STATE_IDLE
 		{
+			cancelLTO( data + DATA_SAGDP_LTO_OFFSET );
+			*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
 			memcpy( data + DATA_SAGDP_LRECEIVED_PID_OFFSET, pid, SAGDP_LRECEIVED_PID_SIZE );
 			*sizeInOut -= SAGDP_LRECEIVED_PID_SIZE;
 			buffOut[0] = packet_status;
@@ -137,6 +146,8 @@ uint8_t handlerSAGDP_receiveNewUP( uint8_t* pid, uint16_t* sizeInOut, uint8_t* b
 			buffOut[0] = packet_status;
 			memcpy( buffOut + 1, buffIn + 1 + SAGDP_LRECEIVED_PID_SIZE, *sizeInOut - 1 );
 
+			cancelLTO( data + DATA_SAGDP_LTO_OFFSET );
+			*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
 			*( data + DATA_SAGDP_STATE_OFFSET ) = packet_status == SAGDP_P_STATUS_INTERMEDIATE ? SAGDP_STATE_WAIT_LOCAL : SAGDP_STATE_IDLE;
 			return SAGDP_RET_TO_HIGHER;
 		}
@@ -170,6 +181,8 @@ uint8_t handlerSAGDP_receiveNewUP( uint8_t* pid, uint16_t* sizeInOut, uint8_t* b
 			buffOut[0] = packet_status;
 			memcpy( buffOut + 1, buffIn + 1 + SAGDP_LRECEIVED_PID_SIZE, *sizeInOut - 1 );
 
+			cancelLTO( data + DATA_SAGDP_LTO_OFFSET );
+			*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
 			*( data + DATA_SAGDP_STATE_OFFSET ) = packet_status == SAGDP_P_STATUS_INTERMEDIATE ? SAGDP_STATE_WAIT_LOCAL : SAGDP_STATE_IDLE;
 			return SAGDP_RET_TO_HIGHER;
 		}
@@ -183,13 +196,15 @@ uint8_t handlerSAGDP_receiveNewUP( uint8_t* pid, uint16_t* sizeInOut, uint8_t* b
 	}
 }
 
-uint8_t handlerSAGDP_receiveRepeatedUP( uint8_t* pid, uint8_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
+uint8_t handlerSAGDP_receiveRepeatedUP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
 {
 	// SAGDP can legitimately receive a repeated packet in wait-remote state (the other side sounds like "we have not received anything from you; please resend, only then we will probably send you something new")
 	// LSP must be resent
 	uint8_t state = *( data + DATA_SAGDP_STATE_OFFSET );
 	if ( state == SAGDP_STATE_WAIT_REMOTE )
 	{
+		cappedExponentiateLTO( data + DATA_SAGDP_LTO_OFFSET );
+		*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
 		*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
 		memcpy( buffOut, lsm, *sizeInOut );
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_PID; // note that PID can be changed!
@@ -202,13 +217,15 @@ uint8_t handlerSAGDP_receiveRepeatedUP( uint8_t* pid, uint8_t* sizeInOut, uint8_
 	}
 }
 
-uint8_t handlerSAGDP_receiveRequestResendLSP( uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
+uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
 {
 	// SAGDP can legitimately receive a repeated packet in wait-remote state (the other side sounds like "we have not received anything from you; please resend, only then we will probably send you something new")
 	// LSP must be resent
 	uint8_t state = *( data + DATA_SAGDP_STATE_OFFSET );
 	if ( state == SAGDP_STATE_WAIT_REMOTE )
 	{
+		cappedExponentiateLTO( data + DATA_SAGDP_LTO_OFFSET );
+		*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
 		*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
 		memcpy( buffOut, lsm, *sizeInOut );
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_PID; // note that PID can be changed!

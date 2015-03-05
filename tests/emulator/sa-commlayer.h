@@ -31,12 +31,14 @@
 // RET codes
 #define COMMLAYER_RET_FAILED 0 // not authenticated, etc
 #define COMMLAYER_RET_OK 1 // new packet
+#define COMMLAYER_RET_PENDING 2
 
 
 bool communicationInitializeAsServer();
 bool communicationInitializeAsClient();
 void communicationTerminate();
 uint8_t sendMessage( uint16_t* msgSize, const unsigned char * buff );
-uint8_t getMessage( uint16_t* msgSize, unsigned char * buff, int maxSize );
+uint8_t getMessage( uint16_t* msgSize, unsigned char * buff, int maxSize ); // returns when a packet received
+uint8_t tryGetMessage(uint16_t* msgSize, unsigned char * buff, int maxSize); // returns immediately, but a packet reception is not guaranteed
 
 #endif // __SA_COMMLAYER_H__

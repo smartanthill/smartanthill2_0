@@ -31,14 +31,16 @@
 
 #include <Windows.h>
 
+#define TIME_FACTOR 500
+
 void waitForTimeQuantum()
 {
-	Sleep(1);
+	Sleep(TIME_FACTOR);
 }
 
 unsigned short getTime()
 {
-	return (unsigned short)( GetTickCount() );
+	return (unsigned short)( GetTickCount() / TIME_FACTOR ); // 100 ms
 }
 
 #endif

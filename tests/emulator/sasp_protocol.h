@@ -130,7 +130,9 @@ int SASP_calcComplementarySize( int iniSize, int requiredSize )
 
 int SASP_encodeSize( int size, uint8_t* buff )
 {
-	if ( size < 128 )
+	if ( size == 0 )
+		return 0;
+	else if ( size < 128 )
 	{
 		buff[ 0 ] = size;
 		return 1; 
@@ -193,14 +195,18 @@ void SASP_EncryptAndAddAuthenticationData( uint8_t* pid, uint16_t* sizeInOut, ui
 	uint8_t c = 0; // dummy tag
 
 	// 1. Calculate and encode complementary size; Form the first block
-	int compl_size = SASP_calcComplementarySize( msgSize + 1, msgSize + 1 );
+	uint16_t compl_size = SASP_calcComplementarySize( msgSize + 1, msgSize + 1 );
+	uint16_t encoding_size = SASP_encodeSize( compl_size, stack+1 );
 	stack[0] = first_byte;
 	if ( compl_size )
+	{
 		stack[0] |= 0x80;
+	}
 	else
+	{
 		stack[0] &= 0x7F;
-	int encoding_size = SASP_encodeSize( compl_size, stack+1 );
-	if ( msgSize >= SASP_ENC_BLOCK_SIZE-1-encoding_size )
+	}
+	if ( msgSize > SASP_ENC_BLOCK_SIZE-1-encoding_size )
 	{
 		singleBlock = false;
 		memcpy( stack+1+encoding_size, buffIn, SASP_ENC_BLOCK_SIZE-1-encoding_size );
@@ -254,7 +260,7 @@ void SASP_EncryptAndAddAuthenticationData( uint8_t* pid, uint16_t* sizeInOut, ui
 	}
 
 	// 3. process forced padding (if any); note: if present, it will be a multiple of a block size
-	int paddingSizeRemaining = compl_size - paddingAddedSize - 1;
+	int paddingSizeRemaining = compl_size == 0 ? 0 : compl_size - paddingAddedSize - 1;
 	assert( paddingSizeRemaining % SASP_ENC_BLOCK_SIZE == 0 );
 	for ( j=0; j<paddingSizeRemaining/SASP_ENC_BLOCK_SIZE; j++ )
 	{
@@ -318,7 +324,8 @@ bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* pid, uint16_t* sizeInOut, 
 
 	int i, j;
 	uint8_t c = 0;
-	int compl_size = 0;
+	uint16_t compl_size;
+	uint16_t sizeUsedForSizeEnc;
 	bool tagOK = true;
 
 	// 1. decrypt the first block to find out payload size
@@ -334,9 +341,17 @@ bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* pid, uint16_t* sizeInOut, 
 	ins_pos += 1;
 
 	if ( stack[0] & 0x80 )
+	{
 		compl_size = SASP_decodeSize( stack + 1 );
-	int sizeUsedForSizeEnc = SASP_getSizeUsedForEncoding( stack + 1 );
-	byte_seq_size = enc_data_size - compl_size - 1;
+		sizeUsedForSizeEnc = SASP_getSizeUsedForEncoding( stack + 1 );
+		byte_seq_size = enc_data_size - compl_size - 1;
+	}
+	else
+	{
+		compl_size = 0;
+		sizeUsedForSizeEnc = 0;
+		byte_seq_size = enc_data_size - 1;
+	}
 	byte_seq_size_remaining = byte_seq_size;
 
 	if ( byte_seq_size_remaining <= SASP_ENC_BLOCK_SIZE - 1 - sizeUsedForSizeEnc )
@@ -443,7 +458,8 @@ uint8_t handlerSASP_send( bool repeated, uint8_t* pid, uint16_t* sizeInOut, uint
 	if ( !repeated )
 		SASP_NonceLS_increment( data + DATA_SASP_NONCE_LS_OFFSET );
 
-	SASP_EncryptAndAddAuthenticationData( pid, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, data+DATA_SASP_NONCE_LS_OFFSET );
+//	SASP_EncryptAndAddAuthenticationData( pid, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, data+DATA_SASP_NONCE_LS_OFFSET );
+	DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( repeated, pid, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, data+DATA_SASP_NONCE_LS_OFFSET );
 
 	return SASP_RET_TO_LOWER_REGULAR;
 }
