@@ -133,13 +133,13 @@ getmsg:
 			goto getmsg;
 		}
 		printf("Message from server received\n");
-		printf( "size: %d\n", *sizeInOut );
+		printf( "ret: %d; size: %d\n", ret_code, *sizeInOut );
 
 rectosasp:
 		// 2. Pass to SASP
 		ret_code = handlerSASP_receive( pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
-		printf( "size: %d\n", *sizeInOut );
+		printf( "SASP1:  ret: %d; size: %d\n", ret_code, *sizeInOut );
 
 		switch ( ret_code )
 		{
@@ -185,9 +185,9 @@ rectosasp:
 		}
 
 		// 3. pass to SAGDP a new packet
-		ret_code = handlerSAGDP_receiveNewUP( &timer_val, pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
+		ret_code = handlerSAGDP_receiveNewUP( &timer_val, pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
-		printf( "size: %d\n", *sizeInOut );
+		printf( "SAGDP1: ret: %d; size: %d\n", ret_code, *sizeInOut );
 
 		switch ( ret_code )
 		{
@@ -211,6 +211,10 @@ rectosasp:
 				// regular processing will be done below, but we need to jump over 
 				break;
 			}
+			case SAGDP_RET_TO_LOWER_REPEATED:
+			{
+				goto saspsend;
+			}
 			default:
 			{
 				// unexpected ret_code
@@ -224,7 +228,7 @@ processcmd:
 		// 4. Process received command (yoctovm)
 		ret_code = master_continue( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
-		printf( "size: %d\n", *sizeInOut );
+		printf( "YOCTO:  ret: %d; size: %d\n", ret_code, *sizeInOut );
 entry:	
 
 		switch ( ret_code )
@@ -259,7 +263,7 @@ entry:
 		// 5. SAGDP
 		ret_code = handlerSAGDP_receiveHLP( &timer_val, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
-		printf( "size: %d\n", *sizeInOut );
+		printf( "SAGDP2: ret: %d; size: %d\n", ret_code, *sizeInOut );
 
 		switch ( ret_code )
 		{
@@ -288,7 +292,7 @@ entry:
 saspsend:
 		ret_code = handlerSASP_send( false, pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
-		printf( "size: %d\n", *sizeInOut );
+		printf( "SASP2: ret: %d; size: %d\n", ret_code, *sizeInOut );
 
 		switch ( ret_code )
 		{
@@ -307,6 +311,7 @@ saspsend:
 		}
 
 		ret_code = handlerSAGDP_receivePID( pid, data_buff + DADA_OFFSET_SAGDP );
+		printf( "SAGDP3: ret: %d; size: %d\n", ret_code, *sizeInOut );
 		switch ( ret_code )
 		{
 			case SAGDP_RET_OK:
@@ -331,6 +336,7 @@ saspsend:
 
 sendmsg:
 		if ( rand() % 2 )
+//		if ( 1 )
 		{
 			ret_code = sendMessage( sizeInOut, rwBuff );
 			if (ret_code != COMMLAYER_RET_OK )

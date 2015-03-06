@@ -42,9 +42,10 @@
 // SAGDP States
 #define SAGDP_STATE_NOT_INITIALIZED 0
 #define SAGDP_STATE_IDLE 0 // TODO: implement transition from non_initialized to idle state or ensure there is no difference in states
-#define SAGDP_STATE_WAIT_PID 2
-#define SAGDP_STATE_WAIT_REMOTE 3
-#define SAGDP_STATE_WAIT_LOCAL 4
+#define SAGDP_STATE_WAIT_FIRST_PID 2
+#define SAGDP_STATE_WAIT_NEXT_PID 3
+#define SAGDP_STATE_WAIT_REMOTE 4
+#define SAGDP_STATE_WAIT_LOCAL 5
 
 
 // packet statuses
@@ -52,8 +53,8 @@
 #define SAGDP_P_STATUS_FIRST 1
 #define SAGDP_P_STATUS_TERMINATING 2
 #define SAGDP_P_STATUS_ERROR_MSG ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING )
-#define SAGDP_P_STATUS_REQUESTED_RESEND 4
-#define SAGDP_P_STATUS_MASK ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING | SAGDP_P_STATUS_REQUESTED_RESEND )
+#define SAGDP_P_STATUS_NO_RESEND 4
+#define SAGDP_P_STATUS_MASK ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING | SAGDP_P_STATUS_NO_RESEND )
 
 
 // sizes
@@ -67,14 +68,16 @@
 #define DATA_SAGDP_SIZE (1+SAGDP_LRECEIVED_PID_SIZE+SAGDP_LSENT_PID_SIZE+SAGDP_LTO_SIZE+2)
 #define DATA_SAGDP_STATE_OFFSET 0 // SAGDP state
 #define DATA_SAGDP_LRECEIVED_PID_OFFSET 1 // last received packet unique identifier
-#define DATA_SAGDP_LSENT_PID_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE ) // last sent packet ID
-#define DATA_SAGDP_LTO_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LSENT_PID_SIZE ) // timer value
-#define DATA_SAGDP_LSM_SIZE_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LSENT_PID_SIZE + SAGDP_LTO_SIZE ) // last sent packet size
+#define DATA_SAGDP_FIRST_LSENT_PID_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE ) // last sent packet ID
+#define DATA_SAGDP_NEXT_LSENT_PID_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE ) // last sent packet ID
+#define DATA_SAGDP_LTO_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LSENT_PID_SIZE ) // timer value
+#define DATA_SAGDP_LSM_SIZE_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LSENT_PID_SIZE + SAGDP_LTO_SIZE ) // last sent packet size
+//#define DATA_SAGDP_ALREADY_REPLIED_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LSENT_PID_SIZE + SAGDP_LTO_SIZE + 2 ) // already replied flag
 
 
 // handlers
-uint8_t handlerSAGDP_timer( uint8_t* timeout, uint8_t* sizeInOut, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
-uint8_t handlerSAGDP_receiveNewUP( uint8_t* timeout, uint8_t* pid, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data );
+uint8_t handlerSAGDP_timer( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
+uint8_t handlerSAGDP_receiveNewUP( uint8_t* timeout, uint8_t* pid, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
 uint8_t handlerSAGDP_receiveRepeatedUP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
 uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
 uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );

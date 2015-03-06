@@ -455,7 +455,7 @@ void DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( bool repeated, uint8_t* 
 
 uint8_t handlerSASP_send( bool repeated, uint8_t* pid, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
 {
-	if ( !repeated )
+//	if ( !repeated )
 		SASP_NonceLS_increment( data + DATA_SASP_NONCE_LS_OFFSET );
 
 //	SASP_EncryptAndAddAuthenticationData( pid, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, data+DATA_SASP_NONCE_LS_OFFSET );
