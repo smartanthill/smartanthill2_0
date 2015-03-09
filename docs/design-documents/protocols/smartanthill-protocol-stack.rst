@@ -27,10 +27,9 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.5a
+:Version:   v0.2.6
 
-*NB: this document relies on certain terms and concepts introduced in*
-:ref:`saoverarch` *document, please make sure to read it before proceeding.*
+*NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
 SmartAnthill protocol stack is intended to provide communication services between SmartAnthill Clients and SmartAnthill Devices, allowing SmartAnthill Clients to control SmartAnthill Devices. These communication services are implemented as a request-response services within OSI/ISO network model.
 
@@ -67,20 +66,21 @@ Relation between SmartAnthill protocol stack and OSI/ISO network model
 |        |              |                  |                       |                      |                        +---------------+------------+                        |
 |        |              |                  |                       |                      |                        | IP side       | SA side    |                        |
 +========+==============+==================+=======================+======================+========================+===============+============+========================+
-| 7      | Application  | SACCP            | Device Control        | Control Program      | Zepto VM               | --                         | Zepto VM               |
+| 7      | Application  | Zepto VM         | Device Control        | Control Program      | Zepto VM               | --                         | Zepto VM               |
 +--------+--------------+------------------+-----------------------+----------------------+------------------------+----------------------------+------------------------+
-| 6      | Presentation | --               |                       |                      |                        |                            |                        |
+| 6      | Presentation | SACCP            | Command/Reply         | SACCP                | SACCP                  | --                         | SACCP                  |
+|        |              |                  | Handling              |                      |                        |                            |                        |
 +--------+--------------+------------------+-----------------------+----------------------+------------------------+----------------------------+------------------------+
 | 5      | Session      | SAGDP            | Guaranteed            | SAGDP ("Master")     | SAGDP ("Slave")        | --                         | SAGDP ("Slave")        |
 |        |              |                  | Delivery              |                      |                        |                            |                        |
 |        |              +------------------+-----------------------+----------------------+------------------------+----------------------------+------------------------+
 |        |              | SASP             | Encryption and        | SASP                 | SASP                   | SASP (optional)            | SASP                   |
 |        |              |                  | Authentication        |                      |                        |                            |                        |
-+--------+--------------+------------------+-----------------------+----------------------+------------------------+----------------------------+------------------------+
-| 4      | Transport    | SAoIP [1]_       | Transport over IP     | SAoIP                | SAoIP                  | SAoIP                      | --                     |
-|        |              |                  | Networks              |                      |                        |                            |                        |
-|        |              +------------------+-----------------------+----------------------+------------------------+---------------+------------+                        |
-|        |              | TCP or UDP       | As usual for TCP/UDP  | TCP or UDP           | TCP or UDP             | TCP or UDP    | --         |                        |
++--------+--------------+------------------+-----------------------+----------------------+------------------------+---------------+------------+------------------------+
+| 4      | Transport    | SAoIP [1]_       | Transport over IP     | SAoIP                | SAoIP                  | SAoIP         | --         | --                     |
+|        |              |                  | Networks              |                      |                        |               |            |                        |
+|        |              +------------------+-----------------------+----------------------+------------------------+---------------+            |                        |
+|        |              | TCP or UDP       | As usual for TCP/UDP  | TCP or UDP           | TCP or UDP             | TCP or UDP    |            |                        |
 |        |              |                  |                       |                      |                        |               |            |                        |
 +--------+--------------+------------------+-----------------------+----------------------+------------------------+---------------+            |                        |
 | 3      | Network      | IP               | As usual for IP       | IP                   | IP                     | IP            |            |                        |
@@ -98,7 +98,9 @@ Relation between SmartAnthill protocol stack and OSI/ISO network model
 
 SmartAnthill protocol stack consists of the following protocols:
 
-* **SACCP** – SmartAnthill Command&Control Protocol. Corresponds to Layer 7 of OSI/ISO network model. On the SmartAnthill Device side, is implemented by Zepto VM, which handles generic commands and routes device-specific commands to device-specific plug-ins.
+* **Zepto VM**. Essentially a byte-code interpreter, where byte-code is optimized for exteremely resource-constrained devices. Zepto VM handles generic commands and routes device-specific commands to device-specific plug-ins.
+
+* **SACCP** – SmartAnthill Command&Control Protocol. Corresponds to Layer 7 of OSI/ISO network model. 
 
 * **SAGDP** – SmartAnthill Guaranteed Delivery Protocol. Belongs to Layer 5 of OSI/ISO network model. Provides guaranteed command/reply delivery. Flow control is implemented, but is quite rudimentary (only one outstanding packet is normally allowed for each virtual link, see details below). On the other hand, SAGDP provides efficient support for scenarios such as temporary disabling receiver on the SmartAnthill Device side; such scenarios are very important to ensure energy efficiency.
 
@@ -141,10 +143,8 @@ Packet Size Guarantees, DEVICECAPS instruction, SACCP_GUARANTEED_PAYLOAD, and Fr
 
 In SmartAnthill, SACCP MUST allow sending commands with at-least-8-bytes payload; all underlying protocols MUST support it (taking into account appropriate header sizes, so, for example, SASP MUST be able to pass at least 8_bytes+SACCP_headers+SAGDP_headers as payload). If Client needs to send a command which is larger than 8 bytes, it SHOULD obtain information about device capabilities, before doing it. Currently, SmartAnthill provides two ways to do it:
 
-* to obtain Device Capabilities information about SmartAnthill Device from SmartAnthill DB (see 
-  :ref:`saoverarch` document for details) at the time of SmartAnthill Device programming or "pairing". This method is currently beyond the scope of SmartAnthill Protocols (TODO: should we add it?).
-* to obtain Device Capabilities information via Zepto VM DEVICECAPS instruction (see
-  :ref:`sazeptovm` document for details). When Client doesn't have information about Device, it's SACCP request with Zepto VM's DEVICECAPS instruction MUST be <= 8 bytes in size; Zepto VM's SACCP  reply to a DEVICECAPS instruction MAY be larger than 8 bytes if it is specified in the instruction (and if is Device itself is capable of sending it).
+* to obtain Device Capabilities information about SmartAnthill Device from SmartAnthill DB (see :ref:`saoverarch` document for details) at the time of SmartAnthill Device programming or "pairing". This method is currently beyond the scope of SmartAnthill Protocols (TODO: should we add it?).
+* to obtain Device Capabilities information via Zepto VM DEVICECAPS instruction (see :ref:`sazeptovm` document for details). When Client doesn't have information about Device, it's SACCP request with Zepto VM's DEVICECAPS instruction MUST be <= 8 bytes in size; Zepto VM's SACCP  reply to a DEVICECAPS instruction MAY be larger than 8 bytes if it is specified in the instruction (and if is Device itself is capable of sending it).
 
 One of DeviceCapabilities fields is SACCP_GUARANTEED_PAYLOAD (which is conceptually similar to MTU from IP stack, but includes header sizes to provide information which is appropriate for Layer 7). When SmartAnthill Device fills in SACCP_GUARANTEED_PAYLOAD in response to Device Capabilities request, it MUST take into account capabilities of it's L1/L2 protocol; that is, if a SmartAnthill Device supports IEEE 802.15.4 and L2 protocol which doesn't perform packet fragmentation and re-assembly, then the Device won't be able to send/receive payloads which are roughly 80 bytes in size (exact size depends on headers and needs to be calculated depending on protocol specifics), and it MUST NOT report DeviceCapabilities.SACCP_GUARANTEED_PAYLOAD which is more than this amount.
 
@@ -262,6 +262,11 @@ In most cases, SmartAnthill Protocol Stack uses SmartAnthill Encoded-\*-Int<max=
 In such cases, SmartAnthill uses **SmartAnthill Endianness**, which is **LITTLE-ENDIAN**.
 
 *Rationale for using LITTLE-ENDIAN encoding (rather than "network byte order" which is traditionally big-endian) is based on the observation that the most resource-constrained MPUs out of target group (namely PIC and AVR8), are little-endian. For them, the difference of not doing conversion between protocol-order and MPU-order might be important; as the other MPUs are not that much constrained, we don't expect the cost of conversion to be significant. In other words, this LITTLE-ENDIAN decision to favours poorer-resource MPUs at the cost of richer-resource MPUs.*
+
+SmartAnthill Bitfields
+^^^^^^^^^^^^^^^^^^^^^^
+
+In some cases, SmartAnthill Protocols use bitfields; in such cases, notation such as \| Bitfield-1, Bitfield2 \| is interpreted as that Bitfield-1 occupies most significant bits of the field, and Bitfield-2 occupies least significant bits of the field. 
 
 Layering remarks
 ----------------

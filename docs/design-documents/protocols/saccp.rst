@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.1.5b
+:Version:   v0.2
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -35,7 +35,7 @@ SmartAnthill Command&Control Protocol (SACCP)
 
 SACCP is a part of SmartAnthill 2.0 protocol stack. It belongs to Level 7 of OSI/ISO Network Model, and is responsible for allowing SmartAnthill Client (usually implemented by SmartAnthill Central Controller) to control SmartAnthill Device.
 
-Within SmartAnthill protocol stack, SACCP is located on top of SAGDP. On the side of SmartAnthill Device, SACCP is implemented by Zepto VM. On the side of SmartAnthill Client, SACCP is implemented by Control Program.
+Within SmartAnthill protocol stack, SACCP is located on top of SAGDP. On the side of SmartAnthill Device, on top of SACCP there is Zepto VM. On the side of SmartAnthill Client, on top of SACCP is Control Program.
 
 As well as it's underlying protocol (which is usually SAGDP), SACCP is an asymmetric protocol; it means that behaviour of SACCP is somewhat different for SmartAnthill Device and SmartAnthill Client. For the purposes of SACCP underlying protocol,  SmartAnthill Client is considered “master device”, and SmartAnthill Device is considered “slave device”.
 
@@ -51,15 +51,13 @@ The underlying protocol of SACCP should support the concept of “packet chain�
 Packet Chains
 -------------
 
-All interactions in SACCP are considered as “packet chains” (see
-:ref:`saprotostack` document for more details). With "packet chains", one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever SACCP issues a packet to an underlying protocol, it MUST specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication.
+All interactions in SACCP are considered as “packet chains” (see :ref:`saprotostack` document for more details). With "packet chains", one of the parties initiates communication by sending a packet P1, another party responds with a packet P2, then first party may respond to P2 with P3 and so on. Whenever SACCP issues a packet to an underlying protocol, it MUST specify whether a packet is a first, intermediate, or last within a “packet chain” (using 'is-first' and 'is-last' flags; note that due to “rules of engagement” described below, 'is-first' and 'is-last' flags are inherently incompatible, which MAY be relied on by implementation). This information allows underlying protocol to arrange for proper retransmission if some packets are lost during communication.
 
 
 Handling of Fatal Errors
 ------------------------
 
-SACCP is built under the assumption that in case of any inconsistency between SmartAnthill Client and SmartAnthill Device, it is SmartAnthill Client which is right (see 
-:ref:`saprotostack` document for more details). Keeping this in mind, SACCP underlying protocol MUST detect any fatal inconsistencies in the protocol (one example of such inconsistency is authenticated packet which is out-of-chain-order), and MUST invoke re-initialization of the SmartAnthill Device in this case. It is done regardless of the SACCP state and layers above SACCP, and MAY be done without notifying SACCP or any layers above the SACCP.
+SACCP is built under the assumption that in case of any inconsistency between SmartAnthill Client and SmartAnthill Device, it is SmartAnthill Client which is right (see :ref:`saprotostack` document for more details). Keeping this in mind, implementation of SACCP underlying protocol on the SmartAnthill Device side MUST detect any fatal inconsistencies in the protocol (one example of such inconsistency is authenticated packet which is out-of-chain-order), and MUST invoke re-initialization of the SmartAnthill Device in this case. It is done regardless of the SACCP state and layers above SACCP, and MAY be done without notifying SACCP or any layers above the SACCP.
 
 Layering remarks
 ----------------
@@ -94,6 +92,16 @@ To ensure correct operation of an underlying protocol, there are certain rules (
 
    As long as the “rules of engagement” above are obeyed, and SACCP properly informs an underlying protocol whether each packet it sends, is first, intermediary, or last in the chain, retransmission correctness can be provided by an underlying protocol, and SACCP doesn't need to care about it.
 
+SACCP Checksum
+--------------
+
+To re-use the same code which is used for SASP anyway, SACCP uses the following checksum algorithm:
+
+* split input into 12-byte blocks; if there is an incomplete block, pad it with zeros
+* calculate CBC-MAC on these blocks, using Speck-96 (with a 96-bit block), with a pre-defined Speck-96 key, where each byte of the pre-defined key is 0xA5. 
+* calculated CBC-MAC represents 96 bits (12 bytes) of checksum
+* starting from the beginning of the 96-bit (12-byte) checksum, take as many bytes as necessary (up to 12)
+
 SACCP Packets
 -------------
 
@@ -103,18 +111,52 @@ SACCP packets are divided into SACCP command packets (from SmartAnthill Client t
 SACCP Command Packets
 ^^^^^^^^^^^^^^^^^^^^^
 
-SACCP command packets have the following structure:
+SACCP command packets can be one of the following:
 
-**\| Execution-Layer-Program \|**
+**\| SACCP_NEW_PROGRAM, Reserved \| Execution-Layer-Program \|**
+
+where SACCP_NEW_PROGRAM is a 4-bit constant, Reserved is a 4-bit field which MUST consist of zeros (otherwise SACCP returns SACCP_ERROR_INVALID_FORMAT), and Execution-Layer-Program is variable-length program.
+
+NEW_PROGRAM command packet indicates that Execution-Layer-Program (normally - Zepto VM program) is requested to be executed on the SmartAnthill Device.
+
+**\| SACCP_REPEAT_OLD_PROGRAM, Checksum-Length \| Checksum \|**
+
+where SACCP_REPEAT_OLD_PROGRAM is a 4-bit constant, Checksum-Length is a 4-bit length of Checksum field (Checksum-Length MUST be >= 4 and MUST be <= 12, if it is not - SACCP returns SACCP_ERROR_INVALID_FORMAT error), Checksum has length of Checksum-Length, and is calculated as SACCP Checksum which is described above.
+
+OLD_PROGRAM command packet indicates that the Execution-Layer program which is already in memory of SmartAnthill Device, needs to be repeated. Checksum field is used to ensure that perceptions of the "program which is already in memory" are the same for SmartAnthill Client and SmartAnthill Device (inconsistencies are possible is several scenarios, such as two SmartAnthill Clients working with the same SmartAnthill Device, accidental reboot of the SmartAnthill Device, and so on). If Checksum does not match the program within SmartAnthill Device, SACCP returns SACCP_ERROR_OLD_PROGRAM_CHECKSUM_DOESNT_MATCH error.
+
+**\| SACCP_REUSE_OLD_PROGRAM, Checksum-Length \| Checksum \| Fragments \|** TODO: New-Checksum just in case?
+
+where SACCP_REUSE_OLD_PROGRAM is a 4-bit constant, Checksum-Length and Checksum are similar to those in SACCP_REPEAT_OLD_PROGRAM, and Fragments is a sequence of fragments.
+
+SACCP_REUSE_OLD_PROGRAM is used when existing program is mostly the same, but there are some differences. When processing it, SACCP goes through the fragments, and appends data within (or referred to by) the fragment, to the new program, in a sense "assembling" new program from verbatim fragments, and from reference-to-old-program fragments.
+
+SACCP Reuse Fragments
+'''''''''''''''''''''
+
+Each of the fragments in SACCP_REUSE_OLD_PROGRAM command packet is one of the following:
+
+**\| SACCP_REUSE_FRAME_VERBATIM \| Fragment-Length \| Fragment \|**
+
+where SACCP_REUSE_FRAME_VERBATIM is a 1-byte constant, Fragment-Length is Encoded-Size<max=2> field, and Fragment has size of Fragment-Length. TODO: Truncated-Encoded-Size (also for FRAME_REFERENCE)?
+
+**\| SACCP_REUSE_FRAME_REFERENCE \| Fragment-Length \| Fragment-Offset \|**
+
+where SACCP_REUSE_FRAME_REFERENCE is a 1-byte constant, Fragment-Length is Encoded-Size<max=2> field, and Fragment-Offset is Encoded-Size<max=2> field, indicating offset of the fragment within existing program. 
 
 
 SACCP Reply Packets
-^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
 
-SACCP reply packets have the following structure:
+SACCP reply packets can be one of the following:
 
-**| Execution-Layer-Reply |**
+**| SACCP_OK \| Execution-Layer-Reply |**
 
+where SACCP_OK is 1-byte constant, and Execution-Layer-Reply is variable-length field.
+
+**| Saccp-Error-Code \|**
+
+where Saccp-Error-Code is a 1-byte field, which takes one of the following values: SACCP_ERROR_INVALID_FORMAT, or SACCP_ERROR_OLD_PROGRAM_CHECKSUM_DOESNT_MATCH.
 
 Device Pins SHOULD NOT be Addressed Directly within Execution-Layer-Program
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -129,8 +171,7 @@ TODO: ?describe same thing in 'Zepto VM'?
 Execution Layer and Control Program
 -----------------------------------
 
-Whenever SmartAnthill Device receives a SACCP command packet, SACCP invokes Execution Layer  and passes received Execution-Layer-Program to it. After Execution Layer has finished it's execution, SACCP passes the reply back to the SmartAnthill Client. One example of a valid Execution Layer is Zepto VM which is described in a separate document, 
-:ref:`sazeptovm` .
+Whenever SmartAnthill Device receives a SACCP command packet, SACCP invokes Execution Layer  and passes received (or calculated as described above) Execution-Layer-Program to it. After Execution Layer has finished it's execution, SACCP passes the reply back to the SmartAnthill Client. One example of a valid Execution Layer is Zepto VM which is described in a separate document, :ref:`sazeptovm` .
 
 Within SmartAnthill system, Execution Layer exists only on the side of SmartAnthill Device (and not on the side of SmartAnthill Client). It's counterpart on the side of SmartAnthill Client is Control Program.
 
