@@ -27,7 +27,7 @@
 SmartAnthill Security Protocol (SASP)
 =====================================
 
-:Version:   v0.1.3d
+:Version:   v0.2
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -224,7 +224,6 @@ For its operations SASP uses the following data:
 
 - Nonce Lower Watermark (NLW)
 - Nonce to use For Sending (NFS)
-- Last Received Packet Signature (LRPS)
 
 
 7. Events
@@ -233,29 +232,19 @@ For its operations SASP uses the following data:
 There are three events that SASP processes: 
 
  1. receiving a SASP packet from the communication peer
- 2. receiving a packet  from a higher level protocol (HLP packet) where high-level protocol specifies it is a New packet, and
- 3. receiving a packet  from a higher level protocol (HLP packet) where high-level protocol specifies it is a Repeated packet.
+ 2. receiving a packet  from a higher level protocol (HLP packet)
 
-7.1. Receiving an HLP packet as New
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+7.1. Receiving an HLP packet
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A packet from a higher level protocol is received with a status "New". After this packet is encrypted and authentication data is added using a new nonce, a resulting SASP packet is to be passed to the communication peer (using underlying protocol).
+A packet from a higher level protocol is received. After this packet is encrypted and authentication data is added using a new nonce, a resulting SASP packet is to be passed to the communication peer (using underlying protocol).
 
-7.2. Receiving an HLP packet as Repeated
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-A packet from a higher level protocol is received with a status "Repeated". In this case SASP MUST ensure that the SASP packet which it sends, is exactly the same as the previous packet. It MAY be achieved using any of the following:
-
-* SASP itself keeps a copy of the previous packet, and validates that the one received from higher level protocol, is the same as the previous one
-* higher-level protocol keeps a copy of the previous packet, and guarantees to SASP that it is the same packet as the previous one; in this case SASP MAY generate the SASP packet, based on the packet from higher-level protocol, and using [TODO:NFS or NFS-1?] as nonce.
-
-7.3. Receiving a SASP packet
+7.2. Receiving a SASP packet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A SASP packet from the communication peer is received (via underlying protocol). A packet can be:
 
   * valid new packet, which means that the packet data passed validation process, and packet nonce VP is greater than the Nonce Lower Watermark;
-  * valid repeated packet, a copy of the last received packet;
   * old-nonce packet, an otherwise valid packet with a nonce VP less than the Nonce Lower Watermark, which means either de-synchronization in communication, or an attack attempt
   * packet with Error "Old Nonce" Message (intended for SASP itself)
   * invalid packet, in particular, corrupted, an attacker's packet, etc.
@@ -268,18 +257,12 @@ A SASP packet from the communication peer is received (via underlying protocol).
 
 To process events the protocol should be in either "idle" state Details of processing are placed below.
 
-8.1. Receiving an HLP packet as New
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+8.1. Receiving an HLP packet
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 NFS is incremented. HLP packet is encrypted and authenticated using current value of NFS to form a SASP packet. This SASP packet is sent to the communication peer using underlying protocol.
 
-8.2. Receiving an HLP packet as Repeated
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-HLP packet is encrypted and authenticated using current value of NFS, that is, with a value that has been used while the original packet was sent. This SASP packet is sent to the communication peer using underlying protocol.
-
-
-8.3. Receiving a SASP packet
+8.2. Receiving a SASP packet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 On receipt of a SASP packet, first, an intra-packet authentication is performed as follows:
@@ -298,12 +281,7 @@ Then:
 
      + if packets other than Error Old Nonce Message: packet nonce VP is compared to the Nonce Lower Watermark (NLW). Three cases are possible:
 
-        * if nonce VP is less than NLW: a packet with Error Old Nonce Message is prepared with the lowest possible valid nonce set to a current value of NLW; the packet is authenticated and sent to the communication peer.
-        * if nonce VP is equal to NLW: a repeated packet is received: packet signature is compared to LRPS.
-
-            + if packet signature is not equal to LRPS: a potential for an attacker's packet; the packet is silently dropped;
-            + if packet signature is equal to LRPS: an HLP packet with payload of the received packet is passed to the higher level protocol with status "repeated"
-
+        * if nonce VP is less than or equal to NLW: a packet with Error Old Nonce Message is prepared with the lowest possible valid nonce set to a current value of NLW; the packet is authenticated and sent to the communication peer.        
         * if nonce VP is greater than NLW: a new packet is received: NLW is set to the value of nonce VP of the received packet; LRPS is set to packet signature; an HLP packet with payload of the received packet is passed to the higher level protocol with status "new".
 
 TODO!: sending packets (encryption etc.)
