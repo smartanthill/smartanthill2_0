@@ -78,7 +78,7 @@ uint8_t handlerSAGDP_timer( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buff
 		*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
 		*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
 		memcpy( buffOut, lsm, *sizeInOut );
-		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_NEXT_PID; // note that PID can be changed!
+		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_NEXT_PID_THEN_WR; // note that PID can be changed!
 		return SAGDP_RET_TO_LOWER_REPEATED;
 	}
 	else // other states: ignore
@@ -87,7 +87,7 @@ uint8_t handlerSAGDP_timer( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buff
 	}
 }
 
-uint8_t handlerSAGDP_receiveNewUP( uint8_t* timeout, uint8_t* pid, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
+uint8_t handlerSAGDP_receiveNewUP( uint8_t* timeout, uint8_t* pid, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
 {
 	// sizeInOut represents a size of UP packet
 	// A new packet can come either in idle (beginning of a chain), or in wait-remote (continuation of a chain) state.
@@ -103,17 +103,109 @@ uint8_t handlerSAGDP_receiveNewUP( uint8_t* timeout, uint8_t* pid, uint16_t* siz
 		{
 			// TODO: process
 		}
-		else if ( packet_status != SAGDP_P_STATUS_FIRST ) // unexpected state; silently ignore
+		else if ( packet_status != SAGDP_P_STATUS_FIRST )
 		{
-			PRINTF( "SAGDP OK: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
-			return SAGDP_RET_OK; // just ignore
+//			PRINTF( "SAGDP OK: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
+//			return SAGDP_RET_OK; // just ignore
+			uint8_t* pidlsent_first = data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET;
+			uint8_t* pidlsent_last = data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET;
+			PRINTF( "handlerSAGDP_receiveNewUP(): PID last sent first   : %x%x%x%x%x%x\n", pidlsent_first[0], pidlsent_first[1], pidlsent_first[2], pidlsent_first[3], pidlsent_first[4], pidlsent_first[5] );
+			PRINTF( "handlerSAGDP_receiveNewUP(): PID reply-to in packet: %x%x%x%x%x%x\n", buffIn[1], buffIn[2], buffIn[3], buffIn[4], buffIn[5], buffIn[6] );
+			PRINTF( "handlerSAGDP_receiveNewUP(): PID last sent last    : %x%x%x%x%x%x\n", pidlsent_last[0], pidlsent_last[1], pidlsent_last[2], pidlsent_last[3], pidlsent_last[4], pidlsent_last[5] );
+			bool isold = pid_compare( buffIn + 1, data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET ) < 0;
+			if ( isold )
+			{
+				PRINTF( "SAGDP OK: state = %d, packet_status = %d; isold\n", state, packet_status );
+				if ( packet_status ==  SAGDP_P_STATUS_INTERMEDIATE )
+				{
+					// re-send LSP
+					*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+					memcpy( buffOut, lsm, *sizeInOut );
+					return SAGDP_RET_TO_LOWER_REPEATED;
+				}
+				else
+				{
+					assert( packet_status ==  SAGDP_P_STATUS_TERMINATING );
+					return SAGDP_RET_OK; // ignored
+				}
+				return handlerSAGDP_receiveRepeatedUP( timeout, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, data, lsm );
+			}
+			bool isreply = is_pid_in_range( buffIn + 1, data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET, data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET );
+			if ( !isreply ) // silently ignore
+			{
+				PRINTF( "SAGDP OK: CORRRUPTED: state = %d, packet_status = %d, !isreply\n", state, packet_status );
+				return SAGDP_RET_OK;
+			}
+			// for non-terminating, save packet ID
+			if ( packet_status == SAGDP_P_STATUS_INTERMEDIATE )
+			{
+				return SAGDP_RET_OK; // ignored
+			}
+			else
+			{
+				assert( packet_status ==  SAGDP_P_STATUS_TERMINATING );
+				return SAGDP_RET_OK; // ignored
+			}
 		}
 #else // USED_AS_MASTER not ndefined
-		if ( packet_status != SAGDP_P_STATUS_FIRST ) // invalid states
+		if ( packet_status == SAGDP_P_STATUS_ERROR_MSG ) // unexpected at slave's side
 		{
 			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
 			PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
 			return SAGDP_RET_SYS_CORRUPTED;
+		}
+		if ( packet_status != SAGDP_P_STATUS_FIRST )
+		{
+//			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
+//			PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
+//			return SAGDP_RET_SYS_CORRUPTED;
+			uint8_t* pidlsent_first = data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET;
+			uint8_t* pidlsent_last = data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET;
+			PRINTF( "handlerSAGDP_receiveNewUP(): PID last sent first   : %x%x%x%x%x%x\n", pidlsent_first[0], pidlsent_first[1], pidlsent_first[2], pidlsent_first[3], pidlsent_first[4], pidlsent_first[5] );
+			PRINTF( "handlerSAGDP_receiveNewUP(): PID reply-to in packet: %x%x%x%x%x%x\n", buffIn[1], buffIn[2], buffIn[3], buffIn[4], buffIn[5], buffIn[6] );
+			PRINTF( "handlerSAGDP_receiveNewUP(): PID last sent last    : %x%x%x%x%x%x\n", pidlsent_last[0], pidlsent_last[1], pidlsent_last[2], pidlsent_last[3], pidlsent_last[4], pidlsent_last[5] );
+			bool isold = pid_compare( buffIn + 1, data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET ) < 0;
+			if ( isold )
+			{
+				PRINTF( "SAGDP OK: state = %d, packet_status = %d; isold\n", state, packet_status );
+				if ( packet_status ==  SAGDP_P_STATUS_INTERMEDIATE )
+				{
+					// re-send LSP
+					*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+					memcpy( buffOut, lsm, *sizeInOut );
+					return SAGDP_RET_TO_LOWER_REPEATED;
+				}
+				else
+				{
+					assert( packet_status ==  SAGDP_P_STATUS_TERMINATING );
+					// TODO: send an error message to a communication partner
+					*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
+					PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
+					return SAGDP_RET_SYS_CORRUPTED;
+				}
+				return handlerSAGDP_receiveRepeatedUP( timeout, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, data, lsm );
+			}
+			bool isreply = is_pid_in_range( buffIn + 1, data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET, data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET );
+			if ( !isreply ) // silently ignore
+			{
+				// TODO: send an error message to a communication partner
+				*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
+				PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
+				return SAGDP_RET_SYS_CORRUPTED;
+			}
+			// for non-terminating, save packet ID
+			if ( packet_status == SAGDP_P_STATUS_INTERMEDIATE )
+			{
+				// TODO: send an error message to a communication partner
+				*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
+				PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
+				return SAGDP_RET_SYS_CORRUPTED;
+			}
+			else
+			{
+				assert( packet_status ==  SAGDP_P_STATUS_TERMINATING );
+				return SAGDP_RET_OK; // ignored
+			}
 		}
 #endif
 		else // allowed combination: packet_status == SAGDP_P_STATUS_FIRST in SAGDP_STATE_IDLE
@@ -237,7 +329,7 @@ uint8_t handlerSAGDP_receiveNewUP( uint8_t* timeout, uint8_t* pid, uint16_t* siz
 	}
 }
 
-uint8_t handlerSAGDP_receiveRepeatedUP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
+uint8_t handlerSAGDP_receiveRepeatedUP( uint8_t* timeout, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
 {
 	// SAGDP can legitimately receive a repeated packet in wait-remote state (the other side sounds like "we have not received anything from you; please resend, only then we will probably send you something new")
 	// LSP must be resent
@@ -253,7 +345,27 @@ uint8_t handlerSAGDP_receiveRepeatedUP( uint8_t* timeout, uint16_t* sizeInOut, u
 			*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
 			memcpy( buffOut, lsm, *sizeInOut );
 			buffOut[0] |= SAGDP_P_STATUS_NO_RESEND;
-			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_NEXT_PID; // note that PID can be changed!
+			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_NEXT_PID_THEN_WR; // note that PID can be changed!
+			return SAGDP_RET_TO_LOWER_REPEATED;
+		}
+		else
+		{
+			PRINTF( "SAGDP OK: CORRRUPTED: state = %d, packet_status = %d\n", state, sizeInOut[0] & 3 );
+			return SAGDP_RET_OK;
+		}
+	}
+	else if ( state == SAGDP_STATE_IDLE )
+	{
+//		if ( *(data+DATA_SAGDP_ALREADY_REPLIED_OFFSET) == 0 )
+		if ( ( buffIn[0] & SAGDP_P_STATUS_NO_RESEND ) == 0 )
+		{
+//			*(data+DATA_SAGDP_ALREADY_REPLIED_OFFSET) = 1;
+			cappedExponentiateLTO( data + DATA_SAGDP_LTO_OFFSET );
+			*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
+			*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+			memcpy( buffOut, lsm, *sizeInOut );
+			buffOut[0] |= SAGDP_P_STATUS_NO_RESEND;
+			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_NEXT_PID_THEN_IDLE; // note that PID can be changed!
 			return SAGDP_RET_TO_LOWER_REPEATED;
 		}
 		else
@@ -269,7 +381,7 @@ uint8_t handlerSAGDP_receiveRepeatedUP( uint8_t* timeout, uint16_t* sizeInOut, u
 	}
 }
 
-uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
+uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
 {
 	// SAGDP can legitimately receive a repeated packet in wait-remote state (the other side sounds like "we have not received anything from you; please resend, only then we will probably send you something new")
 	// LSP must be resent
@@ -280,7 +392,16 @@ uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint16_t* sizeIn
 		*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
 		*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
 		memcpy( buffOut, lsm, *sizeInOut );
-		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_NEXT_PID; // note that PID can be changed!
+		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_NEXT_PID_THEN_WR; // note that PID can be changed!
+		return SAGDP_RET_TO_LOWER_REPEATED;
+	}
+	if ( state == SAGDP_STATE_IDLE )
+	{
+		cappedExponentiateLTO( data + DATA_SAGDP_LTO_OFFSET );
+		*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
+		*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+		memcpy( buffOut, lsm, *sizeInOut );
+		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_NEXT_PID_THEN_IDLE; // note that PID can be changed!
 		return SAGDP_RET_TO_LOWER_REPEATED;
 	}
 	else // invalid states
@@ -290,7 +411,7 @@ uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint16_t* sizeIn
 	}
 }
 
-uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
+uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
 {
 	// Important: sizeInOut is a size of the message; returned size: sizeInOut += SAGDP_LRECEIVED_PID_SIZE
 	//
@@ -331,7 +452,7 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t*
 		*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
 
 //		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_PID;
-		*( data + DATA_SAGDP_STATE_OFFSET ) = packet_status == SAGDP_P_STATUS_TERMINATING ? SAGDP_STATE_IDLE : SAGDP_STATE_WAIT_FIRST_PID;
+		*( data + DATA_SAGDP_STATE_OFFSET ) = packet_status == SAGDP_P_STATUS_TERMINATING ? SAGDP_STATE_WAIT_FIRST_PID_THEN_IDLE : SAGDP_STATE_WAIT_FIRST_PID_THEN_WR;
 //		*(data+DATA_SAGDP_ALREADY_REPLIED_OFFSET) = 0;
 		return SAGDP_RET_TO_LOWER_NEW;
 	}
@@ -363,7 +484,7 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t*
 		*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
 
 //		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_PID;
-		*( data + DATA_SAGDP_STATE_OFFSET ) = packet_status == SAGDP_P_STATUS_TERMINATING ? SAGDP_STATE_IDLE : SAGDP_STATE_WAIT_FIRST_PID;
+		*( data + DATA_SAGDP_STATE_OFFSET ) = packet_status == SAGDP_P_STATUS_TERMINATING ? SAGDP_STATE_WAIT_FIRST_PID_THEN_IDLE : SAGDP_STATE_WAIT_FIRST_PID_THEN_WR;
 //		*(data+DATA_SAGDP_ALREADY_REPLIED_OFFSET) = 0;
 		return SAGDP_RET_TO_LOWER_NEW;
 	}
@@ -378,21 +499,30 @@ uint8_t handlerSAGDP_receivePID( uint8_t* pid, uint8_t* data )
 {
 	PRINTF( "handlerSAGDP_receivePID(): PID: %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 	uint8_t state = *( data + DATA_SAGDP_STATE_OFFSET );
-	if ( state == SAGDP_STATE_WAIT_FIRST_PID )
+	if ( state == SAGDP_STATE_WAIT_FIRST_PID_THEN_WR )
 	{
 		memcpy( data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET, pid, SAGDP_LSENT_PID_SIZE );
 		memcpy( data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET, pid, SAGDP_LSENT_PID_SIZE );
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_REMOTE;
 		return SAGDP_RET_OK;
 	}
-	if ( state == SAGDP_STATE_WAIT_NEXT_PID )
+	if ( state == SAGDP_STATE_WAIT_NEXT_PID_THEN_WR )
 	{
 		memcpy( data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET, pid, SAGDP_LSENT_PID_SIZE );
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_REMOTE;
 		return SAGDP_RET_OK;
 	}
-	else if ( state == SAGDP_STATE_IDLE ) // ignore
+	else if ( state == SAGDP_STATE_WAIT_FIRST_PID_THEN_IDLE )
 	{
+		memcpy( data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET, pid, SAGDP_LSENT_PID_SIZE );
+		memcpy( data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET, pid, SAGDP_LSENT_PID_SIZE );
+		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_IDLE;
+		return SAGDP_RET_OK;
+	}
+	if ( state == SAGDP_STATE_WAIT_NEXT_PID_THEN_IDLE )
+	{
+		memcpy( data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET, pid, SAGDP_LSENT_PID_SIZE );
+		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_IDLE;
 		return SAGDP_RET_OK;
 	}
 	else // invalid states

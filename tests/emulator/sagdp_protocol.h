@@ -42,10 +42,12 @@
 // SAGDP States
 #define SAGDP_STATE_NOT_INITIALIZED 0
 #define SAGDP_STATE_IDLE 0 // TODO: implement transition from non_initialized to idle state or ensure there is no difference in states
-#define SAGDP_STATE_WAIT_FIRST_PID 2
-#define SAGDP_STATE_WAIT_NEXT_PID 3
-#define SAGDP_STATE_WAIT_REMOTE 4
-#define SAGDP_STATE_WAIT_LOCAL 5
+#define SAGDP_STATE_WAIT_REMOTE 2
+#define SAGDP_STATE_WAIT_LOCAL 3
+#define SAGDP_STATE_WAIT_FIRST_PID_THEN_WR 4
+#define SAGDP_STATE_WAIT_NEXT_PID_THEN_WR 5
+#define SAGDP_STATE_WAIT_FIRST_PID_THEN_IDLE 6
+#define SAGDP_STATE_WAIT_NEXT_PID_THEN_IDLE 7
 
 
 // packet statuses
@@ -77,10 +79,10 @@
 
 // handlers
 uint8_t handlerSAGDP_timer( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
-uint8_t handlerSAGDP_receiveNewUP( uint8_t* timeout, uint8_t* pid, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
-uint8_t handlerSAGDP_receiveRepeatedUP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
-uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
-uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint16_t* sizeInOut, uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
+uint8_t handlerSAGDP_receiveNewUP( uint8_t* timeout, uint8_t* pid, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
+uint8_t handlerSAGDP_receiveRepeatedUP( uint8_t* timeout, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
+uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
+uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
 uint8_t handlerSAGDP_receivePID( uint8_t* PID, uint8_t* data );
 
 
