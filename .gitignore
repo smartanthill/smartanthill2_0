@@ -8,3 +8,4 @@ dropin.cache
 .pioenvs
 .sconsign.dblite
 twistd.pid
+twistd-cc.pid

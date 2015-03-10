@@ -38,9 +38,9 @@ from smartanthill import FIRMWARE_VERSION
 
 class PlatformIOBuilder(object):
 
-    def __init__(self, pioenvs_dir, environment):
+    def __init__(self, pioenvs_dir, env_name):
         self.pioenvs_dir = pioenvs_dir
-        self.env_name = environment
+        self.env_name = env_name
 
         self._defer = Deferred()
         self._defines = []
@@ -56,9 +56,8 @@ class PlatformIOBuilder(object):
             return None
         for ext in ["bin", "hex"]:
             firm_path = join(self.get_env_dir(), "firmware." + ext)
-            if not isfile(firm_path):
-                continue
-            return firm_path
+            if isfile(firm_path):
+                return firm_path
         return None
 
     def append_define(self, name, value=None):
@@ -71,12 +70,12 @@ class PlatformIOBuilder(object):
             PLATFORMIO_SRCBUILD_FLAGS=self._get_srcbuild_flags()
         )
 
-        output = utils.getProcessOutput(
+        d = utils.getProcessOutputAndValue(
             "platformio", args=("run", "-e", self.env_name),
             env=environ.update(newenvs),
-            path=sibpath(__file__, "embedded")
+            path=sibpath(__file__, join("embedded", "firmware"))
         )
-        output.addCallbacks(self._on_run_callback, self._on_run_errback)
+        d.addBoth(self._on_run_callback)
         return self._defer
 
     def _get_srcbuild_flags(self):
@@ -90,17 +89,16 @@ class PlatformIOBuilder(object):
 
     def _on_run_callback(self, result):
         log.msg(result)
+
         fw_path = self.get_firmware_path()
-        if not isfile(fw_path) or "Error" in result:
+        # result[2] is return code
+        if result[2] != 0 or not fw_path or not isfile(fw_path):
             return self._defer.errback(Exception(result))
 
-        result = dict(
+        data = dict(
             version=".".join([str(s) for s in FIRMWARE_VERSION]),
             size=getsize(fw_path),
             type=fw_path[-3:],
             firmware=b64encode(open(fw_path).read())
         )
-        self._defer.callback(result)
-
-    def _on_run_errback(self, failure):
-        self._defer.errback(failure)
+        self._defer.callback(data)
