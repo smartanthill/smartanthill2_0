@@ -71,7 +71,7 @@ setup(
         "Topic :: Internet",
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Human Machine Interfaces",
-        "Topic :: Scientific/Engineering :: Interface Engine/Protocol "
+        "Topic :: Scientific/Engineering :: Interface Engine/Protocol"
         "Translator",
         "Topic :: Software Development :: Compilers",
         "Topic :: Software Development :: Embedded Systems",

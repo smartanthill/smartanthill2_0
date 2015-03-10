@@ -26,8 +26,8 @@
 from twisted.python.reflect import namedObject
 
 from smartanthill import __docsurl__
-from smartanthill.device.operation.base import (get_operation_class,
-                                                OperationType)
+from smartanthill.device.operation.base import (OperationType,
+                                                get_operation_class)
 from smartanthill.exception import BoardUnknownOperation, DeviceUnknownBoard
 
 
