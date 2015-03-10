@@ -66,8 +66,9 @@ class PlatformIOBuilder(object):
 
     def run(self):
         newenvs = dict(
-            PIOENVS_DIR=self.pioenvs_dir,
-            PIOSRCBUILD_FLAGS=self._get_srcbuild_flags()
+            PLATFORMIO_SETTING_ENABLE_PROMPTS="false",
+            PLATFORMIO_ENVS_DIR=self.pioenvs_dir,
+            PLATFORMIO_SRCBUILD_FLAGS=self._get_srcbuild_flags()
         )
 
         output = utils.getProcessOutput(
