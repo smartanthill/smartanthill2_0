@@ -134,7 +134,7 @@ angular.module('siteApp')
       $scope.progressbar.info = 'Uploading...';
 
       var data = result;
-      data.serialport = $scope.selectedSerialPort.selected.port;
+      data.uploadport = $scope.selectedSerialPort.selected.port;
       return $resource(siteConfig.apiURL + 'devices/:deviceId/uploadfw', {
         deviceId: device.id
       }).save(data).$promise;
