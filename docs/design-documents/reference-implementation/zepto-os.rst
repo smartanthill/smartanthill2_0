@@ -27,7 +27,7 @@
 SmartAnthill Zepto OS
 =====================
 
-:Version:   v0.2.3e
+:Version:   v0.2.4
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -82,8 +82,7 @@ Zepto OS is implemented as a "main loop", which calls different functions and pe
 * NB: all calls of protocol handlers (both “receiving” and “sending”) are made right from the program “main loop” (and not one protocol handler calling another one), to reduce stack usage.
 * after protocol handler has processed the data, it returns to “main loop”. Now previous src is not needed anymore, so "main loop" can and should **memmove()** dst to the beginning of “command buffer”, discarding src and freeing space in "command buffer" for future processing.
 * after such **memmove()** is done, we have current packet (as processed by previous protocol handler) at the beginning of “command buffer”, so we can repeat the process of calling the “receiving” “protocol handler” (such as SAGDP, and then Zepto VM).
-* when Zepto VM is called (it has prototype **zepto_vm(const void\* src,uint16 src_size,void\* dst, uint16\* dst_size,WaitingFor\* waiting_for);**; *WaitingFor* structure is described in detail in 'Asynchronous Returns' subsection below), it starts parsing the command buffer and execute commands. Whenever Zepto VM encounters an EXEC command (see 
-  :ref:`sazeptovm` document for details), Zepto VM calls an appropriate plugin handler, with the following prototype: **plugin_handler(const void\* plugin_config, void\* plugin_state, const void\* cmd, uint16 cmd_size, REPLY_HANDLE reply, WaitingFor\* waiting_for)**, passing pointer to plugin data as a cmd and creating *REPLY_HANDLE reply* out of it's own *dst*. See details on REPLY_HANDLE in 'Plugin API' section below. After plugin_handler returns, Zepto VM makes sure that it's own *dst* is incremented by a size of the accumulated reply. This ensures proper and easy forming of "reply buffer" as required by Zepto VM specification.
+* when Zepto VM is called (it has prototype **zepto_vm(const void\* src,uint16 src_size,void\* dst, uint16\* dst_size,WaitingFor\* waiting_for);**; *WaitingFor* structure is described in detail in 'Asynchronous Returns' subsection below), it starts parsing the command buffer and execute commands. Whenever Zepto VM encounters an EXEC command (see :ref:`sazeptovm` document for details), Zepto VM calls an appropriate plugin handler, which has prototype specified in :ref:`saplugin` document. When calling plugin handler, Zepto VM passes pointer to plugin data as a command, and creates *MEMORY_HANDLE reply* out of it's own *dst*. After plugin_handler returns, Zepto VM makes sure that it's own *dst* is incremented by a size of the accumulated reply. This ensures proper and easy forming of "reply buffer" as required by Zepto VM specification.
 * after the Zepto VM has processed the data, “main loop” doesn't need the command anymore, so it can again **memmove()** "reply buffer" (returned at *dst* location by Zepto VM) to the beginning of “command buffer” and call SAGDP “sending” protocol handler.
 * after “sending” protocol handler returns, “main loop” may and should **memmove()** reply of the “sending” protocol handler to the beginning of the “command buffer” and continue calling the “sending” protocol handlers (and memmove()-ing data to the beginning of the “command buffer”) until the last protocol handler is called; at this point, data is prepared for feeding to the physical channel.
 * at this point, "main loop" may and should call [TODO] function (which belongs to device-specific library) to pass data back to the physical layer.
@@ -115,90 +114,36 @@ State Machines
 Model which is described above in "Main Loop" section, implies that all SmartAnthill protocol handlers (including Zepto VM) are implemented as "state machines"; state of these "state machines" should be fixed-size and belongs to "fixed-size states" memory area mentioned in "Memory Architecture" section above.
 
 Plugins
-^^^^^^^
+-------
 
-Ideally, plugins SHOULD also be implemented as state machines, for example:
+Zepto OS plugins MUST be compliant with SmartAnthill Plugin specification, as outlined in :ref:`saplugin` document.
 
-.. code-block:: c
+Memory Allocation and MEMORY_HANDLE
+-----------------------------------
 
-    struct MyPluginConfig { //constant structure filled with a configuration
-                          //  for specific 'ant body part'
-    byte request_pin_number;//pin to request sensor read
-    byte ack_pin_number;//pin to wait for to see when sensor has provided the data
-    byte reply_pin_numbers[4];//pins to read when ack_pin_number shows that the data is ready
-    };
+Zepto OS supports a very rudimentary memory allocation. All memory always comes from "command buffer". To enable memory allocation in very constrained environments, Zepto OS uses a concept of MEMORY_HANDLE. 
 
-    struct MyPluginState {
-    byte state; //'0' means 'initial state', '1' means 'requested sensor to perform read'
-    };
+MEMORY_HANDLE encapsulates "memory block" (via an additional indirection). Zepto OS MAY move memory blocks at certain points (specifically, when a switch to another "green thread" may occur). In particular, MEMORY_HANDLE is used for Plugin Handlers (see :ref:`saplugin` document for details).
 
-    byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
-    //perform sensor initialization if necessary
-    MyPluginState* ps = (MyPluginState*)plugin_state;
-    ps->state = 0;
-    }
+Whoever uses MEMORY_HANDLE, MUST NOT store pointers to the memory block over such "dangerous" points in program. Debug implementation of Zepto OS will track such situations and will cause an exception when an access to such a pointer occurs after "dangerous" point. 
 
-    //TODO: reinit? (via deinit, or directly, or implicitly)
-
-    byte my_plugin_handler(const void* plugin_config, void* plugin_state,
-      const void* cmd, uint16 cmd_size, REPLY_HANDLE reply, WaitingFor* waiting_for) {
-    const MyPluginConfig* pc = (MyPluginConfig*) plugin_config;
-    MyPluginState* ps = (MyPluginState*)plugin_state;
-    if(ps->state == 0) {
-      //request sensor to perform read, using pc->request_pin_number
-      ps->state = 1;
-      //let's assume that sensor will set signal on pin#3 to 1 when the data is ready
-
-      //filling in pins_to_wait to indicate we're waiting for pin #3, and value =1 for it:
-      byte apn = pc->ack_pin_number;
-
-      //splitting apn into byte number 'idx' and bit number 'shift'
-      byte idx = apn >> 3;
-      byte shift = apn & 0x7;
-      waiting_for->pins_to_wait[idx] |= (1<<shift);
-      waiting_for->pins_values_to_wait[idx] |= (1<<shift);
-
-      return WAITING_FOR;
-    }
-    else {
-      //read pin# pc->ack_pin_number just in case
-      if(ack_pin != 1) {
-        byte apn = pc->ack_pin_number;
-        byte idx = apn >> 3;
-        byte shift = apn & 0x7;
-        waiting_for->pins_to_wait[idx] |= (1<<shift);
-        waiting_for->pins_values_to_wait[idx] |= (1<<shift);
-        return WAITING_FOR;
-      }
-      //read data from sensor using pc->reply_pin_numbers[],
-      //  and fill in "reply buffer" with data using reply_append(reply,sz)
-      //  Note that the pointer returned by reply_append() may change between different
-      //    calls to my_plugin_handler() and therefore MUST NOT be stored
-      //    within plugin_state
-      return 0;
-    }
-    }
-
-Such an approach allows Zepto VM to perform proper pausing (with ability for SmartAnthill Client to interrupt processing by sending a new command while it didn't receive an answer to the previous one) when long waits are needed. It also enables parallel processing of the plugins (TODO: PARALLEL instruction for Zepto VM).
-
-However, for some plugins (simple ones without waiting at all, or if we're too lazy to write proper state machine), we can use 'dummy state machine', with *MyPluginState* being NULL and unused, and **plugin_handler()** not taking into account any states at all.
-
+TODO: list of such "dangerous" points.
 
 Programming Guidelines
 ----------------------
 
 The following guidelines are considered important to ensure that only absolutely minimum amount of RAM is used:
 
-* Dynamic allocation is not used, at all. (yes, it means no **malloc()**)
+* Dynamic allocation is heavily discouraged. When used, it MUST be based on MEMORY_HANDLES as described above (yes, it means no **malloc()**)
 * No third-party libraries (except for those specially designed for MCUs) are allowed
 * All on-stack arrays MUST be analyzed for being necessary and rationale presented in comments.
 
-Support for PARALLEL instruction
---------------------------------
+Support for PARALLEL Zepto VM instruction
+-----------------------------------------
 
-PARALLEL instruction is supported starting from ZeptoVM-Medium. It allows for pseudo-parallel execution (i.e. when plugin A is waiting, plugin B may continue to work).
+PARALLEL instruction is supported by Zepto VM, starting from ZeptoVM-Medium. It allows for pseudo-parallel execution (i.e. when plugin A is waiting, plugin B may continue to work).
 
-Implementing PARALLEL instruction is tricky, in particular, because we don't know how much space to allocate for each pseudo-thread to use from "reply buffer". To get around this problem, we've encapsulated reply buffer as an opaque ZEPTOVM_REPLYBUFFER handle, which allows us to move reply sub-buffers as it is needed as the pseudo-threads are working and plugins are requesting 'push_reply(handle)'.
+Implementing PARALLEL instruction is tricky, in particular, because we don't know how much space to allocate for each pseudo-thread to use from "reply buffer". To get around this problem, we've encapsulated reply buffer as an opaque MEMORY_HANDLE. 
 
 In addition, to accommodate per-pseudo-thread expression stacks, at the moment of PARALLEL instruction we perform a 'virtual split' of the remaining space in "expression stack" into "per-pseudo-thread expression stacks"; to implement this 'virtual split', we keep an array of offsets of these "per-pseudo-thread expression stacks" within main "expression stack", and move them as necessary to accommodate expression stack requests (in a manner similar to the handling of "reply sub-buffers" described above).
 
@@ -206,7 +151,6 @@ EEPROM Handling
 ---------------
 
 TODO
-
 
 Running on top of another OS
 ----------------------------
@@ -226,36 +170,4 @@ where bufSize is an inout parameter, taking original buffer size and returning p
 
 TODO: more and more and more
 
-
-Plugin API
-----------
-
-Zepto VM provides several APIs to be used by plugins.
-
-Data Types
-^^^^^^^^^^
-
-REPLY_HANDLE
-''''''''''''
-
-REPLY_HANDLE is an encapsulation of a "reply buffer", which allows plugin to call **reply_append()** (see below).
-REPLY_HANDLE is normally obtained as a parameter from plugin_handler() call.
-
-**Caution:** Plugins MUST treat REPLY_HANDLE as completely opaque and MUST NOT try to use it to access reply buffer directly; doing so may easily result in memory corruption when running certain Zepto VM programs (for example, when PARALLEL instruction is used).
-
-TODO: WaitingFor
-
-Functions
-^^^^^^^^^
-
-reply_append()
-''''''''''''''
-
-**void\* reply_append(REPLY_HANDLE handle,uint16 sz);**
-
-reply_append() allocates 'sz' bytes within "reply buffer" specified by handle and returns a pointer to this allocated buffer. This buffer can be then filled with plugin's reply.
-
-**Caution:** note that the pointer returned by reply_append() is temporary and may change between different calls to the same plugin, i.e. this pointer (or derivatives) MUST NOT be stored as a part of the plugin state; storing offsets is fine.
-
-TODO: describe error conditions (such as lack of space in buffer)
 

@@ -32,3 +32,4 @@ Specification
     Core Architecture <smartanthill-core-architecture>
     protocols/index
     protocols/zepto-vm
+    smartanthill-plugins
