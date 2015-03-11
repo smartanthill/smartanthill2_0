@@ -27,7 +27,7 @@
 SmartAnthill Guaranteed Delivery Protocol (SAGDP)
 =================================================
 
-:Version:   v0.2
+:Version:   v0.2.1
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -368,7 +368,10 @@ A received UP packet can be either a new packet, or a repetetion of a previously
 
 **At Master's side**, processing depends on the status of the packet in chain.
   * Error Message: payload of the packet is reported to a higher level protocol with its status, and SAGDP changes its state to idle.
-  * "First":  unexpected, ignored [+++check]
+  * "First": chain consistency is verified by comparison of PPID of the packet with LSPIDR.
+     * PPID is below the LSPIDR: a repeated packet has been received. The Last Sent Packet is re-sent, and SAGDP changes its state to Wait-PID (with flags PR set and NSI not set).
+     * PPID is within LSPIDR: unexpected (received "new" packet is a response to the last sent packet); the packet is ignored.
+     * PPID is above LSPID (chain is broken): the packet is ignored.
   * "Intermediate": chain consistency is verified by comparison of PPID of the packet with LSPIDR.
      * PPID is below the LSPIDR: a repeated packet has been received. The Last Sent Packet is re-sent, and SAGDP changes its state to Wait-PID.
      * PPID is within LSPIDR (received packet is a response to the last sent packet): packet PID is saved as a current value of LRPID, payload of the packet is reported to a higher level protocol with its status in chain, and SAGDP changes its state to wait-local.
@@ -380,11 +383,13 @@ A received UP packet can be either a new packet, or a repetetion of a previously
 
 **At Slave side**,
   * Error Message: unexpected; system must send a packet with Error Message to its communication partner and then transit to "not initialized" state thus invalidating all current data.
-  * "First": system must transit to "not initialized" state; then SAGDP transits to idle state; the packet PID is saved as a current value of LRPID, payload of the packet is reported to a higher level protocol with its status, and SAGDP changes its state to wait-local.
+  * "First": chain consistency is verified by comparison of PPID of the packet with LSPIDR.
+     * PPID is below the LSPIDR: a repeated packet has been received. The Last Sent Packet is re-sent, and SAGDP changes its state to Wait-PID (with flags PR set and NSI not set).
+     * PPID is within or above LSPIDR (master has selected to start a new chain): system must transit to "not initialized" and then to "idle" state, and then to process the packet again.
   * "Intermediate": chain consistency is verified by comparison of PPID of the packet with LSPIDR.
      * PPID is below the LSPIDR: a repeated packet has been received. The Last Sent Packet is re-sent, and SAGDP changes its state to Wait-PID.
      * PPID is within LSPIDR (received packet is a response to the last sent packet): packet PID is saved as a current value of LRPID, payload of the packet is reported to a higher level protocol with its status in chain, and SAGDP changes its state to wait-local.
-     * PPID is not equal to LSPID (chain is broken): system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
+     * PPID is above LSPID (chain is broken): system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
   * "Terminating": chain consistency is verified by comparison of PPID of the packet with LSPID.
      * PPID is below the LSPIDR: unexpected (a repeated packet has been received that is "terminating", but SAGDP did not respond to a "terminating" packet). System must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
      * PPID is within LSPID (received packet is a response to the last sent packet): payload of the packet is reported to a higher level protocol with its status in chain, and SAGDP changes its state to idle.
