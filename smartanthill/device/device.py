@@ -23,8 +23,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 # DAMAGE
 
-# from twisted.internet.defer import inlineCallbacks
-import re
 from base64 import b64decode
 from os import environ, makedirs
 from os.path import dirname, isdir, join
@@ -33,7 +31,6 @@ from tempfile import mkdtemp
 
 from twisted.internet import utils
 from twisted.python.constants import ValueConstant
-from twisted.python.failure import Failure
 from twisted.python.util import sibpath
 
 from smartanthill.device.board.base import BoardFactory
@@ -80,10 +77,8 @@ class Device(object):
         tmp_dir = mkdtemp()
         platformioini_path = sibpath(
             dirname(__file__),
-            join("cc", "embedded", "platformio.ini")
+            join("cc", "embedded", "firmware", "platformio.ini")
         )
-
-        # show Alias: uploader
 
         # prepare temporary PlatformIO project
         pioenv_dir = join(tmp_dir, ".pioenvs", self.board.get_id())
@@ -94,10 +89,10 @@ class Device(object):
                   "w") as f:
             f.write(b64decode(firmware['firmware']))
 
-        defer = utils.getProcessOutput(
+        defer = utils.getProcessOutputAndValue(
             "platformio",
             args=("run", "-e", self.board.get_id(), "-t", "uploadlazy",
-                  "--upload-port", firmware['serialport']),
+                  "--upload-port", firmware['uploadport']),
             env=environ,
             path=tmp_dir
         )
@@ -107,15 +102,10 @@ class Device(object):
     def _on_uploadfw_output(self, result, tmp_dir):
         self.log.debug(result)
         rmtree(tmp_dir)
-        if isinstance(result, Failure):
-            return result
 
-        match = re.search(
-            r"(Done, (\d+) bytes total|(\d+) bytes of flash written)",
-            result
-        )
-        if match:
-            return {
-                "result": "%s bytes of flash has been written" % match.group(2)
-            }
-        raise Exception(result)
+        if result[2] != 0:  # result[2] is return code
+            raise Exception(result)
+
+        return {
+            "result": "Please restart device."
+        }
