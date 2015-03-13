@@ -33,3 +33,4 @@ Specification
     protocols/index
     protocols/zepto-vm
     smartanthill-plugins
+    zepto-patterns
