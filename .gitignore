@@ -9,3 +9,4 @@ dropin.cache
 .sconsign.dblite
 twistd.pid
 twistd-cc.pid
+dist
