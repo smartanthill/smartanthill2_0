@@ -1,27 +1,18 @@
 /*******************************************************************************
-    Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
-    Redistribution and use of this file in source and compiled
-    forms, with or without modification, are permitted
-    provided that the following conditions are met:
-        * Redistributions in source form must retain the above copyright
-          notice, this list of conditions and the following disclaimer.
-        * Redistributions in compiled form must reproduce the above copyright
-          notice, this list of conditions and the following disclaimer in the
-          documentation and/or other materials provided with the distribution.
-        * Neither the name of the OLogN Technologies AG nor the names of its
-          contributors may be used to endorse or promote products derived from
-          this software without specific prior written permission.
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-    ARE DISCLAIMED. IN NO EVENT SHALL OLogN Technologies AG BE LIABLE FOR ANY
-    DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
-    DAMAGE
+Copyright (C) 2015 OLogN Technologies AG
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License version 2 as 
+    published by the Free Software Foundation.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
 #include "sa-common.h"
@@ -133,11 +124,11 @@ void communicationTerminate()
 	hPipe = INVALID_HANDLE_VALUE;
 }
 
-uint8_t sendMessage(uint16_t* msgSize, const unsigned char * buff)
+uint8_t sendMessage(uint16_t* msgSize, const uint8_t * buff)
 {
 	BOOL   fSuccess = FALSE;
 	DWORD  cbWritten;
-	unsigned char sizePacked[2];
+	uint8_t sizePacked[2];
 	sizePacked[0] = *msgSize & 0xFF;
 	sizePacked[1] = (*msgSize >> 8) & 0xFF;
 
@@ -170,7 +161,7 @@ uint8_t sendMessage(uint16_t* msgSize, const unsigned char * buff)
 	return COMMLAYER_RET_OK;
 }
 
-uint8_t getMessage(uint16_t* msgSize, unsigned char * buff, int maxSize) // returns when a packet received
+uint8_t getMessage(uint16_t* msgSize, uint8_t * buff, int maxSize) // returns when a packet received
 {
 	BOOL   fSuccess = FALSE;
 	DWORD  cbRead;
@@ -292,7 +283,7 @@ bool isPreReadingDone()
 	return true;
 }
 
-uint8_t finalizeReading(uint16_t* msgSize, unsigned char * buff, int maxSize)
+uint8_t finalizeReading(uint16_t* msgSize, uint8_t * buff, int maxSize)
 {
 //	printf( "finalizeReading() called (size = %d)...\n", async_buff[0] );
 	BOOL   fSuccess = FALSE;
@@ -321,7 +312,7 @@ uint8_t finalizeReading(uint16_t* msgSize, unsigned char * buff, int maxSize)
 
 }
 
-uint8_t tryGetMessage(uint16_t* msgSize, unsigned char * buff, int maxSize) // returns immediately, but a packet reception is not guaranteed
+uint8_t tryGetMessage(uint16_t* msgSize, uint8_t * buff, int maxSize) // returns immediately, but a packet reception is not guaranteed
 {
 	uint8_t ret_code;
 	if ( asyncReadStatus == 0 )

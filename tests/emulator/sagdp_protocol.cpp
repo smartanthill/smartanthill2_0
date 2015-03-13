@@ -1,27 +1,18 @@
 /*******************************************************************************
-    Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
-    Redistribution and use of this file in source and compiled
-    forms, with or without modification, are permitted
-    provided that the following conditions are met:
-        * Redistributions in source form must retain the above copyright
-          notice, this list of conditions and the following disclaimer.
-        * Redistributions in compiled form must reproduce the above copyright
-          notice, this list of conditions and the following disclaimer in the
-          documentation and/or other materials provided with the distribution.
-        * Neither the name of the OLogN Technologies AG nor the names of its
-          contributors may be used to endorse or promote products derived from
-          this software without specific prior written permission.
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-    ARE DISCLAIMED. IN NO EVENT SHALL OLogN Technologies AG BE LIABLE FOR ANY
-    DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
-    DAMAGE
+Copyright (C) 2015 OLogN Technologies AG
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License version 2 as 
+    published by the Free Software Foundation.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
 #include "sagdp_protocol.h"
@@ -68,58 +59,6 @@ bool is_pid_in_range( const uint8_t* pid, const uint8_t* first_pid, const uint8_
 {
 	return pid_compare( pid, first_pid ) >=0 && pid_compare( pid, last_pid ) <= 0;
 }
-/*
-uint8_t handlerSAGDP_receiveRepeatedUP( uint8_t* timeout, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
-{
-	// SAGDP can legitimately receive a repeated packet in wait-remote state (the other side sounds like "we have not received anything from you; please resend, only then we will probably send you something new")
-	// LSP must be resent
-	uint8_t state = *( data + DATA_SAGDP_STATE_OFFSET );
-	if ( state == SAGDP_STATE_WAIT_REMOTE )
-	{
-//		if ( *(data+DATA_SAGDP_ALREADY_REPLIED_OFFSET) == 0 )
-		if ( ( buffIn[0] & SAGDP_P_STATUS_NO_RESEND ) == 0 )
-		{
-//			*(data+DATA_SAGDP_ALREADY_REPLIED_OFFSET) = 1;
-			cappedExponentiateLTO( data + DATA_SAGDP_LTO_OFFSET );
-			*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
-			*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
-			memcpy( buffOut, lsm, *sizeInOut );
-			buffOut[0] |= SAGDP_P_STATUS_NO_RESEND;
-			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_NEXT_PID_THEN_WR; // note that PID can be changed!
-			return SAGDP_RET_TO_LOWER_REPEATED;
-		}
-		else
-		{
-			PRINTF( "SAGDP OK: CORRRUPTED: state = %d, packet_status = %d\n", state, sizeInOut[0] & 3 );
-			return SAGDP_RET_OK;
-		}
-	}
-	else if ( state == SAGDP_STATE_IDLE )
-	{
-//		if ( *(data+DATA_SAGDP_ALREADY_REPLIED_OFFSET) == 0 )
-		if ( ( buffIn[0] & SAGDP_P_STATUS_NO_RESEND ) == 0 )
-		{
-//			*(data+DATA_SAGDP_ALREADY_REPLIED_OFFSET) = 1;
-			cappedExponentiateLTO( data + DATA_SAGDP_LTO_OFFSET );
-			*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
-			*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
-			memcpy( buffOut, lsm, *sizeInOut );
-			buffOut[0] |= SAGDP_P_STATUS_NO_RESEND;
-			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_IDLE; // note that PID can be changed!
-			return SAGDP_RET_TO_LOWER_REPEATED;
-		}
-		else
-		{
-			PRINTF( "SAGDP OK: CORRRUPTED: state = %d, packet_status = %d\n", state, sizeInOut[0] & 3 );
-			return SAGDP_RET_OK;
-		}
-	}
-	else // invalid states
-	{
-		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
-		return SAGDP_RET_SYS_CORRUPTED;
-	}
-}*/
 
 
 
@@ -404,11 +343,6 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 					return SAGDP_RET_OK;
 				}
 			}
-/*			if ( packet_status == SAGDP_P_STATUS_FIRST ) // unexpected state; silently ignore
-			{
-				PRINTF( "SAGDP OK: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
-				return SAGDP_RET_OK; // just ignore
-			}*/
 			bool isreply = is_pid_in_range( buffIn + 1, data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET, data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET );
 			if ( !isreply ) // silently ignore
 			{
@@ -694,42 +628,3 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, uint16_t* siz
 		return SAGDP_RET_SYS_CORRUPTED;
 	}
 }
-/*
-uint8_t handlerSAGDP_receivePID( uint8_t* pid, uint8_t* data )
-{
-	PRINTF( "handlerSAGDP_receivePID(): PID: %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
-	uint8_t state = *( data + DATA_SAGDP_STATE_OFFSET );
-	if ( state == SAGDP_STATE_WAIT_FIRST_PID_THEN_WR )
-	{
-		memcpy( data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET, pid, SAGDP_LSENT_PID_SIZE );
-		memcpy( data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET, pid, SAGDP_LSENT_PID_SIZE );
-		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_REMOTE;
-		return SAGDP_RET_OK;
-	}
-	if ( state == SAGDP_STATE_WAIT_NEXT_PID_THEN_WR )
-	{
-		memcpy( data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET, pid, SAGDP_LSENT_PID_SIZE );
-		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_REMOTE;
-		return SAGDP_RET_OK;
-	}
-	else if ( state == SAGDP_STATE_WAIT_FIRST_PID_THEN_IDLE )
-	{
-		memcpy( data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET, pid, SAGDP_LSENT_PID_SIZE );
-		memcpy( data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET, pid, SAGDP_LSENT_PID_SIZE );
-		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_IDLE;
-		return SAGDP_RET_OK;
-	}
-	if ( state == SAGDP_STATE_WAIT_NEXT_PID_THEN_IDLE )
-	{
-		memcpy( data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET, pid, SAGDP_LSENT_PID_SIZE );
-		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_IDLE;
-		return SAGDP_RET_OK;
-	}
-	else // invalid states
-	{
-		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
-		return SAGDP_RET_SYS_CORRUPTED;
-	}
-	// TODO: ensure no other special cases
-}
-*/

@@ -1,27 +1,18 @@
 /*******************************************************************************
-    Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
-    Redistribution and use of this file in source and compiled
-    forms, with or without modification, are permitted
-    provided that the following conditions are met:
-        * Redistributions in source form must retain the above copyright
-          notice, this list of conditions and the following disclaimer.
-        * Redistributions in compiled form must reproduce the above copyright
-          notice, this list of conditions and the following disclaimer in the
-          documentation and/or other materials provided with the distribution.
-        * Neither the name of the OLogN Technologies AG nor the names of its
-          contributors may be used to endorse or promote products derived from
-          this software without specific prior written permission.
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-    ARE DISCLAIMED. IN NO EVENT SHALL OLogN Technologies AG BE LIABLE FOR ANY
-    DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
-    DAMAGE
+Copyright (C) 2015 OLogN Technologies AG
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License version 2 as 
+    published by the Free Software Foundation.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
 
@@ -36,9 +27,9 @@
 
 
 #define BUF_SIZE 512
-unsigned char rwBuff[BUF_SIZE];
-unsigned char data_buff[BUF_SIZE];
-unsigned char msgLastSent[BUF_SIZE];
+uint8_t rwBuff[BUF_SIZE];
+uint8_t data_buff[BUF_SIZE];
+uint8_t msgLastSent[BUF_SIZE];
 uint8_t pid[ SASP_NONCE_SIZE ];
 
 
@@ -60,7 +51,7 @@ int main(int argc, char *argv[])
 	// TODO: revise memory management
 	uint16_t* sizeInOut = (uint16_t*)(rwBuff + 3 * BUF_SIZE / 4);
 	uint8_t* stack = (uint8_t*)sizeInOut + 2; // first two bytes are used for sizeInOut
-	int stackSize = BUF_SIZE / 4 - 2;
+	uint16_t stackSize = BUF_SIZE / 4 - 2;
 	uint8_t nonce[ SASP_NONCE_SIZE ];
 	uint8_t timer_val = 0;
 	uint16_t wake_time;
@@ -69,12 +60,6 @@ int main(int argc, char *argv[])
 	// do necessary initialization
 	sagdp_init( data_buff + DADA_OFFSET_SAGDP );
 
-
-	// quick simulation of a part of SAGDP responsibilities: a copy of the last message sent message
-/*	unsigned char msgLastSent[BUF_SIZE];
-	uint16_t sizeInOutLastSent;
-	sizeInOutLastSent = 0;
-	bool resendLastMsg = false;*/
 
 	uint8_t ret_code;
 
@@ -328,30 +313,6 @@ saspsend:
 				break;
 			}
 		}
-
-/*		ret_code = handlerSAGDP_receivePID( pid, data_buff + DADA_OFFSET_SAGDP );
-		printf( "SAGDP3: ret: %d; size: %d\n", ret_code, *sizeInOut );
-		switch ( ret_code )
-		{
-			case SAGDP_RET_OK:
-			{
-				// regular processing will be done below in the next block
-				break;
-			}
-			case SAGDP_RET_SYS_CORRUPTED:
-			{
-				// TODO: process reset
-				goto getmsg;
-				break;
-			}
-			default:
-			{
-				// unexpected ret_code
-				printf( "Unexpected ret_code %d\n", ret_code );
-				assert( 0 );
-				break;
-			}
-		}*/
 
 	sendmsg:
 		allowSyncExec();

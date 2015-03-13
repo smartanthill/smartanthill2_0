@@ -1,27 +1,18 @@
 /*******************************************************************************
-    Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
-    Redistribution and use of this file in source and compiled
-    forms, with or without modification, are permitted
-    provided that the following conditions are met:
-        * Redistributions in source form must retain the above copyright
-          notice, this list of conditions and the following disclaimer.
-        * Redistributions in compiled form must reproduce the above copyright
-          notice, this list of conditions and the following disclaimer in the
-          documentation and/or other materials provided with the distribution.
-        * Neither the name of the OLogN Technologies AG nor the names of its
-          contributors may be used to endorse or promote products derived from
-          this software without specific prior written permission.
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-    ARE DISCLAIMED. IN NO EVENT SHALL OLogN Technologies AG BE LIABLE FOR ANY
-    DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
-    DAMAGE
+Copyright (C) 2015 OLogN Technologies AG
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License version 2 as 
+    published by the Free Software Foundation.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
 
@@ -55,7 +46,7 @@ void SASP_restoreFromBackup( uint8_t* dataBuff )
 
 void SASP_NonceLS_increment(  uint8_t* nonce )
 {
-	int i;
+	int8_t i;
 	for ( i=0; i<SASP_NONCE_SIZE; i++ )
 	{
 		nonce[i] ++;
@@ -67,7 +58,7 @@ int8_t SASP_NonceCompare( const uint8_t* nonce1, const uint8_t* nonce2 )
 {
 	if ( (nonce1[SASP_NONCE_SIZE-1]&0x7F) > (nonce2[SASP_NONCE_SIZE-1]&0x7F) ) return 1;
 	if ( (nonce1[SASP_NONCE_SIZE-1]&0x7F) < (nonce2[SASP_NONCE_SIZE-1]&0x7F) ) return -1;
-	int i;
+	int8_t i;
 	for ( i=SASP_NONCE_SIZE-2; i>=0; i-- )
 	{
 		if ( nonce1[i] > nonce2[i] ) return int8_t(1);
@@ -91,15 +82,15 @@ void SASP_NonceClearForSaspFlag(  uint8_t* nonce )
 	nonce[SASP_NONCE_SIZE-1] &= 0x7F;
 }
 
-int SASP_calcComplementarySize( int iniSize, int requiredSize )
+uint16_t SASP_calcComplementarySize( uint16_t iniSize, uint16_t requiredSize )
 {
-	int padToRequired = requiredSize - iniSize;
-	int roundUpSize = ( requiredSize / SASP_ENC_BLOCK_SIZE ) * SASP_ENC_BLOCK_SIZE + ( requiredSize % SASP_ENC_BLOCK_SIZE ? SASP_ENC_BLOCK_SIZE : 0 );
-	int freeSpaceSize = roundUpSize - iniSize;
+	uint16_t padToRequired = requiredSize - iniSize;
+	uint16_t roundUpSize = ( requiredSize / SASP_ENC_BLOCK_SIZE ) * SASP_ENC_BLOCK_SIZE + ( requiredSize % SASP_ENC_BLOCK_SIZE ? SASP_ENC_BLOCK_SIZE : 0 );
+	uint16_t freeSpaceSize = roundUpSize - iniSize;
 	return freeSpaceSize; 
 }
 
-int SASP_encodeSize( int size, uint8_t* buff )
+uint16_t SASP_encodeSize( uint16_t size, uint8_t* buff )
 {
 	if ( size == 0 )
 		return 0;
@@ -116,7 +107,7 @@ int SASP_encodeSize( int size, uint8_t* buff )
 	}
 }
 
-int SASP_decodeSize( uint8_t* buff )
+uint16_t SASP_decodeSize( uint8_t* buff )
 {
 	if ( ( buff[ 0 ] & 128 ) == 0 )
 	{
@@ -129,7 +120,7 @@ int SASP_decodeSize( uint8_t* buff )
 	}
 }
 
-int SASP_getSizeUsedForEncoding( uint8_t* buff )
+uint16_t SASP_getSizeUsedForEncoding( uint8_t* buff )
 {
 	if ( ( buff[ 0 ] & 128 ) == 0 )
 		return 1;
@@ -201,7 +192,7 @@ void SASP_EncryptAndAddAuthenticationData( uint16_t* sizeInOut, const uint8_t* _
 	{
 		// 2. process each next full block of the message 
 		const uint8_t* restOfMsg = buffIn + (SASP_ENC_BLOCK_SIZE-encoding_size-1);
-		int restOfMsgSize = msgSize - (SASP_ENC_BLOCK_SIZE-encoding_size-1);
+		uint16_t restOfMsgSize = msgSize - (SASP_ENC_BLOCK_SIZE-encoding_size-1);
 		for ( j=0; j<restOfMsgSize/SASP_ENC_BLOCK_SIZE; j++ )
 		{
 			for ( i=0; i<SASP_ENC_BLOCK_SIZE; i++)
@@ -231,7 +222,7 @@ void SASP_EncryptAndAddAuthenticationData( uint16_t* sizeInOut, const uint8_t* _
 	}
 
 	// 3. process forced padding (if any); note: if present, it will be a multiple of a block size
-	int paddingSizeRemaining = compl_size == 0 ? 0 : compl_size - paddingAddedSize - 1;
+	uint16_t paddingSizeRemaining = compl_size == 0 ? 0 : compl_size - paddingAddedSize - 1;
 	assert( paddingSizeRemaining % SASP_ENC_BLOCK_SIZE == 0 );
 	for ( j=0; j<paddingSizeRemaining/SASP_ENC_BLOCK_SIZE; j++ )
 	{
@@ -251,10 +242,6 @@ void SASP_EncryptAndAddAuthenticationData( uint16_t* sizeInOut, const uint8_t* _
 
 	// 5. construct header:
 	memcpy( buffOut, nonce, SASP_NONCE_SIZE );
-
-/*	// 6. save PID
-	memcpy( pid, nonce, SASP_NONCE_SIZE );
-	pid[ SASP_NONCE_SIZE - 1] = (pid[ SASP_NONCE_SIZE - 1] & 0x7F) | ( ( MASTER_SLAVE_BIT ) << 7 );*/
 
 	// TODO: proper size handling
 	*sizeInOut = ins_pos;
@@ -490,14 +477,6 @@ uint8_t handlerSASP_receive( uint8_t* pid, uint16_t* sizeInOut, const uint8_t* b
 		SASP_NonceSetIntendedForSaspFlag( buffOut );
 		return SASP_RET_TO_LOWER_ERROR;
 	}
-/*	else if ( nonceCmp == 0 )
-	{
-		bool same = memcmp( data+DATA_SASP_LRPS_OFFSET, buffIn+SASP_HEADER_SIZE, SASP_TAG_SIZE ) == 0;
-		if (!same)
-			return SASP_RET_IGNORE;
-		// TODO: any further processing?
-		return SASP_RET_TO_HIGHER_REPEATED;
-	}*/
 
 	// 4. Finally, we have a brand new packet
 	memcpy( data+DATA_SASP_NONCE_LW_OFFSET, buffIn, SASP_NONCE_SIZE ); // update Nonce Low Watermark
