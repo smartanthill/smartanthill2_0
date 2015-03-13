@@ -79,13 +79,13 @@ class PlatformIOBuilder(object):
         return self._defer
 
     def _get_srcbuild_flags(self):
-        flags = ""
+        flags = []
         for d in self._defines:
             if d[1] is not None:
-                flags += "-D%s=%s" % (d[0], d[1])
+                flags.append("-D%s=%s" % (d[0], d[1]))
             else:
-                flags += "-D%s" % d[0]
-        return flags
+                flags.append("-D%s" % d[0])
+        return " ".join(flags)
 
     def _on_run_callback(self, result):
         log.msg(result)
