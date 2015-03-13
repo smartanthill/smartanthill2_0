@@ -42,13 +42,11 @@
 #define YOCTOVM_FAILED 0 // sunject for system reset
 #define YOCTOVM_OK 1 // if terminating packet received
 #define YOCTOVM_PASS_LOWER 2
+#define YOCTOVM_RESET_STACK 3
 
-#if !defined USED_AS_MASTER
-uint8_t yocto_process( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
-#else // USED_AS_MASTER
+uint8_t slave_process( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
 uint8_t master_start( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
 uint8_t master_continue( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
-#endif // USED_AS_MASTER
 
 // Pure Testing Block
 bool isChainContinued();

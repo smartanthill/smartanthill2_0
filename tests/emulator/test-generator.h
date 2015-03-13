@@ -24,42 +24,33 @@
     DAMAGE
 *******************************************************************************/
 
+#if !defined __TEST_GENERATOR_H__
+#define __TEST_GENERATOR_H__
 
-#if !defined __SA_COMMON_H__
-#define __SA_COMMON_H__
+// initialization
+void initTestSystem();
+void freeTestSystem();
 
-// common includes
-#include <memory.h> // for memcpy(), memset(), memcmp(). Note: their implementation may or may not be more effective than just by-byte operation on a particular target platform
-#include <assert.h>
+// comm layer hooks
+void registerIncomingPacket( const uint8_t* packet, uint16_t size );
+void registerOutgoingPacket( const uint8_t* packet, uint16_t size );
+bool shouldDropIncomingPacket();
+bool shouldDropOutgoingPacket();
+bool shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size );
+bool shouldInsertOutgoingPacket( uint8_t* packet, uint16_t* size );
+void insertIncomingPacket();
+void insertOutgoingPacket();
 
-// data types
-#define uint8_t unsigned char
-#define int8_t char
-#define uint16_t unsigned short
+// sync hooks
+void requestSyncExec();
+void allowSyncExec();
+void waitToProceed();
+void justWait( uint16_t durationSec );
 
-// Master/Slave distinguishing bit; USED_AS_MASTER is assumed to be a preprocessor definition if necessary
-#ifdef USED_AS_MASTER
-#define MASTER_SLAVE_BIT 1
-#else // USED_AS_MASTER
-#define MASTER_SLAVE_BIT 0
+// scenarios
+#if !defined USED_AS_MASTER
+bool startSequence();
 #endif
 
-// offsets in data segment of particular handler data
-// note: internal structure is defined by a correspondent handler (see respective .h files for details)
-// TODO: think about more reliable mechanism
-#define DADA_OFFSET_SASP 0
-#define DADA_OFFSET_SAGDP ( DADA_OFFSET_SASP + 28 )
-#define DADA_OFFSET_NEXT ( DADA_OFFSET_SAGDP + 28 )
 
-// debug helpers
-
-#define DEBUG_PRINTING
-
-#ifdef DEBUG_PRINTING
-#include <stdio.h>
-#define PRINTF printf
-#else // DEBUG_PRINTING
-#define PRINTF
-#endif // DEBUG_PRINTING
-
-#endif // __SA_COMMON_H__
+#endif // __TEST_GENERATOR_H__

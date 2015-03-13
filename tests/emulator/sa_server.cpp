@@ -31,6 +31,7 @@
 #include "sasp_protocol.h"
 #include "sagdp_protocol.h"
 #include "yoctovm_protocol.h"
+#include "test-generator.h"
 #include <stdio.h> 
 
 
@@ -39,6 +40,7 @@ unsigned char rwBuff[BUF_SIZE];
 unsigned char data_buff[BUF_SIZE];
 unsigned char msgLastSent[BUF_SIZE];
 uint8_t pid[ SASP_NONCE_SIZE ];
+uint8_t nonce[ SASP_NONCE_SIZE ];
 
 
 
@@ -47,6 +49,9 @@ int main(int argc, char *argv[])
 {
 	printf("STARTING SERVER...\n");
 	printf("==================\n\n");
+
+	initTestSystem();
+
 
 	// in this preliminary implementation all memory segments are kept separately
 	// All memory objects are listed below
@@ -61,6 +66,9 @@ int main(int argc, char *argv[])
 
 	uint8_t ret_code;
 
+	// do necessary initialization
+	sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+
 
 	printf("\nAwaiting client connection... \n" );
 	if (!communicationInitializeAsServer())
@@ -68,9 +76,19 @@ int main(int argc, char *argv[])
 
 	printf("Client connected.\n");
 
+	bool startSeq = startSequence();
+
 	// MAIN LOOP
 	for (;;)
 	{
+		if ( startSeq )
+		{
+			startSeq = false;
+			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
+			waitToProceed();
+			memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+			goto alt_entry;
+		}
 getmsg:
 		// 1. Get message from comm peer
 /*		ret_code = getMessage( sizeInOut, rwBuff, BUF_SIZE);
@@ -88,7 +106,14 @@ getmsg:
 			if ( timer_val && getTime() >= wake_time )
 			{
 				printf( "no reply received; the last message (if any) will be resent by timer\n" );
-				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, NULL, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+				if ( ret_code == SAGDP_RET_NEED_NONCE )
+				{
+					ret_code = handlerSASP_get_nonce( sizeInOut, nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+					assert( ret_code == SASP_RET_NONCE );
+					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+					assert( ret_code != SAGDP_RET_NEED_NONCE );
+				}
 				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 				goto saspsend;
 				break;
@@ -129,18 +154,25 @@ rectosasp:
 				// regular processing will be done below in the next block
 				break;
 			}
-			case SASP_RET_TO_HIGHER_REPEATED:
+/*			case SASP_RET_TO_HIGHER_REPEATED:
 			{
 				printf( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
 				ret_code = handlerSAGDP_receiveRepeatedUP( &timer_val, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 				goto saspsend;
 				break;
-			}
+			}*/
 			case SASP_RET_TO_HIGHER_LAST_SEND_FAILED:
 			{
 				printf( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
-				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, NULL, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+				if ( ret_code == SAGDP_RET_NEED_NONCE )
+				{
+					ret_code = handlerSASP_get_nonce( sizeInOut, nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+					assert( ret_code == SASP_RET_NONCE );
+					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+					assert( ret_code != SAGDP_RET_NEED_NONCE );
+				}
 				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 				goto saspsend;
 				break;
@@ -155,7 +187,21 @@ rectosasp:
 		}
 
 		// 3. pass to SAGDP a new packet
-		ret_code = handlerSAGDP_receiveNewUP( &timer_val, pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+		ret_code = handlerSAGDP_receiveUP( &timer_val, NULL, pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+		if ( ret_code == SAGDP_RET_START_OVER_FIRST_RECEIVED )
+		{
+			sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+			// TODO: do remaining reinitialization
+			ret_code = handlerSAGDP_receiveUP( &timer_val, NULL, pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+			assert( ret_code != SAGDP_RET_START_OVER_FIRST_RECEIVED );
+		}
+		else if ( ret_code == SAGDP_RET_NEED_NONCE )
+		{
+			ret_code = handlerSASP_get_nonce( sizeInOut, nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+			assert( ret_code == SASP_RET_NONCE );
+			ret_code = handlerSAGDP_receiveUP( &timer_val, nonce, pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+			assert( ret_code != SAGDP_RET_NEED_NONCE );
+		}
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 		printf( "SAGDP1: ret: %d; size: %d\n", ret_code, *sizeInOut );
 
@@ -172,6 +218,7 @@ rectosasp:
 			case SAGDP_RET_SYS_CORRUPTED:
 			{
 				// TODO: reinitialize all
+				sagdp_init( data_buff + DADA_OFFSET_SAGDP );
 				goto getmsg;
 				break;
 			}
@@ -185,6 +232,10 @@ rectosasp:
 			{
 				goto saspsend;
 			}
+			case SAGDP_RET_OK:
+			{
+				goto getmsg;
+			}
 			default:
 			{
 				// unexpected ret_code
@@ -196,7 +247,7 @@ rectosasp:
 
 processcmd:
 		// 4. Process received command (yoctovm)
-		ret_code = yocto_process( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
+		ret_code = slave_process( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 		printf( "YOCTO:  ret: %d; size: %d\n", ret_code, *sizeInOut );
 
@@ -230,9 +281,17 @@ processcmd:
 			
 			
 		// 5. SAGDP
+alt_entry:
 		uint8_t timer_val;
-		ret_code = handlerSAGDP_receiveHLP( &timer_val, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
-		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+		ret_code = handlerSAGDP_receiveHLP( &timer_val, NULL, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+		if ( ret_code == SAGDP_RET_NEED_NONCE )
+		{
+			ret_code = handlerSASP_get_nonce( sizeInOut, nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+			assert( ret_code == SASP_RET_NONCE );
+			ret_code = handlerSAGDP_receiveHLP( &timer_val, nonce, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+			assert( ret_code != SAGDP_RET_NEED_NONCE );
+		}
+memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 		printf( "SAGDP2: ret: %d; size: %d\n", ret_code, *sizeInOut );
 
 		switch ( ret_code )
@@ -265,7 +324,7 @@ processcmd:
 
 		// SASP
 saspsend:
-		ret_code = handlerSASP_send( false, pid, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+		ret_code = handlerSASP_send( nonce, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SASP );
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 		printf( "SASP2:  ret: %d; size: %d\n", ret_code, *sizeInOut );
 
@@ -285,7 +344,7 @@ saspsend:
 			}
 		}
 
-		ret_code = handlerSAGDP_receivePID( pid, data_buff + DADA_OFFSET_SAGDP );
+/*		ret_code = handlerSAGDP_receivePID( pid, data_buff + DADA_OFFSET_SAGDP );
 		printf( "SAGDP3: ret: %d; size: %d\n", ret_code, *sizeInOut );
 		switch ( ret_code )
 		{
@@ -308,7 +367,7 @@ saspsend:
 				break;
 			}
 		}
-
+		*/
 sendmsg:
 			ret_code = sendMessage( sizeInOut, rwBuff );
 			if (ret_code != COMMLAYER_RET_OK )

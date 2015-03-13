@@ -44,12 +44,12 @@
 // Pure Testing Block
 bool chainContinued;
 bool isChainContinued() {return chainContinued; }
-uint16_t last_sent_id = (uint16_t)(0xFFF0);
+uint16_t last_sent_id = (uint16_t)(0xFFF0) + (((uint16_t)MASTER_SLAVE_BIT) << 15 );
 // End of Pure Testing Block 
 
-#if !defined USED_AS_MASTER
 
-uint8_t yocto_process( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ )
+
+uint8_t slave_process( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ )
 {
 	// buffer assumes to contain an input message (including First Byte)
 	// FAKE structure of the buffer: First_Byte | remaining_packet_cnt (1 byte) | fake_body (9-12 bytes)
@@ -123,7 +123,7 @@ uint8_t yocto_process( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buff
 	return YOCTOVM_PASS_LOWER;
 }
 
-#else // USED_AS_MASTER
+
 
 uint8_t master_start( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ )
 {
@@ -170,6 +170,10 @@ uint8_t master_start( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffO
 	return YOCTOVM_PASS_LOWER;
 }
 
+//bool start_over_once = true;
+bool start_over_once = false;
+bool statck_reset = false;
+
 uint8_t master_continue( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ )
 {
 	// by now master_continue() does the same as yocto_process
@@ -181,6 +185,23 @@ uint8_t master_continue( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* bu
 	uint16_t reply_to_id = *(uint16_t*)(buffIn+2);
 	uint16_t self_id = *(uint16_t*)(buffIn+4);
 	first_byte &= SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING; // to use only respective bits
+
+	if ( start_over_once )
+	{
+		if ( second_byte == 3 || second_byte == 4 )
+		{
+			if (!statck_reset)
+			{
+				statck_reset = true;
+				return YOCTOVM_RESET_STACK;
+			}
+			else
+			{
+				start_over_once = false;
+				return master_start( sizeInOut, buffIn, buffOut );
+			}
+		}
+	}
 
 	// print received packet
 	char tail[9];
@@ -240,5 +261,3 @@ uint8_t master_continue( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* bu
 	// return status
 	return YOCTOVM_PASS_LOWER;
 }
-
-#endif // USED_AS_MASTER
