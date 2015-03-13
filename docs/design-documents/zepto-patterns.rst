@@ -27,7 +27,9 @@
 Zepto Programming Patterns
 ==========================
 
-*NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *, * :ref:`sazeptovm` *, and* :ref:`saplugin` *documents, please make sure to read them before proceeding.*
+:Version:   v0.1a
+
+*NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` , :ref:`sazeptovm` *, and* :ref:`saplugin` *documents, please make sure to read them before proceeding.*
 
 Zepto VM does not intend to provide highly sophisticated and/or mathematics-oriented functionality; instead, it intends to support very limited but highly practical scenarios, which allow to minimize communications between SmartAnthill Central Controller and SmartAnthill Device, therefore allowing to minimize power consumption on the side of SmartAnthill Device. 
 
