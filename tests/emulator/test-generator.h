@@ -15,23 +15,33 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#include "sa-timer.h"
+#if !defined __TEST_GENERATOR_H__
+#define __TEST_GENERATOR_H__
 
+// initialization
+void initTestSystem();
+void freeTestSystem();
 
-#ifdef _MSC_VER
+// comm layer hooks
+void registerIncomingPacket( const uint8_t* packet, uint16_t size );
+void registerOutgoingPacket( const uint8_t* packet, uint16_t size );
+bool shouldDropIncomingPacket();
+bool shouldDropOutgoingPacket();
+bool shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size );
+bool shouldInsertOutgoingPacket( uint8_t* packet, uint16_t* size );
+void insertIncomingPacket();
+void insertOutgoingPacket();
 
-#include <Windows.h>
+// sync hooks
+void requestSyncExec();
+void allowSyncExec();
+void waitToProceed();
+void justWait( uint16_t durationSec );
 
-#define TIME_FACTOR 500
-
-void waitForTimeQuantum()
-{
-	Sleep(TIME_FACTOR);
-}
-
-unsigned short getTime()
-{
-	return (unsigned short)( GetTickCount() / TIME_FACTOR ); // 100 ms
-}
-
+// scenarios
+#if !defined USED_AS_MASTER
+bool startSequence();
 #endif
+
+
+#endif // __TEST_GENERATOR_H__
