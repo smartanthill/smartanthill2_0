@@ -33,11 +33,13 @@ Copyright (C) 2015 OLogN Technologies AG
 #define YOCTOVM_FAILED 0 // sunject for system reset
 #define YOCTOVM_OK 1 // if terminating packet received
 #define YOCTOVM_PASS_LOWER 2
-#define YOCTOVM_RESET_STACK 3
+#define YOCTOVM_PASS_LOWER_THEN_IDLE 3 // ret code for testing; same as YOCTOVM_PASS_LOWER but notifies main loop that the chain is over
+#define YOCTOVM_RESET_STACK 4
 
 uint8_t slave_process( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
 uint8_t master_start( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
 uint8_t master_continue( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
+uint8_t master_error( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
 
 // Pure Testing Block
 bool isChainContinued();

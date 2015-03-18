@@ -26,12 +26,17 @@ uint8_t incomingPackets[ MAX_IPACKETS_TO_STORE * PACKET_MAX_SIZE ];
 uint8_t outgoingPackets[ MAX_IPACKETS_TO_STORE * PACKET_MAX_SIZE ];
 
 #if !defined USED_AS_MASTER
-bool slaveStartsSequence = true;
+bool slaveStartsSequence = false;
 bool startSequence()
 {
 	return slaveStartsSequence;
 }
 #endif
+
+uint16_t get_rand_val()
+{
+	return (uint16_t)( rand() );
+}
 
 void registerIncomingPacket( const uint8_t* packet, uint16_t size )
 {
@@ -56,20 +61,20 @@ void registerOutgoingPacket( const uint8_t* packet, uint16_t size )
 bool shouldDropIncomingPacket()
 {
 //	return false;
-	return rand() % 2 == 0; // rate selection
+	return rand() % 4 == 0; // rate selection
 }
 
 bool shouldDropOutgoingPacket()
 {
 //	return false;
-	return rand() % 2 == 0; // rate selection
+	return rand() % 4 == 0; // rate selection
 }
 
 
 
 bool shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size )
 {
-	if ( rand() % 2 != 0 ) // rate selection
+	if ( rand() % 4 != 0 ) // rate selection
 		return false;
 
 	// select one of saved incoming packets
@@ -81,7 +86,7 @@ bool shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size )
 
 bool shouldInsertOutgoingPacket( uint8_t* packet, uint16_t* size )
 {
-	if ( rand() % 2 != 0 ) // rate selection
+	if ( rand() % 4 != 0 ) // rate selection
 		return false;
 
 	// select one of saved incoming packets

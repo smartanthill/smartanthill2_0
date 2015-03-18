@@ -22,6 +22,9 @@ Copyright (C) 2015 OLogN Technologies AG
 void initTestSystem();
 void freeTestSystem();
 
+// common testing calls
+uint16_t get_rand_val();
+
 // comm layer hooks
 void registerIncomingPacket( const uint8_t* packet, uint16_t size );
 void registerOutgoingPacket( const uint8_t* packet, uint16_t size );

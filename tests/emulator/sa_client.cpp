@@ -57,17 +57,21 @@ int main(int argc, char *argv[])
 	uint16_t wake_time;
 	// TODO: revise time/timer management
 
-	// do necessary initialization
-	sagdp_init( data_buff + DADA_OFFSET_SAGDP );
-
-
 	uint8_t ret_code;
 
+	// test setup values
+	bool wait_for_incoming_chain_with_timer;
+	uint16_t wake_time_to_start_new_chain;
 
+	// do necessary initialization
+	sagdp_init( data_buff + DADA_OFFSET_SAGDP );
 
 	// Try to open a named pipe; wait for it, if necessary. 
 	if ( !communicationInitializeAsClient() )
 		return -1;
+
+
+
 
 	ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
 	memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
@@ -84,7 +88,7 @@ getmsg:
 		while ( ret_code == COMMLAYER_RET_PENDING )
 		{
 			waitForTimeQuantum();
-			if ( timer_val && getTime() >= wake_time )
+			if ( timer_val != 0 && getTime() >= wake_time )
 			{
 				printf( "no reply received; the last message (if any) will be resent by timer\n" );
 				// TODO: to think: why do we use here handlerSAGDP_receiveRequestResendLSP() and not handlerSAGDP_timer()
@@ -97,7 +101,16 @@ getmsg:
 					assert( ret_code != SAGDP_RET_NEED_NONCE );
 				}
 				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+				wake_time = 0;
 				goto saspsend;
+				break;
+			}
+			else if ( wait_for_incoming_chain_with_timer && getTime() >= wake_time )
+			{
+				wait_for_incoming_chain_with_timer = false;
+				ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
+				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+				goto entry;
 				break;
 			}
 			ret_code = tryGetMessage( sizeInOut, rwBuff, BUF_SIZE);
@@ -202,6 +215,15 @@ rectosasp:
 				// regular processing will be done below, but we need to jump over 
 				break;
 			}
+			case SAGDP_RET_TO_HIGHER_ERROR:
+			{
+				sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+				// TODO: reinit the rest of stack (where applicable)
+				ret_code = master_error( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
+				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+				goto entry;
+				break;
+			}
 			case SAGDP_RET_TO_LOWER_REPEATED:
 			{
 				goto saspsend;
@@ -222,7 +244,7 @@ processcmd:
 		{
 			sagdp_init( data_buff + DADA_OFFSET_SAGDP );
 			// TODO: reinit the rest of stack (where applicable)
-			ret_code = master_continue( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
+			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
 		}
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 		printf( "YOCTO:  ret: %d; size: %d\n", ret_code, *sizeInOut );
@@ -232,18 +254,50 @@ entry:
 		{
 			case YOCTOVM_PASS_LOWER:
 			{
+				 // test generation: sometimes master can start a new chain at not in-chain reason
+				bool restart_chain = get_rand_val() % 8 == 0;
+				if ( restart_chain )
+				{
+					sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+					ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
+					memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+					assert( ret_code == YOCTOVM_PASS_LOWER );
+				}
 				// regular processing will be done below in the next block
 				break;
 			}
-			case YOCTOVM_OK:
+			case YOCTOVM_PASS_LOWER_THEN_IDLE:
 			{
-				goto getmsg;
+				bool start_now = get_rand_val() % 3 == 0;
+				wake_time_to_start_new_chain = start_now ? getTime() : getTime() + get_rand_val() % 8;
+				wait_for_incoming_chain_with_timer = true;
 				break;
 			}
 			case YOCTOVM_FAILED:
+				sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+				// NOTE: no 'break' is here as the rest is the same as for YOCTOVM_OK
+			case YOCTOVM_OK:
 			{
-				// TODO: process reset
-				goto getmsg;
+				// here, in general, two main options are present: 
+				// (1) to start a new chain immediately, or
+				// (2) to wait, during certain period of time, for an incoming chain, and then, if no packet is received, to start a new chain
+				bool start_now = get_rand_val() % 3 == 0;
+				if ( start_now )
+				{
+					ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
+					memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
+					assert( ret_code == YOCTOVM_PASS_LOWER );
+					// one more trick: wait for some time to ensure that slave will start its own chain, and then send "our own" chain start
+					bool mutual = get_rand_val() % 5 == 0;
+					if ( mutual )
+						justWait( 5 );
+				}
+				else
+				{
+					wake_time_to_start_new_chain = getTime() + get_rand_val() % 8;
+					wait_for_incoming_chain_with_timer = true;
+					goto getmsg;
+				}
 				break;
 			}
 			default:
@@ -334,12 +388,12 @@ saspsend:
 
 
 		// for testing purposes
-		if ( !isChainContinued() )
+/*		if ( !isChainContinued() )
 		{
 			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
 			memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 			goto entry;
-		}
+		}*/
 	}
 
 	communicationTerminate();

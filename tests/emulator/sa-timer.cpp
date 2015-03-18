@@ -22,7 +22,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include <Windows.h>
 
-#define TIME_FACTOR 500
+#define TIME_FACTOR 500 // resulting in 500 ms granularity
 
 void waitForTimeQuantum()
 {
@@ -31,7 +31,7 @@ void waitForTimeQuantum()
 
 unsigned short getTime()
 {
-	return (unsigned short)( GetTickCount() / TIME_FACTOR ); // 100 ms
+	return (unsigned short)( GetTickCount() / TIME_FACTOR );
 }
 
 #endif

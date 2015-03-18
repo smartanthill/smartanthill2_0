@@ -106,7 +106,14 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 		if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_ERROR_MSG )
 		{
 			// TODO: process
-			assert(0);
+			cancelLTO( data + DATA_SAGDP_LTO_OFFSET );
+			*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
+			*sizeInOut -= SAGDP_LRECEIVED_PID_SIZE;
+			buffOut[0] = ( packet_status & SAGDP_P_STATUS_MASK );
+			memcpy( buffOut + 1, buffIn + 1 + SAGDP_LRECEIVED_PID_SIZE, *sizeInOut-1 );
+
+			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_IDLE;
+			return SAGDP_RET_TO_HIGHER;
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) != SAGDP_P_STATUS_FIRST )
 		{
@@ -147,7 +154,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 			bool isreply = is_pid_in_range( buffIn + 1, data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET, data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET );
 			if ( !isreply ) // above the range; silently ignore
 			{
-				PRINTF( "SAGDP OK: CORRRUPTED: state = %d, packet_status = %d, !isreply\n", state, packet_status );
+				PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d, !isreply\n", state, packet_status );
 				return SAGDP_RET_OK;
 			}
 			// for non-terminating, save packet ID
@@ -162,13 +169,17 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 			}
 		}
 #else // USED_AS_MASTER not ndefined
-		if ( packet_status == SAGDP_P_STATUS_ERROR_MSG ) // unexpected at slave's side
+		if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_ERROR_MSG ) // unexpected at slave's side
 		{
+			// send an error message to a communication partner and reinitialize
+			buffOut[0] = SAGDP_P_STATUS_ERROR_MSG;
+			*sizeInOut = 1;
+			// TODO: add other relevant data, if any, and update sizeInOut
 			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
 			PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
 			return SAGDP_RET_SYS_CORRUPTED;
 		}
-		if ( packet_status != SAGDP_P_STATUS_FIRST )
+		if ( ( packet_status & SAGDP_P_STATUS_MASK ) != SAGDP_P_STATUS_FIRST )
 		{
 //			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
 //			PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
@@ -182,7 +193,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 			if ( isold )
 			{
 				PRINTF( "SAGDP OK: state = %d, packet_status = %d; isold\n", state, packet_status );
-				if ( packet_status ==  SAGDP_P_STATUS_INTERMEDIATE )
+				if ( ( packet_status & SAGDP_P_STATUS_MASK ) ==  SAGDP_P_STATUS_INTERMEDIATE )
 				{
 					// re-send LSP
 					if ( nonce == NULL )
@@ -199,8 +210,11 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 				}
 				else
 				{
-					assert( packet_status ==  SAGDP_P_STATUS_TERMINATING );
-					// TODO: send an error message to a communication partner
+					assert( ( packet_status & SAGDP_P_STATUS_MASK ) ==  SAGDP_P_STATUS_TERMINATING );
+					// send an error message to a communication partner and reinitialize
+					buffOut[0] = SAGDP_P_STATUS_ERROR_MSG;
+					*sizeInOut = 1;
+					// TODO: add other relevant data, if any, and update sizeInOut
 					*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
 					PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
 					return SAGDP_RET_SYS_CORRUPTED;
@@ -210,22 +224,28 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 			bool isreply = is_pid_in_range( buffIn + 1, data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET, data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET );
 			if ( !isreply ) // silently ignore
 			{
-				// TODO: send an error message to a communication partner
+				// send an error message to a communication partner and reinitialize
+				buffOut[0] = SAGDP_P_STATUS_ERROR_MSG;
+				*sizeInOut = 1;
+				// TODO: add other relevant data, if any, and update sizeInOut
 				*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
 				PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
 				return SAGDP_RET_SYS_CORRUPTED;
 			}
 			// for non-terminating, save packet ID
-			if ( packet_status == SAGDP_P_STATUS_INTERMEDIATE )
+			if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_INTERMEDIATE )
 			{
-				// TODO: send an error message to a communication partner
+				// send an error message to a communication partner and reinitialize
+				buffOut[0] = SAGDP_P_STATUS_ERROR_MSG;
+				*sizeInOut = 1;
+				// TODO: add other relevant data, if any, and update sizeInOut
 				*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
 				PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
 				return SAGDP_RET_SYS_CORRUPTED;
 			}
 			else
 			{
-				assert( packet_status ==  SAGDP_P_STATUS_TERMINATING );
+				assert( ( packet_status & SAGDP_P_STATUS_MASK ) ==  SAGDP_P_STATUS_TERMINATING );
 				return SAGDP_RET_OK; // ignored
 			}
 		}
@@ -274,14 +294,21 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 #ifdef USED_AS_MASTER
 		if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_ERROR_MSG )
 		{
-			// TODO: process
+			cancelLTO( data + DATA_SAGDP_LTO_OFFSET );
+			*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
+			*sizeInOut -= SAGDP_LRECEIVED_PID_SIZE;
+			buffOut[0] = ( packet_status & SAGDP_P_STATUS_MASK );
+			memcpy( buffOut + 1, buffIn + 1 + SAGDP_LRECEIVED_PID_SIZE, *sizeInOut-1 );
+
+			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_IDLE;
+			return SAGDP_RET_TO_HIGHER;
 		}
-		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_FIRST ) // unexpected state; silently ignore
+		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_FIRST )
 		{
 			// note: this "first" packet can be start of a new chain, or a re-sent of the beginning of the previous chain (if that previous chain had a length of 2)
 			const uint8_t* this_chain_id = buffIn + 1;
 			const uint8_t* prev_chain_id = data + DATA_SAGDP_LRECEIVED_CHAIN_ID_OFFSET;
-			bool is_resent = pid_compare( this_chain_id, this_chain_id ) == 0;
+			bool is_resent = pid_compare( this_chain_id, prev_chain_id ) == 0;
 			if ( is_resent )
 			{
 				if ( nonce == NULL )
@@ -300,8 +327,10 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 			}
 			else
 			{
-				PRINTF( "SAGDP OK: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
-				return SAGDP_RET_OK; // just ignore
+				PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
+//				return SAGDP_RET_OK; // just ignore
+				// TODO: form a packet
+				return SAGDP_RET_TO_HIGHER_ERROR;
 			}
 		}
 		else
@@ -344,10 +373,12 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 				}
 			}
 			bool isreply = is_pid_in_range( buffIn + 1, data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET, data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET );
-			if ( !isreply ) // silently ignore
+			if ( !isreply )
 			{
 				PRINTF( "SAGDP OK: CORRRUPTED: state = %d, packet_status = %d, !isreply\n", state, packet_status );
-				return SAGDP_RET_OK;
+//				return SAGDP_RET_OK; // silently ignore
+				// TODO: form a packet
+				return SAGDP_RET_TO_HIGHER_ERROR;
 			}
 			// for non-terminating, save packet ID
 			if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_INTERMEDIATE )
@@ -368,7 +399,10 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 #else // USED_AS_MASTER not defined
 		if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_ERROR_MSG )
 		{
-			// TODO: send an error message to a communication partner
+			// send an error message to a communication partner and reinitialize
+			buffOut[0] = SAGDP_P_STATUS_ERROR_MSG;
+			*sizeInOut = 1;
+			// TODO: add other relevant data, if any, and update sizeInOut
 			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
 			PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
 			return SAGDP_RET_SYS_CORRUPTED;
@@ -442,7 +476,10 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 			bool isreply = is_pid_in_range( buffIn + 1, data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET, data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET );
 			if ( !isreply ) // silently ignore
 			{
-				// TODO: send an error message to a communication partner
+				// send an error message to a communication partner and reinitialize
+				buffOut[0] = SAGDP_P_STATUS_ERROR_MSG;
+				*sizeInOut = 1;
+				// TODO: add other relevant data, if any, and update sizeInOut
 				*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
 				PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d, !isreply\n", state, packet_status );
 				return SAGDP_RET_SYS_CORRUPTED;
@@ -468,6 +505,10 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 
 	else // invalid states
 	{
+		// send an error message to a communication partner and reinitialize
+		buffOut[0] = SAGDP_P_STATUS_ERROR_MSG;
+		*sizeInOut = 1;
+		// TODO: add other relevant data, if any, and update sizeInOut
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
 		PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
 		return SAGDP_RET_SYS_CORRUPTED;
@@ -516,6 +557,10 @@ uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint8_t* nonce, 
 	}
 	else // invalid states
 	{
+		// send an error message to a communication partner and reinitialize
+		buffOut[0] = SAGDP_P_STATUS_ERROR_MSG;
+		*sizeInOut = 1;
+		// TODO: add other relevant data, if any, and update sizeInOut
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
 		return SAGDP_RET_SYS_CORRUPTED;
 	}
@@ -533,11 +578,16 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, uint16_t* siz
 
 	uint8_t state = *( data + DATA_SAGDP_STATE_OFFSET );
 	uint8_t packet_status = buffIn[0];
+	PRINTF( "handlerSAGDP_receiveHLP(): state = %d, packet_status = %d\n", state, packet_status );
 
 	if ( state == SAGDP_STATE_IDLE )
 	{
 		if ( ( packet_status & SAGDP_P_STATUS_FIRST ) == 0 || ( packet_status & SAGDP_P_STATUS_TERMINATING ) )
 		{
+			// send an error message to a communication partner and reinitialize
+			buffOut[0] = SAGDP_P_STATUS_ERROR_MSG;
+			*sizeInOut = 1;
+			// TODO: add other relevant data, if any, and update sizeInOut
 			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
 			return SAGDP_RET_SYS_CORRUPTED;
 		}
@@ -551,6 +601,7 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, uint16_t* siz
 		// apply nonce
 		memcpy( data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET, nonce, SAGDP_LSENT_PID_SIZE );
 		memcpy( data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET, nonce, SAGDP_LSENT_PID_SIZE );
+		memcpy( data + DATA_SAGDP_LRECEIVED_CHAIN_ID_OFFSET, nonce, SAGDP_LSENT_PID_SIZE );
 
 		// form a UP packet
 		uint8_t* writeptr = buffOut;
@@ -563,7 +614,7 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, uint16_t* siz
 		else
 			memcpy( writeptr, data + DATA_SAGDP_LRECEIVED_PID_OFFSET, SAGDP_LRECEIVED_PID_SIZE );
 		writeptr += SAGDP_LRECEIVED_PID_SIZE;
-		memcpy( writeptr, buffIn+1, *sizeInOut );
+		memcpy( writeptr, buffIn+1, *sizeInOut-1 );
 		*sizeInOut += SAGDP_LRECEIVED_PID_SIZE;
 
 		// save a copy
@@ -584,6 +635,10 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, uint16_t* siz
 	{
 		if ( packet_status & SAGDP_P_STATUS_FIRST )
 		{
+			// send an error message to a communication partner and reinitialize
+			buffOut[0] = SAGDP_P_STATUS_ERROR_MSG;
+			*sizeInOut = 1;
+			// TODO: add other relevant data, if any, and update sizeInOut
 			*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
 			return SAGDP_RET_SYS_CORRUPTED;
 		}
@@ -605,7 +660,7 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, uint16_t* siz
 		PRINTF( "handlerSAGDP_receiveHLP(): PID reply-to: %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 		memcpy( writeptr, data + DATA_SAGDP_LRECEIVED_PID_OFFSET, SAGDP_LRECEIVED_PID_SIZE );
 		writeptr += SAGDP_LRECEIVED_PID_SIZE;
-		memcpy( writeptr, buffIn+1, *sizeInOut );
+		memcpy( writeptr, buffIn+1, *sizeInOut-1 );
 		*sizeInOut += SAGDP_LRECEIVED_PID_SIZE;
 
 		// save a copy
@@ -624,6 +679,10 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, uint16_t* siz
 	}
 	else // invalid states
 	{
+		// send an error message to a communication partner and reinitialize
+		buffOut[0] = SAGDP_P_STATUS_ERROR_MSG;
+		*sizeInOut = 1;
+		// TODO: add other relevant data, if any, and update sizeInOut
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_NOT_INITIALIZED;
 		return SAGDP_RET_SYS_CORRUPTED;
 	}
