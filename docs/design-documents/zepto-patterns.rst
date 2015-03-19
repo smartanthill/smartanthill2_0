@@ -33,7 +33,7 @@ Zepto Programming Patterns
 
 Zepto VM does not intend to provide highly sophisticated and/or mathematics-oriented functionality; instead, it intends to support very limited but highly practical scenarios, which allow to minimize communications between SmartAnthill Central Controller and SmartAnthill Device, therefore allowing to minimize power consumption on the side of SmartAnthill Device.
 
-Currently, Zepto programming patterns are described in terms of Zepto Lua and Zepto Python. These two are extremely limited versions of their normal counterparts ("zepto" means "10^-21", so you get about 10^-21 functionality out of original languages). Basically, whatever is not in these examples, you shouldn't use.
+Currently, Zepto programming patterns are described in terms of Zepto Lua, Zepto Python and Zepto JavaScript. These two are extremely limited versions of their normal counterparts ("zepto" means "10^-21", so you get about 10^-21 functionality out of original languages). Basically, whatever is not in these examples, you shouldn't use.
 
 Pattern 1. Simple Request/Response
 ----------------------------------
@@ -51,6 +51,12 @@ Zepto Python:
 .. code-block:: python
 
   return TemperatureSensor.Execute()
+
+Zepto JavaScript
+
+.. code-block:: javascript
+
+  return TemperatureSensor.Execute();
 
 This program should compile to all Zepto VM Levels.
 
@@ -73,6 +79,13 @@ Zepto Python:
 
   mcu_sleep(5*60)
   return TemperatureSensor.Execute()
+
+Zepto JavaScript:
+
+.. code-block:: javascript
+
+  mcu_sleep(5*60);
+  return TemperatureSensor.Execute();
 
 This program should compile to all Zepto VM Levels.
 
@@ -100,13 +113,26 @@ Zepto Python:
 
 .. code-block:: python
 
-    for i in range(1,5):
+    for i in range(0, 5):
         temp = TemperatureSensor.Execute()
         if temp.Temperature < 36.0 or \
                 temp.Temperature > 38.9:
             return temp
         mcu_sleep(5*60)
     return TemperatureSensor.Execute()
+
+Zepto JavaScript:
+
+.. code-block:: javascript
+
+    for (var i = 0; i < 5; i++) {
+        temp = TemperatureSensor.Execute();
+        if (temp.Temperature < 36.0 ||
+                temp.Temperature > 38.9)
+            return temp;
+        mcu_sleep(5*60);
+    }
+    return TemperatureSensor.Execute();
 
 This program should compile to all Zepto VM Levels, starting from Zepto VM Small.
 
@@ -141,6 +167,20 @@ or
 
   return (TemperatureSensor.Execute(), HumiditySensor.Execute())
 
+Zepto JavaScript:
+
+.. code-block:: javascript
+
+  temp = TemperatureSensor.Execute();
+  humi = HumiditySensor.Execute();
+  return [temp, humi];
+
+or
+
+.. code-block:: javascript
+
+  return [TemperatureSensor.Execute(), HumiditySensor.Execute()];
+
 In all these (equivalent) cases compiler, if possible, SHOULD implicitly call both sensor Execute() functions in parallel (see PARALLEL Zepto VM instruction), reducing processing time.
 
 Combined Example
@@ -169,7 +209,7 @@ Zepto Lua:
 .. code-block:: python
 
     humi = HumiditySensor.Execute()
-    for i in range(1, 5):
+    for i in range(0, 5):
         if i%2 == 0:
             humi = HumiditySensor.Execute()
         temp = TemperatureSensor.Execute()
@@ -178,9 +218,27 @@ Zepto Lua:
                temp.Temperature > 30.0:
             return temp, humi
 
-    mcu_sleep(5*60)
+        mcu_sleep(5*60)
 
     return (TemperatureSensor.Execute(), HumiditySensor.Execute())
+
+
+.. code-block:: javascript
+
+    humi = HumiditySensor.Execute();
+    for (var i = 0; i < 5; i++) {
+        if (i%2 == 0)
+            humi = HumiditySensor.Execute();
+        temp = TemperatureSensor.Execute();
+
+        if (humi.HumiditySensor > 80 &&
+               temp.Temperature > 30.0)
+            return [temp, humi];
+
+        mcu_sleep(5*60);
+    }
+
+    return [TemperatureSensor.Execute(), HumiditySensor.Execute()];
 
 TODO: calculation plugins(?)
 
