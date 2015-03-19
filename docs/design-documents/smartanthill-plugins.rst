@@ -31,25 +31,25 @@ SmartAnthill Plugins
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
-SmartAnthill Devices use SmartAnthill Plugins to communicate with specific devices. 
+SmartAnthill Devices use SmartAnthill Plugins to communicate with specific devices.
 
-SmartAnthill Plugins are generally written in C programming language. 
+SmartAnthill Plugins are generally written in C programming language.
 
 Each SmartAnthill Plugin is represented by it's Plugin Handler, and Plugin Manifest.
 
 SmartAnthill Plugin Handler
 ---------------------------
 
-Each SmartAnthill Plugin has Plugin Handler, usually implemented as two C functions which have the following prototypes: 
+Each SmartAnthill Plugin has Plugin Handler, usually implemented as two C functions which have the following prototypes:
 
 **plugin_handler_init(const void\* plugin_config, void\* plugin_state )**
 
 **plugin_handler(const void\* plugin_config, void\* plugin_state, const void\* cmd, uint16 cmd_size, MEMORY_HANDLE reply, WaitingFor\* waiting_for)**
 
-See details on MEMORY_HANDLE in 'Plugin API' section below. 
+See details on MEMORY_HANDLE in 'Plugin API' section below.
 
-SmartAnthill Manifest
----------------------
+SmartAnthill Plugin Manifest
+----------------------------
 
 Each SmartAnthill Plugin has Plugin Manifest, which describes input and output of the plugin.
 
@@ -73,8 +73,8 @@ Plugin Manifest is an XML file, with structure which looks as follows:
 
 Currently supported <field> types are:
 
-  * "encoded-int<max=n>" (using Encoded-Signed-Int<max=> encoding as specified in :ref:`saprotostack` document). 
-  * "encoded-uint<max=n>" (using Encoded-Unsigned-Int<max=> encoding as specified in :ref:`saprotostack` document). 
+  * "encoded-int<max=n>" (using Encoded-Signed-Int<max=> encoding as specified in :ref:`saprotostack` document).
+  * "encoded-uint<max=n>" (using Encoded-Unsigned-Int<max=> encoding as specified in :ref:`saprotostack` document).
   * additional data types will be added as needed
 
 <meaning> tag
@@ -84,13 +84,13 @@ Currently supported <field> types are:
 
 **if(TemperatureSensor.Temperature > 38.9) {...}**
 
-instead of 
+instead of
 
 **if(TemperatureSensor.Temperature > 200) {...}**
 
 which would be necessary without <meaning> tag.
 
-To enable much more intuitive first form, an appropriate fragment of Plugin Manifest should be written as 
+To enable much more intuitive first form, an appropriate fragment of Plugin Manifest should be written as
 
 .. code-block:: xml
 
@@ -102,7 +102,7 @@ To enable much more intuitive first form, an appropriate fragment of Plugin Mani
       </meaning>
   ...
 
-or as 
+or as
 
 .. code-block:: xml
 
@@ -113,7 +113,7 @@ or as
       </meaning>
   ...
 
-where *meaning* is calculated as **meaning=a\*field+b**. 
+where *meaning* is calculated as **meaning=a\*field+b**.
 
 Currently supported <meaning> types are "float" and "int". If <meaning> type is 'int', then all the relevant calculations are performed as floats, and then rounded to the nearest integer.
 

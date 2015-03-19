@@ -62,7 +62,7 @@ While Zepto VM itself indeed uses ridiculously low amount of RAM, a developer ne
 Zepto VM Restrictions
 ---------------------
 
-As Zepto VM implements an “Execution Layer” of SACCP, it needs to implement all  “Execution Layer Restrictions” set in 
+As Zepto VM implements an “Execution Layer” of SACCP, it needs to implement all  “Execution Layer Restrictions” set in
 :ref:`saccp` document. While present document doesn't duplicate these restrictions, it aims to specify them in appropriate places (for example, when specific instructions are described).
 
 “Program Errors” as specified in Execution Layer Restrictions are implemented as ZEPTOVM_PROGRAMERROR_* Zepto VM exceptions as described below.
@@ -114,12 +114,12 @@ Zepto VM Opcodes
 * ZEPTOVM_OP_POPREPLIES
 * ZEPTOVM_OP_EXIT
 * */\* starting from the next opcode, instructions are not supported by Zepto VM-One \*/*
-* ZEPTOVM_OP_JMP 
+* ZEPTOVM_OP_JMP
 * ZEPTOVM_OP_JMPIFERRORCODE_LT
 * ZEPTOVM_OP_JMPIFERRORCODE_GT
 * ZEPTOVM_OP_JMPIFERRORCODE_EQ
 * */\* starting from the next opcode, instructions are not supported by Zepto VM-Tiny and below \*/*
-* ZEPTOVM_OP_PUSHEXPR_CONSTANT 
+* ZEPTOVM_OP_PUSHEXPR_CONSTANT
 * ZEPTOVM_OP_PUSHEXPR_ERRORCODE
 * ZEPTOVM_OP_PUSHEXPR_1BYTE_FROMREPLY
 * ZEPTOVM_OP_PUSHEXPR_2BYTES_FROMREPLY
@@ -136,7 +136,7 @@ Zepto VM Opcodes
 * ZEPTOVM_OP_JMPIFEXPR_NOPOP_EQ
 * ZEPTOVM_OP_JMPIFEXPR_NOPOP_NE
 * */\* starting from the next opcode, instructions are not supported by Zepto VM-Small and below \*/*
-* ZEPTOVM_OP_PARALLEL 
+* ZEPTOVM_OP_PARALLEL
 
 Zepto VM Exceptions
 -------------------
@@ -190,7 +190,7 @@ where ZEPTOVM_OP_DEVICECAPS is 1-byte opcode, and MAXIMUM-REPLY-SIZE is a 1-byte
 
 DEVICECAPS instruction pushes Device-Capabilities-Reply to "reply buffer". Usually DEVICECAPS instruction is the only instruction in the program (this allows to provide guarantees on the maximum reply size).
 
-Device-Capabilities-Reply MUST be at most of the *maximum-devicecaps-size = min(MAXIMUM-REPLY-SIZE,CurrentDeviceCapabilities.SACCP_EXTENDED_GUARANTEED_PAYLOAD)* size; this is necessary to ensure that it safely passes all the SmartAnthill Protocols (see 
+Device-Capabilities-Reply MUST be at most of the *maximum-devicecaps-size = min(MAXIMUM-REPLY-SIZE,CurrentDeviceCapabilities.SACCP_EXTENDED_GUARANTEED_PAYLOAD)* size; this is necessary to ensure that it safely passes all the SmartAnthill Protocols (see
 :ref:`saprotostack` document for details). *maximum-devicecaps-size* MUST be >= 8 and <= 384.
 
 Device-Capabilities-Reply is defined as follows:
@@ -207,7 +207,7 @@ and Extended-Device-Capabilities extends beyond 8 bytes to provide more informat
 
 Here:
 
-* SACCP_BASIC_GUARANTEED_PAYLOAD is a 1-byte field specifying guaranteed size of SACCP payload which is supported by current device (taking into account capabilities of it's L2 protocol, see 
+* SACCP_BASIC_GUARANTEED_PAYLOAD is a 1-byte field specifying guaranteed size of SACCP payload which is supported by current device (taking into account capabilities of it's L2 protocol, see
   :ref:`saprotostack` document for details). If SACCP guaranteed payload of the device is more than 255 bytes, then SACCP_GUARANTEED_PAYLOAD MUST be set to 255, and SACCP_EXTENDED_GUARANTEED_PAYLOAD SHOULD be set to real value of the SACCP guaranteed payload.
 * <ZEPTOVM_LEVEL> is a 3-bit bitfield, specifying Zepto VM Level supported
 * <ZEPTOVM_BASIC_REPLY_STACK_SIZE> is a 5-bit bitfield, equal to ZEPTOVM_REPLY_STACK_SIZE (see below for details). If ZEPTOVM_REPLY_STACK_SIZE is more than 31, then <ZEPTOVM_BASIC_REPLY_STACK_SIZE> MUST be set to 31, and real ZEPTOVM_REPLY_STACK_SIZE SHOULD be reported in ZEPTOVM_EXTENDED_REPLY_STACK_SIZE field.
@@ -312,15 +312,15 @@ where <SUBCODE> is one of {LT,GT,EQ}; ZEPTOVM_OP_JMPIFERRORCODE_LT, ZEPTOVM_OP_J
 
 ZEPTOVM_OP_JMPIFERRORCODE_* instruction takes the reply of the last plugin which was called, and compares first byte of the reply (which by convention represents 'plugin error code', see above) to the THRESHOLD. If first byte of the reply is < (for <SUBCODE>=LT) THRESHOLD, PC is incremented by a value of DELTA (as with JMP, DELTA is added to a PC positioned right after current instruction).
 
-+---------+---------------------------------------+
-|<SUBCODE>|Jump if                                |
-+=========+=======================================+
-|LT       | First byte of last reply < THRESHOLD  |
-+---------+---------------------------------------+
-|GT       | First byte of last reply > THRESHOLD  |
-+---------+---------------------------------------+
-|EQ       | First byte of last reply == THRESHOLD |
-+---------+---------------------------------------+
++-----------+---------------------------------------+
+| <SUBCODE> | Jump if                               |
++===========+=======================================+
+| LT        | First byte of last reply < THRESHOLD  |
++-----------+---------------------------------------+
+| GT        | First byte of last reply > THRESHOLD  |
++-----------+---------------------------------------+
+| EQ        | First byte of last reply == THRESHOLD |
++-----------+---------------------------------------+
 
 **\| ZEPTOMV_OP_POPREPLIES \| N-REPLIES \|**
 
@@ -341,12 +341,12 @@ Memory overhead of ZeptoVM-Tiny is (in addition to overhead of ZeptoVM-One) is 1
 Level Small
 ^^^^^^^^^^^
 
-Zepto VM-Small allows for even more complicated programs, including expressions and loops, at che cost of additional memory needed (in addition to Zepto VM-Tiny) being on the order of 9-17 bytes.
+Zepto VM-Small allows for even more complicated programs, including expressions and loops, at the cost of additional memory needed (in addition to Zepto VM-Tiny) being on the order of 9-17 bytes.
 Zepto VM-Small, in addition to instructions supported by Zepto VM-Tiny, additionally supports the following instructions:
 
 **\| ZEPTOVM_OP_PUSHEXPR_CONSTANT \| CONST \|**
 
-where where ZEPTOVM_OP_PUSHEXPR_CONSTANT is 1-byte opcode, and CONST is a 2-byte constant (encoded using SmartAnthill Endianness as defined in :ref:`saprotostack`) to be pushed to expression stack.
+where ZEPTOVM_OP_PUSHEXPR_CONSTANT is 1-byte opcode, and CONST is a 2-byte constant (encoded using SmartAnthill Endianness as defined in :ref:`saprotostack`) to be pushed to expression stack.
 
 PUSHEXPR_CONSTANT instruction pushes CONST to an expression stack (if expression stack is exceeded, it will cause ZEPTOVM_EXPRSTACKOVERFLOW VM exception).
 

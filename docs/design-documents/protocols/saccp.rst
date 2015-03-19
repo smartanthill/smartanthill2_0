@@ -44,7 +44,7 @@ As well as it's underlying protocol (which is usually SAGDP), SACCP is an asymme
 SACCP Assumptions
 -----------------
 
-It is assumed that authentication, encryption, integrity and reliable delivery should be implemented by protocol layers below SACCP. SACCP operates on data packets which are already defragmented, authenticated, decrypted, and are guaranteed to be reliably delivered (reliable delivery includes guarantees that every data packet is delivered only once, see also an exceptions to guaranteed delivery in cases of “dual packet chains” and “fatal error handling” below). 
+It is assumed that authentication, encryption, integrity and reliable delivery should be implemented by protocol layers below SACCP. SACCP operates on data packets which are already defragmented, authenticated, decrypted, and are guaranteed to be reliably delivered (reliable delivery includes guarantees that every data packet is delivered only once, see also an exceptions to guaranteed delivery in cases of “dual packet chains” and “fatal error handling” below).
 
 The underlying protocol of SACCP should support the concept of “packet chain” (see section “Packet Chains” for more details). SACCP, when sending a packet, MUST specify to the underlying protocol whether the packet is the first, intermediate, or last in the “packet chain” (and receiving this information back when receiving the packet). One protocol which can be used as SACCP underlying protocol, is SAGDP.
 
@@ -75,7 +75,7 @@ To ensure correct operation of an underlying protocol, there are certain rules (
 
    a) From (2) it follows that 'is-first' and 'is-last' flags are inherently incompatible (which MAY be relied on by implementation)
 
-3. Multiple replies to a single command are not allowed. Scenarios when 'double-reply' to the same command is needed (for example, for longer- or uncertain-time-taking commands need to be implemented, SHOULD be handled in the same way as scenarios with disabling the receiver ('last' packet on the SmartAnthill Device side, then long command, then SmartAnthill Device initiates a new chain).a short “ACK” to confirm that the command is received, may be sent first, then the command can be executed, and then a real reply may be sent), MUST be implemented as follows:
+3. Multiple replies to a single command are not allowed. Scenarios when 'double-reply' to the same command is needed (for example, for longer- or uncertain-time-taking commands need to be implemented, SHOULD be handled in the same way as scenarios with disabling the receiver ('last' packet on the SmartAnthill Device side, then long command, then SmartAnthill Device initiates a new chain). A short “ACK” to confirm that the command is received, may be sent first, then the command can be executed, and then a real reply may be sent), MUST be implemented as follows:
 
    a) first reply MUST be the last packet in the “packet chain” (that is, it MUST have 'is-last' flag)
    b) second reply MUST start a new “packet chain” (that is, it MUST have 'is-first' flag)
@@ -99,7 +99,7 @@ To re-use the same code which is used for SASP anyway, SACCP uses the following 
 
 * prepend input with input-size (encoded as Encoded-Size<max=2>). This ensures that CBC-MAC is secure (because prepending length as Encoded-Size guarantees that there are no two distinct messages which are prefixes of each other; not that we really need it).
 * split input (with prepended input-size) into 12-byte blocks; if there is an incomplete block, pad it with zeros
-* calculate CBC-MAC on sequence of these blocks, using Speck-96 (with a 96-bit block), with a pre-defined Speck-96 key, where each byte of the pre-defined key is 0xA5. 
+* calculate CBC-MAC on sequence of these blocks, using Speck-96 (with a 96-bit block), with a pre-defined Speck-96 key, where each byte of the pre-defined key is 0xA5.
 * calculated CBC-MAC represents 96 bits (12 bytes) of checksum
 * starting from the beginning of the 96-bit (12-byte) checksum, take as many bytes as necessary (up to 12)
 
@@ -143,7 +143,7 @@ where SACCP_REUSE_FRAME_VERBATIM is a 1-byte constant, Fragment-Length is Encode
 
 **\| SACCP_REUSE_FRAME_REFERENCE \| Fragment-Length \| Fragment-Offset \|**
 
-where SACCP_REUSE_FRAME_REFERENCE is a 1-byte constant, Fragment-Length is Encoded-Size<max=2> field, and Fragment-Offset is Encoded-Size<max=2> field, indicating offset of the fragment within existing program. 
+where SACCP_REUSE_FRAME_REFERENCE is a 1-byte constant, Fragment-Length is Encoded-Size<max=2> field, and Fragment-Offset is Encoded-Size<max=2> field, indicating offset of the fragment within existing program.
 
 
 SACCP Reply Packets
