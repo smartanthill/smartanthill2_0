@@ -266,7 +266,8 @@ processcmd:
 			case YOCTOVM_PASS_LOWER:
 			{
 				 // test generation: sometimes slave can start a new chain at not in-chain reason (although in this case it won't be accepted by Master)
-				bool restart_chain = get_rand_val() % 8 == 0;
+//				bool restart_chain = get_rand_val() % 8 == 0;
+				bool restart_chain = false;
 				if ( restart_chain )
 				{
 					sagdp_init( data_buff + DADA_OFFSET_SAGDP );

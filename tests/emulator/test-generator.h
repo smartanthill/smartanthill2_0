@@ -32,19 +32,22 @@ bool shouldDropIncomingPacket();
 bool shouldDropOutgoingPacket();
 bool shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size );
 bool shouldInsertOutgoingPacket( uint8_t* packet, uint16_t* size );
+/*
 void insertIncomingPacket();
 void insertOutgoingPacket();
+*/
+
+bool holdOutgoingPacket( const uint8_t* packet, const uint16_t* size );
+bool isOutgoingPacketOnHold();
+bool releaseOutgoingPacket( uint8_t* packet, uint16_t* size );
+void requestHoldingPacket();
+bool holdPacketOnRequest( const uint8_t* packet, const uint16_t* size );
 
 // sync hooks
 void requestSyncExec();
 void allowSyncExec();
 void waitToProceed();
 void justWait( uint16_t durationSec );
-
-// scenarios
-#if !defined USED_AS_MASTER
-bool startSequence();
-#endif
 
 
 #endif // __TEST_GENERATOR_H__

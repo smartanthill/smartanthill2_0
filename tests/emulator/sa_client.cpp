@@ -85,6 +85,15 @@ getmsg:
 		printf("Waiting for a packet from server...\n");
 //		ret_code = getMessage( sizeInOut, rwBuff, BUF_SIZE);
 		ret_code = tryGetMessage( sizeInOut, rwBuff, BUF_SIZE);
+
+		// sync sending/receiving
+		if ( ret_code == COMMLAYER_RET_OK )
+		{
+			uint16_t sz;
+			if ( releaseOutgoingPacket( rwBuff + BUF_SIZE / 4, &sz ) ) // we are on the safe side here as buffer out is not yet used
+				sendMessage( &sz, rwBuff + BUF_SIZE / 4 );
+		}
+
 		while ( ret_code == COMMLAYER_RET_PENDING )
 		{
 			waitForTimeQuantum();
@@ -102,6 +111,16 @@ getmsg:
 				}
 				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 				wake_time = 0;
+				// sync sending/receiving: release presently hold packet (if any), and cause this packet to be hold
+				{
+					uint16_t sz;
+					if ( releaseOutgoingPacket( rwBuff + BUF_SIZE / 4, &sz ) ) // we are on the safe side here as buffer out is not yet used
+					{
+						sendMessage( &sz, rwBuff + BUF_SIZE / 4 );
+						requestHoldingPacket();
+					}
+				}
+
 				goto saspsend;
 				break;
 			}
@@ -114,6 +133,14 @@ getmsg:
 				break;
 			}
 			ret_code = tryGetMessage( sizeInOut, rwBuff, BUF_SIZE);
+
+			// sync sending/receiving
+			if ( ret_code == COMMLAYER_RET_OK )
+			{
+				uint16_t sz;
+				if ( releaseOutgoingPacket( rwBuff + BUF_SIZE / 4, &sz ) ) // we are on the safe side here as buffer out is not yet used
+					sendMessage( &sz, rwBuff + BUF_SIZE / 4 );
+			}
 		}
 		if ( ret_code != COMMLAYER_RET_OK )
 		{
@@ -371,19 +398,35 @@ saspsend:
 	sendmsg:
 		allowSyncExec();
 		registerOutgoingPacket( rwBuff, *sizeInOut );
-		insertOutgoingPacket();
-		if ( !shouldDropOutgoingPacket() )
+
+		bool syncSendReceive;
+		if ( holdPacketOnRequest( rwBuff, sizeInOut ) )
+			syncSendReceive = false;
+		else
+			get_rand_val() % 7 == 0 && !isOutgoingPacketOnHold();
+
+		if ( syncSendReceive )
 		{
-			ret_code = sendMessage( sizeInOut, rwBuff );
-			if (ret_code != COMMLAYER_RET_OK )
-			{
-				return -1;
-			}
-			printf("\nMessage sent to comm peer\n");
+			holdOutgoingPacket( rwBuff, sizeInOut );
 		}
 		else
 		{
-			printf("\nMessage lost on the way...\n");
+			if ( shouldInsertOutgoingPacket( rwBuff, sizeInOut ) )
+				sendMessage( sizeInOut, rwBuff );
+
+			if ( !shouldDropOutgoingPacket() )
+			{
+				ret_code = sendMessage( sizeInOut, rwBuff );
+				if (ret_code != COMMLAYER_RET_OK )
+				{
+					return -1;
+				}
+				printf("\nMessage sent to comm peer\n");
+			}
+			else
+			{
+				printf("\nMessage lost on the way...\n");
+			}
 		}
 
 

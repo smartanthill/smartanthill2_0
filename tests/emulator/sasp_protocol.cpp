@@ -23,6 +23,7 @@ void SASP_initAtLifeStart( uint8_t* dataBuff )
 {
 	memset( dataBuff + DATA_SASP_NONCE_LW_OFFSET, 0, SASP_NONCE_SIZE );
 	memset( dataBuff + DATA_SASP_NONCE_LS_OFFSET, 0, SASP_NONCE_SIZE );
+	*( dataBuff + DATA_SASP_NONCE_LS_OFFSET + SASP_NONCE_SIZE - 1 ) = 1;
 	memset( dataBuff + DATA_SASP_LRPS_OFFSET, 0, SASP_TAG_SIZE );
 
 	eeprom_write( DATA_SASP_NONCE_LW_ID, dataBuff + DATA_SASP_NONCE_LW_OFFSET, SASP_NONCE_SIZE );

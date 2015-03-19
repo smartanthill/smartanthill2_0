@@ -56,6 +56,11 @@ uint8_t slave_process( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buff
 
 	// get packet data
 	uint8_t first_byte = buffIn[0];
+	if ( ( first_byte & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) == SAGDP_P_STATUS_ERROR_MSG )
+	{
+		PRINTF( "slave_process(): ERROR MESSAGE RECEIVED IN YOCTO\n" );
+		assert(0);
+	}
 	uint16_t chain_id = *(uint16_t*)(buffIn+1);
 	uint16_t chain_ini_size = *(uint16_t*)(buffIn+3);
 	uint16_t reply_to_id = *(uint16_t*)(buffIn+5);
@@ -209,6 +214,11 @@ uint8_t master_continue( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* bu
 
 	// get packet data
 	uint8_t first_byte = buffIn[0];
+	if ( ( first_byte & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) == SAGDP_P_STATUS_ERROR_MSG )
+	{
+		PRINTF( "master_continue(): ERROR MESSAGE RECEIVED IN YOCTO\n" );
+		return master_start( sizeInOut, buffIn, buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
+	}
 	uint16_t chain_id = *(uint16_t*)(buffIn+1);
 	uint16_t chain_ini_size = *(uint16_t*)(buffIn+3);
 	uint16_t reply_to_id = *(uint16_t*)(buffIn+5);
@@ -230,10 +240,6 @@ uint8_t master_continue( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* bu
 	// flags
 	assert( (first_byte & 4 ) == 0 );
 	first_byte &= SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING; // to use only respective bits
-	if ( first_byte == SAGDP_P_STATUS_ERROR_MSG )
-	{
-		return master_start( sizeInOut, buffIn, buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
-	}
 
 	if ( first_byte == SAGDP_P_STATUS_FIRST )
 	{

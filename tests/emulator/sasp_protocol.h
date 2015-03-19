@@ -41,7 +41,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define DATA_SASP_SIZE (SASP_NONCE_SIZE+SASP_NONCE_SIZE+SASP_TAG_SIZE)
 #define DATA_SASP_NONCE_LW_OFFSET 0 // Nonce Lower Watermark
 #define DATA_SASP_NONCE_LS_OFFSET SASP_NONCE_SIZE // Nonce to use For Sending
-#define DATA_SASP_LRPS_OFFSET (SASP_NONCE_SIZE+SASP_NONCE_SIZE) // Last Received Packet Signature
+#define DATA_SASP_LRPS_OFFSET (SASP_NONCE_SIZE+SASP_NONCE_SIZE) // Last Received Packet Signature TODO: Check whether we need it
 
 
 // handlers

@@ -18,20 +18,60 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "sa-common.h"
 #include "sa-commlayer.h"
 #include "test-generator.h"
-#include <stdlib.h> // for rand()
+#include <stdlib.h> // for get_rand_val()
 
 #define MAX_IPACKETS_TO_STORE ((uint16_t)5)
 #define PACKET_MAX_SIZE ((uint16_t)514)
 uint8_t incomingPackets[ MAX_IPACKETS_TO_STORE * PACKET_MAX_SIZE ];
 uint8_t outgoingPackets[ MAX_IPACKETS_TO_STORE * PACKET_MAX_SIZE ];
 
-#if !defined USED_AS_MASTER
-bool slaveStartsSequence = false;
-bool startSequence()
+
+uint8_t packetOnHold[ PACKET_MAX_SIZE ];
+bool isPacketOnHold = false;
+bool holdRequested = false;
+
+bool holdOutgoingPacket( const uint8_t* packet, const uint16_t* size )
 {
-	return slaveStartsSequence;
+	if ( isPacketOnHold )
+		return false;
+	*(uint16_t*)packetOnHold = *size;
+	memcpy( incomingPackets + 2, packet, *size );
+	isPacketOnHold = true;
+	return true;
 }
-#endif
+
+bool isOutgoingPacketOnHold()
+{
+	return isPacketOnHold;
+}
+
+bool releaseOutgoingPacket( uint8_t* packet, uint16_t* size )
+{
+	if ( !isPacketOnHold )
+		return false;
+	*size = *(uint16_t*)packetOnHold;
+	memcpy( packet, incomingPackets + 2, *size );
+	isPacketOnHold = false;
+	return true;
+}
+
+void requestHoldingPacket()
+{
+	assert( !isPacketOnHold );
+	holdRequested = true;
+}
+
+bool holdPacketOnRequest( const uint8_t* packet, const uint16_t* size )
+{
+	if ( !holdRequested )
+		return false;
+	holdRequested = false;
+	assert( !isPacketOnHold );
+	return holdOutgoingPacket( packet, size );
+}
+
+
+
 
 uint16_t get_rand_val()
 {
@@ -61,24 +101,24 @@ void registerOutgoingPacket( const uint8_t* packet, uint16_t size )
 bool shouldDropIncomingPacket()
 {
 //	return false;
-	return rand() % 4 == 0; // rate selection
+	return get_rand_val() % 4 == 0; // rate selection
 }
 
 bool shouldDropOutgoingPacket()
 {
 //	return false;
-	return rand() % 4 == 0; // rate selection
+	return get_rand_val() % 4 == 0; // rate selection
 }
 
 
 
 bool shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size )
 {
-	if ( rand() % 4 != 0 ) // rate selection
+	if ( get_rand_val() % 4 != 0 ) // rate selection
 		return false;
 
 	// select one of saved incoming packets
-	uint8_t sel_packet = rand() % MAX_IPACKETS_TO_STORE;
+	uint8_t sel_packet = get_rand_val() % MAX_IPACKETS_TO_STORE;
 	*size = *(uint16_t*)( incomingPackets + PACKET_MAX_SIZE * sel_packet );
 	memcpy( packet, incomingPackets + PACKET_MAX_SIZE * sel_packet + 2, *size );
 	return *size != 0;
@@ -86,23 +126,23 @@ bool shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size )
 
 bool shouldInsertOutgoingPacket( uint8_t* packet, uint16_t* size )
 {
-	if ( rand() % 4 != 0 ) // rate selection
+	if ( get_rand_val() % 4 != 0 ) // rate selection
 		return false;
 
 	// select one of saved incoming packets
-	uint8_t sel_packet = rand() % MAX_IPACKETS_TO_STORE;
+	uint8_t sel_packet = get_rand_val() % MAX_IPACKETS_TO_STORE;
 	*size = *(uint16_t*)( outgoingPackets + PACKET_MAX_SIZE * sel_packet );
 	memcpy( packet, outgoingPackets + PACKET_MAX_SIZE * sel_packet + 2, *size );
 	return *size != 0;
 }
-
+/*
 void insertIncomingPacket()
 {
-	if ( rand() % 2 != 0 ) // rate selection
+	if ( get_rand_val() % 2 != 0 ) // rate selection
 		return;
 
 	// select one of saved incoming packets
-	uint8_t sel_packet = rand() % MAX_IPACKETS_TO_STORE;
+	uint8_t sel_packet = get_rand_val() % MAX_IPACKETS_TO_STORE;
 	uint16_t size = *(uint16_t*)( incomingPackets + PACKET_MAX_SIZE * sel_packet );
 	if ( size != 0 )
 		sendMessage( &size, incomingPackets + PACKET_MAX_SIZE * sel_packet + 2 );
@@ -110,16 +150,16 @@ void insertIncomingPacket()
 
 void insertOutgoingPacket()
 {
-	if ( rand() % 2 != 0 ) // rate selection
+	if ( get_rand_val() % 2 != 0 ) // rate selection
 		return;
 
 	// select one of saved incoming packets
-	uint8_t sel_packet = rand() % MAX_IPACKETS_TO_STORE;
+	uint8_t sel_packet = get_rand_val() % MAX_IPACKETS_TO_STORE;
 	uint16_t size = *(uint16_t*)( outgoingPackets + PACKET_MAX_SIZE * sel_packet );
 	if ( size != 0 )
 		sendMessage( &size, outgoingPackets + PACKET_MAX_SIZE * sel_packet + 2 );
 }
-
+*/
 
 
 #ifdef _MSC_VER
@@ -133,6 +173,8 @@ void initTestSystem()
 {
 	hSyncEvent = CreateEventA( NULL, TRUE, TRUE, syncEventName );
 	assert( hSyncEvent != NULL );
+	memset( packetOnHold, 0, sizeof( packetOnHold ) );
+	isPacketOnHold = false;
 }
 
 void freeTestSystem()

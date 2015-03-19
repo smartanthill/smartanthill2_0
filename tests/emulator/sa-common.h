@@ -40,7 +40,7 @@ Copyright (C) 2015 OLogN Technologies AG
 // TODO: think about more reliable mechanism
 #define DADA_OFFSET_SASP 0
 #define DADA_OFFSET_SAGDP ( DADA_OFFSET_SASP + 28 )
-#define DADA_OFFSET_NEXT ( DADA_OFFSET_SAGDP + 28 )
+#define DADA_OFFSET_NEXT ( DADA_OFFSET_SAGDP + 34 )
 
 // debug helpers
 
