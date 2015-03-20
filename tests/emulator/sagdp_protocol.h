@@ -28,10 +28,11 @@ Copyright (C) 2015 OLogN Technologies AG
 #define SAGDP_RET_OK 1 // no output is available and no further action is required (for instance, after getting PID)
 #define SAGDP_RET_TO_LOWER_NEW 2 // new packet
 #define SAGDP_RET_TO_LOWER_REPEATED 3 // repeated packet
-#define SAGDP_RET_TO_HIGHER 4
-#define SAGDP_RET_TO_HIGHER_ERROR 5
-#define SAGDP_RET_START_OVER_FIRST_RECEIVED 6 // "first" packet is received while SAGDP is in "wait-remote" state
-#define SAGDP_RET_NEED_NONCE 7 // nonce is necessary before sending a packet
+#define SAGDP_RET_TO_LOWER_NONE 4 // repeated packet
+#define SAGDP_RET_TO_HIGHER 5
+#define SAGDP_RET_TO_HIGHER_ERROR 6
+#define SAGDP_RET_START_OVER_FIRST_RECEIVED 7 // "first" packet is received while SAGDP is in "wait-remote" state
+#define SAGDP_RET_NEED_NONCE 8 // nonce is necessary before sending a packet
 
 
 // SAGDP States

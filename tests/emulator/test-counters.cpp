@@ -15,23 +15,48 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#include "sa-timer.h"
 
+#include "sa-common.h"
 
-#ifdef _MSC_VER
-
-#include <Windows.h>
-
-#define TIME_FACTOR 200 // resulting in 200 ms granularity
-
-void waitForTimeQuantum()
+#ifdef ENABLE_COUNTER_SYSTEM
+size_t COUNTERS[MAX_COUNTERS_CNT];
+const char* CTRS_NAMES[MAX_COUNTERS_CNT];
+double COUNTERS_D[MAX_COUNTERS_CNT];
+const char* CTRS_NAMES_D[MAX_COUNTERS_CNT];
+void printCounters()
 {
-	Sleep(TIME_FACTOR);
+	printf( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n" );
+	for ( int i=0; i<MAX_COUNTERS_CNT; i++ )
+	{
+		if ( CTRS_NAMES[ i ] )
+			printf( "%d:\t[%d] %s\n", COUNTERS[ i ], i, CTRS_NAMES[ i ] );
+		else
+			assert( COUNTERS[ i ] == 0 );
+		if ( CTRS_NAMES_D[ i ] )
+			printf( "%f:\t[%d] %s\n", COUNTERS_D[ i ], i, CTRS_NAMES_D[ i ] );
+	}
+	printf( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n" );
+}
+#endif // ENABLE_COUNTER_SYSTEM
+
+/*
+
+struct counter
+{
+	const char* name;
+	int value;
+};
+
+counter Counters[] = 
+{
+};
+
+
+void increment_counter( uint8_t ctr )
+{
 }
 
-unsigned short getTime()
+void print_counters()
 {
-	return (unsigned short)( GetTickCount() / TIME_FACTOR );
 }
-
-#endif
+*/

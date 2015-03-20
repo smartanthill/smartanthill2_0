@@ -38,8 +38,8 @@ Copyright (C) 2015 OLogN Technologies AG
 //uint16_t last_sent_id = (uint16_t)(0xFFF0) + (((uint16_t)MASTER_SLAVE_BIT) << 15 );
 uint16_t last_sent_id = 0;
 
-uint16_t currChainID;
-uint16_t currChainIdBase = ( MASTER_SLAVE_BIT << 15 );
+uint16_t currChainID[2];
+uint16_t currChainIdBase[2] = { 0, ( MASTER_SLAVE_BIT << 15 ) };
 // End of Pure Testing Block 
 
 
@@ -54,6 +54,8 @@ uint8_t slave_process( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buff
 	// replying_to is a copy of self_id of the received packet (or 0 for the first packet ion the chain)
 	// rand_part is filled with some number of '-' ended by '>'
 
+	INCREMENT_COUNTER( 0, "slave_process(), packet received" );
+
 	// get packet data
 	uint8_t first_byte = buffIn[0];
 	if ( ( first_byte & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) == SAGDP_P_STATUS_ERROR_MSG )
@@ -61,23 +63,25 @@ uint8_t slave_process( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buff
 		PRINTF( "slave_process(): ERROR MESSAGE RECEIVED IN YOCTO\n" );
 		assert(0);
 	}
-	uint16_t chain_id = *(uint16_t*)(buffIn+1);
-	uint16_t chain_ini_size = *(uint16_t*)(buffIn+3);
-	uint16_t reply_to_id = *(uint16_t*)(buffIn+5);
-	uint16_t self_id = *(uint16_t*)(buffIn+7);
+	uint16_t chain_id[2];
+	chain_id[0] = *(uint16_t*)(buffIn+1);
+	chain_id[1] = *(uint16_t*)(buffIn+3);
+	uint16_t chain_ini_size = *(uint16_t*)(buffIn+5);
+	uint16_t reply_to_id = *(uint16_t*)(buffIn+7);
+	uint16_t self_id = *(uint16_t*)(buffIn+9);
 	char tail[256];
-	memcpy( tail, buffIn+9, *sizeInOut - 9 );
-	tail[ *sizeInOut - 9 ] = 0;
+	memcpy( tail, buffIn+11, *sizeInOut - 11 );
+	tail[ *sizeInOut - 11 ] = 0;
 
 	// print packet
-	PRINTF( "Yocto: Packet received: [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", *sizeInOut, first_byte, chain_id, chain_ini_size, reply_to_id, self_id, tail );
+	PRINTF( "Yocto: Packet received: [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", *sizeInOut, first_byte, chain_id[0], chain_id[1], chain_ini_size, reply_to_id, self_id, tail );
 
 	// test and analyze
 
 	// size
 	if ( !( *sizeInOut >= 10 && *sizeInOut <= 17 ) )
 		printf( "ZEPTO: BAD PACKET RECEIVED\n", *sizeInOut );
-	assert( *sizeInOut >= 10 && *sizeInOut <= 17 );
+	assert( *sizeInOut >= 12 && *sizeInOut <= 19 );
 
 	// flags
 	assert( (first_byte & 4 ) == 0 );
@@ -85,19 +89,20 @@ uint8_t slave_process( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buff
 	if ( first_byte == SAGDP_P_STATUS_FIRST )
 	{
 		assert( 0 == reply_to_id );
-		assert( chain_id != currChainID );
-		currChainID = chain_id;
+		assert( chain_id[0] != currChainID[0] || chain_id[1] != currChainID[1] );
+		currChainID[0] = chain_id[0];
+		currChainID[1] = chain_id[1];
 	}
 	else
 	{
 		assert( last_sent_id == reply_to_id );
-		assert( chain_id == currChainID );
+		assert( chain_id[0] == currChainID[0] && chain_id[1] == currChainID[1] );
 	}
 
 	if ( first_byte == SAGDP_P_STATUS_TERMINATING )
 	{
 //		chainContinued = false;
-		currChainIdBase ++;
+		currChainIdBase[0] ++;
 		return YOCTOVM_OK;
 	}
 
@@ -113,22 +118,25 @@ uint8_t slave_process( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buff
 	last_sent_id = self_id;
 
 	buffOut[0] = first_byte;
-	*(uint16_t*)(buffOut+1) = chain_id;
-	*(uint16_t*)(buffOut+3) = chain_ini_size;
-	*(uint16_t*)(buffOut+5) = reply_to_id;
-	*(uint16_t*)(buffOut+7) = self_id;
+	*(uint16_t*)(buffOut+1) = chain_id[0];
+	*(uint16_t*)(buffOut+3) = chain_id[1];
+	*(uint16_t*)(buffOut+5) = chain_ini_size;
+	*(uint16_t*)(buffOut+7) = reply_to_id;
+	*(uint16_t*)(buffOut+9) = self_id;
 
 	uint16_t varln = 6 - self_id % 7; // 0:6
-	*sizeInOut = 9+varln+1;
-	buffOut[9+varln] = '>';
-	while (varln--) buffOut[9+varln] = '-';
+	*sizeInOut = 11+varln+1;
+	buffOut[11+varln] = '>';
+	while (varln--) buffOut[11+varln] = '-';
 
 	// print outgoing packet
-	memcpy( tail, buffOut+9, *sizeInOut - 9 );
-	tail[ *sizeInOut - 9 ] = 0;
-	PRINTF( "Yocto: Packet sent    : [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", *sizeInOut, first_byte, chain_id, chain_ini_size, reply_to_id, self_id, tail );
+	memcpy( tail, buffOut+11, *sizeInOut - 11 );
+	tail[ *sizeInOut - 11 ] = 0;
+	PRINTF( "Yocto: Packet sent    : [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", *sizeInOut, first_byte, chain_id[0], chain_id[1], chain_ini_size, reply_to_id, self_id, tail );
 
-	assert( *sizeInOut >= 10 && *sizeInOut <= 17 );
+	assert( *sizeInOut >= 12 && *sizeInOut <= 19 );
+
+	INCREMENT_COUNTER( 1, "slave_process(), packet sent" );
 
 	// return status
 //	chainContinued = true;
@@ -138,6 +146,8 @@ uint8_t slave_process( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buff
 
 uint8_t master_error( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ )
 {
+	INCREMENT_COUNTER( 2, "master_error()" );
+
 	return master_start( sizeInOut, buffIn, buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
 }
 
@@ -146,6 +156,7 @@ uint8_t master_start( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffO
 	// Forms a first packet in the chain
 	// for structure of the packet see comments to yocto_process()
 	// Initial number of packets in the chain is currently entered manually by a tester
+	PRINT_COUNTERS();
 
 	uint8_t first_byte = SAGDP_P_STATUS_FIRST;
 
@@ -165,8 +176,11 @@ uint8_t master_start( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffO
 
 #endif // MANUAL_TEST_DATA_ENTERING
 
-	currChainID = ++currChainIdBase;
-	uint16_t chain_id = currChainID;
+	currChainID[0] = ++( currChainIdBase[0] );
+	currChainID[1] = currChainIdBase[1];
+	uint16_t chain_id[2];
+	chain_id[0] = currChainID[0];
+	chain_id[1] = currChainID[1];
 	uint16_t reply_to_id = 0;
 	uint16_t self_id = 1;
 	last_sent_id = self_id;
@@ -181,23 +195,27 @@ uint8_t master_start( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffO
 
 	// prepare outgoing packet
 	buffOut[0] = first_byte;
-	*(uint16_t*)(buffOut+1) = chain_id;
-	*(uint16_t*)(buffOut+3) = chain_ini_size;
-	*(uint16_t*)(buffOut+5) = reply_to_id;
-	*(uint16_t*)(buffOut+7) = self_id;
+	*(uint16_t*)(buffOut+1) = chain_id[0];
+	*(uint16_t*)(buffOut+3) = chain_id[1];
+	*(uint16_t*)(buffOut+5) = chain_ini_size;
+	*(uint16_t*)(buffOut+7) = reply_to_id;
+	*(uint16_t*)(buffOut+9) = self_id;
 
 	uint16_t varln = 6 - self_id % 7; // 0:6
-	*sizeInOut = 9+varln+1;
-	buffOut[9+varln] = '>';
-	while (varln--) buffOut[9+varln] = '-';
+	*sizeInOut = 11+varln+1;
+	buffOut[11+varln] = '>';
+	while (varln--) buffOut[11+varln] = '-';
 
 	// print outgoing packet
 	char tail[256];
-	memcpy( tail, buffOut+9, *sizeInOut - 9 );
-	tail[ *sizeInOut - 9 ] = 0;
-	PRINTF( "Yocto: Packet sent    : [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", *sizeInOut, first_byte, chain_id, chain_ini_size, reply_to_id, self_id, tail );
+	memcpy( tail, buffOut+11, *sizeInOut - 11 );
+	tail[ *sizeInOut - 11 ] = 0;
+	PRINTF( "Yocto: Packet sent    : [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", *sizeInOut, first_byte, chain_id[0], chain_id[1], chain_ini_size, reply_to_id, self_id, tail );
 
-	assert( *sizeInOut >= 10 && *sizeInOut <= 17 );
+	assert( *sizeInOut >= 12 && *sizeInOut <= 19 );
+
+	INCREMENT_COUNTER( 3, "master_start(), chain started" );
+
 
 	// return status
 	return YOCTOVM_PASS_LOWER;
@@ -211,31 +229,36 @@ uint8_t master_continue( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* bu
 {
 	// by now master_continue() does the same as yocto_process
 
+	INCREMENT_COUNTER( 4, "master_continue(), packet received" );
+
 
 	// get packet data
 	uint8_t first_byte = buffIn[0];
 	if ( ( first_byte & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) == SAGDP_P_STATUS_ERROR_MSG )
 	{
+		INCREMENT_COUNTER( 5, "master_continue(), error received" );
 		PRINTF( "master_continue(): ERROR MESSAGE RECEIVED IN YOCTO\n" );
 		return master_start( sizeInOut, buffIn, buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
 	}
-	uint16_t chain_id = *(uint16_t*)(buffIn+1);
-	uint16_t chain_ini_size = *(uint16_t*)(buffIn+3);
-	uint16_t reply_to_id = *(uint16_t*)(buffIn+5);
-	uint16_t self_id = *(uint16_t*)(buffIn+7);
+	uint16_t chain_id[2];
+	chain_id[0] = *(uint16_t*)(buffIn+1);
+	chain_id[1] = *(uint16_t*)(buffIn+3);
+	uint16_t chain_ini_size = *(uint16_t*)(buffIn+5);
+	uint16_t reply_to_id = *(uint16_t*)(buffIn+7);
+	uint16_t self_id = *(uint16_t*)(buffIn+9);
 	char tail[256];
-	memcpy( tail, buffIn+9, *sizeInOut - 9 );
-	tail[ *sizeInOut - 9 ] = 0;
+	memcpy( tail, buffIn+11, *sizeInOut - 11 );
+	tail[ *sizeInOut - 11 ] = 0;
 
 	// print packet
-	PRINTF( "Yocto: Packet received: [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", *sizeInOut, first_byte, chain_id, chain_ini_size, reply_to_id, self_id, tail );
+	PRINTF( "Yocto: Packet received: [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", *sizeInOut, first_byte, chain_id[0], chain_id[1], chain_ini_size, reply_to_id, self_id, tail );
 
 	// test and analyze
 
 	// size
 	if ( !( *sizeInOut >= 10 && *sizeInOut <= 17 ) )
 		printf( "ZEPTO: BAD PACKET RECEIVED\n", *sizeInOut );
-	assert( *sizeInOut >= 10 && *sizeInOut <= 17 );
+	assert( *sizeInOut >= 12 && *sizeInOut <= 19 );
 
 	// flags
 	assert( (first_byte & 4 ) == 0 );
@@ -244,19 +267,22 @@ uint8_t master_continue( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* bu
 	if ( first_byte == SAGDP_P_STATUS_FIRST )
 	{
 		assert( 0 == reply_to_id );
-		assert( chain_id != currChainID );
-		currChainID = chain_id;
+		assert( chain_id[0] != currChainID[0] || chain_id[1] != currChainID[1] );
+		currChainID[0] = chain_id[0];
+		currChainID[1] = chain_id[1];
 	}
 	else
 	{
 		assert( last_sent_id == reply_to_id );
-		assert( chain_id == currChainID );
+		assert( chain_id[0] == currChainID[0] && chain_id[1] == currChainID[1] );
 	}
+
 
 	if ( first_byte == SAGDP_P_STATUS_TERMINATING )
 	{
 //		chainContinued = false;
-		currChainIdBase ++;
+		(currChainIdBase[0]) ++;
+		INCREMENT_COUNTER( 6, "master_continue(), packet terminating received" );
 		return YOCTOVM_OK;
 	}
 
@@ -296,23 +322,27 @@ uint8_t master_continue( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* bu
 	last_sent_id = self_id;
 
 	buffOut[0] = first_byte;
-	*(uint16_t*)(buffOut+1) = chain_id;
-	*(uint16_t*)(buffOut+3) = chain_ini_size;
-	*(uint16_t*)(buffOut+5) = reply_to_id;
-	*(uint16_t*)(buffOut+7) = self_id;
+	*(uint16_t*)(buffOut+1) = chain_id[0];
+	*(uint16_t*)(buffOut+3) = chain_id[1];
+	*(uint16_t*)(buffOut+5) = chain_ini_size;
+	*(uint16_t*)(buffOut+7) = reply_to_id;
+	*(uint16_t*)(buffOut+9) = self_id;
 
 	uint16_t varln = 6 - self_id % 7; // 0:6
-	*sizeInOut = 9+varln+1;
-	buffOut[9+varln] = '>';
-	while (varln--) buffOut[9+varln] = '-';
+	*sizeInOut = 11+varln+1;
+	buffOut[11+varln] = '>';
+	while (varln--) buffOut[11+varln] = '-';
 
 	// print outgoing packet
-	memcpy( tail, buffOut+9, *sizeInOut - 9 );
-	tail[ *sizeInOut - 9 ] = 0;
-	PRINTF( "Yocto: Packet sent    : [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", *sizeInOut, first_byte, chain_id, chain_ini_size, reply_to_id, self_id, tail );
+	memcpy( tail, buffOut+11, *sizeInOut - 11 );
+	tail[ *sizeInOut - 11 ] = 0;
+	PRINTF( "Yocto: Packet sent    : [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", *sizeInOut, first_byte, chain_id[0], chain_id[1], chain_ini_size, reply_to_id, self_id, tail );
 
-	assert( *sizeInOut >= 10 && *sizeInOut <= 17 );
+	assert( *sizeInOut >= 12 && *sizeInOut <= 19 );
 
 	// return status
+	INCREMENT_COUNTER( 7, "master_continue(), packet sent" );
+	INCREMENT_COUNTER_IF( 8, "master_continue(), last packet sent", (first_byte >> 1) );
+
 	return first_byte == SAGDP_P_STATUS_TERMINATING ? YOCTOVM_PASS_LOWER_THEN_IDLE : YOCTOVM_PASS_LOWER;
 }

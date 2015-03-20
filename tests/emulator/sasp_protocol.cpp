@@ -398,6 +398,7 @@ void DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( uint16_t* sizeInOut, con
 	uint8_t dbg_nonce[6];
 
 	PRINTF( "handlerSASP_send(): nonce used: %02x %02x %02x %02x %02x %02x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
+	PRINTF( "handlerSASP_send(): size: %d\n", *sizeInOut );
 
 	// do required job
 	SASP_EncryptAndAddAuthenticationData( sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, nonce );
@@ -425,16 +426,19 @@ uint8_t handlerSASP_send( const uint8_t* nonce, uint16_t* sizeInOut, const uint8
 //	DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( pid, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, data+DATA_SASP_NONCE_LS_OFFSET );
 	DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, nonce );
 
+	INCREMENT_COUNTER( 10, "handlerSASP_send()" );
 	return SASP_RET_TO_LOWER_REGULAR;
 }
 
 uint8_t handlerSASP_receive( uint8_t* pid, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data )
 {
+	INCREMENT_COUNTER( 11, "handlerSASP_receive()" );
 	// 1. Perform intra-packet authentication
 	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( pid, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize );
 	PRINTF( "handlerSASP_receive(): PID: %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 	if ( !ipaad )
 	{
+		INCREMENT_COUNTER( 12, "handlerSASP_receive(), garbage in" );
 		PRINTF( "handlerSASP_receive(): BAD PACKET RECEIVED\n" );
 		return SASP_RET_IGNORE;
 	}
@@ -442,6 +446,7 @@ uint8_t handlerSASP_receive( uint8_t* pid, uint16_t* sizeInOut, const uint8_t* b
 	// 2. Is it an Error Old Nonce Message
 	if ( SASP_NonceIsIntendedForSasp( buffIn ) )
 	{
+		INCREMENT_COUNTER( 13, "handlerSASP_receive(), intended for SASP" );
 		uint8_t* nls = data+DATA_SASP_NONCE_LS_OFFSET;
 		uint8_t* new_nls = buffOut+2;
 		PRINTF( "handlerSASP_receive(): packet for SASP received...\n" );
@@ -451,6 +456,7 @@ uint8_t handlerSASP_receive( uint8_t* pid, uint16_t* sizeInOut, const uint8_t* b
 		int8_t nonceCmp = SASP_NonceCompare( nls, new_nls ); // skipping First Byte and reserved byte
 		if ( nonceCmp < 0 )
 		{
+			INCREMENT_COUNTER( 14, "handlerSASP_receive(), nonce las updated" );
 			SASP_NonceClearForSaspFlag( new_nls );
 			memcpy( nls, new_nls, SASP_NONCE_SIZE );
 			SASP_NonceLS_increment( nls );
@@ -465,6 +471,7 @@ uint8_t handlerSASP_receive( uint8_t* pid, uint16_t* sizeInOut, const uint8_t* b
 	int8_t nonceCmp = SASP_NonceCompare( buffIn, nlw );
 	if ( nonceCmp <= 0 ) // error message must be prepared
 	{
+		INCREMENT_COUNTER( 15, "handlerSASP_receive(), error old nonce" );
 		PRINTF( "handlerSASP_receive(): old nonce; packet for SASP is being prepared...\n" );
 		PRINTF( "   nonce received: %02x %02x %02x %02x %02x %02x\n", buffIn[0], buffIn[1], buffIn[2], buffIn[3], buffIn[4], buffIn[5] );
 		PRINTF( "   current    NLW: %02x %02x %02x %02x %02x %02x\n", nlw[0], nlw[1], nlw[2], nlw[3], nlw[4], nlw[5] );
@@ -483,6 +490,7 @@ uint8_t handlerSASP_receive( uint8_t* pid, uint16_t* sizeInOut, const uint8_t* b
 	memcpy( data+DATA_SASP_NONCE_LW_OFFSET, buffIn, SASP_NONCE_SIZE ); // update Nonce Low Watermark
 	memcpy( data+DATA_SASP_LRPS_OFFSET, buffIn+SASP_HEADER_SIZE, SASP_TAG_SIZE ); // save packet signature
 	pid[ SASP_NONCE_SIZE - 1 ] &= (uint8_t)(0x7F);
+	INCREMENT_COUNTER( 16, "handlerSASP_receive(), passed up" );
 	return SASP_RET_TO_HIGHER_NEW;
 }
 

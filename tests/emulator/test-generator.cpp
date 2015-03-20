@@ -101,24 +101,24 @@ void registerOutgoingPacket( const uint8_t* packet, uint16_t size )
 bool shouldDropIncomingPacket()
 {
 //	return false;
-	return get_rand_val() % 4 == 0; // rate selection
+	return get_rand_val() % 8 == 0; // rate selection
 }
 
 bool shouldDropOutgoingPacket()
 {
 //	return false;
-	return get_rand_val() % 4 == 0; // rate selection
+	return get_rand_val() % 8 == 0; // rate selection
 }
 
 
 
 bool shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size )
 {
-	if ( get_rand_val() % 4 != 0 ) // rate selection
+	if ( get_rand_val() % 8 != 0 ) // rate selection
 		return false;
 
 	// select one of saved incoming packets
-	uint8_t sel_packet = get_rand_val() % MAX_IPACKETS_TO_STORE;
+	uint8_t sel_packet = get_rand_val() % ( MAX_IPACKETS_TO_STORE - 1 ) + 1;
 	*size = *(uint16_t*)( incomingPackets + PACKET_MAX_SIZE * sel_packet );
 	memcpy( packet, incomingPackets + PACKET_MAX_SIZE * sel_packet + 2, *size );
 	return *size != 0;
@@ -126,11 +126,11 @@ bool shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size )
 
 bool shouldInsertOutgoingPacket( uint8_t* packet, uint16_t* size )
 {
-	if ( get_rand_val() % 4 != 0 ) // rate selection
+	if ( get_rand_val() % 8 != 0 ) // rate selection
 		return false;
 
 	// select one of saved incoming packets
-	uint8_t sel_packet = get_rand_val() % MAX_IPACKETS_TO_STORE;
+	uint8_t sel_packet = get_rand_val() % ( MAX_IPACKETS_TO_STORE - 1 ) + 1;
 	*size = *(uint16_t*)( outgoingPackets + PACKET_MAX_SIZE * sel_packet );
 	memcpy( packet, outgoingPackets + PACKET_MAX_SIZE * sel_packet + 2, *size );
 	return *size != 0;
@@ -181,7 +181,7 @@ void freeTestSystem()
 {
 	CloseHandle( hSyncEvent );
 }
-
+/*
 void requestSyncExec()
 {
 	ResetEvent( hSyncEvent );
@@ -196,7 +196,7 @@ void waitToProceed()
 {
 	WaitForSingleObject( hSyncEvent, 10000 );	// should be "infinitely", but let's be practical
 }
-
+*/
 void justWait( uint16_t durationSec )
 {
 	Sleep( durationSec * 1000 );

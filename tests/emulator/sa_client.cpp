@@ -36,15 +36,20 @@ uint8_t pid[ SASP_NONCE_SIZE ];
 
 int main(int argc, char *argv[])
 {
+#ifdef ENABLE_COUNTER_SYSTEM
+	INIT_COUNTER_SYSTEM
+#endif // ENABLE_COUNTER_SYSTEM
+
+		
 	printf("starting CLIENT...\n");
 	printf("==================\n\n");
 
 	initTestSystem();
-	bool run_simultaniously = true;
+/*	bool run_simultaniously = true;
 	if ( run_simultaniously )
 	{
 		requestSyncExec();
-	}
+	}*/
 
 	// in this preliminary implementation all memory segments are kept separately
 	// All memory objects are listed below
@@ -84,14 +89,32 @@ getmsg:
 		// 1. Get message from comm peer
 		printf("Waiting for a packet from server...\n");
 //		ret_code = getMessage( sizeInOut, rwBuff, BUF_SIZE);
-		ret_code = tryGetMessage( sizeInOut, rwBuff, BUF_SIZE);
+		if ( shouldInsertIncomingPacket( rwBuff, sizeInOut ) )
+		{
+			INCREMENT_COUNTER( 87, "MAIN LOOP, incoming packet inserted" );
+			ret_code = COMMLAYER_RET_OK;
+		}
+		else
+		{
+			ret_code = tryGetMessage( sizeInOut, rwBuff, BUF_SIZE); 
+			INCREMENT_COUNTER_IF( 96, "MAIN LOOP, packet received [1]", ret_code == COMMLAYER_RET_OK );
+		}
 
 		// sync sending/receiving
 		if ( ret_code == COMMLAYER_RET_OK )
 		{
+			if ( shouldDropIncomingPacket() )
+			{
+				INCREMENT_COUNTER( 88, "MAIN LOOP, incoming packet dropped [1]" );
+				goto getmsg;
+			}
 			uint16_t sz;
 			if ( releaseOutgoingPacket( rwBuff + BUF_SIZE / 4, &sz ) ) // we are on the safe side here as buffer out is not yet used
+			{
+				INCREMENT_COUNTER( 89, "MAIN LOOP, packet sent sync with receiving [1]" );
+				assert( sz );
 				sendMessage( &sz, rwBuff + BUF_SIZE / 4 );
+			}
 		}
 
 		while ( ret_code == COMMLAYER_RET_PENDING )
@@ -102,22 +125,28 @@ getmsg:
 				printf( "no reply received; the last message (if any) will be resent by timer\n" );
 				// TODO: to think: why do we use here handlerSAGDP_receiveRequestResendLSP() and not handlerSAGDP_timer()
 				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, NULL, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+				if ( ret_code == SAGDP_RET_TO_LOWER_NONE )
+				{
+					continue;
+				}
+				wake_time = 0;
 				if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
 					ret_code = handlerSASP_get_nonce( sizeInOut, nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
 					assert( ret_code == SASP_RET_NONCE );
 					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
-					assert( ret_code != SAGDP_RET_NEED_NONCE );
+					assert( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_TO_LOWER_NONE );
 				}
 				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
-				wake_time = 0;
 				// sync sending/receiving: release presently hold packet (if any), and cause this packet to be hold
 				{
 					uint16_t sz;
 					if ( releaseOutgoingPacket( rwBuff + BUF_SIZE / 4, &sz ) ) // we are on the safe side here as buffer out is not yet used
 					{
+						assert( sz );
 						sendMessage( &sz, rwBuff + BUF_SIZE / 4 );
 						requestHoldingPacket();
+						INCREMENT_COUNTER( 90, "MAIN LOOP, packet sent sync with receiving [2] (because of timer)" );
 					}
 				}
 
@@ -126,6 +155,7 @@ getmsg:
 			}
 			else if ( wait_for_incoming_chain_with_timer && getTime() >= wake_time )
 			{
+				INCREMENT_COUNTER( 91, "MAIN LOOP, waiting for incoming chain by timer done; starting own chain" );
 				wait_for_incoming_chain_with_timer = false;
 				ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
 				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
@@ -133,13 +163,23 @@ getmsg:
 				break;
 			}
 			ret_code = tryGetMessage( sizeInOut, rwBuff, BUF_SIZE);
+			INCREMENT_COUNTER_IF( 97, "MAIN LOOP, packet received [2]", ret_code == COMMLAYER_RET_OK );
 
 			// sync sending/receiving
 			if ( ret_code == COMMLAYER_RET_OK )
 			{
 				uint16_t sz;
 				if ( releaseOutgoingPacket( rwBuff + BUF_SIZE / 4, &sz ) ) // we are on the safe side here as buffer out is not yet used
+				{
+					INCREMENT_COUNTER( 93, "MAIN LOOP, packet sent sync with receiving [3]" );
+					assert( sz );
 					sendMessage( &sz, rwBuff + BUF_SIZE / 4 );
+				}
+				if ( shouldDropIncomingPacket() )
+				{
+					INCREMENT_COUNTER( 92, "MAIN LOOP, incoming packet dropped [2]" );
+					goto getmsg;
+				}
 			}
 		}
 		if ( ret_code != COMMLAYER_RET_OK )
@@ -149,8 +189,12 @@ getmsg:
 				return -1;
 			goto getmsg;
 		}
+
+		registerIncomingPacket( rwBuff, *sizeInOut );
 		printf("Message from server received\n");
 		printf( "ret: %d; size: %d\n", ret_code, *sizeInOut );
+
+
 
 rectosasp:
 		// 2. Pass to SASP
@@ -188,12 +232,16 @@ rectosasp:
 			{
 				printf( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
 				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, NULL, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
-				if ( ret_code == SAGDP_RET_NEED_NONCE )
+				if ( ret_code == SAGDP_RET_TO_LOWER_NONE )
+				{
+					continue;
+				}
+				else if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
 					ret_code = handlerSASP_get_nonce( sizeInOut, nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
 					assert( ret_code == SASP_RET_NONCE );
 					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
-					assert( ret_code != SAGDP_RET_NEED_NONCE );
+					assert( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_TO_LOWER_NONE );
 				}
 				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 				goto saspsend;
@@ -267,12 +315,12 @@ rectosasp:
 processcmd:
 		// 4. Process received command (yoctovm)
 		ret_code = master_continue( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
-		if ( ret_code == YOCTOVM_RESET_STACK )
+/*		if ( ret_code == YOCTOVM_RESET_STACK )
 		{
 			sagdp_init( data_buff + DADA_OFFSET_SAGDP );
 			// TODO: reinit the rest of stack (where applicable)
-			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
-		}
+			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
+		}*/
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 		printf( "YOCTO:  ret: %d; size: %d\n", ret_code, *sizeInOut );
 entry:	
@@ -308,19 +356,22 @@ entry:
 				// here, in general, two main options are present: 
 				// (1) to start a new chain immediately, or
 				// (2) to wait, during certain period of time, for an incoming chain, and then, if no packet is received, to start a new chain
-				bool start_now = get_rand_val() % 3 == 0;
+//				bool start_now = get_rand_val() % 3 == 0;
+				bool start_now = true;
 				if ( start_now )
 				{
+					PRINTF( "   ===  YOCTOVM_OK, forced chain restart  ===\n" );
 					ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
 					memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 					assert( ret_code == YOCTOVM_PASS_LOWER );
 					// one more trick: wait for some time to ensure that slave will start its own chain, and then send "our own" chain start
-					bool mutual = get_rand_val() % 5 == 0;
+/*					bool mutual = get_rand_val() % 5 == 0;
 					if ( mutual )
-						justWait( 5 );
+						justWait( 5 );*/
 				}
 				else
 				{
+					PRINTF( "   ===  YOCTOVM_OK, delayed chain restart  ===\n" );
 					wake_time_to_start_new_chain = getTime() + get_rand_val() % 8;
 					wait_for_incoming_chain_with_timer = true;
 					goto getmsg;
@@ -396,35 +447,52 @@ saspsend:
 		}
 
 	sendmsg:
-		allowSyncExec();
+//		allowSyncExec();
+		assert( *sizeInOut );
 		registerOutgoingPacket( rwBuff, *sizeInOut );
+		assert( *sizeInOut );
 
 		bool syncSendReceive;
 		if ( holdPacketOnRequest( rwBuff, sizeInOut ) )
+		{
+			INCREMENT_COUNTER( 95, "MAIN LOOP, holdPacketOnRequest() called" );
 			syncSendReceive = false;
+			assert( *sizeInOut );
+		}
 		else
-			get_rand_val() % 7 == 0 && !isOutgoingPacketOnHold();
+			syncSendReceive = get_rand_val() % 4 == 0 && !isOutgoingPacketOnHold();
+		assert( *sizeInOut );
 
 		if ( syncSendReceive )
 		{
+			INCREMENT_COUNTER( 94, "MAIN LOOP, holdOutgoingPacket() called" );
 			holdOutgoingPacket( rwBuff, sizeInOut );
+			assert( *sizeInOut );
 		}
 		else
 		{
-			if ( shouldInsertOutgoingPacket( rwBuff, sizeInOut ) )
-				sendMessage( sizeInOut, rwBuff );
+			uint16_t sz;
+			if ( shouldInsertOutgoingPacket( rwBuff + BUF_SIZE / 4, &sz ) )
+			{
+				INCREMENT_COUNTER( 80, "MAIN LOOP, packet inserted" );
+				assert( sz );
+				sendMessage( &sz, rwBuff + BUF_SIZE / 4 );
+			}
 
 			if ( !shouldDropOutgoingPacket() )
 			{
+				assert( *sizeInOut );
 				ret_code = sendMessage( sizeInOut, rwBuff );
 				if (ret_code != COMMLAYER_RET_OK )
 				{
 					return -1;
 				}
+				INCREMENT_COUNTER( 82, "MAIN LOOP, packet sent" );
 				printf("\nMessage sent to comm peer\n");
 			}
 			else
 			{
+				INCREMENT_COUNTER( 81, "MAIN LOOP, packet dropped" );
 				printf("\nMessage lost on the way...\n");
 			}
 		}

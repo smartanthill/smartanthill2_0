@@ -38,6 +38,11 @@ uint8_t nonce[ SASP_NONCE_SIZE ];
 
 int main(int argc, char *argv[])
 {
+#ifdef ENABLE_COUNTER_SYSTEM
+	INIT_COUNTER_SYSTEM
+#endif // ENABLE_COUNTER_SYSTEM
+
+		
 	printf("STARTING SERVER...\n");
 	printf("==================\n\n");
 
@@ -94,6 +99,7 @@ getmsg:
 			goto getmsg;
 		}*/
 		ret_code = tryGetMessage( sizeInOut, rwBuff, BUF_SIZE);
+		INCREMENT_COUNTER_IF( 91, "MAIN LOOP, packet received [1]", ret_code == COMMLAYER_RET_OK );
 		while ( ret_code == COMMLAYER_RET_PENDING )
 		{
 			waitForTimeQuantum();
@@ -101,12 +107,16 @@ getmsg:
 			{
 				printf( "no reply received; the last message (if any) will be resent by timer\n" );
 				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, NULL, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+				if ( ret_code == SAGDP_RET_TO_LOWER_NONE )
+				{
+					continue;
+				}
 				if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
 					ret_code = handlerSASP_get_nonce( sizeInOut, nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
 					assert( ret_code == SASP_RET_NONCE );
 					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
-					assert( ret_code != SAGDP_RET_NEED_NONCE );
+					assert( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_TO_LOWER_NONE );
 				}
 				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 				goto saspsend;
@@ -121,6 +131,7 @@ getmsg:
 				break;
 			}
 			ret_code = tryGetMessage( sizeInOut, rwBuff, BUF_SIZE);
+			INCREMENT_COUNTER_IF( 92, "MAIN LOOP, packet received [2]", ret_code == COMMLAYER_RET_OK );
 		}
 		if ( ret_code != COMMLAYER_RET_OK )
 		{
@@ -168,12 +179,16 @@ rectosasp:
 			{
 				printf( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
 				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, NULL, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+				if ( ret_code == SAGDP_RET_TO_LOWER_NONE )
+				{
+					continue;
+				}
 				if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
 					ret_code = handlerSASP_get_nonce( sizeInOut, nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
 					assert( ret_code == SASP_RET_NONCE );
 					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4, BUF_SIZE / 4, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
-					assert( ret_code != SAGDP_RET_NEED_NONCE );
+					assert( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_TO_LOWER_NONE );
 				}
 				memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 				goto saspsend;
@@ -251,13 +266,13 @@ rectosasp:
 processcmd:
 		// 4. Process received command (yoctovm)
 		ret_code = slave_process( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
-		if ( ret_code == YOCTOVM_RESET_STACK )
+/*		if ( ret_code == YOCTOVM_RESET_STACK )
 		{
 			sagdp_init( data_buff + DADA_OFFSET_SAGDP );
 			printf( "slave_process(): ret_code = YOCTOVM_RESET_STACK\n" );
 			// TODO: reinit the rest of stack (where applicable)
-			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
-		}
+			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
+		}*/
 		memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 		printf( "YOCTO:  ret: %d; size: %d\n", ret_code, *sizeInOut );
 
@@ -298,16 +313,18 @@ processcmd:
 				bool start_now = true;
 				if ( start_now )
 				{
+					PRINTF( "   ===  YOCTOVM_OK, forced chain restart  ===\n" );
 					ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4/*, BUF_SIZE / 4, stack, stackSize*/ );
 					memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
 					assert( ret_code == YOCTOVM_PASS_LOWER );
 					// one more trick: wait for some time to ensure that master will start its own chain, and then send "our own" chain start
-					bool mutual = get_rand_val() % 5 == 0;
+/*					bool mutual = get_rand_val() % 5 == 0;
 					if ( mutual )
-						justWait( 4 );
+						justWait( 4 );*/
 				}
 				else
 				{
+					PRINTF( "   ===  YOCTOVM_OK, delayed chain restart  ===\n" );
 					wake_time_to_start_new_chain = getTime() + get_rand_val() % 8;
 					wait_for_incoming_chain_with_timer = true;
 					goto getmsg;
@@ -406,6 +423,7 @@ sendmsg:
 			{
 				return -1;
 			}
+			INCREMENT_COUNTER( 90, "MAIN LOOP, packet sent" );
 			printf("\nMessage replied to client\n");
 
 	}

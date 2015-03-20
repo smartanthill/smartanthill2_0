@@ -44,9 +44,9 @@ void requestHoldingPacket();
 bool holdPacketOnRequest( const uint8_t* packet, const uint16_t* size );
 
 // sync hooks
-void requestSyncExec();
+/*void requestSyncExec();
 void allowSyncExec();
-void waitToProceed();
+void waitToProceed();*/
 void justWait( uint16_t durationSec );
 
 
