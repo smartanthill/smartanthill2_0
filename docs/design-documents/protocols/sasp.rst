@@ -27,7 +27,7 @@
 SmartAnthill Security Protocol (SASP)
 =====================================
 
-:Version:   v0.2
+:Version:   v0.2.0
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -128,9 +128,8 @@ Within SASP, keys MUST be unique for each communication pair, and uniqueness of 
 * Peer-Distinguishing Flag
 * for packets sent by each peer, by "Nonce to use for Sending" (NFS)
 
-EAX as such doesn't guarantee protection from replay attacks, however as nonces are unique, replay attack is not possible as long as SASP drops packets with repeated nonces. SASP does drop packets with repeated nonces, with two exceptions:
+EAX as such doesn't guarantee protection from replay attacks, however as nonces are unique, replay attack is not possible as long as SASP drops packets with repeated nonces. SASP does drop packets with repeated nonces, with the following exception:
 
-* last packet being re-sent is not being dropped by SASP (it can be a legitimate retransmit which may require retransmit in return) but is reported as 'repeated packet' to higher-level protocol; this is not a security problem as long as the only action higher-level protocol does on receiving it, is re-sending the very last packet it has already sent. SAGDP does satisfy this requirement.
 * Error "Old Nonce" Message. For 'Error "Old Nonce" Message, SASP does not check the nonce (this is necessary to avoid potential deadlocks). However, replay attack based on these messages is not possible, because SASP does not allow NLW to decrease, and therefore all replay packets will be ignored by SASP.
 
 Therefore, SASP is secure (because of EAX and AES128 being secure) and also provides protection from replay attacks.
@@ -152,15 +151,10 @@ To be economical with the set of values that are greater than a current value of
 
 TODO: Nonce Exhaustion/Overflow handling
 
-4.2. Processing repeated Packet
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-In some cases it may be desired to repeat resending the same packet. For instance, it may be detected that a packet has not been received by the communication peer. In this case an exact copy of the packet is re-sent; being exact copy implies that the packet has the same nonce as the original packet. On the receiving side the nonce VP is found to be equal to NLW (since NLW was set to the value of nonce VP of the original packet). SASP detects this special case, and, if the packet is otherwise valid, reports that the packet is repeated to the higher level protocol while passing the packet for further processing.
-
-4.3. Processing packet with an obsolete nonce
+4.2. Processing packet with an obsolete nonce
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If a packet is internally valid, but its nonce VP is less than a current value of NLW, it may indicate that states of the communication peers are out of sync (and not necessarily that a third party attack is detected). In this case, to resynchronize communication process an Error "Old Nonce" Message is formed with the lowest possible nonce VP, and a packet with this message is sent to a communication partner.
+If a packet is internally valid, but its nonce VP is less than or equal to a current value of NLW, it may indicate that states of the communication peers are out of sync (and not necessarily that a third party attack is detected). In this case, to resynchronize communication process an Error "Old Nonce" Message is formed with the lowest possible acceptable nonce VP, and a packet with this message is sent to a communication partner.
 
 If an Error "Old Nonce" Message is received, the receiving party compares its NFS with the lowest possible value of the nonce within the message, and if NFS is less that value, NFS is set to the value as specified in the message; using such a value of NFS for sending packets will ensure that the packet will pass NLW test at the receiving party.
 
@@ -232,12 +226,13 @@ For its operations SASP uses the following data:
 There are three events that SASP processes: 
 
  1. receiving a SASP packet from the communication peer
- 2. receiving a packet  from a higher level protocol (HLP packet)
+ 2. receiving a packet from a higher level protocol (HLP packet)
+ 3. receiving a request from a higher level for nonce variable part
 
 7.1. Receiving an HLP packet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A packet from a higher level protocol is received. After this packet is encrypted and authentication data is added using a new nonce, a resulting SASP packet is to be passed to the communication peer (using underlying protocol).
+A packet from a higher level protocol is received together with a nonce VP. After a received nonce VP is ensured to be numerically greater than NLS, this packet is encrypted and authentication data is added using a new nonce based on a received nonce VP, a resulting SASP packet is to be passed to the communication peer (using underlying protocol).
 
 7.2. Receiving a SASP packet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -249,18 +244,26 @@ A SASP packet from the communication peer is received (via underlying protocol).
   * packet with Error "Old Nonce" Message (intended for SASP itself)
   * invalid packet, in particular, corrupted, an attacker's packet, etc.
 
+7.3. Receiving a request for nonce VP
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A higher level protocol can request for a nonce VP that will be returned together with an HLP packet for sending to a communication peer. Nonce VP returned must be greater then a current value of NLS.
+
 
 
 
 8. Event processing
 -------------------
 
-To process events the protocol should be in either "idle" state Details of processing are placed below.
+Further details of event processing are placed below.
 
 8.1. Receiving an HLP packet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-NFS is incremented. HLP packet is encrypted and authenticated using current value of NFS to form a SASP packet. This SASP packet is sent to the communication peer using underlying protocol.
+A packet from a higher level protocol is received together with a nonce VP. Nonce VP is compared to the current value of NFS.
+
+  * Nonce VP is less than or equal to NFS: no processing is done and an error is reported [TODO: should we provide more details on what such error should result in]
+  * Nonce VP is greater than NFS: NFS is set to the value of nonce VP; HLP packet is encrypted and authenticated using a new nonce based on a received nonce VP to form a SASP packet. This SASP packet is sent to the communication peer using underlying protocol.
 
 8.2. Receiving a SASP packet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -282,9 +285,16 @@ Then:
      + if packets other than Error Old Nonce Message: packet nonce VP is compared to the Nonce Lower Watermark (NLW). Three cases are possible:
 
         * if nonce VP is less than or equal to NLW: a packet with Error Old Nonce Message is prepared with the lowest possible valid nonce set to a current value of NLW; the packet is authenticated and sent to the communication peer.        
-        * if nonce VP is greater than NLW: a new packet is received: NLW is set to the value of nonce VP of the received packet; LRPS is set to packet signature; an HLP packet with payload of the received packet is passed to the higher level protocol with status "new".
+        * if nonce VP is greater than NLW: a new packet is received: NLW is set to the value of nonce VP of the received packet; LRPS is set to packet signature [TODO: check whether we use it elsewhere]; an HLP packet with payload of the received packet is passed to the higher level protocol together with the nonce VP of the packet nonce.
 
 TODO!: sending packets (encryption etc.)
+
+8.3. Receiving a request for nonce VP
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A Nonce VP is generated based on a current value of NLS so that the numerical value of nonce VP be greater than numerical value of NLS. Such generation can be as simple as numerical value of NLS plus 1.
+
+
 
 9. Payload Size and SASP Packet Size
 ------------------------------------
