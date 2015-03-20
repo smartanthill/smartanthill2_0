@@ -27,11 +27,9 @@
 Zepto VM
 ========
 
-:Version:   v0.1.10b
+:Version:   v0.2
 
-*NB: this document relies on certain terms and concepts introduced in*
-:ref:`saoverarch` *and*
-:ref:`saccp` *documents, please make sure to read them before proceeding.*
+*NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
 Zepto VM is a minimalistic virtual machine used by SmartAnthill Devices. It implements SACCP (SmartAnthill Command&Control Protocol) on the side of the SmartAnthill Device (and SACCP corresponds to Layer 7 of OSI/ISO network model). By design, Zepto VM is intended to run on devices with extremely limited resources (as little as 512 bytes of RAM).
 
@@ -62,8 +60,7 @@ While Zepto VM itself indeed uses ridiculously low amount of RAM, a developer ne
 Zepto VM Restrictions
 ---------------------
 
-As Zepto VM implements an “Execution Layer” of SACCP, it needs to implement all  “Execution Layer Restrictions” set in
-:ref:`saccp` document. While present document doesn't duplicate these restrictions, it aims to specify them in appropriate places (for example, when specific instructions are described).
+As Zepto VM implements an “Execution Layer” of SACCP, it needs to implement all  “Execution Layer Restrictions” set in :ref:`saccp` document. While present document doesn't duplicate these restrictions, it aims to specify them in appropriate places (for example, when specific instructions are described).
 
 “Program Errors” as specified in Execution Layer Restrictions are implemented as ZEPTOVM_PROGRAMERROR_* Zepto VM exceptions as described below.
 
@@ -73,12 +70,10 @@ Bodyparts and Plugins
 According to a more general SmartAnthill architecture, each SmartAnthill Device (a.k.a. 'Ant') has one or more sensors and/or actuators, with each sensor or actuator known as an 'ant body part'. Each 'body part' is assigned it's own id, which is stored in 'SmartAnthill Database' within SmartAnthill Client (which in turn is usually implemented by SmartAnthill Central Controller).
 For each body part type, there is a 'plugin' (so if there are body parts of the same type in the device, number of plugins can be smaller than number of body parts). Plugins are pieces of code which are written in C language and programmed into MCU of SmartAnthill device.
 
-Structure of Plugin Data and Error Codes
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Structure of Plugin Data
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-Data to be passed to and from plugins is generally opaque, with one exception: first byte of plugin reply is interpreted as an unsigned 'error code'. Exact meaning of 'error code' is plugin-specific, but in general it should be thought of as something similar to 'program exit code' in traditional OSes.
-
-Error code == 255 is reserved for Zepto VM exceptions (see below) and SHOULD NOT be returned by conforming plugins.
+Data to be passed to and from plugins is generally described in Plugin Manifest, as described in :ref:`saplugin` document. 
 
 Packet Chains
 -------------
@@ -88,8 +83,7 @@ In SACCP (and in Zepto VM as an implementation of SACCP), all interactions betwe
 Device Capabilities
 -------------------
 
-As an implementation of SACCP on SmartAnthill Device side, Zepto VM is responsible for parsing and replying to SACCP 'Device Capabilities' request as described in
-:ref:`saccp` document.
+As an implementation of SACCP on SmartAnthill Device side, Zepto VM is responsible for parsing and replying to SACCP 'Device Capabilities' request as described in :ref:`saccp` document.
 
 Zepto VM Instructions
 ---------------------
@@ -111,18 +105,18 @@ Zepto VM Opcodes
 * ZEPTOVM_OP_SLEEP
 * ZEPTOVM_OP_TRANSMITTER
 * ZEPTOVM_OP_MCUSLEEP
-* ZEPTOVM_OP_POPREPLIES
+* ZEPTOVM_OP_POPREPLIES *\* limited support in Zepto VM-One, full support from Zepto VM-Tiny \*/*
 * ZEPTOVM_OP_EXIT
 * */\* starting from the next opcode, instructions are not supported by Zepto VM-One \*/*
 * ZEPTOVM_OP_JMP
-* ZEPTOVM_OP_JMPIFERRORCODE_LT
-* ZEPTOVM_OP_JMPIFERRORCODE_GT
-* ZEPTOVM_OP_JMPIFERRORCODE_EQ
+* ZEPTOVM_OP_JMPIFREPLYFIELD_LT
+* ZEPTOVM_OP_JMPIFREPLYFIELD_GT
+* ZEPTOVM_OP_JMPIFREPLYFIELD_EQ
+* ZEPTOVM_OP_JMPIFREPLYFIELD_NE
+* ZEPTOVM_OP_MOVEREPLYTOFRONT
 * */\* starting from the next opcode, instructions are not supported by Zepto VM-Tiny and below \*/*
 * ZEPTOVM_OP_PUSHEXPR_CONSTANT
-* ZEPTOVM_OP_PUSHEXPR_ERRORCODE
-* ZEPTOVM_OP_PUSHEXPR_1BYTE_FROMREPLY
-* ZEPTOVM_OP_PUSHEXPR_2BYTES_FROMREPLY
+* ZEPTOVM_OP_PUSHEXPR_REPLYFIELD
 * ZEPTOVM_OP_PUSHEXPR_EXPR
 * ZEPTOVM_OP_POPEXPR
 * ZEPTOVM_OP_EXPRUNOP
@@ -144,10 +138,8 @@ Zepto VM Exceptions
 If Zepto VM encounters a problem, it reports it as an “VM exception”. Whenever exception characterized by EXCEPTION-CODE occurs, it is processed as follows:
 
 * all contents of “reply buffer” is discarded
-* “reply buffer” is filled with the following information: \|255\|EXCEPTION-CODE\|INSTRUCTION-POSITION\| , where all fields are 1-byte.
-* This reply is sent back to the command originator.
-
-The structure of the reply means that it will be interpreted as a reply with error code == 255, and by convention error code 255 is reserved for VM exceptions.
+* “reply buffer” is filled with the following information: \|EXCEPTION-CODE\|INSTRUCTION-POSITION\| , where all fields are Encoded-Unsigned-Int<max=2>.
+* This reply is passed to the underlying protocol as an 'exception'.
 
 Currently, Zepto VM may issue the following exceptions:
 
@@ -155,7 +147,7 @@ Currently, Zepto VM may issue the following exceptions:
 * ZEPTOVM_INVALIDENCODEDSIZE */\* Issued whenever Encoded-\*-Int<max=...> is an invalid encoding, as defined in* :ref:`saprotostack` document *\*/*
 * ZEPTOVM_PLUGINERROR
 * ZEPTOVM_INVALIDPARAMETER
-* ZEPTOVM_INVALIDREPLYOFFSET
+* ZEPTOVM_INVALIDREPLYNUMBER
 * ZEPTOVM_EXPRSTACKUNDERFLOW
 * ZEPTOVM_EXPRSTACKINVALIDINDEX
 * ZEPTOVM_EXPRSTACKOVERFLOW
@@ -190,8 +182,7 @@ where ZEPTOVM_OP_DEVICECAPS is 1-byte opcode, and MAXIMUM-REPLY-SIZE is a 1-byte
 
 DEVICECAPS instruction pushes Device-Capabilities-Reply to "reply buffer". Usually DEVICECAPS instruction is the only instruction in the program (this allows to provide guarantees on the maximum reply size).
 
-Device-Capabilities-Reply MUST be at most of the *maximum-devicecaps-size = min(MAXIMUM-REPLY-SIZE,CurrentDeviceCapabilities.SACCP_EXTENDED_GUARANTEED_PAYLOAD)* size; this is necessary to ensure that it safely passes all the SmartAnthill Protocols (see
-:ref:`saprotostack` document for details). *maximum-devicecaps-size* MUST be >= 8 and <= 384.
+Device-Capabilities-Reply MUST be at most of the *maximum-devicecaps-size = min(MAXIMUM-REPLY-SIZE,CurrentDeviceCapabilities.SACCP_EXTENDED_GUARANTEED_PAYLOAD)* size; this is necessary to ensure that it safely passes all the SmartAnthill Protocols (see :ref:`saprotostack` document for details). *maximum-devicecaps-size* MUST be >= 8 and <= 384.
 
 Device-Capabilities-Reply is defined as follows:
 
@@ -207,8 +198,7 @@ and Extended-Device-Capabilities extends beyond 8 bytes to provide more informat
 
 Here:
 
-* SACCP_BASIC_GUARANTEED_PAYLOAD is a 1-byte field specifying guaranteed size of SACCP payload which is supported by current device (taking into account capabilities of it's L2 protocol, see
-  :ref:`saprotostack` document for details). If SACCP guaranteed payload of the device is more than 255 bytes, then SACCP_GUARANTEED_PAYLOAD MUST be set to 255, and SACCP_EXTENDED_GUARANTEED_PAYLOAD SHOULD be set to real value of the SACCP guaranteed payload.
+* SACCP_BASIC_GUARANTEED_PAYLOAD is a 1-byte field specifying guaranteed size of SACCP payload which is supported by current device (taking into account capabilities of it's L2 protocol, see :ref:`saprotostack` document for details). If SACCP guaranteed payload of the device is more than 255 bytes, then SACCP_GUARANTEED_PAYLOAD MUST be set to 255, and SACCP_EXTENDED_GUARANTEED_PAYLOAD SHOULD be set to real value of the SACCP guaranteed payload.
 * <ZEPTOVM_LEVEL> is a 3-bit bitfield, specifying Zepto VM Level supported
 * <ZEPTOVM_BASIC_REPLY_STACK_SIZE> is a 5-bit bitfield, equal to ZEPTOVM_REPLY_STACK_SIZE (see below for details). If ZEPTOVM_REPLY_STACK_SIZE is more than 31, then <ZEPTOVM_BASIC_REPLY_STACK_SIZE> MUST be set to 31, and real ZEPTOVM_REPLY_STACK_SIZE SHOULD be reported in ZEPTOVM_EXTENDED_REPLY_STACK_SIZE field.
 * ZEPTOVM_BASIC_EXPR_STACK_SIZE is a 1-byte field, equal to ZEPTOVM_EXPR_STACK_SIZE (see below for details). If ZEPTOVM_EXPR_STACK_SIZE is more than 255, then ZEPTOVM_BASIC_EXPR_STACK_SIZE MUST be set to 255, and real ZEPTOVM_EXPR_STACK_SIZE SHOULD be reported in ZEPTOVM_EXTENDED_EXPR_STACK_SIZE field.
@@ -251,16 +241,16 @@ As MCUSLEEP may disable device receiver, Zepto VM enforces relevant “Execution
 
 * If original command has not had an ISLAST flag, and MCUSLEEP is invoked, it is ZEPTOVM_PROGRAMERROR_INVALIDREPLYSEQUENCE exception.
 * Zepto VM keeps track if MCUSLEEP was invoked; this 'mcusleep-invoked' flag is used by some other instructions.
-* NB: double MCUSLEEP within the same program is ok, so if 'mcusleep-invoked' flag is already set and MCUSLEEP is invoked, this is not a problem
+* NB: calling MCUSLEEP twice within the same program is allowed, so if 'mcusleep-invoked' flag is already set and MCUSLEEP is invoked, this is not a problem
 
 It should be noted that implementing MCUSLEEP instruction will implicitly require storing current program, current PC and current “reply buffer” either in EEPROM, or to request MPU to preserve RAM while waiting. This will be done automagically by Zepto VM, but it is not without it's cost. It might be useful to know that in some cases this cost is lower when amount of data to be preserved is small (for example, it happens when “reply buffer” is empty, and/or when <MAYDROPEARLIERINSTRUCTIONS> is used and the remaining program is small).
 
 
 **\| ZEPTOVM_OP_POPREPLIES \| N-REPLIES \|**
 
-where ZEPTOVM_OP_POPREPLIES is a 1-byte opcode (NB: it is the same as ZEPTOVM_OP_POPREPLIES in Level Tiny), and N-REPLIES is 1 byte, which MUST be 255 for Zepto VM-One (other values are allowed for Zepto VM-Tiny and above, as described below). If N-REPLIES is not 255 for Zepto VM-One POPREPLIES instruction, Zepto VM will issue a ZEPTOVM_INVALIDPARAMETER exception. \|POPREPLIES\|255\| effectively means “remove all replies currently in reply buffer”.
+where ZEPTOVM_OP_POPREPLIES is a 1-byte opcode (NB: it is the same as ZEPTOVM_OP_POPREPLIES in Level Tiny), and N-REPLIES is an Encoded-Int<max=2> field, which MUST be 0 for Zepto VM-One (other values are allowed for Zepto VM-Tiny and above, as described below). If N-REPLIES is not 0 for Zepto VM-One POPREPLIES instruction, Zepto VM will issue a ZEPTOVM_INVALIDPARAMETER exception. \|POPREPLIES\|0\| means “remove all replies currently in reply buffer”.
 
-NB: Zepto VM-One implements POPREPLIES instruction only partially (for 1 value of N-REPLIES); Zepto VM-Tiny supports other values as described below, and behavior for this 1 value of N-REPLIES which is supported by both Zepto VM-One and Zepto VM-Tiny is consistent for any Zepto VM implementation.
+NB: Zepto VM-One implements POPREPLIES instruction only partially (for N-REPLIES=0); Zepto VM-Tiny supports other values as described below, and behavior for N-REPLIES=0 which is supported by both Zepto VM-One and Zepto VM-Tiny is consistent for any Zepto VM implementation.
 
 **\| ZEPTOVM_OP_EXIT \| <REPLY-FLAGS>,<FORCED-PADDING-FLAG> \| (opt) FORCED-PADDING-TO \|**
 
@@ -276,8 +266,7 @@ To enforce “Execution Layer Requirements”, the following SHOULD be enforced 
 
 If any of the restrictions above is not compied with, Zepto VM generates a ZEPTOVM_PROGRAMERROR_INVALIDREPLYSEQUENCE exception.
 
-FORCED-PADDING-TO field (if present) specifies 'enforced padding' as described in
-:ref:`sasp` document. Essentially:
+FORCED-PADDING-TO field (if present) specifies 'enforced padding' as described in :ref:`sascrambling` document. Essentially:
 
 * if present, FORCED-PADDING-TO MUST specify length which is equal to or greater than the size of current "reply buffer"
 * if developer wants to avoid information leak from the fact that encrypted messages may have different lengths, she may specify the same FORCED-PADDING-TO for all the replies which should be indistinguishable.
@@ -306,37 +295,55 @@ Zepto VM-Tiny allows for more complicated programs, including basic conditions, 
 
 where ZEPTOVM_OP_JMP is a 1-byte opcode, and DELTA is an Encoded-Signed-Int<max=2> signed integer which denotes how PC (program counter) should be changed (DELTA is considered in relation to the end of JMP instruction, so JMP 0 is effectively a no-op).
 
-**\| ZEPTOVM_OP_JMPIFERRORCODE_<SUBCODE> \| THRESHOLD \| DELTA \|**
+**\| ZEPTOVM_OP_JMPIFREPLYFIELD_<SUBCODE> \| REPLY-NUMBER \| FIELD-SEQUENCE \| THRESHOLD \| DELTA \|**
 
-where <SUBCODE> is one of {LT,GT,EQ}; ZEPTOVM_OP_JMPIFERRORCODE_LT, ZEPTOVM_OP_JMPIFERRORCODE_GT, and  ZEPTOVM_OP_JMPIFERRORCODE_EQ are 1-byte opcodes, THRESHOLD is a 1-byte unsigned integer, and interpretation of DELTA is similar to that of in JMP instruction description.
+where <SUBCODE> is one of {LT,GT,EQ}; ZEPTOVM_OP_JMPIFREPLYFIELD_LT, ZEPTOVM_OP_JMPIFREPLYFIELD_GT, and ZEPTOVM_OP_JMPIFREPLYFIELD_EQ are 1-byte opcodes, REPLY-NUMBER is an Encoded-Signed-Int<max=2>, FIELD-SEQUENCE is described below, THRESHOLD is an Encoded-Int<max=2> field, and interpretation of DELTA is similar to that of in JMP instruction description.
 
-ZEPTOVM_OP_JMPIFERRORCODE_* instruction takes the reply of the last plugin which was called, and compares first byte of the reply (which by convention represents 'plugin error code', see above) to the THRESHOLD. If first byte of the reply is < (for <SUBCODE>=LT) THRESHOLD, PC is incremented by a value of DELTA (as with JMP, DELTA is added to a PC positioned right after current instruction).
+REPLY-NUMBER is a number of reply in "reply buffer". Negative values mean 'from the end of buffer', so that REPLY-NUMBER=-1 means 'last reply in reply buffer'. If REPLY-NUMBER points to a non-existing item in "reply buffer" (that is, it is positive and is >= number-of-replies, or it is negative and is <= -number-of-replies TODO:check), it is a ZEPTOVM_INVALIDREPLYNUMBER exception.
 
-+-----------+---------------------------------------+
-| <SUBCODE> | Jump if                               |
-+===========+=======================================+
-| LT        | First byte of last reply < THRESHOLD  |
-+-----------+---------------------------------------+
-| GT        | First byte of last reply > THRESHOLD  |
-+-----------+---------------------------------------+
-| EQ        | First byte of last reply == THRESHOLD |
-+-----------+---------------------------------------+
+FIELD-SEQUENCE field describes a sequence of fields to be read from plugin reply; normally, during SmartAnthill operation, it is derived from SmartAnthill Plugin Manifest. Last field in FIELD-SEQUENCE always represents a field to be read; all previous fields are skipped. FIELD-SEQUENCE is encoded as a byte sequence with the following byte values supported:
 
-**\| ZEPTOMV_OP_POPREPLIES \| N-REPLIES \|**
+* ENCODED_UNSIGNED_INT_FIELD
+* ENCODED_SIGNED_INT_FIELD
+* ONE_BYTE_FIELD
+* TWO_BYTE_FIELD
+* END_OF_SEQUENCE
 
-where POPREPLIES is a 1-byte opcode and N-REPLIES is a 1-byte number of replies to be popped.
+ZEPTOVM_OP_JMPIFREPLYFIELD_* instruction takes the reply of the last plugin which was called, and compares required field to the THRESHOLD. If first byte of the reply is < (for <SUBCODE>=LT) THRESHOLD, PC is incremented by a value of DELTA (as with JMP, DELTA is added to a PC positioned right after current instruction).
 
-POPREPLIES instruction removes last N-REPLIES of plugins from the reply buffer. If N-REPLIES is less than number of replies currently in buffer, it means that all replies are removed, therefore \|POPREPLIES\|255\| always means “Remove all replies currently in reply buffer”. Usually, either \|POPREPLIES\|1\| or \|POPREPLIES\|255\| is used, but other values are also possible.
++-----------+--------------------+
+| <SUBCODE> | Jump if            |
++===========+====================+
+| LT        | Field < THRESHOLD  |
++-----------+--------------------+
+| GT        | Field > THRESHOLD  |
++-----------+--------------------+
+| EQ        | Field == THRESHOLD |
++-----------+--------------------+
+| NE        | Field != THRESHOLD |
++-----------+--------------------+
+
+**\| ZEPTOVM_OP_POPREPLIES \| N-REPLIES \|**
+
+where ZEPTOVM_OP_POPREPLIES is a 1-byte opcode and N-REPLIES is an Encoded-Unsigned-Int<max=2> field representing number of replies to be popped.
+
+POPREPLIES instruction removes last N-REPLIES of plugins from the reply buffer. If N-REPLIES is equal to zero, it means that all replies are removed. If N-REPLIES is more than number of replies in the buffer, it is a TODO exception. Usually, either \|POPREPLIES\|0\| or \|POPREPLIES\|1\| is used, but other values are also possible.
+
+**\| ZEPTOVM_OP_MOVEREPLYTOFRONT \| REPLY-NUMBER \|**
+
+where ZEPTOVM_OP_MOVEREPLYTOFRONT is a 1-byte opcode and REPLY-NUMBER is an Encoded-Signed-Int<max=2> field, as described in JMPIFREPLYFIELD instruction.
+
+MOVEREPLYTOFRONT instruction is used to reorder replies within reply buffer. It takes reply which has REPLY-NUMBER, and makes it the first one in the buffer, moving the rest of the replies back. Implementation note: need also to recalculate and update positions in offset stack.
 
 Implementation notes
 ''''''''''''''''''''
 
-To implement Zepto VM-Tiny, in addition to PC required by Zepto VM-One, a stack of offsets which signify positions of recent replies in “reply buffer”, need to be maintained. Such stack should consist of an array of bytes for offsets, and additional byte to store number of entries on the stack. Size of this stack is a ZEPTOVM_REPLY_STACK_SIZE parameter of Zepto VM-Tiny (which is stored in SmartAnthill DB on SmartAnthill Client and reported via "Device Capabilities" request).
+To implement Zepto VM-Tiny, in addition to PC required by Zepto VM-One, a stack of offsets which signify positions of recent replies in “reply buffer”, needs to be maintained. Such stack should consist of an array of bytes for offsets, and additional byte to store number of entries on the stack. Size of this stack is a ZEPTOVM_REPLY_STACK_SIZE parameter of Zepto VM-Tiny (which is stored in SmartAnthill DB on SmartAnthill Client and reported via "Device Capabilities" request).
 
 Memory overhead
 '''''''''''''''
 
-Memory overhead of ZeptoVM-Tiny is (in addition to overhead of ZeptoVM-One) is 1+ZEPTOVM_REPLY_STACK_SIZE.
+Memory overhead of ZeptoVM-Tiny is (in addition to overhead of ZeptoVM-One) is 1+ZEPTOVM_REPLY_STACK_SIZE (or 1+2*ZEPTOVM_REPLY_STACK_SIZE if size of reply buffer can be over 256 bytes).
 
 Level Small
 ^^^^^^^^^^^
@@ -350,22 +357,16 @@ where ZEPTOVM_OP_PUSHEXPR_CONSTANT is 1-byte opcode, and CONST is a 2-byte const
 
 PUSHEXPR_CONSTANT instruction pushes CONST to an expression stack (if expression stack is exceeded, it will cause ZEPTOVM_EXPRSTACKOVERFLOW VM exception).
 
-**\| ZEPTOVM_OP_PUSHEXPR_ERRORCODE \| REPLY-OFFSET \|**
+**\| ZEPTOVM_OP_PUSHEXPR_REPLYFIELD \| REPLY-NUMBER \| FIELD-SEQUENCE \|**
 
-where ZEPTOVM_OP_PUSHEXPR_ERRORCODE is 1-byte opcode, and REPLY-OFFSET is a 1-byte offset of reply in “reply buffer”, so that REPLY-OFFSET == 0 corresponds to most recent reply,  REPLY-OFFSET == 1 corresponds to a previous one and so on. If REPLY-OFFSET is more than current value of replies in “reply buffer”, this will cause a ZEPTOVM_INVALIDREPLYOFFSET VM exception.
+ZEPTOVM_OP_PUSHEXPR_REPLYFIELD is 1-byte opcode, REPLY-NUMBER and FIELD-SEQUENCE are similar to that of in JMPIFREPLYFIELD instruction. 
 
-PUSHEXPR_ERRORCODE pushes an error code of appropriate reply (as specified by REPLY-OFFSET, see details above) to the expression stack (if expression stack is exceeded, it will cause ZEPTOVM_EXPRSTACKOVERFLOW VM exception).
-
-**\| ZEPTOVM_OP_PUSHEXPR <LEN> FROMREPLY \| REPLY-OFFSET \| OFFSET-WITHIN-REPLY \|**
-
-where <LEN> is one of {1BYTE,2BYTES}; ZEPTOVM_OP_PUSHEXPR_1BYTE_FROMREPLY and  ZEPTOVM_OP_PUSHEXPR_2BYTES_FROMREPLY are 1-byte opcodes, REPLY-OFFSET is a 1-byte offset similar to that of PUSHEXPR_ERRORCODE, and OFFSET-WITHIN-REPLY is a 1-byte offset within specified reply.  If REPLY-OFFSET is more than current value of replies in “reply buffer”, this will cause a ZEPTOVM_INVALIDREPLYOFFSET VM exception.
-
-PUSHEXPR <LEN> FROMREPLY takes one or two bytes (as specified by <LEN>) from reply specified by REPLY-OFFSET, at offset within reply as specified by OFFSET-WITHIN-REPLY, and pushes it to the expression stack (if expression stack is exceeded, it will cause ZEPTOVM_EXPRSTACKOVERFLOW VM exception).
-The idea of the PUSHEXPR <LEN> FROMREPLY instruction is that, assuming that one knows the format of reply, she can extract multiple parameters from the replies. Note that due to convention that first byte of reply is the errorcode, \|PUSHEXPR_1BYTE_FROMREPLY\|REPLY-OFFSET\|0\| is the same as \|PUSHEXPR_ERRORCODE\|REPLY-OFFSET\|.
+PUSHEXPR_REPLYFIELD takes a field (specified by FIELD-SEQUENCE) from reply (specified by REPLY-NUMBER), and pushes it to the expression stack (if expression stack is exceeded, it will cause ZEPTOVM_EXPRSTACKOVERFLOW VM exception).
+If data in the field doesn't fit into 2 bytes, it is an ZEPTOVM_INVALIDEXPRDATA exception. If data in the field is negative, it is casted to unsigned before pushing. 
 
 **\| ZEPTOVM_OP_PUSHEXPR_EXPR \| EXPR-OFFSET \|**
 
-where ZEPTOVM_OP_PUSHEXPR_EXPR is a 1-byte opcode, and EXPR-OFFSET is a 1-byte offset of the expression which needs to be duplicated on the top of the expression stack.
+where ZEPTOVM_OP_PUSHEXPR_EXPR is a 1-byte opcode, and EXPR-OFFSET is an Encoded-Unsigned-Int<max=2> offset of the value within expression stack which needs to be duplicated on the top of the expression stack.
 
 PUSHEXPR_EXPR instruction peeks a value from the expression stack without removing it from the stack; the value is specified by EXPR-OFFSET, so that EXPR-OFFSET == 0 means "topmost value on the stack", EXPR-OFFSET == 1 means "second topmost value on the stack" and so on. If EXPR-OFFSET is greater than current expression stack size, this will cause ZEPTOVM_EXPRSTACKINVALIDINDEX exception.
 
@@ -506,13 +507,13 @@ Statistics for different Zepto-VM levels:
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
 |Level          |Opcodes Supported|Typical Parameter Values             |Amount of RAM used (with typical parameter values)|
 +===============+=================+=====================================+==================================================+
-|Zepto VM-One   | 8               |                                     | 1 to 2                                           |
+|Zepto VM-One   | TODO            |                                     | 1 to 2                                           |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
-|Zepto VM-Tiny  | 12              |ZEPTOVM_REPLY_STACK_SIZE=4 to 8      | (1 to 2)+(5 to 9) = 6 to 11                      |
+|Zepto VM-Tiny  | TODO            |ZEPTOVM_REPLY_STACK_SIZE=4 to 8      | (1 to 2)+(5 to 9) = 6 to 11                      |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
-|Zepto VM-Small | 28              |ZEPTOVM_EXPR_STACK_SIZE=4 to 8       | (6 to 11)+(9 to 17) = 15 to 28                   |
+|Zepto VM-Small | TODO            |ZEPTOVM_EXPR_STACK_SIZE=4 to 8       | (6 to 11)+(9 to 17) = 15 to 28                   |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
-|Zepto VM-Medium| 29+TBD          |ZEPTOVM_EXPR_STACK_SIZE=8 to 12      | TBD                                              |
+|Zepto VM-Medium| TODO            |ZEPTOVM_EXPR_STACK_SIZE=8 to 12      | TBD                                              |
 |               |                 |ZEPTOVM_MAX_PSEUDOTHREADS=4 to 8     |                                                  |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
 

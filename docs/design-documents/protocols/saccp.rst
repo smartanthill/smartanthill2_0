@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.2.1
+:Version:   v0.2.2
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -151,13 +151,17 @@ SACCP Reply Packets
 
 SACCP reply packets can be one of the following:
 
-**| SACCP_OK \| Execution-Layer-Reply |**
+**\| SACCP_OK \| Execution-Layer-Reply \|**
 
 where SACCP_OK is 1-byte constant, and Execution-Layer-Reply is variable-length field.
 
-**| Saccp-Error-Code \|**
+**\| Saccp-Error-Code \|**
 
 where Saccp-Error-Code is a 1-byte field, which takes one of the following values: SACCP_ERROR_INVALID_FORMAT, or SACCP_ERROR_OLD_PROGRAM_CHECKSUM_DOESNT_MATCH.
+
+**\| SACCP_ERROR_VM_EXCEPTION \| Exception-Data \|**
+
+where SACCP_ERROR_VM_EXCEPTION is a 1-byte constant (different from all valid values of Saccp-Error-Code), and Exception-Data is exception data as passed by Execution Layer.
 
 Device Pins SHOULD NOT be Addressed Directly within Execution-Layer-Program
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
