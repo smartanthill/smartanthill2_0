@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version:   v0.1
+:Version:   v0.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -69,22 +69,31 @@ Plugin Manifest is an XML file, with structure which looks as follows:
       <field name="xyz" type="encoded-int<max=2>" min="0" max="255">
         <meaning type="float">
           <linear-conversion input-point0="0" output-point0="20.0"
-                             input-point1="100" output-point1="40.0">
+                             input-point1="100" output-point1="40.0" />
         </meaning>
       </field>
     </reply>
+    <peripheral>
+      <spi>
+        <pin type="SCLK" name="SPI SCLK" />
+        <pin type="MOSI" name="SPI MOSI" />
+        <pin type="MISO" name="SPI MISO"  />
+        <pin type="SS" name="SPI SS" />
+      </spi>
+      <pin name="LED Pin" type="digital">
+    </peripheral>
   </smartanthill.plugin>
 
 Currently supported <field> types are:
 
-  * "encoded-int<max=n>" (using Encoded-Signed-Int<max=> encoding as specified in :ref:`saprotostack` document).
-  * "encoded-uint<max=n>" (using Encoded-Unsigned-Int<max=> encoding as specified in :ref:`saprotostack` document).
+  * ``encoded-int<max=n>`` (using Encoded-Signed-Int<max=> encoding as specified in :ref:`saprotostack` document).
+  * ``encoded-uint<max=n>`` (using Encoded-Unsigned-Int<max=> encoding as specified in :ref:`saprotostack` document).
   * additional data types will be added as needed
 
 <meaning> tag
 ^^^^^^^^^^^^^
 
-<meaning> tag specifies that while field has type such as integer, it's meaning for the programmer and end-user is different, and can be, for example, a float. This often arises when plugin, for example, measures temperature in range between 35 and 40 celsius as an integer from 0 to 255. <meaning> tag in Plugin Manifest allows developer to write something along the lines of:
+``<meaning>`` tag specifies that while field has type such as integer, it's meaning for the programmer and end-user is different, and can be, for example, a float. This often arises when plugin, for example, measures temperature in range between 35 and 40 celsius as an integer from 0 to 255. <meaning> tag in Plugin Manifest allows developer to write something along the lines of:
 
 **if(TemperatureSensor.Temperature > 38.9) {...}**
 
@@ -117,13 +126,39 @@ or as
       </meaning>
   ...
 
-where *meaning* is calculated as **meaning=a\*field+b**.
+where *meaning* is calculated as ``meaning=a*field+b``.
 
 Currently supported <meaning> types are "float" and "int". If <meaning> type is 'int', then all the relevant calculations are performed as floats, and then rounded to the nearest integer.
 
-Each <meaning> tag MUST specify conversion. Currently supported conversions are: <linear-conversion> and <piecewise-linear-conversion> [TODO].
+Each ``<meaning>`` tag MUST specify conversion. Currently supported conversions are: ``<linear-conversion>`` and ``<piecewise-linear-conversion>`` [TODO].
 
-<meaning> tags can be used both for <command> fields and for <reply> fields.
+``<meaning>`` tags can be used both for ``<command>`` fields and for ``<reply>`` fields.
+
+
+<peripheral> tag
+^^^^^^^^^^^^^^^^
+
+``<peripheral>`` tag specifies list of required hardware interfaces, pins, etc.
+This information will be used by :ref:`sacorearchdashser` for configuring
+SmartAnthill device.
+
+Allowed peripheral nodes:
+
+* ``<i2c>`` `Inter-Integrated Circuit <http://en.wikipedia.org/wiki/I²C>`_
+
+    + ``<pin type="SDA">`` - Serial Data Line
+    + ``<pin type="SCL">`` - Serial Clock Line
+
+* ``<spi>`` `Serial Peripheral Interface Bus <http://en.wikipedia.org/wiki/Serial_Peripheral_Interface_Bus>`_
+
+    + ``<pin type="SCLK">`` - Serial Clock (output from master)
+    + ``<pin type="MOSI">`` - Master Output, Slave Input (output from master)
+    + ``<pin type="MISO">`` - Master Input, Slave Output (output from slave)
+    + ``<pin type="SS">`` - Slave Select (active low, output from master)
+
+* ``<pin type="analog">``
+* ``<pin type="digital">``
+* ``<pin type="pwm">`` - `Pulse-width modulation <http://en.wikipedia.org/wiki/Pulse-width_modulation>`_
 
 SmartAnthill Plugin Handler as a State Machine
 ----------------------------------------------
