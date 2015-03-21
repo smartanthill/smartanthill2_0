@@ -35,6 +35,8 @@ Zepto VM does not intend to provide highly sophisticated and/or mathematics-orie
 
 Currently, Zepto programming patterns are described in terms of Zepto Lua, Zepto Python and Zepto JavaScript. These two are extremely limited versions of their normal counterparts ("zepto" means "10^-21", so you get about 10^-21 functionality out of original languages). Basically, whatever is not in these examples, you shouldn't use.
 
+.. contents::
+
 Pattern 1. Simple Request/Response
 ----------------------------------
 

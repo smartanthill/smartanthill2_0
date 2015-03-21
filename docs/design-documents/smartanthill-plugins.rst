@@ -37,6 +37,10 @@ SmartAnthill Plugins are generally written in C programming language.
 
 Each SmartAnthill Plugin is represented by it's Plugin Handler, and Plugin Manifest.
 
+
+.. contents::
+
+
 SmartAnthill Plugin Handler
 ---------------------------
 
