@@ -27,7 +27,7 @@
 SmartAnthill Guaranteed Delivery Protocol (SAGDP)
 =================================================
 
-:Version:   v0.2.1
+:Version:   v0.2.2
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -56,6 +56,8 @@ SAGDP belongs to Layer 2 of OSI/ISO network model, see
 	 
 1.2. **Chain**. An ordered set of packets. Each packet in a chain is of one of mutually exclusive types: "first", "intermediate", and "terminating", wherein "first" is the first packet in the chain, "terminating" is the last packet in the chain, and "intermediate" is neither "first" nor "terminating".
 
+     1.2.1. **Chain ID**: each chain has an associated unique (for communication between two given devices) chain ID.
+
 1.3. **Master and Slave**. For certain reasons that are discussed below parties participating in data exchange and using this protocol are considered as non-equivalent to each other, and details of protocols at each side are somehow different. To distinguish sides, where applicable, we will use terms Master and Slave. Usually Master is a device generating and sending some commands, and Slave is a device receiving commands and returning results.
 
 1.4. **Error Message**. A packet that represents an error report. This packet can be sent by a Slave in context of any or no chain, if the Slave has encountered an error that prevents it from further packet processing. To be distinguished from other packets, a packet containing Error Message must be marked as both "first" and "terminating" since it has no definite context and does not assume any response.
@@ -73,7 +75,7 @@ where
      * **bit 2**: "requested-resend" flag; set to 1 if a packet is being re-sent as a result of a repeated receiving of a packet being responded;
      * **Remaining 5 bits**: reserved; must be set to 0.
 
-  * **PPID**: 6-byte field with PPID
+  * **PPID**: 6-byte field with PPID (for "intermediate" or "terminating" packet), or with Chain ID (for "first" packet).
   
   * **HLP packet**: variable size field; data that is defined by a higher level protocol.
 
@@ -165,6 +167,11 @@ S6. B does nothing with respect to packet #4 received at S5 as flag "requested-r
 
 Thus a potential for duplicated packet sending is eliminated.
 
+2.5. Motivating Chain ID.
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There are two cases why in state "idle" a "first" packet can come: the packet is an actual beginning of a new chain, or a packet is a re-sent beginning of a previous chain (in this latter case the previous chain is of length two). Respectively, processing of such two cases is different. Chain ID can answer a question whether a "first" packet is related to a previous chain (same chain ID), or to a new chain (otherwise).
+
 
 
 3. States
@@ -184,15 +191,7 @@ If no chain is being processed, the protocol appears in state "idle" and waits f
 
 Idle state has no associated data.
 
-3.3. "wait-PID"
-^^^^^^^^^^^^^^^
-When a packet is sent to the communication partner device, a PID is expected to be received in turn. This state can be considered as formal (addressing rather interface problem of getting PID that was just sent) and is logically preceeding to "wait-remote" state. For correct processing transition to this state must happen aerlier that a reply-packet is received from a communication peer, but practically this is not a problem since such transition happens based on processing within the same device while receiving a reply-packet normally assumes communication between different devices. 
-
-"Wait-local" has the following associated data:
-  * **Packet-Resent flag (PR flag)**: this flag indicates whether a packet which Packet ID is to be received has been sent the first time or re-sent; the flag is set when the packet was re-sent.
-  * **Next State Idle flag (NSI flag)**: waiting for PID can be preceeding to wait-remote or idle state. The flag is set, if the next state must be idle, and cleared otherwise.
-
-3.4. "wait-remote"
+3.3. "wait-remote"
 ^^^^^^^^^^^^^^^^^^
 When a packet is sent to the communication partner device, a reply packet is expected, and the protocol is in "wait-remote" state. With respect to chain ordering two types of packets can arrive: a reply to the packet sent (which means, in particular, that the last sent packet has been received by a communication partner device), and a previously received packet (which means that the last sent packet has not been delivered successfully). In the first case the payload of the received packet is forwarded to the higher level protocol for processing, and SAGDP transits to "wait-local" state waiting for the reply from the higher level. In the second case a last sent packet is resent, and the protocol remains in the same "wait-remote" state.
 
@@ -201,12 +200,14 @@ Another event that can happen in this state is a timer event. If nothing is rece
 "Wait-remote" has the following associated data:
 
 - last sent packet (LSP);
-- last sent packet ID range (LSPLIDR);
+- last sent packet ID range (LSPIDR);
+- previous sent packet ID range (PSPIDR);
+- last received chain ID (LRCID);
 - length of the last time interval between re-send attempts (RSP).
 
 LSP is used for packet resending, and RSP is used to set timer. LSPIDR is used to check whether an incoming packet is a reply to the last sent packet, or is a previously received packet. Such check is done by comparison of LSPIDR with PPID of the received packet.
 
-3.5. "wait-local"
+3.4. "wait-local"
 ^^^^^^^^^^^^^^^^^
 When payload data of a new packet received from the underlying protocol (and thus, ultimately, from a communication partner device) is forwarded to the higher level protocol, SAGDP starts waiting for a reply from a higher level, and stays in "wait-local" state. In this state the only legitimate event is receiving a packet from a higher level that is not marked as a "first" in chain.
 
@@ -236,11 +237,7 @@ TODO: pls check that the intended meaning didn't change
 
 A packet from a higher level protocol has been received with a respective status in chain. This packet is to be pre-processed and passed to an underlying protocol to be ultimately sent to a communication partner device.
 
-4.4. Receiving PID
-^^^^^^^^^^^^^^^^^^
-See comments to "wait-low-PID" and "wait-next-PID" states.
-
-4.5. Timer
+4.4. Timer
 ^^^^^^^^^^
 In the context of SAGDP timer event is used for packet resending, if a response has not been received within certain time.
 
@@ -261,9 +258,12 @@ Processing of this event is different at Mater's and Slave's side in a part when
 
 **At Master's side**, processing depends on the status of the packet in chain.
   * Error Message: payload of the packet is reported to a higher level protocol with its status, and SAGDP changes its state to idle.
-  * "First": packet PID is saved as a current value of LRPID, payload of the packet is reported to a higher level protocol with its status, and SAGDP changes its state to wait-local.
-  * "Intermediate": PPID of the packet is compared to LSPIDR.
-     * PPID is below the LSPIDR: the Last Sent Packet must be re-sent (note that in "idle" state it could be only "terminating"); SAGDP does not change its state.
+  * "First": chain id in the packet is compared to LRCID.
+     * chain ID in the packet is equal to LRCID: a repeated packet has been received; SAGDP requests a new Packet ID, updates upper bound of LSPIDR with received Packet ID, the Last Sent Packet is re-sent together with its Packet ID; SAGDP does not change its state.
+	 * chain ID in the packet is not equal to LRCID: LRCID is set to the value of chain ID in the packet; packet PID is saved as a current value of LRPID, payload of the packet is reported to a higher level protocol with its status, and SAGDP changes its state to wait-local.
+  * "Intermediate": PPID of the packet is compared to LSPIDR and PSPIDR as follows.
+     * PPID is below the LSPIDR and below PSPIDR: packet is ignored; SAGDP does not change its state.
+     * PPID is below the LSPIDR and within PSPIDR: the Last Sent Packet must be re-sent (note that in "idle" state it could be only "terminating"); SAGDP does not change its state.
      * PPID is within LSPIDR: unexpected (received packet is a response to the last sent packet, but the last sent packet in state "idle" could be only "terminating"): ignored [TODO: check for necessity of other actions].
      * PPID is above LSPIDR (chain is broken): ignored [TODO: check for necessity of other actions].
   * "Terminating": PPID of the packet is compared to LSPIDR.
@@ -273,9 +273,12 @@ Processing of this event is different at Mater's and Slave's side in a part when
 
 **At Slave side**,
   * Error Message: unexpected; system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
-  * "First": packet PID is saved as a current value of LRPID, payload of the packet is reported to a higher level protocol with its status, and SAGDP changes its state to wait-local.
-  * "Intermediate": PPID of the packet is compared to LSPIDR.
-     * PPID is below the LSPIDR: the Last Sent Packet is re-sent (note that in "idle" state it could be only "terminating"); SAGDP does not change its state.
+  * "First": chain id in the packet is compared to LRCID.
+     * chain ID in the packet is equal to LRCID: a repeated packet has been received; SAGDP requests a new Packet ID, updates upper bound of LSPIDR with received Packet ID, the Last Sent Packet is re-sent together with its Packet ID; SAGDP does not change its state.
+	 * chain ID in the packet is not equal to LRCID: LRCID is set to the value of chain ID in the packet; packet PID is saved as a current value of LRPID, payload of the packet is reported to a higher level protocol with its status, and SAGDP changes its state to wait-local.
+  * "Intermediate": PPID of the packet is compared to LSPIDR and PSPIDR as follows.
+     * PPID is below the LSPIDR and below PSPIDR: unexpected (chain is broken): system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
+     * PPID is below the LSPIDR and within PSPIDR: the Last Sent Packet must be re-sent (note that in "idle" state it could be only "terminating"); SAGDP does not change its state.
      * PPID is within LSPIDR: unexpected (received packet is a response to the last sent packet, but the last sent packet in state "idle" could be only "terminating"); system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
      * PPID is above LSPIDR: unexpected (chain is broken); system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
   * "Terminating": PPID of the packet is compared to LSPIDR.
@@ -286,7 +289,7 @@ Processing of this event is different at Mater's and Slave's side in a part when
 5.1.2. Receiving an HLP packet that is "first"
 ''''''''''''''''''''''''''''''''''''''''''''''
 
-An UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is set, "is-last" is not set) and the packet PPID that is equal to LRPID. The UP packet is saved as LSP. Timer is set to RSP. The UP packet is sent to the underlying protocol. SAGDP changes its state to "wait-PID".
+An UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is set, "is-last" is not set) and the packet PPID that is equal to LRPID. SAGDP requests a new Packet ID; sets PSPIDR to a current value of LSPIDR; and sets both lower and upper bound of LSPIDR to the received Packet ID (note that the upper bound of LSPIDR serves as a last sent packet ID and can be used when necessary as such). The UP packet is saved as LSP. Timer is set to RSP. The UP packet is sent to the underlying protocol. SAGDP changes its state to "wait-remote".
 
 5.1.3. Receiving a request to resend LSP; or an HLP packet that is "intermediate"; or an HLP packet that is "terminating"
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -295,8 +298,8 @@ TODO: pls check that the intended meaning didn't change
 
 If any of these events happen in idle state, consistency of data processing is broken. If implemented on Master, an error must e reported to the higher level protocol, and SAGDP transits to "idle" state. If implemented on Slave, system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
 
-5.1.4. Timer; or Receiving PID
-''''''''''''''''''''''''''''''
+5.1.4. Timer
+''''''''''''
 
 Ignored in this state.
 
@@ -308,20 +311,20 @@ In wait-local state SAGDP waits from a higher level protocol for a packet that i
 5.2.1. Receiving an HLP packet that is "intermediate"
 '''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-An UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is not set, "is-last" is not set) and the packet PPID that is equal to LSPID. The UP packet is saved as LSP. Timer is set to RSP. The UP packet is sent to the underlying protocol. SAGDP changes its state to "wait-PID".
+An UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is not set, "is-last" is not set) and the packet PPID that is equal to LSPID. SAGDP requests a new Packet ID; sets PSPIDR to a current value of LSPIDR; and sets both lower and upper bound of LSPIDR to the received Packet ID (note that the upper bound of LSPIDR serves as a last sent packet ID and can be used when necessary as such). Timer is set to RSP. The UP packet is sent to the underlying protocol. SAGDP changes its state to "wait-remote".
 
 5.2.2. Receiving an HLP packet that is "terminating"
 ''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-An UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is not set, "is-last" is not set) and the packet PPID that is equal to LSPID. The UP packet is sent to the underlying protocol. SAGDP changes its state to "idle".
+An UP packet is formed wherein HLP packet becomes a payload data, and a header contains flags regarding the position of the packet in chain ("is-first" flag is not set, "is-last" is not set) and the packet PPID that is equal to LSPID. SAGDP requests a new Packet ID; sets PSPIDR to a current value of LSPIDR; and sets both lower and upper bound of LSPIDR to the received Packet ID (note that the upper bound of LSPIDR serves as a last sent packet ID and can be used when necessary as such). Timer is set to RSP. The UP packet is sent to the underlying protocol. SAGDP changes its state to "wait-remote".
 
 5.2.3. Receiving a UP packet with flag "Resent-Packet"
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 The packet is ignored. SAGDP does not change its state.
 
-5.2.4. Receiving an HLP packet that is "first"; or an UP packet with flag "New-Packet"; or Receiving PID; or Receiving a request to resend LSP
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+5.2.4. Receiving an HLP packet that is "first"; or an UP packet; or Receiving a request to resend LSP
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 TODO: pls check that the intended meaning didn't change
 
@@ -333,47 +336,22 @@ If any of these events happen in wait-local state, consistency of data processin
 Ignored in this state.
 
 
-5.3. Processing events in wait-PID state
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-5.3.1. Receiving PID
-''''''''''''''''''''
-
-Processing depends on states of PR and NSI flags. In more details, first, PR is checked.
-  * PR is set: only upper bound of LSPIDR are set to PID;
-  * PR is not set: both lower and upper bound of LSPIDR are set to PID;
-  
-Then NSI flag is checked.
-  * NSI flag set: SAGDP changes its state to "idle";
-  * NSI flag is not set: SAGDP changes its state to "wait-remote";
-
-5.3.2. Timer
-''''''''''''
-
-Ignored in this state.
-
-5.3.3. Receiving an HLP packet that is "first"; or receiving an HLP packet that is "intermediate"; or receiving an HLP packet that is "terminating"; or Receiving a request to resend LSP; or receiving an UP packet with flag "New-Packet"; or receiving an UP packet with flag "Resent-Packet"
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-If any of these events happen in wait-remote state, consistency of data processing is broken. If implemented on Master, an error must e reported to the higher level protocol, and SAGDP transits to "idle" state. If implemented on Slave, system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
-
-
 5.4. Processing events in wait-remote state
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 5.4.1. Receiving an UP packet
 '''''''''''''''''''''''''''''
 
-A received UP packet can be either a new packet, or a repetetion of a previously last-received packet. In the latter case a last sent packet is resent; in the former case processing of this event is different at Mater's and Slave's side in a part when the packet is not a subsequent packet within a current chain. The received packet is processed as follows:
+A received UP packet can be either a new packet, or a repetition of a previously last-received packet. In the latter case a last sent packet is resent; in the former case processing of this event is different at Mater's and Slave's side in a part when the packet is not a subsequent packet within a current chain. The received packet is processed as follows:
 
 **At Master's side**, processing depends on the status of the packet in chain.
   * Error Message: payload of the packet is reported to a higher level protocol with its status, and SAGDP changes its state to idle.
-  * "First": chain consistency is verified by comparison of PPID of the packet with LSPIDR.
-     * PPID is below the LSPIDR: a repeated packet has been received. The Last Sent Packet is re-sent, and SAGDP changes its state to Wait-PID (with flags PR set and NSI not set).
-     * PPID is within LSPIDR: unexpected (received "new" packet is a response to the last sent packet); the packet is ignored.
-     * PPID is above LSPID (chain is broken): the packet is ignored.
-  * "Intermediate": chain consistency is verified by comparison of PPID of the packet with LSPIDR.
-     * PPID is below the LSPIDR: a repeated packet has been received. The Last Sent Packet is re-sent, and SAGDP changes its state to Wait-PID.
+  * "First": chain id in the packet is compared to LRCID.
+     * chain ID in the packet is equal to LRCID: a repeated packet has been received; SAGDP requests a new Packet ID, updates upper bound of LSPIDR with received Packet ID, the Last Sent Packet is re-sent together with its Packet ID; SAGDP does not change its state.
+	 * chain ID in the packet is not equal to LRCID: unexpected; ignored; SAGDPdoes not change its state.
+  * "Intermediate": PPID of the packet is compared to LSPIDR and PSPIDR as follows.
+     * PPID is below the LSPIDR and below PSPIDR: packet is ignored; SAGDP does not change its state.
+     * PPID is below the LSPIDR and within PSPIDR: SAGDP requests a new Packet ID, updates upper bound of LSPIDR with received Packet ID, the Last Sent Packet is re-sent together with its Packet ID; SAGDP does not change its state.
      * PPID is within LSPIDR (received packet is a response to the last sent packet): packet PID is saved as a current value of LRPID, payload of the packet is reported to a higher level protocol with its status in chain, and SAGDP changes its state to wait-local.
      * PPID is above LSPID (chain is broken): the packet is ignored.
   * "Terminating": chain consistency is verified by comparison of PPID of the packet with LSPID.
@@ -383,39 +361,35 @@ A received UP packet can be either a new packet, or a repetetion of a previously
 
 **At Slave side**,
   * Error Message: unexpected; system must send a packet with Error Message to its communication partner and then transit to "not initialized" state thus invalidating all current data.
-  * "First": chain consistency is verified by comparison of PPID of the packet with LSPIDR.
-     * PPID is below the LSPIDR: a repeated packet has been received. The Last Sent Packet is re-sent, and SAGDP changes its state to Wait-PID (with flags PR set and NSI not set).
-     * PPID is within or above LSPIDR (master has selected to start a new chain): system must transit to "not initialized" and then to "idle" state, and then to process the packet again.
-  * "Intermediate": chain consistency is verified by comparison of PPID of the packet with LSPIDR.
-     * PPID is below the LSPIDR: a repeated packet has been received. The Last Sent Packet is re-sent, and SAGDP changes its state to Wait-PID.
+  * "First": chain id in the packet is compared to LRCID.
+     * chain ID in the packet is equal to LRCID: a repeated packet has been received; SAGDP requests a new Packet ID, updates upper bound of LSPIDR with received Packet ID, the Last Sent Packet is re-sent together with its Packet ID; SAGDP does not change its state.
+     * chain ID in the packet is not equal to LRCID (master has selected to start a new chain): system must transit to "not initialized" and then to "idle" state, and then to process the packet again.
+  * "Intermediate": PPID of the packet is compared to LSPIDR and PSPIDR as follows.
+     * PPID is below the LSPIDR and below PSPIDR: unexpected (chain is broken): system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
+     * PPID is below the LSPIDR and within PSPIDR: a repeated packet has been received. SAGDP requests a new Packet ID, updates upper bound of LSPIDR with received Packet ID, the Last Sent Packet is re-sent together with its Packet ID, and SAGDP keeps its present state ("wait-remote").
      * PPID is within LSPIDR (received packet is a response to the last sent packet): packet PID is saved as a current value of LRPID, payload of the packet is reported to a higher level protocol with its status in chain, and SAGDP changes its state to wait-local.
      * PPID is above LSPID (chain is broken): system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
   * "Terminating": chain consistency is verified by comparison of PPID of the packet with LSPID.
      * PPID is below the LSPIDR: unexpected (a repeated packet has been received that is "terminating", but SAGDP did not respond to a "terminating" packet). System must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
-     * PPID is within LSPID (received packet is a response to the last sent packet): payload of the packet is reported to a higher level protocol with its status in chain, and SAGDP changes its state to idle.
-     * PPID is above LSPID (chain is broken): system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
+     * PPID is within LSPIDR (received packet is a response to the last sent packet): payload of the packet is reported to a higher level protocol with its status in chain, and SAGDP changes its state to idle.
+     * PPID is above LSPIDR (chain is broken): system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
 
 
 5.4.2. Receiving a request to resend LSP
 ''''''''''''''''''''''''''''''''''''''''
 
-The LSP is sent to the underlying protocol. Timer is reset [TODO: details on timer reset here and at all applicable places]. SAGDP transits to Wait-PID state.
+SAGDP requests a new Packet ID, updates upper bound of LSPIDR with received Packet ID, the Last Sent Packet is re-sent together with its Packet ID. Timer is reset [TODO: details on timer reset here and at all applicable places]. SAGDP does not change its state.
 
 
 5.4.3. Timer
 ''''''''''''
 
-The LSP is sent to the underlying protocol. Timer is set to RSP.
+The LSP is sent to the underlying protocol. Timer is set to RSP. SAGDP does not change its state.
 
 5.4.4. Receiving an HLP packet that is "first"; or receiving an HLP packet that is "intermediate"; or receiving an HLP packet that is "terminating"
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 If any of these events happen in wait-remote state, consistency of data processing is broken. If implemented on Master, an error must be reported to the higher level protocol, and SAGDP transits to "idle" state. If implemented on Slave, system must send a packet with Error Message to its communication partner and then to transit to "not initialized" state thus invalidating all current data.
-
-5.4.5. Receiving PID
-''''''''''''''''''''
-
-If this event happens in the wait-remote state, it means that SAGDP ir de-sychronized with an underlying protocol, and the system must be reset [TODO: is there any reasonable case for that?]
 
 
 
