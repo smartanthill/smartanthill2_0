@@ -75,29 +75,11 @@ int main(int argc, char *argv[])
 
 	printf("Client connected.\n");
 
-//	bool startSeq = startSequence();
-
 	// MAIN LOOP
 	for (;;)
 	{
-/*		if ( startSeq )
-		{
-			startSeq = false;
-			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
-			waitToProceed();
-			memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
-			goto alt_entry;
-		}*/
 getmsg:
 		// 1. Get message from comm peer
-/*		ret_code = getMessage( sizeInOut, rwBuff, BUF_SIZE);
-		if ( ret_code != COMMLAYER_RET_OK )
-		{
-			printf("\n\nWAITING FOR A NEW CLIENT...\n\n");
-			if (!communicationInitializeAsServer()) // regardles of errors... quick and dirty solution so far
-				return -1;
-			goto getmsg;
-		}*/
 		ret_code = tryGetMessage( sizeInOut, rwBuff, BUF_SIZE);
 		INCREMENT_COUNTER_IF( 91, "MAIN LOOP, packet received [1]", ret_code == COMMLAYER_RET_OK );
 		while ( ret_code == COMMLAYER_RET_PENDING )

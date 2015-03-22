@@ -151,7 +151,8 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 			PRINTF( "handlerSAGDP_receiveNewUP(): PID last sent last    : %x%x%x%x%x%x\n", pidlsent_last[0], pidlsent_last[1], pidlsent_last[2], pidlsent_last[3], pidlsent_last[4], pidlsent_last[5] );
 			bool isold = pid_compare( buffIn + 1, data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET ) < 0;
 			if ( isold )
-			{
+			{ 
+				// TODO: check against previous range
 				INCREMENT_COUNTER( 23, "handlerSAGDP_receiveUP(), idle, is-old" );
 				PRINTF( "SAGDP OK: state = %d, packet_status = %d; isold\n", state, packet_status );
 				if ( ( packet_status & SAGDP_P_STATUS_MASK ) ==  SAGDP_P_STATUS_INTERMEDIATE )
@@ -405,6 +406,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 			bool isold = pid_compare( buffIn + 1, data + DATA_SAGDP_FIRST_LSENT_PID_OFFSET ) < 0;
 			if ( isold )
 			{
+				// TODO: check against too-old status (previous last sent first)
 //				return handlerSAGDP_receiveRepeatedUP( timeout, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, data, lsm );
 				if ( ( buffIn[0] & SAGDP_P_STATUS_NO_RESEND ) == 0 )
 				{

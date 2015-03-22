@@ -33,9 +33,6 @@ Copyright (C) 2015 OLogN Technologies AG
 //#define MANUAL_TEST_DATA_ENTERING
 
 #define CHAIN_MAX_SIZE 9
-//bool chainContinued;
-//bool isChainContinued() {return chainContinued; }
-//uint16_t last_sent_id = (uint16_t)(0xFFF0) + (((uint16_t)MASTER_SLAVE_BIT) << 15 );
 uint16_t last_sent_id = 0;
 
 uint16_t currChainID[2];
@@ -185,14 +182,6 @@ uint8_t master_start( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffO
 	uint16_t self_id = 1;
 	last_sent_id = self_id;
 
-
-	// packet ids
-/*	last_sent_id += 0x10;
-	last_sent_id &= (uint16_t)(0xFFF0);
-	last_sent_id ++; // thus starting from 1 in the last xex digit
-	uint16_t reply_to_id = 0;
-	uint16_t self_id = last_sent_id;*/
-
 	// prepare outgoing packet
 	buffOut[0] = first_byte;
 	*(uint16_t*)(buffOut+1) = chain_id[0];
@@ -220,11 +209,7 @@ uint8_t master_start( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffO
 	// return status
 	return YOCTOVM_PASS_LOWER;
 }
-/*
-//bool start_over_once = true;
-bool start_over_once = false;
-bool statck_reset = false;
-*/
+
 uint8_t master_continue( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ )
 {
 	// by now master_continue() does the same as yocto_process
@@ -285,30 +270,6 @@ uint8_t master_continue( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* bu
 		INCREMENT_COUNTER( 6, "master_continue(), packet terminating received" );
 		return YOCTOVM_OK;
 	}
-
-/*	if ( start_over_once )
-	{
-		if ( second_byte == 3 || second_byte == 4 )
-		{
-			if (!statck_reset)
-			{
-				statck_reset = true;
-				return YOCTOVM_RESET_STACK;
-			}
-			else
-			{
-				start_over_once = false;
-				return master_start( sizeInOut, buffIn, buffOut );
-			}
-		}
-	}
-
-
-	if ( first_byte == SAGDP_P_STATUS_TERMINATING )
-	{
-		return YOCTOVM_OK;
-//		return master_start( sizeInOut, buffIn, buffOut );
-	}*/
 
 	// fake implementation: should this packet be terminal?
 	if ( chain_ini_size == self_id + 1 )

@@ -497,14 +497,6 @@ saspsend:
 			}
 		}
 
-
-		// for testing purposes
-/*		if ( !isChainContinued() )
-		{
-			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
-			memcpy( rwBuff, rwBuff + BUF_SIZE / 4, *sizeInOut );
-			goto entry;
-		}*/
 	}
 
 	communicationTerminate();
