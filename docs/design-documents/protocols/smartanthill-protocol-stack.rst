@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.6
+:Version:   v0.2.7
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -266,7 +266,12 @@ In such cases, SmartAnthill uses **SmartAnthill Endianness**, which is **LITTLE-
 SmartAnthill Bitfields
 ^^^^^^^^^^^^^^^^^^^^^^
 
-In some cases, SmartAnthill Protocols use bitfields; in such cases, notation such as \| Bitfield-1, Bitfield2 \| is interpreted as that Bitfield-1 occupies most significant bits of the field, and Bitfield-2 occupies least significant bits of the field. 
+In some cases, SmartAnthill Protocols use bitfields; in such cases, notation such as **\| <Bitfield-1>, <Bitfield-2> \|** is interpreted as that Bitfield-1 occupies most significant bits of the field, and Bitfield-2 occupies least significant bits of the field. For multi-byte fields with bitfields spanning several bytes, first bitfields are combined to obtain an multi-byte integer field according to the 'least significant bit-most significant bit' rules above, and then a multi-byte value is serialized according to *SmartAnthill Endianness* as described above.
+
+SmartAnthill Half-Float
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Some SmartAnthill commands use 'Half-Float' data as described here: http://en.wikipedia.org/wiki/Half-precision_floating-point_format . SmartAnthill serializes such data as **\| <SIGN-BIT>, <EXPONENT>, <FRACTION> \|**, where <SIGN-BIT> is a 1-bit bitfield, <EXPONENT> is a 5-bit bitfield, and <FRACTION> is an 11-bit bitfield. 
 
 Layering remarks
 ----------------

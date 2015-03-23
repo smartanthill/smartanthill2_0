@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.2
+:Version:   v0.2.1
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
@@ -190,7 +190,7 @@ Device-Capabilities-Reply is defined as follows:
 
 where Basic-Device-Capabilities is restricted to 8 bytes:
 
-**\| SACCP_BASIC_GUARANTEED_PAYLOAD \| <ZEPTOVM_LEVEL>, <ZEPTOVM_BASIC_REPLY_STACK_SIZE> \| ZEPTOVM_BASIC_EXPR_STACK_SIZE \| <ZEPTOVM_BASIC_MAX_PSEUDOTHREADS>, <RESERVED-4-BITS> \| RESERVED-4-BYTES \|**
+**\| SACCP_BASIC_GUARANTEED_PAYLOAD \| <ZEPTOVM_LEVEL>, <ZEPTOVM_BASIC_REPLY_STACK_SIZE> \| <ZEPTOVM_EXPR_FLOAT_TYPE>, <ZEPTOVM_BASIC_EXPR_STACK_SIZE> \| <ZEPTOVM_BASIC_MAX_PSEUDOTHREADS>, <RESERVED-4-BITS> \| RESERVED-4-BYTES \|**
 
 and Extended-Device-Capabilities extends beyond 8 bytes to provide more information; Extended-Device-Capabilities MUST be cut on field boundaries as necessary to fit *maximum-devicecaps-size*:
 
@@ -201,7 +201,8 @@ Here:
 * SACCP_BASIC_GUARANTEED_PAYLOAD is a 1-byte field specifying guaranteed size of SACCP payload which is supported by current device (taking into account capabilities of it's L2 protocol, see :ref:`saprotostack` document for details). If SACCP guaranteed payload of the device is more than 255 bytes, then SACCP_GUARANTEED_PAYLOAD MUST be set to 255, and SACCP_EXTENDED_GUARANTEED_PAYLOAD SHOULD be set to real value of the SACCP guaranteed payload.
 * <ZEPTOVM_LEVEL> is a 3-bit bitfield, specifying Zepto VM Level supported
 * <ZEPTOVM_BASIC_REPLY_STACK_SIZE> is a 5-bit bitfield, equal to ZEPTOVM_REPLY_STACK_SIZE (see below for details). If ZEPTOVM_REPLY_STACK_SIZE is more than 31, then <ZEPTOVM_BASIC_REPLY_STACK_SIZE> MUST be set to 31, and real ZEPTOVM_REPLY_STACK_SIZE SHOULD be reported in ZEPTOVM_EXTENDED_REPLY_STACK_SIZE field.
-* ZEPTOVM_BASIC_EXPR_STACK_SIZE is a 1-byte field, equal to ZEPTOVM_EXPR_STACK_SIZE (see below for details). If ZEPTOVM_EXPR_STACK_SIZE is more than 255, then ZEPTOVM_BASIC_EXPR_STACK_SIZE MUST be set to 255, and real ZEPTOVM_EXPR_STACK_SIZE SHOULD be reported in ZEPTOVM_EXTENDED_EXPR_STACK_SIZE field.
+* ZEPTOVM_BASIC_EXPR_FLOAT_TYPE is a 3-bit bitfield, taking one of the following values: { ROUGH_HALF_FLOAT, HALF_FLOAT, FLOAT, DOUBLE } to indicate type of expression stack supported by Zepto VM (levels Zepto VM Small and higher). if ZEPTOVM_BASIC_EXPR_STACK_SIZE is zero, ZEPTOVM_BASIC_EXPR_FLOAT_TYPE is ignored.
+* ZEPTOVM_BASIC_EXPR_STACK_SIZE is a 5-bit butfield, equal to ZEPTOVM_EXPR_STACK_SIZE (see below for details). If ZEPTOVM_EXPR_STACK_SIZE is more than 31, then ZEPTOVM_BASIC_EXPR_STACK_SIZE MUST be set to 31, and real ZEPTOVM_EXPR_STACK_SIZE SHOULD be reported in ZEPTOVM_EXTENDED_EXPR_STACK_SIZE field.
 * <ZEPTOVM_BASIC_MAX_PSEUDOTHREADS> is a 4-bit bitfield, equal to ZEPTOVM_MAX_PSEUDOTHREADS (see below for details). If ZEPTOVM_MAX_PSEUDOTHREADS is more than 15, then <ZEPTOVM_BASIC_MAX_PSEUDOTHREADS> MUST be set to 15, and real ZEPTOVM_MAX_PSEUDOTHREADS SHOULD be reported in ZEPTOVM_EXTENDED_MAX_PSEUDOTHREADS field.
 * <RESERVED-\*-BITS> and <RESERVED-\*-BYTES> fields are reserved for future use and MUST be set to 0.
 * SACCP_EXTENDED_GUARANTEED_PAYLOAD is an Encoded-Unsigned-Int<max=2> field (as defined in :ref:`saprotostack` document) specifying guaranteed size of SACCP payload which is supported by current device (see SACCP_GUARANTEED_PAYLOAD above for details; unlike SACCP_GUARANTEED_PAYLOAD, SACCP_EXTENDED_GUARANTEED_PAYLOAD is capped at 65535 rather than at 255). SACCP_EXTENDED_GUARANTEED_PAYLOAD field MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
@@ -306,7 +307,8 @@ FIELD-SEQUENCE field describes a sequence of fields to be read from plugin reply
 * ENCODED_UNSIGNED_INT_FIELD
 * ENCODED_SIGNED_INT_FIELD
 * ONE_BYTE_FIELD
-* TWO_BYTE_FIELD
+* TWO_BYTE_FIELD (assumes 'SmartAnthill endianness' as described in :ref:`saprotostack` document)
+* HALF_FLOAT (using encoding as described in :ref:`saprotostack` document for half-floats)
 * END_OF_SEQUENCE
 
 ZEPTOVM_OP_JMPIFREPLYFIELD_* instruction takes the reply of the last plugin which was called, and compares required field to the THRESHOLD. If first byte of the reply is < (for <SUBCODE>=LT) THRESHOLD, PC is incremented by a value of DELTA (as with JMP, DELTA is added to a PC positioned right after current instruction).
@@ -353,7 +355,7 @@ Zepto VM-Small, in addition to instructions supported by Zepto VM-Tiny, addition
 
 **\| ZEPTOVM_OP_PUSHEXPR_CONSTANT \| CONST \|**
 
-where ZEPTOVM_OP_PUSHEXPR_CONSTANT is 1-byte opcode, and CONST is a 2-byte constant (encoded using SmartAnthill Endianness as defined in :ref:`saprotostack`) to be pushed to expression stack.
+where ZEPTOVM_OP_PUSHEXPR_CONSTANT is 1-byte opcode, and CONST is a 2-byte half-float constant (encoded as described in :ref:`saprotostack`) to be pushed to expression stack.
 
 PUSHEXPR_CONSTANT instruction pushes CONST to an expression stack (if expression stack is exceeded, it will cause ZEPTOVM_EXPRSTACKOVERFLOW VM exception).
 
@@ -362,7 +364,7 @@ PUSHEXPR_CONSTANT instruction pushes CONST to an expression stack (if expression
 ZEPTOVM_OP_PUSHEXPR_REPLYFIELD is 1-byte opcode, REPLY-NUMBER and FIELD-SEQUENCE are similar to that of in JMPIFREPLYFIELD instruction. 
 
 PUSHEXPR_REPLYFIELD takes a field (specified by FIELD-SEQUENCE) from reply (specified by REPLY-NUMBER), and pushes it to the expression stack (if expression stack is exceeded, it will cause ZEPTOVM_EXPRSTACKOVERFLOW VM exception).
-If data in the field doesn't fit into 2 bytes, it is an ZEPTOVM_INVALIDEXPRDATA exception. If data in the field is negative, it is casted to unsigned before pushing. 
+If data in the field doesn't fit into stack type (see below), it is an ZEPTOVM_INVALIDEXPRDATA exception. 
 
 **\| ZEPTOVM_OP_PUSHEXPR_EXPR \| EXPR-OFFSET \|**
 
@@ -391,12 +393,12 @@ where ZEPTOVM_OP_EXPRUNOP is a 1-byte opcode, and UNOP is 1-byte taking values f
 +----+-------------------------------+
 |2   + !                             |
 +----+-------------------------------+
-|3   + ++                            |
+|3   + +=1                           |
 +----+-------------------------------+
-|4   + --                            |
+|4   + -=1                           |
 +----+-------------------------------+
 
-EXPRUNOP instruction pops topmost value from the expression stack, modifies it according to the table above, and pushes modified value back to expression stack. All operations are performed as specified in the table above, using signed 16-bit arithmetic. If expression stack is empty, it will cause a ZEPTOVM_EXPRSTACKUNDERFLOW VM exception. TODO? : overflows for '-','++','--'?
+EXPRUNOP instruction pops topmost value from the expression stack, modifies it according to the table above, and pushes modified value back to expression stack. All operations are performed as specified in the table above; '-', '+=1' and '-=1' operations are performed as floating-point operation (see details below), for '~' and '!' operations the operand is first converted into integer with zero exponent (and then only significand is involved in these operations). If expression stack is empty, it will cause a ZEPTOVM_EXPRSTACKUNDERFLOW VM exception. Overflows are handled in a normal manner for floats (NB: as it is float arithmetics, '+=1' and '-=1' operations MAY cause operand to stay without changes even if no 'infinity' has occurred; it means that if half-floats are used as expression stack values, 2048+1 results in 2048, causing potential for infinite loops TODO: check if it is 2048 or 2050).
 
 **\| ZEPTOVM_OP_EXPRBINOP \| BINOP \|**
 
@@ -422,11 +424,18 @@ where ZEPTOVM_OP_EXPRBINOP is a 1-byte opcode, and BINOP is 1-byte taking values
 |7    + ||                             |
 +-----+--------------------------------+
 
-EXPRBINOP instruction pops two topmost values from the expression stack, calculates result out of them according to the table above (as 'second topmost' op 'topmost'), and pushes calculated value back to the expression stack. All operations are performed as specified in the table above, using signed 16-bit arithmetic (except for shifts, which use unsigned 16-bit arithmetic). If expression stack has less than two items, it will cause a ZEPTOVM_EXPRSTACKUNDERFLOW VM exception. TODO? : overflows for '+','-','<<'?
+EXPRBINOP instruction pops two topmost values from the expression stack, calculates result out of them according to the table above (as 'second topmost' op 'topmost'), and pushes calculated value back to the expression stack. All operations are performed as specified in the table above; '+' and '-' are performed as floating-point operations (see details below), for '<<', '>>', '&', '|', '&&', and '||' both operands are first converted into integers with zero exponent (and then only significands of operands are involved in these operations). If expression stack has less than two items, it will cause a ZEPTOVM_EXPRSTACKUNDERFLOW VM exception. Overflows are handled in a standard manner for floats (causing 'infinity' result when necessary). NB: there are no multiplication/division operations for Zepto VM-Small, they're introduced in higher Zepto-VM levels.
+
+**\| ZEPTOVM_OP_EXPRBINOP_IMMEDIATE \| BINOP \| IMMEDIATE-OPERAND \|**
+
+where ZEPTOVM_OP_EXPRBINOP_IMMEDIATE is a 1-byte opcode, BINOP is 1-byte taking the same values as for ZEPTOVM_OP_EXPRBINOP, and IMMEDIATE-OPERAND is a 2-byte half-float. 
+
+**\| EXPRBINOP_IMMEDIATE \| BINOP \| IMMEDIATE-OPERAND \|** instruction acts as a shortcut to **\| PUSHEXPR_CONSTANT \| IMMEDIATE-OPERAND \| EXPRBINOP \| IMMEDIATE-OPERAND \|**. These two forms are strictly equivalent, but EXPRBINOP_IMMEDIATE saves one byte in byte-code, and requires one less (temporary) entry on expression stack.
+
 
 **\| ZEPTOVM_OP_JMPIFEXPR <SUBCODE> \| THRESHOLD \| DELTA \|**
 
-where <SUBCODE> is one of {LT,GT,EQ,NE}; ZEPTOVM_OP_JMPIFEXPR_LT, ZEPTOVM_OP_JMPIFEXPR_GT, ZEPTOVM_OP_JMPIFEXPR_EQ, and  ZEPTOVM_OP_JMPIFEXPR_NE are 1-byte opcodes, THRESHOLD is a 2-byte signed integer (encoded using SmartAnthill Endianness as defined in :ref:`saprotostack`), and interpretation of DELTA is similar to that of in JMP description.
+where <SUBCODE> is one of {LT,GT,EQ,NE}; ZEPTOVM_OP_JMPIFEXPR_LT, ZEPTOVM_OP_JMPIFEXPR_GT, ZEPTOVM_OP_JMPIFEXPR_EQ, and  ZEPTOVM_OP_JMPIFEXPR_NE are 1-byte opcodes, THRESHOLD is a 2-byte half-float constant (encoded as described in :ref:`saprotostack`), and interpretation of DELTA is similar to that of in JMP description.
 
 +---------+----------------------------------------------------+
 |<SUBCODE>|Jump if                                             |
@@ -442,9 +451,11 @@ where <SUBCODE> is one of {LT,GT,EQ,NE}; ZEPTOVM_OP_JMPIFEXPR_LT, ZEPTOVM_OP_JMP
 
 JMPIFEXPR <SUBCODE> instruction pops the topmost value from the expression stack, compares it with THRESHOLD according to <SUBCODE>, and updates Program Counter by DELTA if condition specified by comparison is met (as with JMP, DELTA is added to a PC positioned right after current instruction). If expression stack is empty, it will cause a ZEPTOVM_EXPRSTACKUNDERFLOW VM exception.
 
+TODO: can equivalents for LE/GE be strictly derived in case of floats?
+
 **\| ZEPTOVM_OP_JMPIFEXPR_NOPOP <SUBCODE> \| THRESHOLD \| DELTA \|**
 
-where <SUBCODE> is one of {LT,GT,EQ,NE}; ZEPTOVM_OP_JMPIFEXPR_NOPOP_LT, ZEPTOVM_OP_JMPIFEXPR_NOPOP_GT, ZEPTOVM_OP_JMPIFEXPR_NOPOP_EQ, and  ZEPTOVM_OP_JMPIFEXPR_NOPOP_NE are 1-byte opcodes, THRESHOLD is a 2-byte signed integer (encoded using SmartAnthill Endianness as defined in :ref:`saprotostack`), and interpretation of DELTA is similar to that of in JMP description.
+where <SUBCODE> is one of {LT,GT,EQ,NE}; ZEPTOVM_OP_JMPIFEXPR_NOPOP_LT, ZEPTOVM_OP_JMPIFEXPR_NOPOP_GT, ZEPTOVM_OP_JMPIFEXPR_NOPOP_EQ, and  ZEPTOVM_OP_JMPIFEXPR_NOPOP_NE are 1-byte opcodes, THRESHOLD is a 2-byte half-float constant (encoded as described in :ref:`saprotostack`), and interpretation of DELTA is similar to that of in JMP description.
 
 JMPIFEXPR_NOPOP <SUBCODE> instruction peeks the topmost value on the expression stack without popping it, compares it with THRESHOLD according to <SUBCODE>, and updates Program Counter by DELTA if condition specified by comparison is met (as with JMP, DELTA is added to a PC positioned right after current instruction). If expression stack is empty, it will cause a ZEPTOVM_EXPRSTACKUNDERFLOW VM exception. For details on <SUBCODE>, see description of JMPIFEXPR <SUBCODE> instruction.
 
@@ -453,17 +464,24 @@ JMPIFEXPR_NOPOP instruction is useful for organizing loops based on a value stor
 Implementation notes
 ''''''''''''''''''''
 
-To implement Zepto VM-Small, in addition to PC and reply-offset-stack required by Zepto VM-Tiny, an expression stack of 16-bit values, need to be maintained. Such stack should consist of an array of 16-bit values, and additional byte to store number of entries on the stack. Size of this stack is a ZEPTOVM_EXPR_STACK_SIZE parameter of Zepto VM-Small (which is stored in SmartAnthill DB on SmartAnthill Client and reported via "Device Capabilities" request).
+To implement Zepto VM-Small, in addition to PC and reply-offset-stack required by Zepto VM-Tiny, an expression stack of floating-point values, need to be maintained. Such stack should consist of an array of floating-point values, and an additional byte to store number of entries on the stack. Size of this stack is a ZEPTOVM_EXPR_STACK_SIZE parameter of Zepto VM-Small (which is stored in SmartAnthill DB on SmartAnthill Client and reported via "Device Capabilities" request). 
+
+*Type of the values on expression stack always has floating point semantics*, and is one of the following: ROUGH_HALF_FLOAT (2 bytes; same as HALF_FLOAT, but with reduced calculation precision - TBD), HALF_FLOAT (2-byte float, see http://en.wikipedia.org/wiki/Half-precision_floating-point_format), FLOAT (4-byte float), DOUBLE (8-byte float); one of these constants is returned in DEVICECAPS instruction reply to indicate kind of floating point arithmetics supported by specific device; each subsequent floating point format is an extension over previous one. 
 
 Memory overhead
 '''''''''''''''
 
 Memory overhead of ZeptoVM-Small is (in addition to overhead of ZeptoVM-Tiny) is 1+2*ZEPTOVM_EXPR_STACK_SIZE.
 
+Turing Completeness
+'''''''''''''''''''
+
+Starting from Zepto VM-Small, Zepto VM implementations are techically Turing complete. TODO: check
+
 Zepto VM-Medium
 ^^^^^^^^^^^^^^^
 
-Zepto VM-Medium adds support for registers, call stack, and parallel execution.
+Zepto VM-Medium adds support for registers, call stack, multiplication/division, math pseudo-library, and parallel execution.
 
 **\| ZEPTOVM_OP_PARALLEL \| N-PSEUDO-THREADS \| PSEUDO-THREAD-1-INSTRUCTIONS-SIZE \| PSEUDO-THREAD-1-INSTRUCTIONS \| ... \| PSEUDO-THREAD-N-INSTRUCTIONS-SIZE \| PSEUDO-THREAD-N-INSTRUCTIONS \|**
 
@@ -481,7 +499,7 @@ When PARALLEL instruction execution is started, original expression stack is "fr
 
 PUSHEXPR_EXPR instruction, when it is applied within PARALLEL pseudo-thread, allows to access original (pre-PARALLEL) expression stack. That is, first EXPR-OFFSET values identify expression stack items within the pseudo-thread, but when pseudo-thread values are exhausted, increasing EXPR-OFFSET starts to go into pre-PARALLEL expression stack. For example, if \|PUSHEXPR\|0\| is the first instruction of the pseudo-thread, it peeks a topmost value from the pre-PARALLEL expression stack and pushes it to the pseudo-thread's expression stack. This allows to easily pass information from the main program to pseudo-threads.
 
-TODO: CALL (accounting for pseudo-threads), MOV (pseudo-threads-agnostic)
+TODO: CALL (accounting for pseudo-threads), MOV (pseudo-threads-agnostic), multiplication/log/exp/sin(?), support for piecewise table maths (with piecewise table supplied as a part of command)
 
 Implementation notes
 ''''''''''''''''''''
@@ -512,6 +530,7 @@ Statistics for different Zepto-VM levels:
 |Zepto VM-Tiny  | TODO            |ZEPTOVM_REPLY_STACK_SIZE=4 to 8      | (1 to 2)+(5 to 9) = 6 to 11                      |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
 |Zepto VM-Small | TODO            |ZEPTOVM_EXPR_STACK_SIZE=4 to 8       | (6 to 11)+(9 to 17) = 15 to 28                   |
+|               |                 |ZEPTOVM_EXPR_FLOAT_TYPE=HALF-FLOAT   |                                                  |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
 |Zepto VM-Medium| TODO            |ZEPTOVM_EXPR_STACK_SIZE=8 to 12      | TBD                                              |
 |               |                 |ZEPTOVM_MAX_PSEUDOTHREADS=4 to 8     |                                                  |
