@@ -40,7 +40,7 @@ Copyright (C) 2015 OLogN Technologies AG
 // TODO: think about more reliable mechanism
 #define DADA_OFFSET_SASP 0
 #define DADA_OFFSET_SAGDP ( DADA_OFFSET_SASP + 28 )
-#define DADA_OFFSET_NEXT ( DADA_OFFSET_SAGDP + 28 )
+#define DADA_OFFSET_NEXT ( DADA_OFFSET_SAGDP + 34 )
 
 // debug helpers
 
@@ -52,5 +52,42 @@ Copyright (C) 2015 OLogN Technologies AG
 #else // DEBUG_PRINTING
 #define PRINTF
 #endif // DEBUG_PRINTING
+
+
+// counter system
+#define ENABLE_COUNTER_SYSTEM
+
+#define ENABLE_COUNTER_SYSTEM
+#ifdef ENABLE_COUNTER_SYSTEM
+#define MAX_COUNTERS_CNT 100
+extern size_t COUNTERS[MAX_COUNTERS_CNT];
+extern const char* CTRS_NAMES[MAX_COUNTERS_CNT];
+extern double COUNTERS_D[MAX_COUNTERS_CNT];
+extern const char* CTRS_NAMES_D[MAX_COUNTERS_CNT];
+#define INIT_COUNTER_SYSTEM \
+	memset( COUNTERS, 0, sizeof(COUNTERS) ); \
+	memset( CTRS_NAMES, 0, sizeof(CTRS_NAMES) ); \
+	memset( COUNTERS_D, 0, sizeof(COUNTERS_D) ); \
+	memset( CTRS_NAMES_D, 0, sizeof(CTRS_NAMES_D) ); 
+void printCounters();
+#define PRINT_COUNTERS() printCounters()
+#define TEST_CTR_SYSTEM
+#ifdef TEST_CTR_SYSTEM
+#define INCREMENT_COUNTER( i, name ) \
+	{if ( (COUNTERS[i]) != 0 ); else { assert( CTRS_NAMES[i] == NULL ); CTRS_NAMES[i] = name; } \
+	(COUNTERS[i])++;}
+#define INCREMENT_COUNTER_IF( i, name, cond ) \
+	{ if ( cond ) {if ( (COUNTERS[i]) != 0 ); else { assert( CTRS_NAMES[i] == NULL ); CTRS_NAMES[i] = name; } \
+	(COUNTERS[i])++;} }
+#define UPDATE_MAX_COUNTER( i, name, val ) \
+	{CTRS_NAMES[i] = name; \
+	if ( COUNTERS[i] >= val ); else COUNTERS[i] = val;}
+#else // TEST_CTR_SYSTEM
+#define INCREMENT_COUNTER( i, name ) (COUNTERS[i])++;
+#endif // TEST_CTR_SYSTEM
+
+#else
+#define PRINT_COUNTERS()
+#endif // ENABLE_COUNTER_SYSTEM
 
 #endif // __SA_COMMON_H__
