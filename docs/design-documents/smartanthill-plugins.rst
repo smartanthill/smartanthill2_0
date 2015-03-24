@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version:   v0.2
+:Version:   v0.2.1
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -48,7 +48,7 @@ Each SmartAnthill Plugin has Plugin Handler, usually implemented as two C functi
 
 **plugin_handler_init(const void\* plugin_config, void\* plugin_state )**
 
-**plugin_handler(const void\* plugin_config, void\* plugin_state, const void\* cmd, uint16 cmd_size, MEMORY_HANDLE reply, WaitingFor\* waiting_for)**
+**plugin_handler(const void\* plugin_config, void\* plugin_state, ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor\* waiting_for)**
 
 See details on MEMORY_HANDLE in 'Plugin API' section below.
 
@@ -187,7 +187,7 @@ Ideally, SmartAnthill Plugin Handler SHOULD be implemented as state machines, fo
     //TODO: reinit? (via deinit, or directly, or implicitly)
 
     byte my_plugin_handler(const void* plugin_config, void* plugin_state,
-      const void* cmd, uint16 cmd_size, MEMORY_HANDLE reply, WaitingFor* waiting_for) {
+      ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {
     const MyPluginConfig* pc = (MyPluginConfig*) plugin_config;
     MyPluginState* ps = (MyPluginState*)plugin_state;
     if(ps->state == 0) {
@@ -217,10 +217,7 @@ Ideally, SmartAnthill Plugin Handler SHOULD be implemented as state machines, fo
         return WAITING_FOR;
       }
       //read data from sensor using pc->reply_pin_numbers[],
-      //  and fill in "reply buffer" with data using reply_append(reply,sz)
-      //  Note that the pointer returned by reply_append() may change between different
-      //    calls to my_plugin_handler() and therefore MUST NOT be stored
-      //    within plugin_state
+      //  and append response to "reply buffer" with data using zepto_reply_append_byte(reply,data_read)
       return 0;
     }
 
@@ -237,30 +234,53 @@ SmartAnthill implementation MUST provide the following APIs to be used by plugin
 Data Types
 ^^^^^^^^^^
 
-MEMORY_HANDLE
-'''''''''''''
+REPLY_HANDLE
+''''''''''''
 
-MEMORY_HANDLE is an encapsulation of memory block, which allows plugin to call **reply_append()** (see below). MEMORY_HANDLE is normally obtained as a parameter from plugin_handler() call.
+REPLY_HANDLE is an encapsulation of request/reply block, which allows plugin to call `zepto_reply_append_*()` (see below). REPLY_HANDLE is normally obtained by plugin as a parameter from plugin_handler() call.
 
-**Caution:** Plugins MUST treat MEMORY_HANDLE as completely opaque and MUST NOT try to use it to access reply buffer directly; doing so may easily result in memory corruption when running certain Zepto VM programs (for example, when PARALLEL instruction is used).
+**Caution:** Plugins MUST treat REPLY_HANDLE as completely opaque and MUST NOT try to use it to access reply buffer directly; doing so may easily result in memory corruption when running certain Zepto VM programs (for example, when PARALLEL instruction is used).
 
-For an information on possible implementations of MEMORY_HANDLE, see :ref:`sazeptoos` document.
+For an information on possible implementations of REPLY_HANDLE, see :ref:`sazeptoos` document.
+
+ZEPTO_PARSER structure
+''''''''''''''''''''''
+
+ZEPTO_PARSER is an opaque structure (which can be seen as a sort of object where all data should be considered as private). It is used as follows:
+
+.. code-block:: c
+
+  uint16_t sz = zepto_parse_encodeduint2(parser);
+  byte b = zepto_parse_byte(parser,sz);
 
 TODO: WaitingFor
 
 Functions
 ^^^^^^^^^
 
-reply_append()
-''''''''''''''
+zepto_reply_append_*()
+''''''''''''''''''''''
 
-**void\* reply_append(MEMORY_HANDLE handle, uint16 sz);**
+**void zepto_reply_append_byte(REQUEST_REPLY_HANDLE request_reply, byte data);**
 
-reply_append() allocates 'sz' bytes within "reply buffer" specified by handle and returns a pointer to this allocated buffer. This buffer can be then filled with plugin's reply.
+**void zepto_reply_append_encodeduint2(REQUEST_REPLY_HANDLE request_reply, uint16_t data);**
 
-**Caution:** note that the pointer returned by reply_append() is temporary and may change between different calls to the same plugin, i.e. this pointer (or derivatives) MUST NOT be stored as a part of the plugin state; storing offsets is fine.
+**void zepto_reply_append_encodedint2(REQUEST_REPLY_HANDLE request_reply, int16_t data);**
 
-TODO: describe error conditions (such as lack of space in buffer)
+**void zepto_reply_append_block(REQUEST_REPLY_HANDLE request_reply, void* data, size_t datasz);**
 
-TODO: parse/compose
+zepto_reply_append_*() appends data to the end of reply buffer, which is specified by request_reply parameter. Any zepto_reply_append_*() call MAY cause re-allocation (which in turn MAY cause moving of any memory block); this is usually not a problem, provided that request_reply is used as a completely opaque handle. 
+
+TODO: describe error conditions (such as lack of space in buffer) - longjmp?
+
+ZEPTO_PARSER functions
+''''''''''''''''''''''
+
+**byte zepto_parse_byte(ZEPTO_PARSER* parser);**
+
+**uint16_t zepto_parse_encodeduint2(ZEPTO_PARSER* parser);**
+
+**int16_t zepto_parse_encodedint2(ZEPTO_PARSER* parser);**
+
+zepto_parse_*() familty of functions parses data from request (which previously has been composed by zepto_reply_append_*() functions, usually on the other device)
 
