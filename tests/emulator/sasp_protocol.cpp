@@ -17,6 +17,10 @@ Copyright (C) 2015 OLogN Technologies AG
 
 
 #include "sasp_protocol.h"
+#include "zepto-mem-mngmt.h"
+
+#define NEW_APPROACH
+
 
 
 void SASP_initAtLifeStart( uint8_t* dataBuff )
@@ -83,14 +87,6 @@ void SASP_NonceClearForSaspFlag(  uint8_t* nonce )
 	nonce[SASP_NONCE_SIZE-1] &= 0x7F;
 }
 
-uint16_t SASP_calcComplementarySize( uint16_t iniSize, uint16_t requiredSize )
-{
-	uint16_t padToRequired = requiredSize - iniSize;
-	uint16_t roundUpSize = ( requiredSize / SASP_ENC_BLOCK_SIZE ) * SASP_ENC_BLOCK_SIZE + ( requiredSize % SASP_ENC_BLOCK_SIZE ? SASP_ENC_BLOCK_SIZE : 0 );
-	uint16_t freeSpaceSize = roundUpSize - iniSize;
-	return freeSpaceSize; 
-}
-
 uint16_t SASP_encodeSize( uint16_t size, uint8_t* buff )
 {
 	if ( size == 0 )
@@ -130,6 +126,159 @@ uint16_t SASP_getSizeUsedForEncoding( uint8_t* buff )
 		assert( (buff[1] & 0x80) == 0 );
 		return 2;
 	}
+}
+
+////	special calculations start		////////////////////////////////////////////////////////////////////////////////
+
+uint16_t SASP_calcComplementarySize( uint16_t iniSize, uint16_t requiredSize )
+{
+	uint16_t padToRequired = requiredSize - iniSize;
+	uint16_t roundUpSize = ( requiredSize / SASP_ENC_BLOCK_SIZE ) * SASP_ENC_BLOCK_SIZE + ( requiredSize % SASP_ENC_BLOCK_SIZE ? SASP_ENC_BLOCK_SIZE : 0 );
+	uint16_t freeSpaceSize = roundUpSize - iniSize;
+	return freeSpaceSize; 
+}
+
+void formNonce( uint8_t** buff, const uint8_t* nonceVP, uint8_t for_sasp_flag )
+{
+}
+
+////	special calculations end		////////////////////////////////////////////////////////////////////////////////
+
+////	parser/writer helper functions start		////////////////////////////////////////////////////////////////////////////////
+
+uint8_t read_uint8( uint8_t** buff )
+{
+	uint8_t ret = **buff;
+	(*buff)++;
+	return ret;
+}
+
+uint16_t read_encoded_uint16( uint8_t** buff )
+{
+	if ( ( (*buff)[ 0 ] & 128 ) == 0 )
+	{
+		(*buff)++;
+		return (uint16_t)((*buff)[ 0 ]); 
+	}
+	else
+	{
+		assert( ((*buff)[1] & 0x80) == 0 );
+		uint16_t ret = 128+((uint16_t)((*buff)[0]&0x7F) | ((uint16_t)((*buff)[1]) << 7));
+		(*buff) += 2;
+		return ret;
+	}
+}
+
+void write_encoded_uint16( uint8_t** buff, uint16_t num )
+{
+	assert( num < 16512 );
+	if ( num < 128 )
+	{
+		**buff = num;
+		(*buff)++;
+	}
+	else
+	{
+		(*buff)[0] = ((uint8_t)num & 0x7F) + 128;
+		(*buff)[1] = (num - 128) >> 7;
+		(*buff) += 2;
+	}
+}
+
+void write_encoded_size_uint16( uint8_t** buff, uint16_t size )
+{
+	assert( size < 16512 );
+	if ( size == 0 )
+		return;
+	if ( size < 128 )
+	{
+		**buff = size;
+		(*buff)++;
+	}
+	else
+	{
+		(*buff)[0] = ((uint8_t)size & 0x7F) + 128;
+		(*buff)[1] = (size - 128) >> 7;
+		(*buff) += 2;
+	}
+}
+
+////	parser helper functions end		////////////////////////////////////////////////////////////////////////////////
+
+void SASP_EncryptAndAddAuthenticationData( REQUEST_REPLY_HANDLE mem_h, uint8_t* _stack, int stackSize, const uint8_t* nonce )
+{
+	// msgSize covers the size of message_byte_sequence
+	// (byte with MASTER_SLAVE_BIT) | nonce concatenation is used as a full nonce
+	// the output is formed as follows: nonce | tag | encrypted data
+
+	// data under encryption is as follows: first_byte | (opt) padding_size | message_byte_sequence | (opt) padding
+	// (padding_size size + padding size) is encoded using SASP Encoded-Size
+	
+	// DUMMY values used only until actual authentication/decryption is implemented
+	uint8_t c = 0;
+	int8_t i;
+
+	// init parser object
+	parser_obj po, po1;
+	zepto_parser_init( &po, mem_h );
+
+	// init stack
+	uint8_t* stack_start = _stack;
+	uint8_t* stack = _stack;
+
+	// read first byte
+	uint8_t first_byte = zepto_parse_uint8( &po );
+	uint16_t msg_size = zepto_parsing_remaining_bytes( &po ); // all these bytes + (potentially) {padding_size + padding} will be written
+
+	zepto_parser_init( &po1, &po );
+	zepto_parse_skip_block( &po1, msg_size );
+	zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
+
+	uint16_t padding_size = SASP_ENC_BLOCK_SIZE - ( msg_size + 1 ) % SASP_ENC_BLOCK_SIZE;
+
+	if ( padding_size )
+	{
+		first_byte |= 0x80; // TODO: use bit-field processing instead
+		zepto_write_prepend_byte( mem_h, padding_size );
+		zepto_write_prepend_byte( mem_h, first_byte );
+		zepto_write_block( mem_h, stack, padding_size - 1 ); // TODO 1: check sizes; TODO 2: it's a good place to add some fancy padding (say, all zeros, or rand generated)
+	}
+	else
+	{
+		zepto_write_prepend_byte( mem_h, first_byte );
+	}
+
+	zepto_response_to_request( mem_h );
+	zepto_parser_init( &po, mem_h );
+
+	// encrypt and generate authentication data
+	while ( zepto_parsing_remaining_bytes( &po ) )
+	{
+		bool read_ok = zepto_parse_read_block( &po, stack, SASP_ENC_BLOCK_SIZE );
+		if ( !read_ok )
+		{
+			assert( 0 == "block size is not multiple of SASP_ENC_BLOCK_SIZE" );
+			return; // TODO: process!!!
+		}
+
+		// do DUMMY authentication/decryption
+		for ( i=0; i<SASP_ENC_BLOCK_SIZE; i++)
+			stack[ i ] ^= 'y'; // dummy encrypt
+		for ( i=0; i<SASP_ENC_BLOCK_SIZE; i++)
+			c ^= stack[ i ]; // toward dummy tag
+
+		// write decrypted block to output
+		zepto_write_block( mem_h, stack, SASP_ENC_BLOCK_SIZE );
+	}
+
+	// form DUMMY tag
+	for ( i=0; i<SASP_TAG_SIZE; i++)
+		stack[i] = c;
+
+
+	// prepend tag and nonce
+	zepto_write_prepend_block( mem_h, stack, SASP_TAG_SIZE );
+	zepto_write_prepend_block( mem_h, nonce, SASP_NONCE_SIZE );
 }
 
 void SASP_EncryptAndAddAuthenticationData( uint16_t* sizeInOut, const uint8_t* _buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, const uint8_t* nonce )
@@ -246,6 +395,88 @@ void SASP_EncryptAndAddAuthenticationData( uint16_t* sizeInOut, const uint8_t* _
 
 	// TODO: proper size handling
 	*sizeInOut = ins_pos;
+}
+
+bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, uint8_t* _stack, int stackSize )
+{
+	// input data structure: header | tag | encrypted data
+	// Therefore, msgSize is expected to be SASP_HEADER_SIZE + SASP_TAG_SIZE + k * SASP_ENC_BLOCK_SIZE
+	// Structure of output buffer: PID | first_byte | byte_sequence
+	// return value: if passed, size of SASP_NONCE_SIZE + 1 + byte_sequence
+	//               if failed, -1
+	//
+	// Packet ID (PID) is formed from Nonce VP and Peer-Distinguishing Flag of the incoming packet
+	
+	
+	// DUMMY values used only until actual authentication/decryption is implemented
+	uint8_t c = 0;
+	int8_t i;
+
+	// init parser object
+	parser_obj po;
+	zepto_parser_init( &po, mem_h );
+
+	// init stack
+	uint8_t* stack_start = _stack;
+	uint8_t* stack = _stack;
+
+	// read and form PID
+	zepto_parse_read_block( &po, pid, SASP_NONCE_SIZE );
+	pid[ SASP_NONCE_SIZE - 1] &= 0x7F; // TODO: potentially, we need to use bit-fiels processing instead
+
+	// read tag; note that we do not need it until the end of authentication, so, in general, it could be read later (if proper parser calls are available)
+	zepto_parse_read_block( &po, stack, SASP_TAG_SIZE );
+	stack += SASP_TAG_SIZE;
+
+	// read blocks one by one, authenticate, decrypt, write
+	bool read_ok;
+	while ( !zepto_is_parsing_done( &po ) )
+	{
+		read_ok = zepto_parse_read_block( &po, stack, SASP_ENC_BLOCK_SIZE );
+		if ( !read_ok )
+			return false; // if any bytes, then the whole block
+
+		// do DUMMY authentication/decryption
+		for ( i=0; i<SASP_ENC_BLOCK_SIZE; i++)
+			stack[ i ] ^= 'y'; // dummy decrypt
+		for ( i=0; i<SASP_ENC_BLOCK_SIZE; i++)
+			c ^= stack[ i ]; // toward dummy tag
+
+		// write decrypted block to output
+		zepto_write_block( mem_h, stack, SASP_ENC_BLOCK_SIZE );
+	}
+
+	// now we have a decrypted data as output, and a tag "calculated"
+
+	// decrease stack pointer to point again to tag
+	stack -= SASP_TAG_SIZE;
+
+	// do DUMMY authentication
+	bool tag_ok = true;
+	for ( i=0; i<SASP_TAG_SIZE; i++)
+		tag_ok = tag_ok && stack[i] == c;
+
+	if ( !tag_ok )
+		return false;
+
+	zepto_response_to_request( mem_h );
+	zepto_parser_init( &po, mem_h );
+
+	uint8_t first_byte = zepto_parse_uint8( &po );
+
+	uint16_t padding_size = 0;
+	if ( first_byte & 0x80 ) // TODO: use bit-fiels processing instead
+		padding_size = zepto_parse_uint8( &po ) - 1; // TODO: NOTE!!!! in the new implementation this MAY be revised
+	uint16_t body_size = zepto_parsing_remaining_bytes( &po ) - padding_size;
+
+	parser_obj po1;
+	zepto_parser_init( &po1, &po );
+	zepto_parse_skip_block( &po1, body_size );
+	zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
+	first_byte &= 0x7; // TODO: use bit-fiels processing instead
+	zepto_write_prepend_byte( mem_h, first_byte );
+
+	return true;
 }
 
 bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* pid, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize )
@@ -401,12 +632,37 @@ void DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( uint16_t* sizeInOut, con
 	PRINTF( "handlerSASP_send(): size: %d\n", *sizeInOut );
 
 	// do required job
+#ifdef NEW_APPROACH
+	REQUEST_REPLY_HANDLE mem_h2 = 0;
+	uint8_t x_buff_pad[1024];
+	uint8_t*x_buff = x_buff_pad + 512;
+	memcpy( x_buff, buffIn, *sizeInOut );
+	memory_objects[ mem_h2 ].ptr = x_buff;
+	memory_objects[ mem_h2 ].rq_size = *sizeInOut;
+	memory_objects[ mem_h2 ].rsp_size = 0;
+	SASP_EncryptAndAddAuthenticationData( mem_h2, stack, stackSize, nonce );
+	memcpy( buffOut, memory_objects[ mem_h2 ].ptr + memory_objects[ mem_h2 ].rq_size, memory_objects[ mem_h2 ].rsp_size );
+	*sizeInOut = memory_objects[ mem_h2 ].rsp_size;
+#else // NEW_APPROACH
 	SASP_EncryptAndAddAuthenticationData( sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize, nonce );
+#endif // NEW_APPROACH
 
 	// check results
 	encr_sz = *sizeInOut;
 	decr_sz = encr_sz;
+#ifdef NEW_APPROACH
+	REQUEST_REPLY_HANDLE mem_h = 1;
+	uint8_t x_buff1[512];
+	memcpy( x_buff1, buffOut, decr_sz );
+	memory_objects[ mem_h ].ptr = x_buff1;
+	memory_objects[ mem_h ].rq_size = *sizeInOut;
+	memory_objects[ mem_h ].rsp_size = 0;
+	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( dbg_nonce, mem_h, dbg_stack, 512 );
+	memcpy( checkedMsg, memory_objects[ mem_h ].ptr + memory_objects[ mem_h ].rq_size, memory_objects[ mem_h ].rsp_size );
+	decr_sz = memory_objects[ mem_h ].rsp_size;
+#else // NEW_APPROACH
 	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( dbg_nonce, &decr_sz, buffOut, checkedMsg, buffOutSize, dbg_stack, 512 );
+#endif
 	PRINTF( "handlerSASP_send(): dbg_nonce: %02x %02x %02x %02x %02x %02x\n", dbg_nonce[0], dbg_nonce[1], dbg_nonce[2], dbg_nonce[3], dbg_nonce[4], dbg_nonce[5] );
 	assert( ipaad );
 	assert( decr_sz == inisz );
@@ -434,7 +690,21 @@ uint8_t handlerSASP_receive( uint8_t* pid, uint16_t* sizeInOut, const uint8_t* b
 {
 	INCREMENT_COUNTER( 11, "handlerSASP_receive()" );
 	// 1. Perform intra-packet authentication
+#ifdef NEW_APPROACH
+	REQUEST_REPLY_HANDLE mem_h = 0;
+	uint8_t x_buff_pad[1024];
+	uint8_t*x_buff = x_buff_pad + 512;
+	memcpy( x_buff, buffIn, *sizeInOut );
+	memory_objects[ mem_h ].ptr = x_buff;
+	memory_objects[ mem_h ].rq_size = *sizeInOut;
+	memory_objects[ mem_h ].rsp_size = 0;
+	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( pid, mem_h, stack, stackSize );
+	memcpy( buffOut, memory_objects[ mem_h ].ptr + memory_objects[ mem_h ].rq_size, memory_objects[ mem_h ].rsp_size );
+	*sizeInOut = memory_objects[ mem_h ].rsp_size;
+#else // NEW_APPROACH
 	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( pid, sizeInOut, buffIn, buffOut, buffOutSize, stack, stackSize );
+#endif // NEW_APPROACH
+
 	PRINTF( "handlerSASP_receive(): PID: %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 	if ( !ipaad )
 	{

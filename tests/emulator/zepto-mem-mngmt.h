@@ -22,6 +22,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #define MEMORY_HANDLE uint8_t
 #define REQUEST_REPLY_HANDLE MEMORY_HANDLE
+#define MEMORY_HANDLE_INVALID 0xFF
 
 struct parser_obj
 {
@@ -29,16 +30,37 @@ struct parser_obj
 	uint16_t offset;
 };
 
+// UGLY HOOK FOR BY-PARTS (INITIAL PHASE OF) DEVELOPMENT
+struct request_reply_mem_obj
+{ 
+	uint8_t* ptr;
+	uint16_t rq_size;
+	uint16_t rsp_size;
+};
+
+extern request_reply_mem_obj memory_objects[ 128 ];
+
 
 // parsing functions
 void zepto_parser_init( parser_obj* po, REQUEST_REPLY_HANDLE mem_h );
+void zepto_parser_init( parser_obj* po, const parser_obj* po_base );
 uint8_t zepto_parse_uint8( parser_obj* po );
 uint16_t zepto_parse_encoded_uint16( parser_obj* po );
-void zepto_parse_read_block( parser_obj* po, uint8_t* block, uint16_t size );
+bool zepto_parse_read_block( parser_obj* po, uint8_t* block, uint16_t size );
+bool zepto_parse_skip_block( parser_obj* po, uint16_t size );
+bool zepto_is_parsing_done( parser_obj* po );
+uint16_t zepto_parsing_remaining_bytes( parser_obj* po );
 
 // writing functions
 void zepto_write_uint8( REQUEST_REPLY_HANDLE mem_h, uint8_t val );
 void zepto_write_encoded_uint16( REQUEST_REPLY_HANDLE mem_h, uint16_t val );
-void zepto_write_block( parser_obj* po, const uint8_t* block, uint16_t size );
+void zepto_write_block( REQUEST_REPLY_HANDLE mem_h, const uint8_t* block, uint16_t size );
+
+// extended writing functions
+void zepto_response_to_request( MEMORY_HANDLE mem_h );
+void zepto_convert_part_of_request_to_response( MEMORY_HANDLE mem_h, parser_obj* po_start, parser_obj* po_end );
+//void zepto_convert_part_of_request_to_response( MEMORY_HANDLE mem_h, parser_obj* po_start, uint16_t cutoff_cnt )
+void zepto_write_prepend_byte( MEMORY_HANDLE mem_h, uint8_t bt );
+void zepto_write_prepend_block( MEMORY_HANDLE mem_h, const uint8_t* block, uint16_t size );
 
 #endif // __ZEPTO_MEM_MNGMT_H__
