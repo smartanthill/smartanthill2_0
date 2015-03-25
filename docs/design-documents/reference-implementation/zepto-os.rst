@@ -27,7 +27,7 @@
 SmartAnthill Zepto OS
 =====================
 
-:Version:   v0.2.5
+:Version:   v0.2.6
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -56,10 +56,11 @@ Assumptions (=mother of all screw-ups)
 Layers and Libraries
 --------------------
 
-Reference implementation of SmartAnthill on MCU is divided into two parts:
+Zepto OS is divided into three parts:
 
 * Zepto OS kernel (the same for all MCUs)
 * MCU- and device-dependent libraries (Hardware Abstraction Layer, HAL)
+* SmartAnthill Plugins (see :ref:`saplugin` document; from the point of view of Zepto OS plugins are similar to device drivers).
 
 Memory Architecture
 -------------------
@@ -103,6 +104,40 @@ zepto_create_parser() function initializes ZEPTO_PARSER structure and prepares i
 **void zepto_create_parser_from_parsed_block(ZEPTO_PARSER* target_parser, ZEPTO_PARSER* source_parser, size_t sz);**
 
 zepto_create_parser_from_parsed_block() initializes a new ZEPTO_PARSER from a block of size sz within existing parser (similar to another OO constructor). This is used to support nested parsing (which in turn enables plugin processing as described below).
+
+Error Handling and Zepto Exceptions
+-----------------------------------
+
+In Zepto OS, errors are normally handled via "Zepto Exceptions". Zepto exceptions is a series of macros, which are implemented either via setjmp/longjmp (if it is present on target MCU), or without them. 
+
+Zepto exception macros are used as follows:
+
+Try-catch block:
+
+.. code-block:: c
+  
+  if(ZEPTO_TRY()) {
+    do_something();
+  }
+
+  if(ZEPTO_CATCH()) {
+    //exception handling here
+    //ZEPTO_CATCH() returns exception code passed in ZEPTO_THROW()
+  }
+
+Throwing exception:
+
+.. code-block:: c
+
+  ZEPTO_THROW(exception_code);
+  //exception_code has type 'byte'
+
+Intermediate processing (MUST be written whenever a function-able-to-throw-exception is called; necessary to handle platforms where setjmp/longjmp is not available):
+
+.. code-block:: c
+
+  function_able_to_throw_exception();
+  ZEPTO_UNWIND(-1); //returns '-1' in case of exception unwinding
 
 "Main Loop" a.k.a. "Main Pump"
 ------------------------------
