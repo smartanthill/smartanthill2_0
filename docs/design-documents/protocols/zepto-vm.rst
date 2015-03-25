@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.2.1
+:Version:   v0.2.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
@@ -137,8 +137,7 @@ Zepto VM Exceptions
 
 If Zepto VM encounters a problem, it reports it as an “VM exception”. Whenever exception characterized by EXCEPTION-CODE occurs, it is processed as follows:
 
-* all contents of “reply buffer” is discarded
-* “reply buffer” is filled with the following information: \|EXCEPTION-CODE\|INSTRUCTION-POSITION\| , where all fields are Encoded-Unsigned-Int<max=2>.
+* “reply buffer” is converted into the following format: \|EXCEPTION-CODE\|INSTRUCTION-POSITION\|EXISTING-REPLY-BUFFER-DATA\| , where all fields except for REPLY-BUFFER-DATA, are Encoded-Unsigned-Int<max=2>, and REPLY-BUFFER-DATA fills the rest of the message. In some cases (for example, if there is insufficient RAM), REPLY-BUFFER-DATA MAY be further truncated. *Rationale: In certain scenarios, this REPLY-BUFFER-DATA, while incomplete, may allow SmartAnthill Client to extract useful information about the partially successful command.*
 * This reply is passed to the underlying protocol as an 'exception'.
 
 Currently, Zepto VM may issue the following exceptions:
@@ -246,7 +245,6 @@ As MCUSLEEP may disable device receiver, Zepto VM enforces relevant “Execution
 
 It should be noted that implementing MCUSLEEP instruction will implicitly require storing current program, current PC and current “reply buffer” either in EEPROM, or to request MPU to preserve RAM while waiting. This will be done automagically by Zepto VM, but it is not without it's cost. It might be useful to know that in some cases this cost is lower when amount of data to be preserved is small (for example, it happens when “reply buffer” is empty, and/or when <MAYDROPEARLIERINSTRUCTIONS> is used and the remaining program is small).
 
-
 **\| ZEPTOVM_OP_POPREPLIES \| N-REPLIES \|**
 
 where ZEPTOVM_OP_POPREPLIES is a 1-byte opcode (NB: it is the same as ZEPTOVM_OP_POPREPLIES in Level Tiny), and N-REPLIES is an Encoded-Int<max=2> field, which MUST be 0 for Zepto VM-One (other values are allowed for Zepto VM-Tiny and above, as described below). If N-REPLIES is not 0 for Zepto VM-One POPREPLIES instruction, Zepto VM will issue a ZEPTOVM_INVALIDPARAMETER exception. \|POPREPLIES\|0\| means “remove all replies currently in reply buffer”.
@@ -308,7 +306,7 @@ FIELD-SEQUENCE field describes a sequence of fields to be read from plugin reply
 * ENCODED_SIGNED_INT_FIELD
 * ONE_BYTE_FIELD
 * TWO_BYTE_FIELD (assumes 'SmartAnthill endianness' as described in :ref:`saprotostack` document)
-* HALF_FLOAT (using encoding as described in :ref:`saprotostack` document for half-floats)
+* HALF_FLOAT_FIELD (using encoding as described in :ref:`saprotostack` document for half-floats)
 * END_OF_SEQUENCE
 
 ZEPTOVM_OP_JMPIFREPLYFIELD_* instruction takes the reply of the last plugin which was called, and compares required field to the THRESHOLD. If first byte of the reply is < (for <SUBCODE>=LT) THRESHOLD, PC is incremented by a value of DELTA (as with JMP, DELTA is added to a PC positioned right after current instruction).
@@ -329,7 +327,7 @@ ZEPTOVM_OP_JMPIFREPLYFIELD_* instruction takes the reply of the last plugin whic
 
 where ZEPTOVM_OP_POPREPLIES is a 1-byte opcode and N-REPLIES is an Encoded-Unsigned-Int<max=2> field representing number of replies to be popped.
 
-POPREPLIES instruction removes last N-REPLIES of plugins from the reply buffer. If N-REPLIES is equal to zero, it means that all replies are removed. If N-REPLIES is more than number of replies in the buffer, it is a TODO exception. Usually, either \|POPREPLIES\|0\| or \|POPREPLIES\|1\| is used, but other values are also possible.
+POPREPLIES instruction removes last N-REPLIES of plugins from the reply buffer. If N-REPLIES is equal to zero, it means that all replies are removed. If N-REPLIES is more than number of replies in the buffer, it is a TODO exception. Usually, either \|POPREPLIES\|0\| (removing all the replies) or \|POPREPLIES\|1\| (removing only one reply) is used, but other values are also possible.
 
 **\| ZEPTOVM_OP_MOVEREPLYTOFRONT \| REPLY-NUMBER \|**
 
@@ -382,47 +380,47 @@ POPEXPR instruction removes the topmost value from the expression stack.
 
 **\| ZEPTOVM_OP_EXPRUNOP \| UNOP \|**
 
-where ZEPTOVM_OP_EXPRUNOP is a 1-byte opcode, and UNOP is 1-byte taking values from 0 to 4:
+where ZEPTOVM_OP_EXPRUNOP is a 1-byte opcode, and UNOP is 1-byte taking one of the following values:
 
-+----+-------------------------------+
-|UNOP|Corresponding unary C operation|
-+====+===============================+
-|0   + \-                            |
-+----+-------------------------------+
-|1   + ~                             |
-+----+-------------------------------+
-|2   + !                             |
-+----+-------------------------------+
-|3   + +=1                           |
-+----+-------------------------------+
-|4   + -=1                           |
-+----+-------------------------------+
++-----------+-------------------------------+
+|UNOP       |Corresponding unary C operation|
++===========+===============================+
+|UNOP_MINUS | \-                            |
++-----------+-------------------------------+
+|UNOP_BITNEG| ~                             |
++-----------+-------------------------------+
+|UNOP_NOT   | !                             |
++-----------+-------------------------------+
+|UNOP_INC   | +=1                           |
++-----------+-------------------------------+
+|UNOP_DEC   | -=1                           |
++-----------+-------------------------------+
 
 EXPRUNOP instruction pops topmost value from the expression stack, modifies it according to the table above, and pushes modified value back to expression stack. All operations are performed as specified in the table above; '-', '+=1' and '-=1' operations are performed as floating-point operation (see details below), for '~' and '!' operations the operand is first converted into integer with zero exponent (and then only significand is involved in these operations). If expression stack is empty, it will cause a ZEPTOVM_EXPRSTACKUNDERFLOW VM exception. Overflows are handled in a normal manner for floats (NB: as it is float arithmetics, '+=1' and '-=1' operations MAY cause operand to stay without changes even if no 'infinity' has occurred; it means that if half-floats are used as expression stack values, 2048+1 results in 2048, causing potential for infinite loops TODO: check if it is 2048 or 2050).
 
 **\| ZEPTOVM_OP_EXPRBINOP \| BINOP \|**
 
-where ZEPTOVM_OP_EXPRBINOP is a 1-byte opcode, and BINOP is 1-byte taking values from 0 to 7:
+where ZEPTOVM_OP_EXPRBINOP is a 1-byte opcode, and BINOP is 1-byte taking the following values:
 
-+-----+--------------------------------+
-|BINOP|Corresponding binary C operation|
-+=====+================================+
-|0    + \+                             |
-+-----+--------------------------------+
-|1    + \-                             |
-+-----+--------------------------------+
-|2    + <<                             |
-+-----+--------------------------------+
-|3    + <<                             |
-+-----+--------------------------------+
-|4    + &                              |
-+-----+--------------------------------+
-|5    + \|                             |
-+-----+--------------------------------+
-|6    + &&                             |
-+-----+--------------------------------+
-|7    + ||                             |
-+-----+--------------------------------+
++------------+--------------------------------+
+|BINOP       |Corresponding binary C operation|
++============+================================+
+|BINOP_PLUS  | \+                             |
++------------+--------------------------------+
+|BINOP_MINUS | \-                             |
++------------+--------------------------------+
+|BINOP_SHL   | <<                             |
++------------+--------------------------------+
+|BINOP_SHR   | <<                             |
++------------+--------------------------------+
+|BINOP_BITAND| &                              |
++------------+--------------------------------+
+|BINOP_BITOR | \|                             |
++------------+--------------------------------+
+|BINOP_AND   | &&                             |
++------------+--------------------------------+
+|BINOP_OR    | ||                             |
++------------+--------------------------------+
 
 EXPRBINOP instruction pops two topmost values from the expression stack, calculates result out of them according to the table above (as 'second topmost' op 'topmost'), and pushes calculated value back to the expression stack. All operations are performed as specified in the table above; '+' and '-' are performed as floating-point operations (see details below), for '<<', '>>', '&', '|', '&&', and '||' both operands are first converted into integers with zero exponent (and then only significands of operands are involved in these operations). If expression stack has less than two items, it will cause a ZEPTOVM_EXPRSTACKUNDERFLOW VM exception. Overflows are handled in a standard manner for floats (causing 'infinity' result when necessary). NB: there are no multiplication/division operations for Zepto VM-Small, they're introduced in higher Zepto-VM levels.
 
