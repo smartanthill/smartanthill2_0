@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version:   v0.2.1
+:Version:   v0.2.1a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -264,6 +264,17 @@ Intermediate processing (MUST be written after each and ever call to a function-
   ZEPTO_UNWIND(-1); //returns '-1' in case of exception unwinding
 
 ZEPTO_UNWIND MUST be issued after each function call (except for those function calls which are known not to throw any exceptions) for all valid SmartAnthill Plugins. 
+
+Exception Codes
+'''''''''''''''
+
+Some Exception Codes are reserved for SmartAnthill. To avoid collisions, user exception codes MUST start from ZEPTO_USER_EXCEPTION.
+
+
+ZEPTO_ASSERT
+''''''''''''
+
+ZEPTO_ASSERT is a way to have trackable assertions in plugin code. ZEPTO_ASSERT(condition) effectively causes ZEPTO_THROW(1) if condition fails. ZEPTO_ASSERT() SHOULD be used instead of usual C assert() calls. 
 
 Data Types
 ^^^^^^^^^^

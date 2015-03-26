@@ -27,7 +27,7 @@
 SmartAnthill Zepto OS
 =====================
 
-:Version:   v0.2.6a
+:Version:   v0.2.6b
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -110,7 +110,13 @@ Error Handling and Zepto Exceptions
 
 In Zepto OS, errors are normally handled via "Zepto Exceptions". Zepto exceptions are implemented as a series of macros, which are described in :ref:`saplugin` document. 
 
-Zepto exceptions are implemented either via setjmp/longjmp (if the call is supported on target MCU), or without them. ZEPTO_UNWIND(x) macro expands to a no-op if setjmp/longjmp is used, and into "if(exception_pending)return x;" otherwise. ZEPTO_THROW(exception_code) macro records both exception code and __LINE__ where the exception has occurred (both these parameters are then passed back to SmartAnthill Client as a part of "reply frame" if exception occurred within the plugin, see :ref:`sazeptovm` document for details).
+Zepto exceptions are implemented either via setjmp/longjmp (if the call is supported on target MCU), or without them. ZEPTO_UNWIND(x) macro expands to a no-op if setjmp/longjmp is used, and into "if(exception_pending)return x;" otherwise. ZEPTO_THROW(exception_code) macro records (a) exception code, (b) __LINE__ where the exception has occurred, (c) hash of __FILE_ where exception has occurred (all these parameters are then passed back to SmartAnthill Client as a part of "reply frame" if exception occurred within the plugin, see :ref:`sazeptovm` document for details).
+
+2-byte hash of __FILE__ is calculated as follows:
+
+* removing dir name
+* calculating hash in TODO way (TODO: get hash algorithm from std:: or boost::)
+* taking 2 TODO bytes out of it
 
 "Main Loop" a.k.a. "Main Pump"
 ------------------------------
