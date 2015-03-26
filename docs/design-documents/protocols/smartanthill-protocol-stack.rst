@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.7
+:Version:   v0.2.8
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -248,9 +248,9 @@ Encoded-Signed-Int is an encoding for signed integers, derived from Encoded-Unsi
 Encoded-\*-Int<max=>
 ''''''''''''''''''''
 
-Wherever SmartAnthill specification mentions Encoded-Unsigned-Int or Encoded-Signed-Int, it MUST specify it in the form of *Encoded-Unsigned-Int<max=...>* or *Encoded-Signed-Int<max=...>*. "max=" parameter specifies maximum number of bytes which can appear in this place. For example, Encoded-Unsigned-Int<max=2> specifies that maximum two bytes of Encoded-Unsigned-Int can appear at the specified place, and therefore than values over 16511 cannot be encoded. It also implies that the result of such Encoded-Unsigned-Int<max=2> always fits into 2 bytes (for example, into uint16_t). The high bit of the last possible byte of Encoded-\*-Int is always 0; this ensures an option for an easy expansion in the future.
+Wherever SmartAnthill specification mentions Encoded-Unsigned-Int or Encoded-Signed-Int, it MUST specify it in the form of *Encoded-Unsigned-Int<max=...>* or *Encoded-Signed-Int<max=...>*. "max=" parameter specifies maximum number of bytes which are necessary to represent the encoded number. For example, Encoded-Unsigned-Int<max=2> specifies that the number is between 0 and 65535 (and therefore from one to three bytes may be used to encode it). The high bit of the last possible byte of Encoded-\*-Int is always 0; this ensures an option for an easy expansion in the future.
 
-Currently supported values of "max=" parameter are from 1 to 9.
+Currently supported values of "max=" parameter are from 1 to 8.
 
 When parsing Encoded-\*-Int, if high bit in the last-possible byte is 1, then Encoded-\*-Int is considered invalid. Handling of invalid Encoded-\*-Ints SHOULD be specified in the appropriate place of documentation.
 
