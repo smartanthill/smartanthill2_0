@@ -231,6 +231,40 @@ Plugin API
 
 SmartAnthill implementation MUST provide the following APIs to be used by plugins.
 
+Zepto Exceptions
+^^^^^^^^^^^^^^^^
+
+As SmartAnthill plugins operate in a very restricted environments, SmartAnthill uses a very simplified version of exceptions, which can be implemented completely in C, without any support from compiler or underlying libraries. This is known as Zepto Exceptions and should be used as follows:
+
+Try-catch block:
+
+.. code-block:: c
+  
+  if(ZEPTO_TRY()) {
+    do_something();
+  }
+
+  if(ZEPTO_CATCH()) {
+    //exception handling here
+    //ZEPTO_CATCH() returns exception code passed in ZEPTO_THROW()
+  }
+
+Throwing exception:
+
+.. code-block:: c
+
+  ZEPTO_THROW(exception_code);
+  //exception_code has type 'byte'
+
+Intermediate processing (MUST be written after each and ever call to a function-able-to-throw-exception; this is necessary to handle platforms where setjmp/longjmp is not available, but MUST be written regardless of the target platform):
+
+.. code-block:: c
+
+  function_able_to_throw_exception();
+  ZEPTO_UNWIND(-1); //returns '-1' in case of exception unwinding
+
+ZEPTO_UNWIND MUST be issued after each function call (except for those function calls which are known not to throw any exceptions) for all valid SmartAnthill Plugins. 
+
 Data Types
 ^^^^^^^^^^
 

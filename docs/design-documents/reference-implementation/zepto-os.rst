@@ -27,7 +27,7 @@
 SmartAnthill Zepto OS
 =====================
 
-:Version:   v0.2.6
+:Version:   v0.2.6a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -108,36 +108,9 @@ zepto_create_parser_from_parsed_block() initializes a new ZEPTO_PARSER from a bl
 Error Handling and Zepto Exceptions
 -----------------------------------
 
-In Zepto OS, errors are normally handled via "Zepto Exceptions". Zepto exceptions is a series of macros, which are implemented either via setjmp/longjmp (if it is present on target MCU), or without them. 
+In Zepto OS, errors are normally handled via "Zepto Exceptions". Zepto exceptions are implemented as a series of macros, which are described in :ref:`saplugin` document. 
 
-Zepto exception macros are used as follows:
-
-Try-catch block:
-
-.. code-block:: c
-  
-  if(ZEPTO_TRY()) {
-    do_something();
-  }
-
-  if(ZEPTO_CATCH()) {
-    //exception handling here
-    //ZEPTO_CATCH() returns exception code passed in ZEPTO_THROW()
-  }
-
-Throwing exception:
-
-.. code-block:: c
-
-  ZEPTO_THROW(exception_code);
-  //exception_code has type 'byte'
-
-Intermediate processing (MUST be written whenever a function-able-to-throw-exception is called; necessary to handle platforms where setjmp/longjmp is not available):
-
-.. code-block:: c
-
-  function_able_to_throw_exception();
-  ZEPTO_UNWIND(-1); //returns '-1' in case of exception unwinding
+Zepto exceptions are implemented either via setjmp/longjmp (if the call is supported on target MCU), or without them. ZEPTO_UNWIND(x) macro expands to a no-op if setjmp/longjmp is used, and into "if(exception_pending)return x;" otherwise. ZEPTO_THROW(exception_code) macro records both exception code and __LINE__ where the exception has occurred (both these parameters are then passed back to SmartAnthill Client as a part of "reply frame" if exception occurred within the plugin, see :ref:`sazeptovm` document for details).
 
 "Main Loop" a.k.a. "Main Pump"
 ------------------------------
