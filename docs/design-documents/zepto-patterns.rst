@@ -27,13 +27,13 @@
 Zepto Programming Patterns
 ==========================
 
-:Version:   v0.1a
+:Version:   v0.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` , :ref:`sazeptovm` *, and* :ref:`saplugin` *documents, please make sure to read them before proceeding.*
 
 Zepto VM does not intend to provide highly sophisticated and/or mathematics-oriented functionality; instead, it intends to support very limited but highly practical scenarios, which allow to minimize communications between SmartAnthill Central Controller and SmartAnthill Device, therefore allowing to minimize power consumption on the side of SmartAnthill Device.
 
-Currently, Zepto programming patterns are described in terms of Zepto Lua, Zepto Python and Zepto JavaScript. These two are extremely limited versions of their normal counterparts ("zepto" means "10^-21", so you get about 10^-21 functionality out of original languages). Basically, whatever is not in these examples, you shouldn't use.
+Currently, Zepto programming patterns are described in terms of Zepto JavaScript. This in an extremely limited version of normal JaaScript ("zepto" means "10^-21", so you get about 10^-21 functionality out of original language). Basically, whatever is not in these examples, you shouldn't use.
 
 .. contents::
 
@@ -41,20 +41,6 @@ Pattern 1. Simple Request/Response
 ----------------------------------
 
 The very primitive (though, when aided with a program on Central Controller side, sufficient to implement any kind of logic) program:
-
-Zepto Lua:
-
-.. code-block:: lua
-
-  return TemperatureSensor.Execute()
-
-Zepto Python:
-
-.. code-block:: python
-
-  return TemperatureSensor.Execute()
-
-Zepto JavaScript
 
 .. code-block:: javascript
 
@@ -67,26 +53,10 @@ Pattern 2. Sleep and Measure
 
 Sleep for several minutes (turning off transmitter), then report back.
 
-Zepto Lua:
-
-.. code-block:: lua
-
-  mcu_sleep(5*60) --5*60 is a compile-time constant,
-                  --  so no multiplication is performed on MCU here
-  return TemperatureSensor.Execute()
-
-Zepto Python:
-
-.. code-block:: python
-
-  mcu_sleep(5*60)
-  return TemperatureSensor.Execute()
-
-Zepto JavaScript:
-
 .. code-block:: javascript
 
-  mcu_sleep(5*60);
+  mcu_sleep(5*60); //5*60 is a compile-time constant,
+                   //  so no multiplication is performed on MCU here
   return TemperatureSensor.Execute();
 
 This program should compile to all Zepto VM Levels.
@@ -96,41 +66,14 @@ Pattern 3. Measure and Report If
 
 The same thing, but asking to report only if measurements exceed certain bounds. Still, once per 5 cycles, SmartAnthill Device reports back, so that Central Controller knows that the Device is still alive.
 
-Zepto Lua:
-
-.. code-block:: lua
-
-  for i=1,5 do
-    temp = TemperatureSensor.Execute()
-    if temp.Temperature < 36.0
-       or temp.Temperature > 38.9 then --Note that both comparisons should compile
-                                       --  into integer comparisons, using Plugin Manifest
-      return temp
-    end
-    mcu_sleep(5*60)
-  end
-  return TemperatureSensor.Execute()
-
-Zepto Python:
-
-.. code-block:: python
-
-    for i in range(0, 5):
-        temp = TemperatureSensor.Execute()
-        if temp.Temperature < 36.0 or \
-                temp.Temperature > 38.9:
-            return temp
-        mcu_sleep(5*60)
-    return TemperatureSensor.Execute()
-
-Zepto JavaScript:
-
 .. code-block:: javascript
 
     for (var i = 0; i < 5; i++) {
         temp = TemperatureSensor.Execute();
         if (temp.Temperature < 36.0 ||
                 temp.Temperature > 38.9)
+                  //Note that both comparisons should compile
+                  //  into integer comparisons, using Plugin Manifest
             return temp;
         mcu_sleep(5*60);
     }
@@ -140,36 +83,6 @@ This program should compile to all Zepto VM Levels, starting from Zepto VM Small
 
 Pattern 4. Implicit parallelism
 -------------------------------
-
-Zepto Lua:
-
-.. code-block:: lua
-
-  temp = TemperatureSensor.Execute()
-  humi = HumiditySensor.Execute()
-  return temp, humi
-
-or
-
-.. code-block:: lua
-
-  return TemperatureSensor.Execute(), HumiditySensor.Execute()
-
-Zepto Python:
-
-.. code-block:: python
-
-  temp = TemperatureSensor.Execute()
-  humi = HumiditySensor.Execute()
-  return (temp, humi)
-
-or
-
-.. code-block:: python
-
-  return (TemperatureSensor.Execute(), HumiditySensor.Execute())
-
-Zepto JavaScript:
 
 .. code-block:: javascript
 
@@ -190,49 +103,14 @@ Combined Example
 
 Now let's consider an example where we want to perform temperature measurements more frequently than humidity ones, and
 
-Zepto Lua:
-
-.. code-block:: lua
-
-  humi = HumiditySensor.Execute()
-  for i=1,5 do
-    if(i%2 == 0) -- should compile into "&1"
-      humi = HumiditySensor.Execute()
-    temp = TemperatureSensor.Execute() -- SHOULD be performed in parallel
-                                       -- with HumiditySensor() when applicable
-    if humi.HumiditySensor > 80 and
-       temp.Temperature > 30.0 then
-      return temp, humi
-    end
-    mcu_sleep(5*60)
-  end
-  return TemperatureSensor.Execute(), HumiditySensor.Execute()
-
-.. code-block:: python
-
-    humi = HumiditySensor.Execute()
-    for i in range(0, 5):
-        if i%2 == 0:
-            humi = HumiditySensor.Execute()
-        temp = TemperatureSensor.Execute()
-
-        if humi.HumiditySensor > 80 and \
-               temp.Temperature > 30.0:
-            return temp, humi
-
-        mcu_sleep(5*60)
-
-    return (TemperatureSensor.Execute(), HumiditySensor.Execute())
-
-
 .. code-block:: javascript
 
     humi = HumiditySensor.Execute();
     for (var i = 0; i < 5; i++) {
-        if (i%2 == 0)
+        if (i%2 == 0) //SHOULD compile into '&1' to avoid division
             humi = HumiditySensor.Execute();
-        temp = TemperatureSensor.Execute();
-
+        temp = TemperatureSensor.Execute(); //SHOULD be performed in parallel
+                                            //  with HumiditySensor() when applicable
         if (humi.HumiditySensor > 80 &&
                temp.Temperature > 30.0)
             return [temp, humi];
