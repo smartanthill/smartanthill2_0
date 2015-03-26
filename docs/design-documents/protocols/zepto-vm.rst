@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.2.4
+:Version:   v0.2.5
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
@@ -104,13 +104,20 @@ where HEADER-FLAGS-AND-SIZE field is an Encoded-Unsigned-Int<max=2> field, which
 * **X & 0xE** is an type of optional header
 * **X >> 4** is the size of HEADER-DATA
 
-Currently, only one optional header is supported: Plugin-Exception optional header. 
+Optional Headers
+''''''''''''''''
 
-For Plugin-Exception optional header, type of optional header is 0x0, and HEADER-DATA has the following structure: **\| EXCEPTION-CODE \| EXCEPTION-LINE \|**, where both fields are Exception-Unsigned-Int<max=2> fields.
+Currently, two optional headers are supported: Plugin-Exception optional header, and Plugin-Exception-Call-Trace optional header. 
+
+For Plugin-Exception optional header, type of optional header is 0x0, and HEADER-DATA has the following structure: **\| EXCEPTION-CODE \| EXCEPTION-FILE-HASH \| EXCEPTION-LINE \|**, where EXCEPTION-CODE and EXCEPTION-LINE are Encoded-Unsigned-Int<max=2> fields, and EXCEPTION-FILE-HASH is 2-byte file hash (encoded using "SmartAnthill Endianness").
+
+Plugin-Exception-Call-Trace optional header is optionally added if Plugin-Exception optional header is present, and call trace information is available (in particular, it requires ZEPTO_UNWIND() exception mechanism to be employed).
+
+For Plugin-Exception-Call-Trace optional header, type of optional header is 0x2, and HEADER-DATA is a sequence of **\| TRACE-FILE-HASH \| TRACE-LINE \|** frames (starting from most deep function calls), where TRACE-LINE is an Encoded-Unsigned-Int<max=2> field, and TRACE-FILE-HASH is 2-byte file hash (encoded using "SmartAnthill Endianness").
 
 Plugin-Exception optional header is added if an exception (ZEPTO_THROW, see :ref:`saplugin` document for details) has been thrown while the plugin was executed. 
 
-*NB: due to very limited resources and lack of memory separation support on most MCUs (i.e. all the plugins are usually running in the same protection ring as the OS itself), it is very easy to break Zepto OS by injecting an ill-behaved plugin. Zepto OS and Zepto VM are aiming to provide as much debug information as possible, but there are still scenarios when Zepto OS is not able to recover from bugs in plugin, and will not be able to report anything back.*
+*NB: due to very limited resources and lack of memory separation support on most MCUs (i.e. all the plugins are effectively running in the same protection ring as the Zepto OS itself), it is very easy to break Zepto OS by injecting an ill-behaved plugin. Zepto OS and Zepto VM are aiming to provide as much debug information as possible, but there are still scenarios when Zepto OS is not able to recover from bugs in plugin, and will not be able to report anything back.*
 
 Packet Chains
 -------------
