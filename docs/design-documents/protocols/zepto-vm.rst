@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.2.3
+:Version:   v0.2.4
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
@@ -211,40 +211,31 @@ Level One
 
 ZeptoVM-One is the absolute minimum implementation of Zepto-VM, which allows to execute only a linear sequence of commands, at the cost of additional RAM needed being 1 byte. ZeptoVM-One supports the following instructions:
 
-**\| ZEPTOVM_OP_DEVICECAPS \| MAXIMUM-REPLY-SIZE \|**
+**\| ZEPTOVM_OP_DEVICECAPS \| REQUESTED-FIELDS \|**
 
-where ZEPTOVM_OP_DEVICECAPS is 1-byte opcode, and MAXIMUM-REPLY-SIZE is a 1-byte field.
+where ZEPTOVM_OP_DEVICECAPS is 1-byte opcode, and REQUESTED-FIELDS is described below.
 
-DEVICECAPS instruction pushes Device-Capabilities-Reply to "reply buffer". Usually DEVICECAPS instruction is the only instruction in the program (this allows to provide guarantees on the maximum reply size).
+DEVICECAPS instruction pushes Device-Capabilities-Reply to "reply buffer" as a "reply frame". Usually, DEVICECAPS instruction is the only instruction in the program. If there are too many requested-fields (for example, they don't fit into RAM, or don't fit into MTU) - as any other "reply frame", it MAY be truncated. 
 
-Device-Capabilities-Reply MUST be at most of the *maximum-devicecaps-size = min(MAXIMUM-REPLY-SIZE,CurrentDeviceCapabilities.SACCP_EXTENDED_GUARANTEED_PAYLOAD)* size; this is necessary to ensure that it safely passes all the SmartAnthill Protocols (see :ref:`saprotostack` document for details). *maximum-devicecaps-size* MUST be >= 8 and <= 384.
+REQUESTED-FIELDS is a sequence of indicators which configuration parameters are requested:
 
-Device-Capabilities-Reply is defined as follows:
++--------------------------------+-----------------------------+
+| Indicator                      | Return Type                 |
++================================+=============================+
+| SACCP_GUARANTEED_PAYLOAD       | Encoded-Unsigned-Int<max=2> |
++--------------------------------+-----------------------------+
+| ZEPTOVM_LEVEL                  | 1 byte (enum)               |
++--------------------------------+-----------------------------+
+| ZEPTOVM_REPLY_STACK_SIZE       | Encoded-Unsigned-Int<max=2> |
++--------------------------------+-----------------------------+
+| ZEPTOVM_EXPR_STACK_SIZE        | Encoded-Unsigned-Int<max=2> |
++--------------------------------+-----------------------------+
+| ZEPTOVM_EXPR_FLOAT_TYPE        | 1 byte (enum)               |
++--------------------------------+-----------------------------+
+| ZEPTOVM_MAX_PSEUDOTHREADS      | Encoded-Unsigned-Int<max=2> |
++--------------------------------+-----------------------------+
 
-**\| Basic-Device-Capabilities \| Extended-Device-Capabilities \|**
-
-where Basic-Device-Capabilities is restricted to 8 bytes:
-
-**\| SACCP_BASIC_GUARANTEED_PAYLOAD \| <ZEPTOVM_LEVEL>, <ZEPTOVM_BASIC_REPLY_STACK_SIZE> \| <ZEPTOVM_EXPR_FLOAT_TYPE>, <ZEPTOVM_BASIC_EXPR_STACK_SIZE> \| <ZEPTOVM_BASIC_MAX_PSEUDOTHREADS>, <RESERVED-4-BITS> \| RESERVED-4-BYTES \|**
-
-and Extended-Device-Capabilities extends beyond 8 bytes to provide more information; Extended-Device-Capabilities MUST be cut on field boundaries as necessary to fit *maximum-devicecaps-size*:
-
-**\| SACCP_EXTENDED_GUARANTEED_PAYLOAD \| ZEPTOVM_EXTENDED_REPLY_STACK_SIZE \| ZEPTOVM_EXTENDED_MAX_PSEUDOTHREADS \|**
-
-Here:
-
-* SACCP_BASIC_GUARANTEED_PAYLOAD is a 1-byte field specifying guaranteed size of SACCP payload which is supported by current device (taking into account capabilities of it's L2 protocol, see :ref:`saprotostack` document for details). If SACCP guaranteed payload of the device is more than 255 bytes, then SACCP_GUARANTEED_PAYLOAD MUST be set to 255, and SACCP_EXTENDED_GUARANTEED_PAYLOAD SHOULD be set to real value of the SACCP guaranteed payload.
-* <ZEPTOVM_LEVEL> is a 3-bit bitfield, specifying Zepto VM Level supported
-* <ZEPTOVM_BASIC_REPLY_STACK_SIZE> is a 5-bit bitfield, equal to ZEPTOVM_REPLY_STACK_SIZE (see below for details). If ZEPTOVM_REPLY_STACK_SIZE is more than 31, then <ZEPTOVM_BASIC_REPLY_STACK_SIZE> MUST be set to 31, and real ZEPTOVM_REPLY_STACK_SIZE SHOULD be reported in ZEPTOVM_EXTENDED_REPLY_STACK_SIZE field.
-* ZEPTOVM_BASIC_EXPR_FLOAT_TYPE is a 3-bit bitfield, taking one of the following values: { ROUGH_HALF_FLOAT, HALF_FLOAT, FLOAT, DOUBLE } to indicate type of expression stack supported by Zepto VM (levels Zepto VM Small and higher). if ZEPTOVM_BASIC_EXPR_STACK_SIZE is zero, ZEPTOVM_BASIC_EXPR_FLOAT_TYPE is ignored.
-* ZEPTOVM_BASIC_EXPR_STACK_SIZE is a 5-bit butfield, equal to ZEPTOVM_EXPR_STACK_SIZE (see below for details). If ZEPTOVM_EXPR_STACK_SIZE is more than 31, then ZEPTOVM_BASIC_EXPR_STACK_SIZE MUST be set to 31, and real ZEPTOVM_EXPR_STACK_SIZE SHOULD be reported in ZEPTOVM_EXTENDED_EXPR_STACK_SIZE field.
-* <ZEPTOVM_BASIC_MAX_PSEUDOTHREADS> is a 4-bit bitfield, equal to ZEPTOVM_MAX_PSEUDOTHREADS (see below for details). If ZEPTOVM_MAX_PSEUDOTHREADS is more than 15, then <ZEPTOVM_BASIC_MAX_PSEUDOTHREADS> MUST be set to 15, and real ZEPTOVM_MAX_PSEUDOTHREADS SHOULD be reported in ZEPTOVM_EXTENDED_MAX_PSEUDOTHREADS field.
-* <RESERVED-\*-BITS> and <RESERVED-\*-BYTES> fields are reserved for future use and MUST be set to 0.
-* SACCP_EXTENDED_GUARANTEED_PAYLOAD is an Encoded-Unsigned-Int<max=2> field (as defined in :ref:`saprotostack` document) specifying guaranteed size of SACCP payload which is supported by current device (see SACCP_GUARANTEED_PAYLOAD above for details; unlike SACCP_GUARANTEED_PAYLOAD, SACCP_EXTENDED_GUARANTEED_PAYLOAD is capped at 65535 rather than at 255). SACCP_EXTENDED_GUARANTEED_PAYLOAD field MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
-* ZEPTOVM_EXTENDED_REPLY_STACK_SIZE is an Encoded-Unsigned-Int<max=2> field (as defined in :ref:`saprotostack` document) specifying ZEPTOVM_REPLY_STACK_SIZE (unlike <ZEPTOVM_BASIC_REPLY_STACK_SIZE> bitfield, ZEPTOVM_EXTENDED_REPLY_STACK_SIZE is capped at 65535 rather than at 31). ZEPTOVM_EXTENDED_REPLY_STACK_SIZE MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
-* ZEPTOVM_EXTENDED_EXPR_STACK_SIZE is an Encoded-Unsigned-Int<max=2> field (as defined in :ref:`saprotostack` document) specifying ZEPTOVM_EXPR_STACK_SIZE (unlike ZEPTOVM_BASIC_EXPR_STACK_SIZE field, ZEPTOVM_EXTENDED_EXPR_STACK_SIZE is capped at 65535 rather than at 255). ZEPTOVM_EXTENDED_EXPR_STACK_SIZE field MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
-* ZEPTOVM_EXTENDED_MAX_PSEUDOTHREADS is an Encoded-Unsigned-Int<max=2> field (as defined in :ref:`saprotostack` document) specifying ZEPTOVM_MAX_PSEUDOTHREADS (unlike ZEPTOVM_BASIC_MAX_PSEUDOTHREADS field, ZEPTOVM_EXTENDED_MAX_PSEUDOTHREADS is capped at 65535 rather than at 15). ZEPTOVM_EXTENDED_MAX_PSEUDOTHREADS field MUST be omitted as a whole if it doesn't fit into *maximum-devicecaps-size* defined above.
-
+Reply to DEVICECAPS instruction contains data which correspond to indicators (and come in the same order as indicators within the request).
 
 **\| ZEPTOVM_OP_EXEC \| BODYPART-ID \| DATA-SIZE \| DATA \|**
 
@@ -374,7 +365,7 @@ MOVEREPLYTOFRONT instruction is used to reorder reply frames within reply buffer
 Implementation notes
 ''''''''''''''''''''
 
-To implement Zepto VM-Tiny, in addition to PC required by Zepto VM-One, a stack of offsets which signify positions of reply frames in “reply buffer”, needs to be maintained. Such stack should consist of an array of bytes for offsets, and additional byte to store number of entries on the stack. Size of this stack is a ZEPTOVM_REPLY_STACK_SIZE parameter of Zepto VM-Tiny (which is stored in SmartAnthill DB on SmartAnthill Client and reported via "Device Capabilities" request).
+To implement Zepto VM-Tiny, in addition to PC required by Zepto VM-One, a stack of offsets which signify positions of reply frames in “reply buffer”, needs to be maintained. Such stack should consist of an array of bytes for offsets, and additional byte to store number of entries on the stack. Size of this stack is a ZEPTOVM_REPLY_STACK_SIZE parameter of Zepto VM-Tiny (which is stored in SmartAnthill DB on SmartAnthill Client and reported via DEVICECAPS instruction).
 
 Memory overhead
 '''''''''''''''
@@ -497,7 +488,7 @@ JMPIFEXPR_NOPOP instruction is useful for organizing loops based on a value stor
 Implementation notes
 ''''''''''''''''''''
 
-To implement Zepto VM-Small, in addition to PC and reply-offset-stack required by Zepto VM-Tiny, an expression stack of floating-point values, need to be maintained. Such stack should consist of an array of floating-point values, and an additional byte to store number of entries on the stack. Size of this stack is a ZEPTOVM_EXPR_STACK_SIZE parameter of Zepto VM-Small (which is stored in SmartAnthill DB on SmartAnthill Client and reported via "Device Capabilities" request). 
+To implement Zepto VM-Small, in addition to PC and reply-offset-stack required by Zepto VM-Tiny, an expression stack of floating-point values, need to be maintained. Such stack should consist of an array of floating-point values, and an additional byte to store number of entries on the stack. Size of this stack is a ZEPTOVM_EXPR_STACK_SIZE parameter of Zepto VM-Small (which is stored in SmartAnthill DB on SmartAnthill Client and reported via DEVICECAPS instruction). 
 
 *Type of the values on expression stack always has floating point semantics*, and is one of the following: ROUGH_HALF_FLOAT (2 bytes; same as HALF_FLOAT, but with reduced calculation precision - TBD), HALF_FLOAT (2-byte float, see http://en.wikipedia.org/wiki/Half-precision_floating-point_format), FLOAT (4-byte float), DOUBLE (8-byte float); one of these constants is returned in DEVICECAPS instruction reply to indicate kind of floating point arithmetics supported by specific device; each subsequent floating point format is an extension over previous one. 
 
@@ -539,7 +530,7 @@ Implementation notes
 
 To implement Zepto VM-Medium, in addition to PC, reply-offset-stack, and expression stack as required by Zepto VM-Small, the following changes need to be made:
 
-* PC for each pseudo-threads needs to be maintained; maximum number of pseudo-threads is a ZEPTOVM_MAX_PSEUDOTHREADS parameter of Zepto VM-Medium (which is stored in SmartAnthill DB on SmartAnthill Client and reported via "Device Capabilities" request).
+* PC for each pseudo-threads needs to be maintained; maximum number of pseudo-threads is a ZEPTOVM_MAX_PSEUDOTHREADS parameter of Zepto VM-Medium (which is stored in SmartAnthill DB on SmartAnthill Client and reported via DEVICECAPS instruction).
 * expression stack needs to be replaced with an array of expression stacks (to accommodate PARALLEL instruction); in practice, it is normally implemented by extending expression stack (say, doubling it) and keeping track of sub-expression stacks via array of offsets (with size of ZEPTOVM_MAX_PSEUDOTHREADS) within the expression stack. See :ref:`sazeptoos` document for details.
 * to support replies being pushed to "reply buffer" in parallel, an additional array of 2-byte offsets of current replies needs to be maintained, with a size of ZEPTOVM_MAX_PSEUDOTHREADS.
 
