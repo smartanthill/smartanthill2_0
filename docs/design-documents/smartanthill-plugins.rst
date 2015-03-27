@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version:   v0.2.1a
+:Version:   v0.2.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -169,6 +169,7 @@ Ideally, SmartAnthill Plugin Handler SHOULD be implemented as state machines, fo
 
     struct MyPluginConfig { //constant structure filled with a configuration
                           //  for specific 'ant body part'
+    byte bodypart_id;//always present
     byte request_pin_number;//pin to request sensor read
     byte ack_pin_number;//pin to wait for to see when sensor has provided the data
     byte reply_pin_numbers[4];//pins to read when ack_pin_number shows that the data is ready
@@ -276,6 +277,32 @@ ZEPTO_ASSERT
 
 ZEPTO_ASSERT is a way to have trackable assertions in plugin code. ZEPTO_ASSERT(condition) effectively causes ZEPTO_THROW(1) if condition fails. ZEPTO_ASSERT() SHOULD be used instead of usual C assert() calls. 
 
+zeptoerr
+^^^^^^^^
+
+zeptoerr is a pseudo-stream, somewhat similar to traditional stderr. However, due to hardware limitations, zeptoerr capabilities are very limited, and should be used sparingly.
+
+zeptoerr is intended to be used as follows:
+
+.. code-block:: c
+
+  ZEPTOERR(plugin_config->bodypart_id,"Error: %d",error);
+
+It compiles differently depending on compile-time settings, but generally should have an effect similar to `fprintf(stderr,"Error: %d\n", error);`. To facilitate automated stream decoding in certain modes, the following SHOULD be added to the Plugin Manifest: 
+
+.. code-block:: xml
+
+  <zeptoerr>
+    <line>Error: %d</line> <!-- text within SHOULD be an EXACT match of the text in ZEPTOERR() call -->
+    <line>Error 2: %f</line> <!-- text within SHOULD be an EXACT match of the text in ZEPTOERR() call -->
+  </zeptoerr>
+
+ZEPTOERR has very limited support for data types: only %d (and synomym %i), %x, and %f are supported. Formatting modifiers (such as "%02d") are currently not supported at all. 
+
+Note that in some cases (for example, if SmartAnthill Device runs out of RAM), SmartAnthill Device MAY truncate zeptoerr pseudo-stream.
+
+For implementation details of zeptoerr, please refer to :ref:`sazeptoos` document. 
+
 Data Types
 ^^^^^^^^^^
 
@@ -299,6 +326,8 @@ ZEPTO_PARSER is an opaque structure (which can be seen as a sort of object where
   byte b = zepto_parse_byte(parser,sz);
 
 TODO: WaitingFor
+
+TODO: half-float library
 
 Functions
 ^^^^^^^^^

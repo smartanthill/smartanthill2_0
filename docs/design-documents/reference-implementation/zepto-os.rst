@@ -27,7 +27,7 @@
 SmartAnthill Zepto OS
 =====================
 
-:Version:   v0.2.7
+:Version:   v0.2.8
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -119,6 +119,28 @@ Zepto exceptions are implemented either via setjmp/longjmp (if the call is suppo
 * taking 2 TODO bytes out of it
 
 If ZEPTO_UNWIND() unwinding mechanism (and not setjmp/longjmp unwinding) is used, Zepto OS MAY be able to collect call trace during unwinding. If available, call trace information is represented as a sequence of 'frames', where each frame is a pair consisting of __LINE__ and zepto_fname_hash(__FILE__). If Zepto Exception occurs within plugin, call trace information MAY be passed back to SmartAnthill Client as a part of "reply frame", see see :ref:`sazeptovm` document for details).
+
+zeptoerr
+--------
+
+zeptoerr is a pseudo-stream which is somewhat similar to traditional stderr. However, implementation is very different. 
+
+zeptoerr is used as described in :ref:`saplugin` document. ZEPTOERR() macro compiles (conditionally) to a call to an underlying zepto_error() function. Behaviour of zepto_error() depends on compile-time defines, and can be either "full" mode, or "short" mode.
+
+In both modes, zepto_error() pushes result to a predefined REPLY_HANDLE. 
+
+In "full" mode, zepto_error() pushes the whole string there, and format of the records in REPLY_HANDLE is as follows:
+
+**\| RECORD-LENGTH \| BODYPART-ID \| FORMAT-STRING \| PARAM-LIST \|**
+
+where RECORD-LENGTH is Encoded-Unsigned-Int<max=2>, specifying length of zeptoerr record, BODYPART-ID is an Encoded-Unsigned-Int<max=2> field, FORMAT-STRING is a null-terminated string, and PARAM-LIST is a list of pairs **\| PARAM-TYPE \| PARAM-DATA \|*. Supported values of PARAM-TYPE are the following: 
+
+* FOUR_BYTE_FIELD (assumes 'SmartAnthill endianness' as described in :ref:`saprotostack` document); FOUR_BYTE_FIELD is used for %i on platforms where int is 32-bit
+* TWO_BYTE_FIELD (assumes 'SmartAnthill endianness' as described in :ref:`saprotostack` document); TWO_BYTE_FIELD is used for %i on platforms where in is 16-bit
+* FLOAT_FIELD (using encoding as described in :ref:`saprotostack` document for floats); %f is passed as FLOAT, unless platform uses half-float library to simulate floats
+* HALF_FLOAT_FIELD (using encoding as described in :ref:`saprotostack` document for half-floats); %f is passed as HALF_FLOAT, if platform uses half-float library to simulate floats
+
+In "short" mode, FORMAT-STRING is replaced with 2-byte hash (the same hash which is used for hashing filenames for error handling purposes, as described above). 
 
 "Main Loop" a.k.a. "Main Pump"
 ------------------------------

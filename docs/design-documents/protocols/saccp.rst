@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.2.2a
+:Version:   v0.2.3
 
 *NB: this document relies on certain terms and concepts introduced in*
 :ref:`saoverarch` *and*
@@ -114,23 +114,33 @@ SACCP Command Packets
 
 SACCP command packets can be one of the following:
 
-**\| SACCP_NEW_PROGRAM, Reserved \| Execution-Layer-Program \|**
+**\| <SACCP_NEW_PROGRAM>,<EXTRA-HEADERS-FLAG>,<4-RESERVED-BITS> \| OPTIONAL-EXTRA-HEADERS \| Execution-Layer-Program \|**
 
-where SACCP_NEW_PROGRAM is a 4-bit constant, Reserved is a 4-bit field which MUST consist of zeros (otherwise SACCP returns SACCP_ERROR_INVALID_FORMAT), and Execution-Layer-Program is variable-length program.
+where SACCP_NEW_PROGRAM is a 3-bit constant, EXTRA-HEADERS-FLAG is a 1-bit flag specifying if OPTIONAL-EXTRA-HEADERS are present, 4-RESERVED-BITS is a 4-bit bitfield which MUST consist of zeros (otherwise SACCP returns SACCP_ERROR_INVALID_FORMAT), and Execution-Layer-Program is variable-length program.
 
 NEW_PROGRAM command packet indicates that Execution-Layer-Program (normally - Zepto VM program) is requested to be executed on the SmartAnthill Device.
 
-**\| SACCP_REPEAT_OLD_PROGRAM, Checksum-Length \| Checksum \|**
+**\| <SACCP_REPEAT_OLD_PROGRAM>,<EXTRA-HEADERS-FLAG>,<Checksum-Length> \| OPTIONAL-EXTRA-HEADERS \| Checksum \|**
 
-where SACCP_REPEAT_OLD_PROGRAM is a 4-bit constant, Checksum-Length is a 4-bit length of Checksum field (Checksum-Length MUST be >= 4 and MUST be <= 12, if it is not - SACCP returns SACCP_ERROR_INVALID_FORMAT error), Checksum has length of Checksum-Length, and is calculated as SACCP Checksum which is described above.
+where SACCP_REPEAT_OLD_PROGRAM is a 3-bit constant, EXTRA-HEADERS-FLAG is a 1-bit flag specifying if OPTIONAL-EXTRA-HEADERS are present, Checksum-Length is a 4-bit length of Checksum field (Checksum-Length MUST be >= 4 and MUST be <= 12, if it is not - SACCP returns SACCP_ERROR_INVALID_FORMAT error), Checksum has length of Checksum-Length, and is calculated as SACCP Checksum which is described above.
 
 OLD_PROGRAM command packet indicates that the Execution-Layer program which is already in memory of SmartAnthill Device, needs to be repeated. Checksum field is used to ensure that perceptions of the "program which is already in memory" are the same for SmartAnthill Client and SmartAnthill Device (inconsistencies are possible is several scenarios, such as two SmartAnthill Clients working with the same SmartAnthill Device, accidental reboot of the SmartAnthill Device, and so on). If Checksum does not match the program within SmartAnthill Device, SACCP returns SACCP_ERROR_OLD_PROGRAM_CHECKSUM_DOESNT_MATCH error.
 
-**\| SACCP_REUSE_OLD_PROGRAM, Checksum-Length \| Checksum \| Fragments \|** TODO: New-Checksum just in case?
+**\| <SACCP_REUSE_OLD_PROGRAM>,<EXTRA-HEADERS-FLAG>,<Checksum-Length> \| OPTIONAL-EXTRA-HEADERS \| Checksum \| Fragments \|** TODO: New-Checksum just in case?
 
-where SACCP_REUSE_OLD_PROGRAM is a 4-bit constant, Checksum-Length and Checksum are similar to those in SACCP_REPEAT_OLD_PROGRAM, and Fragments is a sequence of fragments.
+where SACCP_REUSE_OLD_PROGRAM is a 3-bit constant, and EXTRA-HEADERS-FLAG, Checksum-Length and Checksum are similar to those in SACCP_REPEAT_OLD_PROGRAM, and Fragments is a sequence of fragments.
 
 SACCP_REUSE_OLD_PROGRAM is used when existing program is mostly the same, but there are some differences. When processing it, SACCP goes through the fragments, and appends data within (or referred to by) the fragment, to the new program, in a sense "assembling" new program from verbatim fragments, and from reference-to-old-program fragments.
+
+For all SACCP command packets, OPTIONAL-EXTRA-HEADERS is a list of optional headers; each header starts from an Encoded-Unsigned-Int<max=2> field, which then interpreted as follows:
+
+* **X&7** - header type
+* **X>>3** - header length
+
+Currently, only two types of extra headers are supported:
+
+* END_OF_HEADERS (with no further data)
+* ENABLE_ZEPTOERR, with further data being **\|<TRUNCATE-MOST-RECENT><7-RESERVED-BITS>\|**, where TRUNCATE-MOST-RECENT is a 1-bit flag which specifies that zeptoerr should be truncated at the end if truncation becomes necessary (if this bit is not set, the least recent records are truncated from zeptoerr pseudo-stream). By default zeptoerr pseudo-stream is disabled; ENABLE_ZEPTOERR header enables zeptoerr if it is supported by target SmartAnthill Device.
 
 SACCP Reuse Fragments
 '''''''''''''''''''''
@@ -151,17 +161,32 @@ SACCP Reply Packets
 
 SACCP reply packets can be one of the following:
 
-**\| SACCP_OK \| Execution-Layer-Reply \|**
+**\| OK-FLAGS-SIZE \| Execution-Layer-Reply \| 
 
-where SACCP_OK is 1-byte constant, and Execution-Layer-Reply is variable-length field.
+where OK-FLAGS-SIZE field is described below, Execution-Layer-Reply is a variable-length field, OPTIONAL-ZEPTOERR-FLAG is a 1-byte constant, OPTIONAL-ZEPTOERR-DATA-SIZE is an Encoded-Unsigned-Int<max=2> field, and OPTIONAL-ZEPTOERR-DATA is variable-length field.
 
-**\| SACCP_ERROR_VM_EXCEPTION \| Exception-Data \|**
+OK-FLAGS-SIZE is an Encoded-Unsigned-Int<max=2> field, which is read as number X and then treated as follows:
 
-where SACCP_ERROR_VM_EXCEPTION is a 1-byte constant (different from all valid values of Saccp-Error-Code), and Exception-Data is exception data as passed by Execution Layer.
+* **X&3** should be equal to 0x0 (otherwise it is a different type of reply, see below)
+* **X&4** is TRUNCATED-FLAG, an indication that Execution-Layer-Reply has been truncated by SACCP (for example, due to the lack of RAM)
+* **X>>3** is EXECUTION-LAYER-REPLY-SIZE, size of Execution-Layer-Reply field (i.e. size is reported after truncation if there was any)
 
-**\| Saccp-Error-Code \|**
+**\| EXCEPTION-FLAGS-SIZE \| Exception-Data \| OPTIONAL-ZEPTOERR-FLAG \| OPTIONAL-ZEPTOERR-DATA-SIZE \| OPTIONAL-ZEPTOERR-DATA \|**
 
-where Saccp-Error-Code is a 1-byte field, which takes one of the following values: SACCP_ERROR_INVALID_FORMAT, SACCP_ERROR_OLD_PROGRAM_CHECKSUM_DOESNT_MATCH, or SACCP_NO_MEMORY (the last one may occur if SACCP runs out of memory while re-packing the packet coming from Execution Layer). 
+where EXCEPTION-FLAGS-SIZE is described below, Exception-Data is exception data as passed by Execution Layer, and OPTIONAL-ZEPTOERR-* fields are similar to that of in SACCP_OK reply.
+
+ERROR-FLAGS-SIZE is an Encoded-Unsigned-Int<max=2> field, which is read as number X and then treated as follows:
+
+* **X&3** should be equal to 0x1 (otherwise it is a different type of reply)
+* **X&4** is TRUNCATED-FLAG, an indication that Exception-Data has been truncated by SACCP (for example, due to the lack of RAM)
+* **X>>3** is EXCEPTION-DATA-SIZE, size of Exception-Data field (i.e. size is reported after truncation if there was any)
+
+**\| SACCP-ERROR-CODE \|**
+
+where SACCP-ERROR-CODE is an Encoded-Unsigned-Int<max=2> field, which is read as number X and then treated as follows:
+
+* **X&3** should be equal to 0x2 (otherwise it is a different type of reply, see above)
+* **X>>2** is an ERROR-CODE, which takes one of the following values: SACCP_ERROR_INVALID_FORMAT, or SACCP_ERROR_OLD_PROGRAM_CHECKSUM_DOESNT_MATCH.
 
 Device Pins SHOULD NOT be Addressed Directly within Execution-Layer-Program
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
