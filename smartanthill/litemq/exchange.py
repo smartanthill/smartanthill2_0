@@ -52,7 +52,7 @@ class Queue(object):
             options = get_service_named("litemq").options
             self.RESEND_DELAY = options['resend_delay']  # pragma: no cover
             self.RESEND_MAX = options['resend_max']  # pragma: no cover
-        except AttributeError:
+        except (AttributeError, TypeError):
             pass
 
     def put(self, message, properties):
