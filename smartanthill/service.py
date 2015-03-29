@@ -24,6 +24,7 @@ from twisted.python.reflect import namedModule
 from smartanthill import __banner__, __description__, __version__
 from smartanthill.configprocessor import ConfigProcessor, get_baseconf
 from smartanthill.log import Console, Logger
+from smartanthill.util import singleton
 
 
 class SAMultiService(MultiService):
@@ -58,21 +59,15 @@ class SAMultiService(MultiService):
             self._onstarted.append(callback)
 
 
+@singleton
 class SmartAnthillService(SAMultiService):
 
-    INSTANCE = None
-
     def __init__(self, name, options):
-        SmartAnthillService.INSTANCE = self
         self.workspace_dir = options['workspace']
         self.config = ConfigProcessor(self.workspace_dir, options)
         self.console = Console(100)
         self._logmessages = []
         SAMultiService.__init__(self, name, options)
-
-    @staticmethod
-    def instance():
-        return SmartAnthillService.INSTANCE
 
     def startService(self):
         dashboard = ("http://localhost:%d/" %

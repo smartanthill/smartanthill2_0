@@ -31,9 +31,9 @@ def get_service_named(name):
     """ Returns SmartAnthill Service's instance by specified name  """
     from smartanthill.service import SmartAnthillService
     if name == "sas":
-        return SmartAnthillService.instance()
+        return SmartAnthillService()
     else:
-        return SmartAnthillService.instance().getServiceNamed(name)
+        return SmartAnthillService().getServiceNamed(name)
 
 
 def load_config(path):
