@@ -133,7 +133,7 @@ In "full" mode, zepto_error() pushes the whole string there, and format of the r
 
 **\| RECORD-LENGTH \| BODYPART-ID \| FORMAT-STRING \| PARAM-LIST \|**
 
-where RECORD-LENGTH is Encoded-Unsigned-Int<max=2>, specifying length of zeptoerr record, BODYPART-ID is an Encoded-Unsigned-Int<max=2> field, FORMAT-STRING is a null-terminated string, and PARAM-LIST is a list of pairs **\| PARAM-TYPE \| PARAM-DATA \|*. Supported values of PARAM-TYPE are the following: 
+where RECORD-LENGTH is Encoded-Unsigned-Int<max=2>, specifying length of zeptoerr record, BODYPART-ID is an Encoded-Unsigned-Int<max=2> field, FORMAT-STRING is a null-terminated string, and PARAM-LIST is a list of pairs **\| PARAM-TYPE \| PARAM-DATA \|**. Supported values of PARAM-TYPE are the following: 
 
 * FOUR_BYTE_FIELD (assumes 'SmartAnthill endianness' as described in :ref:`saprotostack` document); FOUR_BYTE_FIELD is used for %i on platforms where int is 32-bit
 * TWO_BYTE_FIELD (assumes 'SmartAnthill endianness' as described in :ref:`saprotostack` document); TWO_BYTE_FIELD is used for %i on platforms where in is 16-bit
