@@ -161,7 +161,7 @@ SACCP Reply Packets
 
 SACCP reply packets can be one of the following:
 
-**\| OK-FLAGS-SIZE \| Execution-Layer-Reply \| 
+**\| OK-FLAGS-SIZE \| Execution-Layer-Reply \|** 
 
 where OK-FLAGS-SIZE field is described below, Execution-Layer-Reply is a variable-length field, OPTIONAL-ZEPTOERR-FLAG is a 1-byte constant, OPTIONAL-ZEPTOERR-DATA-SIZE is an Encoded-Unsigned-Int<max=2> field, and OPTIONAL-ZEPTOERR-DATA is variable-length field.
 
