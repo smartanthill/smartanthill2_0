@@ -12,7 +12,7 @@ firmware:
 	cd embedded/firmware; platformio run -t upload
 
 sa-debug:
-	smartanthill --workspacedir=examples/arduino-router/workspace --logger.level=DEBUG
+	smartanthill --logger.level=DEBUG
 
 cc-debug:
 	twistd -n --pidfile=twistd-cc.pid smartanthill-cc

@@ -19,7 +19,7 @@
 
     "device":
     {
-      "enabled": false,
+      "enabled": true,
       "priority": 2,
       "options": {}
     },

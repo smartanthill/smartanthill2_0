@@ -39,7 +39,7 @@ __banner__ = """
   /   (___)(_)    Anthill    (_)(___)   /__          Issues:  {issues}
  /    //|| ||   {version:^11}   || ||\\\\     /\\         License: {license}
 /_______________________________________/ /
-\_______________________________________\/           Workspace: #wsdir#
+\_______________________________________\/           Workspace: #workspace#
  \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \\           Dashboard: #dashboard#
 """.format(version=__version__,
            description=__description__,

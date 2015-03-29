@@ -13,6 +13,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+from os.path import expanduser, join
 from sys import argv as sys_argv
 
 from twisted.application.service import MultiService
@@ -63,8 +64,8 @@ class SmartAnthillService(SAMultiService):
 
     def __init__(self, name, options):
         SmartAnthillService.INSTANCE = self
-        self.workspacedir = options['workspacedir']
-        self.config = ConfigProcessor(self.workspacedir, options)
+        self.workspace_dir = options['workspace']
+        self.config = ConfigProcessor(self.workspace_dir, options)
         self.console = Console(100)
         self._logmessages = []
         SAMultiService.__init__(self, name, options)
@@ -77,7 +78,8 @@ class SmartAnthillService(SAMultiService):
         dashboard = ("http://localhost:%d/" %
                      self.config.get("services.dashboard.options.port"))
         self.log.info(__banner__.replace(
-            "#wsdir#", self.workspacedir).replace("#dashboard#", dashboard))
+            "#workspace#",
+            self.workspace_dir).replace("#dashboard#", dashboard))
 
         self.log.debug("Initial configuration: %s." % self.config)
         self._preload_subservices()
@@ -106,11 +108,11 @@ class SmartAnthillService(SAMultiService):
 
 
 class Options(usage.Options):
-    optParameters = [["workspacedir", "w", ".",
-                      "The path to workspace directory"]]
+    optParameters = [["workspace", "w", join(expanduser("~"), ".smartanthill"),
+                      "Path to home directory"]]
 
     compData = usage.Completions(
-        optActions={"workspacedir": usage.CompleteDirs()})
+        optActions={"workspace": usage.CompleteDirs()})
 
     longdesc = "%s (version %s)" % (__description__, __version__)
 
@@ -132,14 +134,13 @@ class Options(usage.Options):
                 self.optParameters.append([argname, None, v, None, type(v)])
 
     def postOptions(self):
-        wsdir_path = FilePath(self['workspacedir'])
-        if not wsdir_path.exists() or not wsdir_path.isdir():
-            raise usage.UsageError("The path to the workspace directory"
-                                   " is invalid")
-        elif wsdir_path.getPermissions().user.shorthand() != 'rwx':
-            raise usage.UsageError("You don't have 'read/write/execute'"
-                                   " permissions to workspace directory")
-        self['workspacedir'] = wsdir_path.path
+        workspace_dir = FilePath(self['workspace'])
+        if not workspace_dir.exists():
+            workspace_dir.makedirs()
+        if workspace_dir.getPermissions().user.shorthand() != "rwx":
+            raise usage.UsageError("You don't have the 'read/write/execute'"
+                                   " permissions to home directory")
+        self['workspace'] = workspace_dir.path
 
 
 def makeService(options):
