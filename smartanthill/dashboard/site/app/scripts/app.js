@@ -82,7 +82,8 @@ angular.module('siteApp', [
     devices: $resource(siteConfig.apiURL + 'devices/:deviceId', {
       deviceId: '@id'
     }),
-    serialports: $resource(siteConfig.apiURL + 'serialports')
+    serialports: $resource(siteConfig.apiURL + 'serialports'),
+    settings: $resource(siteConfig.apiURL + 'settings'),
   };
 })
 
