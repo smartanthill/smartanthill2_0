@@ -108,3 +108,7 @@ class ConfigProcessor(object):
 
         if write_wsconf:
             self._write_wsconf()
+
+    @property
+    def current_config(self):
+        return self._data
