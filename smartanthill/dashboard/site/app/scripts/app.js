@@ -65,7 +65,8 @@ angular.module('siteApp', [
     })
     .when('/settings', {
       templateUrl: 'views/settings.html',
-      controller: 'SettingsCtrl'
+      controller: 'SettingsController',
+      controllerAs: 'vm',
     })
     .otherwise({
       redirectTo: '/'
