@@ -155,6 +155,11 @@ def console(request):
     return get_service_named("sas").console.get_messages()
 
 
+@router.add("/settings")
+def settings(request):
+    return ConfigProcessor().current_config
+
+
 class REST(Resource):
 
     isLeaf = True
