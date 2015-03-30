@@ -22,7 +22,9 @@
     .module('siteApp')
     .controller('SettingsController', SettingsController);
 
-  function SettingsController($scope) {
+  function SettingsController($scope, siteStorage) {
     var vm = this;
+
+    vm.current_settings = siteStorage.settings.get();
   }
 })();
