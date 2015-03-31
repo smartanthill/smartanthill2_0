@@ -19,18 +19,18 @@
 
 angular.module('siteApp')
 
-.controller('DevicesCtrl', function($scope, siteStorage) {
-  $scope.devices = siteStorage.devices.query();
+.controller('DevicesCtrl', function($scope, dataService) {
+  $scope.devices = dataService.devices.query();
 })
 
 .controller('DeviceInfoCtrl', function($scope, $routeParams, $location,
-  $modal, siteStorage, notifyUser) {
-  $scope.operations = siteStorage.operations.query();
-  $scope.device = siteStorage.devices.get({
+  $modal, dataService, notifyUser) {
+  $scope.operations = dataService.operations.query();
+  $scope.device = dataService.devices.get({
       deviceId: $routeParams.deviceId
     },
     function(data) {
-      $scope.board = siteStorage.boards.get({
+      $scope.board = dataService.boards.get({
         boardId: data.boardId
       });
     });
@@ -85,9 +85,9 @@ angular.module('siteApp')
 })
 
 .controller('DeviceTrainItCtrl', function($q, $scope, $resource,
-  $modalInstance, siteConfig, siteStorage, device, operations) {
+  $modalInstance, siteConfig, dataService, device, operations) {
 
-  $scope.serialports = siteStorage.serialports.query();
+  $scope.serialports = dataService.serialports.query();
   $scope.device = device;
   $scope.selectedSerialPort = {};
   $scope.progressbar = {
@@ -222,11 +222,11 @@ angular.module('siteApp')
 })
 
 .controller('DeviceAddOrEditCtrl', function($q, $scope, $routeParams,
-  $location, siteStorage, notifyUser) {
+  $location, dataService, notifyUser) {
   $scope.selectBoard = {};
   $scope.editMode = false;
   $scope.prevState = {};
-  $scope.operations = siteStorage.operations.query();
+  $scope.operations = dataService.operations.query();
   /**
    * Handlers
    */
@@ -296,7 +296,7 @@ angular.module('siteApp')
   /* End Handlers block */
 
   var usedDevIds = {};
-  siteStorage.devices.query(function(data) {
+  dataService.devices.query(function(data) {
     angular.forEach(data, function(item) {
       usedDevIds[item.id] = true;
     });
@@ -306,14 +306,14 @@ angular.module('siteApp')
 
     var deferred = $q.defer();
     deferred.promise.then(function() {
-      $scope.device = siteStorage.devices.get({
+      $scope.device = dataService.devices.get({
         deviceId: $routeParams.deviceId
       });
       return $scope.device.$promise;
     })
 
     .then(function() {
-      $scope.boards = siteStorage.boards.query();
+      $scope.boards = dataService.boards.query();
       return $scope.boards.$promise;
     })
 
@@ -333,8 +333,8 @@ angular.module('siteApp')
 
   } else {
 
-    $scope.boards = siteStorage.boards.query();
-    $scope.device = new siteStorage.devices();
+    $scope.boards = dataService.boards.query();
+    $scope.device = new dataService.devices();
 
     // default operations
     $scope.device.operationIds = {};

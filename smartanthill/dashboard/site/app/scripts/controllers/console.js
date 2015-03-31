@@ -15,24 +15,31 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-'use strict';
+(function() {
+  'use strict';
 
-angular.module('siteApp')
+  angular
+    .module('siteApp')
+    .controller('ConsoleController', ConsoleController);
 
-.controller('ConsoleCtrl', function($scope, ngTableParams, siteStorage) {
-  $scope.tableParams = new ngTableParams({ // jshint ignore:line
-    count: -1,
-    sorting: {
-      id: 'asc'
-    }
-  }, {
-    total: 0,
-    counts: [],
-    getData: function($defer, params) {
-      siteStorage.devices.query(params.url(), function(data) {
-        params.total(data.length);
-        $defer.resolve(data);
-      });
-    }
-  });
-})
+  function ConsoleController(ngTableParams, dataService) {
+    var vm = this;
+
+    vm.tableParams = new ngTableParams({ // jshint ignore:line
+      count: -1,
+      sorting: {
+        id: 'asc'
+      }
+    }, {
+      total: 0,
+      counts: [],
+      getData: function($defer, params) {
+        dataService.devices.query(params.url(), function(data) {
+          params.total(data.length);
+          $defer.resolve(data);
+        });
+      }
+    });
+  }
+
+})();

@@ -20,36 +20,23 @@
     display: block !important;
   }
 }
+
 .nav,
 .pagination,
 .carousel,
 .panel-title a {
   cursor: pointer;
 }
+
 .navbar-nav .fa {
   margin-right: 5px;
 }
+
 .table-devpins th,
 .table-devpins td {
   text-align: center;
 }
-/* Loading directive (g-tables) */
 
-.loading-container {
-  position: relative;
-}
-.loading-container .loading:before,
-.loading-container .loading:after {
-  content: " ";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  min-height: 50px;
-  min-width: 50px;
-}
-.loading-container .loading:before {
-  background-color: white;
-  opacity: 0.5;
+footer hr {
+  margin: 25px 0 10px 0;
 }

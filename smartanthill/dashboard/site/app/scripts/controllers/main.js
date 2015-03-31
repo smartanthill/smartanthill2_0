@@ -20,10 +20,31 @@
 
   angular
     .module('siteApp')
-    .controller('DashboardController', DashboardController);
+    .controller('MainController', MainController);
 
-  function DashboardController() {
+  function MainController($scope, $location) {
     var vm = this;
+
+    vm.isRouteActive = isRouteActive;
+
+    $scope.$watch(function() {
+      return $location.path();
+    }, onPathChange);
+
+    ////////////
+
+    function isRouteActive(route) {
+      return $location.path().lastIndexOf(route, 0) === 0;
+    }
+
+    function onPathChange(path) {
+      if (path === '/') {
+        path = '/dashboard';
+      }
+      path = path.substring(1);
+      vm.currentPage = path.substring(0, 1).toUpperCase() + path.substring(
+        1);
+    }
   }
 
 })();

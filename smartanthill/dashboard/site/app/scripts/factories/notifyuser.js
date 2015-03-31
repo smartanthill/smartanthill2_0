@@ -20,10 +20,27 @@
 
   angular
     .module('siteApp')
-    .controller('DashboardController', DashboardController);
+    .factory('notifyUser', notifyUser);
 
-  function DashboardController() {
-    var vm = this;
+  function notifyUser($log, toaster) {
+    return function(type, message) {
+      switch (type) {
+        case 'success':
+          $log.info(message);
+          toaster.pop('success', message);
+          break;
+
+        case 'warning':
+          $log.warn(message);
+          toaster.pop('warning', message);
+          break;
+
+        default:
+          $log.error(message);
+          toaster.pop('error', message);
+          break;
+      }
+    };
   }
 
 })();
