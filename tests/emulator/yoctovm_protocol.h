@@ -37,13 +37,6 @@ Copyright (C) 2015 OLogN Technologies AG
 #define YOCTOVM_PASS_LOWER_THEN_IDLE 3 // ret code for testing; same as YOCTOVM_PASS_LOWER but notifies main loop that the chain is over
 //#define YOCTOVM_RESET_STACK 4
 
-#if 0
-uint8_t slave_process( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
-uint8_t master_start( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
-uint8_t master_continue( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
-uint8_t master_error( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
-#endif // 0
-
 uint8_t slave_process( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
 uint8_t master_start( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
 uint8_t master_continue( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* stack, int stackSize*/ );

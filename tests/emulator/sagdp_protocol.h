@@ -74,10 +74,6 @@ Copyright (C) 2015 OLogN Technologies AG
 
 // handlers
 void sagdp_init( uint8_t* data );
-uint8_t handlerSAGDP_timer( uint8_t* timeout, uint8_t* nonce, uint16_t* sizeInOut, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
-uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
-uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint8_t* nonce, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
-uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
 
 uint8_t handlerSAGDP_timer( uint8_t* timeout, uint8_t* nonce, REQUEST_REPLY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
 uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
