@@ -39,6 +39,18 @@ struct request_reply_mem_obj
 };
 
 extern request_reply_mem_obj memory_objects[ 128 ];
+inline
+uint16_t ugly_hook_get_request_size( REQUEST_REPLY_HANDLE mem_h )
+{
+	return memory_objects[ mem_h ].rq_size;
+}
+inline
+uint16_t ugly_hook_get_response_size( REQUEST_REPLY_HANDLE mem_h )
+{
+	return memory_objects[ mem_h ].rsp_size;
+}
+
+// end of UGLY HOOK FOR BY-PARTS (INITIAL PHASE OF) DEVELOPMENT
 
 
 // parsing functions
@@ -62,5 +74,9 @@ void zepto_convert_part_of_request_to_response( MEMORY_HANDLE mem_h, parser_obj*
 //void zepto_convert_part_of_request_to_response( MEMORY_HANDLE mem_h, parser_obj* po_start, uint16_t cutoff_cnt )
 void zepto_write_prepend_byte( MEMORY_HANDLE mem_h, uint8_t bt );
 void zepto_write_prepend_block( MEMORY_HANDLE mem_h, const uint8_t* block, uint16_t size );
+
+// inspired by SAGDP: creating a copy of the packet
+uint16_t zepto_writer_get_response_size( MEMORY_HANDLE mem_h );
+void zepto_writer_get_copy_of_response( MEMORY_HANDLE mem_h, uint8_t* buff );
 
 #endif // __ZEPTO_MEM_MNGMT_H__

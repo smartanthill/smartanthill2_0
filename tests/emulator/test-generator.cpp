@@ -30,6 +30,106 @@ uint8_t packetOnHold[ PACKET_MAX_SIZE ];
 bool isPacketOnHold = false;
 bool holdRequested = false;
 
+void registerIncomingPacket( REQUEST_REPLY_HANDLE mem_h )
+{
+	return;
+	uint8_t buff[ PACKET_MAX_SIZE ];
+	uint16_t packet_size;
+	// init parser object
+	parser_obj po;
+	zepto_parser_init( &po, mem_h );
+	packet_size = zepto_parsing_remaining_bytes( &po );
+	assert( packet_size <= PACKET_MAX_SIZE );
+	zepto_parse_read_block( &po, buff, packet_size );
+	registerIncomingPacket( buff, packet_size );
+}
+
+void registerOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
+{
+	return;
+	uint8_t buff[ PACKET_MAX_SIZE ];
+	uint16_t packet_size;
+	// init parser object
+	parser_obj po;
+	zepto_parser_init( &po, mem_h );
+	packet_size = zepto_parsing_remaining_bytes( &po );
+	assert( packet_size <= PACKET_MAX_SIZE );
+	zepto_parse_read_block( &po, buff, packet_size );
+	registerOutgoingPacket( buff, packet_size );
+}
+
+bool shouldInsertIncomingPacket( REQUEST_REPLY_HANDLE mem_h )
+{
+	return false;
+	uint8_t buff[ PACKET_MAX_SIZE ];
+	uint16_t packet_size;
+	bool ret = shouldInsertIncomingPacket( buff, &packet_size );
+	if ( !ret ) return false;
+	zepto_write_block( mem_h, buff, packet_size );
+	return true;
+}
+
+bool shouldInsertOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
+{
+	return false;
+	uint8_t buff[ PACKET_MAX_SIZE ];
+	uint16_t packet_size;
+	bool ret = shouldInsertOutgoingPacket( buff, &packet_size );
+	if ( !ret ) return false;
+	zepto_write_block( mem_h, buff, packet_size );
+	return true;
+}
+
+
+
+bool holdOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
+{
+	return false;
+	uint8_t buff[ PACKET_MAX_SIZE ];
+	uint16_t packet_size;
+	// init parser object
+	parser_obj po;
+	zepto_parser_init( &po, mem_h );
+	packet_size = zepto_parsing_remaining_bytes( &po );
+	assert( packet_size <= PACKET_MAX_SIZE );
+	zepto_parse_read_block( &po, buff, packet_size );
+	return holdOutgoingPacket( buff, &packet_size );
+}
+
+bool releaseOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
+{
+	return false;
+	uint8_t buff[ PACKET_MAX_SIZE ];
+	uint16_t packet_size;
+	bool ret = releaseOutgoingPacket( buff, &packet_size );
+	if ( !ret ) return false;
+	zepto_write_block( mem_h, buff, packet_size );
+	return true;
+}
+
+bool holdPacketOnRequest( REQUEST_REPLY_HANDLE mem_h )
+{
+	return false;
+	uint8_t buff[ PACKET_MAX_SIZE ];
+	uint16_t packet_size;
+	// init parser object
+	parser_obj po;
+	zepto_parser_init( &po, mem_h );
+	packet_size = zepto_parsing_remaining_bytes( &po );
+	assert( packet_size <= PACKET_MAX_SIZE );
+	zepto_parse_read_block( &po, buff, packet_size );
+	return holdOutgoingPacket( buff, &packet_size );
+}
+
+
+
+
+
+
+
+
+
+
 bool holdOutgoingPacket( const uint8_t* packet, const uint16_t* size )
 {
 	if ( isPacketOnHold )
@@ -42,6 +142,7 @@ bool holdOutgoingPacket( const uint8_t* packet, const uint16_t* size )
 
 bool isOutgoingPacketOnHold()
 {
+	return false;
 	return isPacketOnHold;
 }
 
@@ -100,21 +201,21 @@ void registerOutgoingPacket( const uint8_t* packet, uint16_t size )
 
 bool shouldDropIncomingPacket()
 {
-//	return false;
-	return get_rand_val() % 8 == 0; // rate selection
+	return false;
+//	return get_rand_val() % 8 == 0; // rate selection
 }
 
 bool shouldDropOutgoingPacket()
 {
-//	return false;
-	return get_rand_val() % 8 == 0; // rate selection
+	return false;
+//	return get_rand_val() % 8 == 0; // rate selection
 }
 
 
 
 bool shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size )
 {
-	if ( get_rand_val() % 8 != 0 ) // rate selection
+//	if ( get_rand_val() % 8 != 0 ) // rate selection
 		return false;
 
 	// select one of saved incoming packets
@@ -126,7 +227,7 @@ bool shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size )
 
 bool shouldInsertOutgoingPacket( uint8_t* packet, uint16_t* size )
 {
-	if ( get_rand_val() % 8 != 0 ) // rate selection
+//	if ( get_rand_val() % 8 != 0 ) // rate selection
 		return false;
 
 	// select one of saved incoming packets

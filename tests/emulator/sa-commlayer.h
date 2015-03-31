@@ -18,6 +18,8 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __SA_COMMLAYER_H__
 #define __SA_COMMLAYER_H__
 
+#include "zepto-mem-mngmt.h"
+
 
 // RET codes
 #define COMMLAYER_RET_FAILED 0 // not authenticated, etc
@@ -31,5 +33,9 @@ void communicationTerminate();
 uint8_t sendMessage( uint16_t* msgSize, const uint8_t * buff );
 uint8_t getMessage( uint16_t* msgSize, uint8_t * buff, int maxSize ); // returns when a packet received
 uint8_t tryGetMessage(uint16_t* msgSize, uint8_t * buff, int maxSize); // returns immediately, but a packet reception is not guaranteed
+
+uint8_t sendMessage( MEMORY_HANDLE mem_h );
+uint8_t getMessage( MEMORY_HANDLE mem_h ); // returns when a packet received
+uint8_t tryGetMessage( MEMORY_HANDLE mem_h ); // returns immediately, but a packet reception is not guaranteed
 
 #endif // __SA_COMMLAYER_H__

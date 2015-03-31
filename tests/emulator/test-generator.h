@@ -32,6 +32,12 @@ bool shouldDropIncomingPacket();
 bool shouldDropOutgoingPacket();
 bool shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size );
 bool shouldInsertOutgoingPacket( uint8_t* packet, uint16_t* size );
+
+void registerIncomingPacket( REQUEST_REPLY_HANDLE mem_h );
+void registerOutgoingPacket( REQUEST_REPLY_HANDLE mem_h );
+bool shouldInsertIncomingPacket( REQUEST_REPLY_HANDLE mem_h );
+bool shouldInsertOutgoingPacket( REQUEST_REPLY_HANDLE mem_h );
+
 /*
 void insertIncomingPacket();
 void insertOutgoingPacket();
@@ -42,6 +48,10 @@ bool isOutgoingPacketOnHold();
 bool releaseOutgoingPacket( uint8_t* packet, uint16_t* size );
 void requestHoldingPacket();
 bool holdPacketOnRequest( const uint8_t* packet, const uint16_t* size );
+
+bool holdOutgoingPacket( REQUEST_REPLY_HANDLE mem_h );
+bool releaseOutgoingPacket( REQUEST_REPLY_HANDLE mem_h );
+bool holdPacketOnRequest( REQUEST_REPLY_HANDLE mem_h );
 
 // sync hooks
 /*void requestSyncExec();

@@ -124,6 +124,20 @@ void communicationTerminate()
 	hPipe = INVALID_HANDLE_VALUE;
 }
 
+uint8_t sendMessage( MEMORY_HANDLE mem_h )
+{
+	uint8_t buff[512];
+	uint16_t msgSize;
+	// init parser object
+	parser_obj po;
+	zepto_parser_init( &po, mem_h );
+	msgSize = zepto_parsing_remaining_bytes( &po );
+	assert( msgSize <= 512 );
+	zepto_parse_read_block( &po, buff, msgSize );
+	printf( "message sent; size = %d\n", msgSize );
+	return sendMessage(&msgSize, buff);
+}
+
 uint8_t sendMessage(uint16_t* msgSize, const uint8_t * buff)
 {
 	BOOL   fSuccess = FALSE;
@@ -159,6 +173,15 @@ uint8_t sendMessage(uint16_t* msgSize, const uint8_t * buff)
 	}
 
 	return COMMLAYER_RET_OK;
+}
+
+uint8_t getMessage( MEMORY_HANDLE mem_h ) // returns when a packet received
+{
+	uint8_t buff[512];
+	uint16_t msgSize;
+	uint8_t ret = getMessage( &msgSize, buff, 512 );
+	zepto_write_block( mem_h, buff, msgSize );
+	return ret;
 }
 
 uint8_t getMessage(uint16_t* msgSize, uint8_t * buff, int maxSize) // returns when a packet received
@@ -311,6 +334,21 @@ uint8_t finalizeReading(uint16_t* msgSize, uint8_t * buff, int maxSize)
 	};
 
 }
+
+
+uint8_t tryGetMessage( MEMORY_HANDLE mem_h ) // returns immediately, but a packet reception is not guaranteed
+{
+	uint8_t buff[512];
+	uint16_t msgSize;
+	uint8_t ret = tryGetMessage( &msgSize, buff, 512 );
+	if ( ret == COMMLAYER_RET_OK )
+	{
+		printf( "message received; size = %d\n", msgSize );
+		zepto_write_block( mem_h, buff, msgSize );
+	}
+	return ret;
+}
+
 
 uint8_t tryGetMessage(uint16_t* msgSize, uint8_t * buff, int maxSize) // returns immediately, but a packet reception is not guaranteed
 {

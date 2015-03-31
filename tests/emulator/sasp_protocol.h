@@ -20,6 +20,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "sa-common.h"
 #include "sa-eeprom.h"
+#include "zepto-mem-mngmt.h"
 
 // RET codes
 #define SASP_RET_IGNORE 0 // not authenticated, etc
@@ -47,6 +48,10 @@ Copyright (C) 2015 OLogN Technologies AG
 // handlers
 uint8_t handlerSASP_send( const uint8_t* nonce, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data );
 uint8_t handlerSASP_receive( uint8_t* pid, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data );
-uint8_t handlerSASP_get_nonce( uint16_t* sizeInOut, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data );
+uint8_t handlerSASP_get_nonce( uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data );
+
+uint8_t handlerSASP_receive( uint8_t* pid, MEMORY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data );
+uint8_t handlerSASP_send( const uint8_t* nonce, MEMORY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data );
+
 
 #endif // __SASP_PROTOCOL_H__

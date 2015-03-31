@@ -45,8 +45,15 @@ uint8_t* memory_object_get_response_ptr( REQUEST_REPLY_HANDLE mem_h )
 	return memory_objects[ mem_h ].ptr + memory_objects[ mem_h ].rq_size;
 }
 
+uint16_t memory_object_get_response_size( REQUEST_REPLY_HANDLE mem_h )
+{
+	assert( mem_h < REQUEST_REPLY_OBJ_MAX_CNT );
+	return memory_objects[ mem_h ].rsp_size;
+}
+
 uint8_t* memory_object_append( REQUEST_REPLY_HANDLE mem_h, uint16_t size )
 {
+printf( "memory_object_append( %d )\n", size ); 
 	// TODO: reallocation logic
 	uint8_t* ret = memory_objects[ mem_h ].ptr + memory_objects[ mem_h ].rq_size + memory_objects[ mem_h ].rsp_size;
 	memory_objects[ mem_h ].rsp_size += size;
@@ -123,6 +130,7 @@ uint8_t zepto_parse_uint8( parser_obj* po )
 
 uint16_t zepto_parse_encoded_uint16( parser_obj* po )
 {
+printf( "zepto_write_encoded_uint16(): ini offset = %d...", po->offset ); 
 	assert( po->mem_handle != MEMORY_HANDLE_INVALID );
 	uint8_t* buff = memory_object_get_request_ptr( po->mem_handle ) + po->offset;
 	assert( buff != NULL );
@@ -131,22 +139,26 @@ uint16_t zepto_parse_encoded_uint16( parser_obj* po )
 	{
 		ret = (uint16_t)(buff[ 0 ]); 
 		(po->offset)++;
-		return ret;
 	}
 	else if (  ( buff[ 1 ] & 128 ) == 0  )
 	{
-		ret = 128 + ( (uint16_t)(buff[0] & 0x7F) | ( (uint16_t)(buff[1]) << 7) );
+		ret = 128 + ( (uint16_t)(buff[0] & 0x7F) | ( ((uint16_t)(buff[1])) << 7) ); 
 		po->offset += 2;
-		return ret;
 	}
+/*	else if (buff[0] == 0x80 && buff[1] == 0xff && buff[2] == 1 )
+	{
+		ret = 0x8000;
+		po->offset += 3;
+	}*/
 	else
 	{
 		assert( (buff[2] & 0x80) == 0 );
 		assert( buff[2] < 4 ); // to stay within uint16_max
-		ret = 16512 + ( (uint16_t)(buff[0] & 0x7F) | ( (uint16_t)(buff[1]) << 7) ) | ( (uint16_t)(buff[2]) << 14);
+		ret = 16512 + ( (uint16_t)(buff[0] & 0x7F) | ( (uint16_t)(buff[1]) << 7) ) | ( ((uint16_t)(buff[2])) << 14);
 		po->offset += 3;
-		return ret;
 	}
+	printf( "new offset = %d, num = %x\n", po->offset, ret ); 
+	return ret;
 }
 
 bool zepto_parse_read_block( parser_obj* po, uint8_t* block, uint16_t size )
@@ -195,6 +207,11 @@ void zepto_write_uint8( REQUEST_REPLY_HANDLE mem_h, uint8_t val )
 
 void zepto_write_encoded_uint16( REQUEST_REPLY_HANDLE mem_h, uint16_t num )
 {
+printf( "zepto_write_encoded_uint16( %x )\n", num ); 
+if ( num == 0x8000 )
+{
+	num = 0x8000;
+}
 	assert( mem_h != MEMORY_HANDLE_INVALID );
 	uint8_t* buff;
 	if ( num < 128 )
@@ -215,8 +232,9 @@ void zepto_write_encoded_uint16( REQUEST_REPLY_HANDLE mem_h, uint16_t num )
 		buff = memory_object_append( mem_h, 3 );
 		assert( buff != NULL );
 		buff[0] = ((uint8_t)num & 0x7F) + 128;
-		buff[1] = ( (num - 128) >> 7 ) + 128;
-		buff[2] = (num - 128) >> 14;
+		buff[1] = (( (num - 128) >> 7 ) & 0x7F ) + 128;
+		buff[2] = (num - 16512) >> 14;
+		printf( "0x%x = %x, %x, %x\n", num, buff[0], buff[1], buff[2] );
 	}
 }
 
@@ -269,3 +287,17 @@ void zepto_write_prepend_block( MEMORY_HANDLE mem_h, const uint8_t* block, uint1
 	assert( mem_h != MEMORY_HANDLE_INVALID );
 	memory_object_prepend( mem_h, block, size );
 }
+
+
+
+// inspired by SAGDP: creating a copy of the packet
+uint16_t zepto_writer_get_response_size( MEMORY_HANDLE mem_h )
+{
+	return memory_object_get_response_size( mem_h );
+}
+
+void zepto_writer_get_copy_of_response( MEMORY_HANDLE mem_h, uint8_t* buff )
+{
+	memcpy( buff, memory_object_get_response_ptr( mem_h ), memory_object_get_response_size( mem_h ) );
+}
+
