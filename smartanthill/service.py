@@ -20,6 +20,7 @@ from twisted.application.service import MultiService
 from twisted.python import usage
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedModule
+from twisted.internet import defer
 
 from smartanthill import __banner__, __description__, __version__
 from smartanthill.configprocessor import ConfigProcessor, get_baseconf
@@ -33,7 +34,7 @@ class SAMultiService(MultiService):
         MultiService.__init__(self)
         self.setName(name)
         self.options = options
-        self.log = Logger(self.name)
+        self.log = Logger(self.name, ConfigProcessor().get("logger.level"))
 
         self._started = False
         self._onstarted = []
@@ -49,8 +50,9 @@ class SAMultiService(MultiService):
             callback()
 
     def stopService(self):
-        MultiService.stopService(self)
+        d = MultiService.stopService(self)
         self.log.info("Service has been stopped.")
+        return d
 
     def on_started(self, callback):
         if self._started:
@@ -89,15 +91,31 @@ class SmartAnthillService(SAMultiService):
         service.setServiceParent(self)
 
     def stopSubService(self, name):
-        self.removeService(self.getServiceNamed(name))
+        return self.removeService(self.getServiceNamed(name))
 
     def restartSubService(self, name):
-        self.stopSubService(name)
-        self.startSubService(name)
+        d = defer.Deferred()
+        d.addCallback(lambda result: self.stopSubService(name))
+        d.addCallback(lambda result: self.startSubService(name))
+        return d
+
+    def restartSubServices(self):
+        d = self.stopSubServices()
+        d.addCallback(lambda result: self._preload_subservices())
+        return d
+
+    def stopSubServices(self):
+        l = []
+        services = list(self)
+        services.reverse()
+        for service in services:
+            l.append(defer.maybeDeferred(self.removeService, service))
+        d = defer.DeferredList(l)
+        return d
 
     def _preload_subservices(self):
-        services = sorted(self.config.get("services").items(), key=lambda s:
-                          s[1]['priority'])
+        services = sorted(self.config.get("services").items(),
+                          key=lambda s: s[1]['priority'])
         for name, _ in services:
             self.startSubService(name)
 

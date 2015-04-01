@@ -1,3 +1,52 @@
 <h1>Settings</h1>
 
-<p>Logger level: {{vm.current_settings.logger.level}}</p>
+<form name="settingsForm" ng-submit="vm.submitForm()">
+
+  <section id="logger">
+    <div class="page-header">
+      <h2>Logger</h2>
+    </div>
+    <div class="form-group">
+      <label class="control-label">Logger level</label>
+      <ui-select ng-model="vm.settings.logger.level" theme="bootstrap">
+        <ui-select-match required>{{vm.settings.logger.level}}</ui-select-match>
+        <ui-select-choices repeat="level in vm.validLoggerLevels">
+          <div ng-bind-html="level"></div>
+        </ui-select-choices>
+      </ui-select>
+    </div>
+  </section>
+
+  <section>
+    <div class="page-header">
+      <h2>LiteMQ</h2>
+    </div>
+    <div class="form-group">
+      <label class="control-label">resend_delay</label>
+      <input type="number"
+             class="form-control"
+             ng-model="vm.settings.services.litemq.options.resend_delay">
+    </div>
+    <div class="form-group">
+      <label class="control-label">resend_max</label>
+      <input type="number"
+             class="form-control"
+             ng-model="vm.settings.services.litemq.options.resend_max">
+    </div>
+  </section>
+
+  <section>
+    <div class="page-header">
+      <h2>API</h2>
+    </div>
+    <div class="form-group">
+      <label class="control-label">Port</label>
+      <input type="number"
+             class="form-control"
+             ng-model="vm.settings.services.api.options.rest.port">
+    </div>
+  </section>
+
+  <button type="submit" class="btn btn-primary">Submit</button>
+  <button type="button" class="btn btn-link" ng-click="vm.resetForm()">Reset</button>
+</form>

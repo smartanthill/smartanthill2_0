@@ -20,6 +20,7 @@ from twisted.internet.defer import maybeDeferred
 from twisted.python.failure import Failure
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
+from twisted.internet.defer import Deferred
 
 from smartanthill.configprocessor import ConfigProcessor
 from smartanthill.device.operation.base import OperationType
@@ -155,9 +156,18 @@ def console(request):
     return get_service_named("sas").console.get_messages()
 
 
-@router.add("/settings")
-def settings(request):
-    return ConfigProcessor().current_config
+@router.add("/settings", method="GET")
+def get_settings(request):
+    return ConfigProcessor().get_data()
+
+
+@router.add("/settings", method="POST")
+def update_settings(request):
+    data = json.loads(request.content.read())
+    ConfigProcessor().load_data(data)
+    sas = get_service_named("sas")
+    sas.log.set_level(ConfigProcessor().get("logger.level"))
+    sas.restartSubServices()
 
 
 class REST(Resource):

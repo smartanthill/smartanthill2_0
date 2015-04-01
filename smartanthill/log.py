@@ -33,18 +33,13 @@ class Level(Flags):
 
 class Logger(object):
 
-    def __init__(self, system="-"):
+    def __init__(self, system="-", level=Level.INFO):
         self.system = system
-        self._level = Level.INFO
-
-        try:
-            self.set_level(Level.lookupByName(
-                ConfigProcessor().get("logger.level")))
-        except ValueError:  # pragma: no cover
-            pass
+        self.set_level(level)
 
     def set_level(self, level):
-        assert isinstance(level, FlagConstant)
+        if not isinstance(level, FlagConstant):
+            level = Level.lookupByName(level)
         self._level = level
 
     def fatal(self, *msg, **kwargs):
@@ -70,6 +65,7 @@ class Logger(object):
 
     def _emit(self, *msg, **kwargs):
         _system = self.system
+
         if kwargs['_salevel'].value > self._level.value:
             return
         elif kwargs['_salevel'] != Level.INFO:

@@ -60,7 +60,18 @@
       .when('/settings', {
         templateUrl: 'views/settings.html',
         controller: 'SettingsController',
-        controllerAs: 'vm'
+        controllerAs: 'vm',
+        resolve: {
+          Settings: ['dataService',
+            function(dataService) {
+              return dataService.settings.$promise;
+            }
+          ],
+          LoggerLevels: function getValidLoggerLevels() {
+            // TODO: get available levels via API
+            return ['FATAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
+          }
+        }
       })
       .otherwise({
         redirectTo: '/'

@@ -52,7 +52,7 @@
     }
 
     function getSettings() {
-      return $resource(siteConfig.apiURL + 'settings');
+      return $resource(siteConfig.apiURL + 'settings').get();
     }
   }
 

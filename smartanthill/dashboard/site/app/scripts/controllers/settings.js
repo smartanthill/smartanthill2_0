@@ -22,9 +22,25 @@
     .module('siteApp')
     .controller('SettingsController', SettingsController);
 
-  function SettingsController($scope, dataService) {
+  function SettingsController(notifyUser, Settings, LoggerLevels) {
     var vm = this;
+    var _prevSettings = angular.copy(Settings);
 
-    vm.current_settings = dataService.settings.get();
+    vm.settings = Settings;
+    vm.validLoggerLevels = LoggerLevels;
+    vm.submitForm = submitFormCallback;
+    vm.resetForm = resetFormCallback;
+
+    vm.unableToModifyMessage = "You are unable to modify this option.";
+
+    function submitFormCallback() {
+      vm.settings.$save().then(function(result) {
+        notifyUser('success', 'Settings has been successfully updated!');
+      });
+    }
+
+    function resetFormCallback() {
+      angular.copy(_prevSettings, vm.settings);
+    }
   }
 })();
