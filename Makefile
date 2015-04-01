@@ -26,6 +26,9 @@ dashboard-debug:
 dashboard-clean:
 	cd smartanthill/dashboard/site; grunt clean
 
+dashboard-beautify-js:
+	cd smartanthill/dashboard/site/app; find . -name '*.js' -exec js-beautify -nr -s 2 {} +
+
 test:
 	tox
 	cd smartanthill/dashboard/site; grunt test
