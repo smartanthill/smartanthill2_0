@@ -31,12 +31,15 @@
     vm.submitForm = submitFormCallback;
     vm.resetForm = resetFormCallback;
 
-    vm.unableToModifyMessage = "You are unable to modify this option.";
-
     function submitFormCallback() {
-      vm.settings.$save().then(function(result) {
-        notifyUser('success', 'Settings has been successfully updated!');
-      });
+      vm.settings.$save(function(result) {
+          notifyUser('success', 'Settings has been successfully updated!');
+          console.log('ASOUFHSDIF');
+        },
+        function(result, status) {
+          notifyUser('error', 'Error occurred during settings update!');
+          console.log('ERROR ASOUFHSDIF');
+        });
     }
 
     function resetFormCallback() {
