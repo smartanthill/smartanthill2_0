@@ -19,8 +19,6 @@ import traceback
 from twisted.python import log
 from twisted.python.constants import FlagConstant, Flags
 
-from smartanthill.configprocessor import ConfigProcessor
-
 
 class Level(Flags):
 

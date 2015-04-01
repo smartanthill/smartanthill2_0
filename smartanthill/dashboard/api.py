@@ -20,7 +20,6 @@ from twisted.internet.defer import maybeDeferred
 from twisted.python.failure import Failure
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
-from twisted.internet.defer import Deferred
 
 from smartanthill.configprocessor import ConfigProcessor
 from smartanthill.device.operation.base import OperationType

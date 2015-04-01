@@ -17,10 +17,10 @@ from os.path import expanduser, join
 from sys import argv as sys_argv
 
 from twisted.application.service import MultiService
+from twisted.internet import defer
 from twisted.python import usage
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedModule
-from twisted.internet import defer
 
 from smartanthill import __banner__, __description__, __version__
 from smartanthill.configprocessor import ConfigProcessor, get_baseconf
@@ -51,7 +51,8 @@ class SAMultiService(MultiService):
 
     def stopService(self):
         d = MultiService.stopService(self)
-        self.log.info("Service has been stopped.")
+        d.addCallback(
+            lambda result: self.log.info("Service has been stopped."))
         return d
 
     def on_started(self, callback):
@@ -106,17 +107,16 @@ class SmartAnthillService(SAMultiService):
 
     def stopSubServices(self):
         l = []
-        services = list(self)
-        services.reverse()
-        for service in services:
-            l.append(defer.maybeDeferred(self.removeService, service))
-        d = defer.DeferredList(l)
-        return d
+        for name, _ in reversed(self._get_ordered_service_names()):
+            l.append(defer.maybeDeferred(self.stopSubService, name))
+        return defer.DeferredList(l)
+
+    def _get_ordered_service_names(self):
+        return sorted(self.config.get("services").items(),
+                      key=lambda s: s[1]['priority'])
 
     def _preload_subservices(self):
-        services = sorted(self.config.get("services").items(),
-                          key=lambda s: s[1]['priority'])
-        for name, _ in services:
+        for name, _ in self._get_ordered_service_names():
             self.startSubService(name)
 
 
