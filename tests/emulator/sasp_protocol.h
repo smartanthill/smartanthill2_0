@@ -44,6 +44,9 @@ Copyright (C) 2015 OLogN Technologies AG
 #define DATA_SASP_NONCE_LS_OFFSET SASP_NONCE_SIZE // Nonce to use For Sending
 #define DATA_SASP_LRPS_OFFSET (SASP_NONCE_SIZE+SASP_NONCE_SIZE) // Last Received Packet Signature TODO: Check whether we need it
 
+// initializing and backup
+void SASP_initAtLifeStart( uint8_t* dataBuff );
+void SASP_restoreFromBackup( uint8_t* dataBuff );
 
 // handlers
 uint8_t handlerSASP_receive( uint8_t* pid, MEMORY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data );

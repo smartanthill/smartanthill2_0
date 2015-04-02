@@ -30,9 +30,19 @@ uint8_t packetOnHold[ PACKET_MAX_SIZE ];
 bool isPacketOnHold = false;
 bool holdRequested = false;
 
-void registerIncomingPacket( REQUEST_REPLY_HANDLE mem_h )
+void tester_registerIncomingPacket( const uint8_t* packet, uint16_t size );
+void tester_registerOutgoingPacket( const uint8_t* packet, uint16_t size );
+bool tester_shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size );
+bool tester_shouldInsertOutgoingPacket( uint8_t* packet, uint16_t* size );
+
+bool tester_holdOutgoingPacket( const uint8_t* packet, const uint16_t* size );
+bool tester_releaseOutgoingPacket( uint8_t* packet, uint16_t* size );
+bool tester_holdPacketOnRequest( const uint8_t* packet, const uint16_t* size );
+
+
+
+void tester_registerIncomingPacket( REQUEST_REPLY_HANDLE mem_h )
 {
-	return;
 	uint8_t buff[ PACKET_MAX_SIZE ];
 	uint16_t packet_size;
 	// init parser object
@@ -41,12 +51,11 @@ void registerIncomingPacket( REQUEST_REPLY_HANDLE mem_h )
 	packet_size = zepto_parsing_remaining_bytes( &po );
 	assert( packet_size <= PACKET_MAX_SIZE );
 	zepto_parse_read_block( &po, buff, packet_size );
-	registerIncomingPacket( buff, packet_size );
+	tester_registerIncomingPacket( buff, packet_size );
 }
 
-void registerOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
+void tester_registerOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
 {
-	return;
 	uint8_t buff[ PACKET_MAX_SIZE ];
 	uint16_t packet_size;
 	// init parser object
@@ -55,34 +64,36 @@ void registerOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
 	packet_size = zepto_parsing_remaining_bytes( &po );
 	assert( packet_size <= PACKET_MAX_SIZE );
 	zepto_parse_read_block( &po, buff, packet_size );
-	registerOutgoingPacket( buff, packet_size );
+	tester_registerOutgoingPacket( buff, packet_size );
 }
 
-bool shouldInsertIncomingPacket( REQUEST_REPLY_HANDLE mem_h )
+bool tester_shouldInsertIncomingPacket( REQUEST_REPLY_HANDLE mem_h )
 {
-	return false;
+//	return false;
 	uint8_t buff[ PACKET_MAX_SIZE ];
 	uint16_t packet_size;
-	bool ret = shouldInsertIncomingPacket( buff, &packet_size );
+	bool ret = tester_shouldInsertIncomingPacket( buff, &packet_size );
 	if ( !ret ) return false;
+	assert( ugly_hook_get_response_size( mem_h ) == 0 );
 	zepto_write_block( mem_h, buff, packet_size );
 	return true;
 }
 
-bool shouldInsertOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
+bool tester_shouldInsertOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
 {
-	return false;
+//	return false;
 	uint8_t buff[ PACKET_MAX_SIZE ];
 	uint16_t packet_size;
-	bool ret = shouldInsertOutgoingPacket( buff, &packet_size );
+	bool ret = tester_shouldInsertOutgoingPacket( buff, &packet_size );
 	if ( !ret ) return false;
+	assert( ugly_hook_get_response_size( mem_h ) == 0 );
 	zepto_write_block( mem_h, buff, packet_size );
 	return true;
 }
 
 
 
-bool holdOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
+bool tester_holdOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
 {
 	return false;
 	uint8_t buff[ PACKET_MAX_SIZE ];
@@ -93,21 +104,22 @@ bool holdOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
 	packet_size = zepto_parsing_remaining_bytes( &po );
 	assert( packet_size <= PACKET_MAX_SIZE );
 	zepto_parse_read_block( &po, buff, packet_size );
-	return holdOutgoingPacket( buff, &packet_size );
+	return tester_holdOutgoingPacket( buff, &packet_size );
 }
 
-bool releaseOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
+bool tester_releaseOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
 {
 	return false;
 	uint8_t buff[ PACKET_MAX_SIZE ];
 	uint16_t packet_size;
-	bool ret = releaseOutgoingPacket( buff, &packet_size );
+	bool ret = tester_releaseOutgoingPacket( buff, &packet_size );
 	if ( !ret ) return false;
+	assert( ugly_hook_get_response_size( mem_h ) == 0 );
 	zepto_write_block( mem_h, buff, packet_size );
 	return true;
 }
 
-bool holdPacketOnRequest( REQUEST_REPLY_HANDLE mem_h )
+bool tester_holdPacketOnRequest( REQUEST_REPLY_HANDLE mem_h )
 {
 	return false;
 	uint8_t buff[ PACKET_MAX_SIZE ];
@@ -118,7 +130,8 @@ bool holdPacketOnRequest( REQUEST_REPLY_HANDLE mem_h )
 	packet_size = zepto_parsing_remaining_bytes( &po );
 	assert( packet_size <= PACKET_MAX_SIZE );
 	zepto_parse_read_block( &po, buff, packet_size );
-	return holdOutgoingPacket( buff, &packet_size );
+//	return tester_holdOutgoingPacket( buff, &packet_size );
+	return tester_holdPacketOnRequest( buff, &packet_size );
 }
 
 
@@ -130,7 +143,7 @@ bool holdPacketOnRequest( REQUEST_REPLY_HANDLE mem_h )
 
 
 
-bool holdOutgoingPacket( const uint8_t* packet, const uint16_t* size )
+bool tester_holdOutgoingPacket( const uint8_t* packet, const uint16_t* size )
 {
 	if ( isPacketOnHold )
 		return false;
@@ -140,46 +153,46 @@ bool holdOutgoingPacket( const uint8_t* packet, const uint16_t* size )
 	return true;
 }
 
-bool isOutgoingPacketOnHold()
+bool tester_isOutgoingPacketOnHold()
 {
 	return false;
 	return isPacketOnHold;
 }
 
-bool releaseOutgoingPacket( uint8_t* packet, uint16_t* size )
+bool tester_releaseOutgoingPacket( uint8_t* packet, uint16_t* size )
 {
 	if ( !isPacketOnHold )
 		return false;
 	*size = *(uint16_t*)packetOnHold;
 	memcpy( packet, incomingPackets + 2, *size );
 	isPacketOnHold = false;
-	return true;
+	return *size != 0;
 }
 
-void requestHoldingPacket()
+void tester_requestHoldingPacket()
 {
 	assert( !isPacketOnHold );
 	holdRequested = true;
 }
 
-bool holdPacketOnRequest( const uint8_t* packet, const uint16_t* size )
+bool tester_holdPacketOnRequest( const uint8_t* packet, const uint16_t* size )
 {
 	if ( !holdRequested )
 		return false;
 	holdRequested = false;
 	assert( !isPacketOnHold );
-	return holdOutgoingPacket( packet, size );
+	return tester_holdOutgoingPacket( packet, size );
 }
 
 
 
 
-uint16_t get_rand_val()
+uint16_t tester_get_rand_val()
 {
 	return (uint16_t)( rand() );
 }
 
-void registerIncomingPacket( const uint8_t* packet, uint16_t size )
+void tester_registerIncomingPacket( const uint8_t* packet, uint16_t size )
 {
 	assert( size <= PACKET_MAX_SIZE );
 	for ( int8_t i=MAX_IPACKETS_TO_STORE-1; i; i-- )
@@ -188,7 +201,7 @@ void registerIncomingPacket( const uint8_t* packet, uint16_t size )
 	memcpy( incomingPackets + 2, packet, size );
 }
 
-void registerOutgoingPacket( const uint8_t* packet, uint16_t size )
+void tester_registerOutgoingPacket( const uint8_t* packet, uint16_t size )
 {
 	assert( size <= PACKET_MAX_SIZE );
 	for ( int8_t i=MAX_IPACKETS_TO_STORE-1; i; i-- )
@@ -199,68 +212,43 @@ void registerOutgoingPacket( const uint8_t* packet, uint16_t size )
 
 
 
-bool shouldDropIncomingPacket()
+bool tester_shouldDropIncomingPacket()
 {
-	return false;
-//	return get_rand_val() % 8 == 0; // rate selection
+//	return false;
+	return tester_get_rand_val() % 8 == 0; // rate selection
 }
 
-bool shouldDropOutgoingPacket()
+bool tester_shouldDropOutgoingPacket()
 {
-	return false;
-//	return get_rand_val() % 8 == 0; // rate selection
+//	return false;
+	return tester_get_rand_val() % 8 == 0; // rate selection
 }
 
 
 
-bool shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size )
+bool tester_shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size )
 {
-//	if ( get_rand_val() % 8 != 0 ) // rate selection
+	if ( tester_get_rand_val() % 8 != 0 ) // rate selection
 		return false;
 
 	// select one of saved incoming packets
-	uint8_t sel_packet = get_rand_val() % ( MAX_IPACKETS_TO_STORE - 1 ) + 1;
+	uint8_t sel_packet = tester_get_rand_val() % ( MAX_IPACKETS_TO_STORE - 1 ) + 1;
 	*size = *(uint16_t*)( incomingPackets + PACKET_MAX_SIZE * sel_packet );
 	memcpy( packet, incomingPackets + PACKET_MAX_SIZE * sel_packet + 2, *size );
 	return *size != 0;
 }
 
-bool shouldInsertOutgoingPacket( uint8_t* packet, uint16_t* size )
+bool tester_shouldInsertOutgoingPacket( uint8_t* packet, uint16_t* size )
 {
-//	if ( get_rand_val() % 8 != 0 ) // rate selection
+	if ( tester_get_rand_val() % 8 != 0 ) // rate selection
 		return false;
 
 	// select one of saved incoming packets
-	uint8_t sel_packet = get_rand_val() % ( MAX_IPACKETS_TO_STORE - 1 ) + 1;
+	uint8_t sel_packet = tester_get_rand_val() % ( MAX_IPACKETS_TO_STORE - 1 ) + 1;
 	*size = *(uint16_t*)( outgoingPackets + PACKET_MAX_SIZE * sel_packet );
 	memcpy( packet, outgoingPackets + PACKET_MAX_SIZE * sel_packet + 2, *size );
 	return *size != 0;
 }
-/*
-void insertIncomingPacket()
-{
-	if ( get_rand_val() % 2 != 0 ) // rate selection
-		return;
-
-	// select one of saved incoming packets
-	uint8_t sel_packet = get_rand_val() % MAX_IPACKETS_TO_STORE;
-	uint16_t size = *(uint16_t*)( incomingPackets + PACKET_MAX_SIZE * sel_packet );
-	if ( size != 0 )
-		sendMessage( &size, incomingPackets + PACKET_MAX_SIZE * sel_packet + 2 );
-}
-
-void insertOutgoingPacket()
-{
-	if ( get_rand_val() % 2 != 0 ) // rate selection
-		return;
-
-	// select one of saved incoming packets
-	uint8_t sel_packet = get_rand_val() % MAX_IPACKETS_TO_STORE;
-	uint16_t size = *(uint16_t*)( outgoingPackets + PACKET_MAX_SIZE * sel_packet );
-	if ( size != 0 )
-		sendMessage( &size, outgoingPackets + PACKET_MAX_SIZE * sel_packet + 2 );
-}
-*/
 
 
 #ifdef _MSC_VER
@@ -270,7 +258,7 @@ void insertOutgoingPacket()
 HANDLE hSyncEvent;
 const char* syncEventName = "sa_testing_sync_event";
 
-void initTestSystem()
+void tester_initTestSystem()
 {
 	hSyncEvent = CreateEventA( NULL, TRUE, TRUE, syncEventName );
 	assert( hSyncEvent != NULL );
@@ -278,7 +266,7 @@ void initTestSystem()
 	isPacketOnHold = false;
 }
 
-void freeTestSystem()
+void tester_freeTestSystem()
 {
 	CloseHandle( hSyncEvent );
 }

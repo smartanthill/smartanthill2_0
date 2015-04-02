@@ -158,9 +158,12 @@ void SASP_EncryptAndAddAuthenticationData( REQUEST_REPLY_HANDLE mem_h, uint8_t* 
 		stack[i] = c;
 
 
-	// prepend tag and nonce
-	zepto_write_prepend_block( mem_h, stack, SASP_TAG_SIZE );
-	zepto_write_prepend_block( mem_h, nonce, SASP_NONCE_SIZE );
+	// uppend tag and prepend nonce
+	zepto_write_block( mem_h, stack, SASP_TAG_SIZE );
+//	zepto_write_prepend_block( mem_h, nonce, SASP_NONCE_SIZE );
+	uint8_t* nonce_end = stack;
+	zepto_parser_encode_uint( nonce, SASP_NONCE_SIZE, &nonce_end );
+	zepto_write_prepend_block( mem_h, stack, nonce_end - stack );
 }
 
 bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, uint8_t* _stack, int stackSize )
@@ -187,16 +190,13 @@ bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* pid, REQUEST_REPLY_HANDLE 
 	uint8_t* stack = _stack;
 
 	// read and form PID
-	zepto_parse_read_block( &po, pid, SASP_NONCE_SIZE );
+//	zepto_parse_read_block( &po, pid, SASP_NONCE_SIZE );
+	zepto_parser_decode_uint( &po, pid, SASP_NONCE_SIZE );
 	pid[ SASP_NONCE_SIZE - 1] &= 0x7F; // TODO: potentially, we need to use bit-fiels processing instead
-
-	// read tag; note that we do not need it until the end of authentication, so, in general, it could be read later (if proper parser calls are available)
-	zepto_parse_read_block( &po, stack, SASP_TAG_SIZE );
-	stack += SASP_TAG_SIZE;
 
 	// read blocks one by one, authenticate, decrypt, write
 	bool read_ok;
-	while ( !zepto_is_parsing_done( &po ) )
+	while ( zepto_parsing_remaining_bytes( &po ) > SASP_TAG_SIZE )
 	{
 		read_ok = zepto_parse_read_block( &po, stack, SASP_ENC_BLOCK_SIZE );
 		if ( !read_ok )
@@ -215,7 +215,14 @@ bool SASP_IntraPacketAuthenticateAndDecrypt( uint8_t* pid, REQUEST_REPLY_HANDLE 
 	// now we have a decrypted data as output, and a tag "calculated"
 
 	// decrease stack pointer to point again to tag
-	stack -= SASP_TAG_SIZE;
+
+	// read tag; note that we do not need it until the end of authentication, so, in general, it could be read later (if proper parser calls are available)
+	read_ok = zepto_parse_read_block( &po, stack, SASP_ENC_BLOCK_SIZE );
+	zepto_parse_read_block( &po, stack, SASP_TAG_SIZE );
+	if ( !read_ok )
+		return false; // if any bytes, then the whole block
+//	stack += SASP_TAG_SIZE;
+//	stack -= SASP_TAG_SIZE;
 
 	// do DUMMY authentication
 	bool tag_ok = true;
@@ -272,7 +279,7 @@ void DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( MEMORY_HANDLE mem_h, uin
 
 	// init parser object
 	zepto_parser_init( &po, mem_h );
-	zepto_parser_init( &po1, mem_h );
+	zepto_parser_init( &po1, mem_h );	
 
 
 	// TODO: if this debug code remains in use, lines below must be replaced by getting a new handle
@@ -295,6 +302,7 @@ void DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( MEMORY_HANDLE mem_h, uin
 	memcpy( checkedMsg, memory_objects[ mem_h2 ].ptr + memory_objects[ mem_h2 ].rq_size, memory_objects[ mem_h2 ].rsp_size );
 	decr_sz = memory_objects[ mem_h2 ].rsp_size;
 
+	PRINTF( "handlerSASP_send():     nonce: %02x %02x %02x %02x %02x %02x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
 	PRINTF( "handlerSASP_send(): dbg_nonce: %02x %02x %02x %02x %02x %02x\n", dbg_nonce[0], dbg_nonce[1], dbg_nonce[2], dbg_nonce[3], dbg_nonce[4], dbg_nonce[5] );
 	assert( ipaad );
 	assert( decr_sz == inisz );
@@ -323,11 +331,18 @@ uint8_t handlerSASP_receive( uint8_t* pid, MEMORY_HANDLE mem_h, uint8_t* stack, 
 	// init parser object
 	parser_obj po;
 	zepto_parser_init( &po, mem_h );
-	zepto_parse_read_block( &po, stack, SASP_NONCE_SIZE );
+//	zepto_parse_read_block( &po, stack, SASP_NONCE_SIZE );
+	zepto_parser_decode_uint( &po, stack, SASP_NONCE_SIZE );
 	bool for_sasp = SASP_NonceIsIntendedForSasp( stack );
+	if ( for_sasp )
+	{
+		PRINTF( "handlerSASP_receive(): for sasp; nonce: %02x %02x %02x %02x %02x %02x\n", stack[0], stack[1], stack[2], stack[3], stack[4], stack[5] );
+		PRINTF( "handlerSASP_receive(): packet size: %d\n", zepto_parsing_remaining_bytes( &po ) );
+		assert( zepto_parsing_remaining_bytes( &po ) == 2 * SASP_ENC_BLOCK_SIZE );
+	}
 	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( pid, mem_h, stack + SASP_NONCE_SIZE, stackSize );
 
-	PRINTF( "handlerSASP_receive(): PID: %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
+	PRINTF( "handlerSASP_receive(): PID: %02x %02x %02x %02x %02x %02x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 	if ( !ipaad )
 	{
 		INCREMENT_COUNTER( 12, "handlerSASP_receive(), garbage in" );
@@ -338,6 +353,7 @@ uint8_t handlerSASP_receive( uint8_t* pid, MEMORY_HANDLE mem_h, uint8_t* stack, 
 	// 2. Is it an Error Old Nonce Message
 	if ( for_sasp )
 	{
+		zepto_response_to_request( mem_h ); // since now it's we who are the recipient of this packet
 		INCREMENT_COUNTER( 13, "handlerSASP_receive(), intended for SASP" );
 		uint8_t* nls = data+DATA_SASP_NONCE_LS_OFFSET;
 		// now we need to extract a proposed value of nonce from the output
@@ -346,14 +362,15 @@ uint8_t handlerSASP_receive( uint8_t* pid, MEMORY_HANDLE mem_h, uint8_t* stack, 
 		// uint8_t* new_nls = buffOut+2;
 		parser_obj po1, po2;
 		zepto_parser_init( &po1, mem_h );
-		zepto_response_to_request( mem_h );
+//		zepto_response_to_request( mem_h );
 		zepto_parse_skip_block( &po1, 2 );
-		zepto_parse_read_block( &po1, stack + SASP_NONCE_SIZE, SASP_NONCE_SIZE );
-		zepto_parser_init( &po1, mem_h );
+//		zepto_parse_read_block( &po1, stack + SASP_NONCE_SIZE, SASP_NONCE_SIZE );
+		zepto_parser_decode_uint( &po1, stack + SASP_NONCE_SIZE, SASP_NONCE_SIZE );
+/*		zepto_parser_init( &po1, mem_h );
 		zepto_parser_init( &po2, mem_h );
 		uint16_t packet_size = zepto_parsing_remaining_bytes( &po2 );
 		zepto_parse_skip_block( &po2, packet_size );
-		zepto_convert_part_of_request_to_response( mem_h, &po1, &po2 ); // finally, put where taken...
+		zepto_convert_part_of_request_to_response( mem_h, &po1, &po2 ); // finally, put where taken...*/
 
 		uint8_t* new_nls = stack + SASP_NONCE_SIZE;
 
@@ -371,6 +388,7 @@ uint8_t handlerSASP_receive( uint8_t* pid, MEMORY_HANDLE mem_h, uint8_t* stack, 
 			// TODO: shuold we do anything else?
 			return SASP_RET_TO_HIGHER_LAST_SEND_FAILED;
 		}
+		PRINTF( "handlerSASP_receive(), for SASP, error old nonce, not applied\n" );
 		return SASP_RET_IGNORE;
 	}
 
@@ -384,6 +402,7 @@ uint8_t handlerSASP_receive( uint8_t* pid, MEMORY_HANDLE mem_h, uint8_t* stack, 
 		PRINTF( "   nonce received: %02x %02x %02x %02x %02x %02x\n", stack[0], stack[1], stack[2], stack[3], stack[4], stack[5] );
 		PRINTF( "   current    NLW: %02x %02x %02x %02x %02x %02x\n", nlw[0], nlw[1], nlw[2], nlw[3], nlw[4], nlw[5] );
 
+		zepto_response_to_request( mem_h ); // we have to create a new response (with error old nonce)
 		// we are to create a brand new output
 		// TODO: think about faster and more straightforward approaches
 /*		uint8_t* ins_ptr = stack;
@@ -394,12 +413,17 @@ uint8_t handlerSASP_receive( uint8_t* pid, MEMORY_HANDLE mem_h, uint8_t* stack, 
 		*sizeInOut = SASP_NONCE_SIZE+2;*/
 		zepto_write_uint8( mem_h, 0 ); // First Byte
 		zepto_write_uint8( mem_h, 0 ); // Reserved Byte
-		zepto_write_block( mem_h, nlw, SASP_NONCE_SIZE );
+//		zepto_write_block( mem_h, nlw, SASP_NONCE_SIZE );
+		uint8_t* ne = stack;
+		zepto_parser_encode_uint( nlw, SASP_NONCE_SIZE, &ne );
+		zepto_write_block( mem_h, stack, ne - stack );
 		zepto_response_to_request( mem_h );
 
 		memcpy( stack, pid, SASP_NONCE_SIZE );
 		SASP_NonceSetIntendedForSaspFlag( stack );
 		SASP_EncryptAndAddAuthenticationData( mem_h, stack + SASP_NONCE_SIZE, stackSize - SASP_NONCE_SIZE, stack );
+		PRINTF( "handlerSASP_receive(): ------------------- ERROR OLD NONCE WILL BE SENT ----------------------...\n" );
+		assert( ugly_hook_get_response_size( mem_h ) <= 39 );
 		return SASP_RET_TO_LOWER_ERROR;
 	}
 

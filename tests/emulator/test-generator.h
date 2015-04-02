@@ -19,39 +19,25 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __TEST_GENERATOR_H__
 
 // initialization
-void initTestSystem();
-void freeTestSystem();
+void tester_initTestSystem();
+void tester_freeTestSystem();
 
 // common testing calls
-uint16_t get_rand_val();
+uint16_t tester_get_rand_val();
 
 // comm layer hooks
-void registerIncomingPacket( const uint8_t* packet, uint16_t size );
-void registerOutgoingPacket( const uint8_t* packet, uint16_t size );
-bool shouldDropIncomingPacket();
-bool shouldDropOutgoingPacket();
-bool shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size );
-bool shouldInsertOutgoingPacket( uint8_t* packet, uint16_t* size );
+void tester_registerIncomingPacket( REQUEST_REPLY_HANDLE mem_h );
+void tester_registerOutgoingPacket( REQUEST_REPLY_HANDLE mem_h );
+bool tester_shouldDropIncomingPacket();
+bool tester_shouldDropOutgoingPacket();
+bool tester_shouldInsertIncomingPacket( REQUEST_REPLY_HANDLE mem_h );
+bool tester_shouldInsertOutgoingPacket( REQUEST_REPLY_HANDLE mem_h );
 
-void registerIncomingPacket( REQUEST_REPLY_HANDLE mem_h );
-void registerOutgoingPacket( REQUEST_REPLY_HANDLE mem_h );
-bool shouldInsertIncomingPacket( REQUEST_REPLY_HANDLE mem_h );
-bool shouldInsertOutgoingPacket( REQUEST_REPLY_HANDLE mem_h );
-
-/*
-void insertIncomingPacket();
-void insertOutgoingPacket();
-*/
-
-bool holdOutgoingPacket( const uint8_t* packet, const uint16_t* size );
-bool isOutgoingPacketOnHold();
-bool releaseOutgoingPacket( uint8_t* packet, uint16_t* size );
-void requestHoldingPacket();
-bool holdPacketOnRequest( const uint8_t* packet, const uint16_t* size );
-
-bool holdOutgoingPacket( REQUEST_REPLY_HANDLE mem_h );
-bool releaseOutgoingPacket( REQUEST_REPLY_HANDLE mem_h );
-bool holdPacketOnRequest( REQUEST_REPLY_HANDLE mem_h );
+bool tester_holdOutgoingPacket( REQUEST_REPLY_HANDLE mem_h );
+bool tester_isOutgoingPacketOnHold();
+bool tester_releaseOutgoingPacket( REQUEST_REPLY_HANDLE mem_h );
+void tester_requestHoldingPacket();
+bool tester_holdPacketOnRequest( REQUEST_REPLY_HANDLE mem_h );
 
 // sync hooks
 /*void requestSyncExec();

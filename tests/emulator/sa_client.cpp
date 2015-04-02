@@ -36,7 +36,7 @@ uint8_t pid[ SASP_NONCE_SIZE ];
 
 
 
-int main_loop2( REQUEST_REPLY_HANDLE mem_h, REQUEST_REPLY_HANDLE mem_h_tmp )
+int main_loop( REQUEST_REPLY_HANDLE mem_h, REQUEST_REPLY_HANDLE mem_h_tmp )
 {
 #ifdef ENABLE_COUNTER_SYSTEM
 	INIT_COUNTER_SYSTEM
@@ -46,7 +46,7 @@ int main_loop2( REQUEST_REPLY_HANDLE mem_h, REQUEST_REPLY_HANDLE mem_h_tmp )
 	printf("starting CLIENT...\n");
 	printf("==================\n\n");
 
-	initTestSystem();
+	tester_initTestSystem();
 /*	bool run_simultaniously = true;
 	if ( run_simultaniously )
 	{
@@ -72,6 +72,7 @@ int main_loop2( REQUEST_REPLY_HANDLE mem_h, REQUEST_REPLY_HANDLE mem_h_tmp )
 
 	// do necessary initialization
 	sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+	SASP_initAtLifeStart( data_buff + DADA_OFFSET_SASP );
 
 	// Try to open a named pipe; wait for it, if necessary. 
 	if ( !communicationInitializeAsClient() )
@@ -91,7 +92,7 @@ getmsg:
 		// 1. Get message from comm peer
 		printf("Waiting for a packet from server...\n");
 //		ret_code = getMessage( sizeInOut, rwBuff, BUF_SIZE);
-		if ( shouldInsertIncomingPacket( mem_h ) )
+		if ( tester_shouldInsertIncomingPacket( mem_h ) )
 		{
 			zepto_response_to_request( mem_h );
 			INCREMENT_COUNTER( 87, "MAIN LOOP, incoming packet inserted" );
@@ -107,20 +108,21 @@ getmsg:
 		// sync sending/receiving
 		if ( ret_code == COMMLAYER_RET_OK )
 		{
-			if ( shouldDropIncomingPacket() )
+			if ( tester_shouldDropIncomingPacket() )
 			{
 				INCREMENT_COUNTER( 88, "MAIN LOOP, incoming packet dropped [1]" );
 				zepto_response_to_request( mem_h );
 				goto getmsg;
 			}
 
-			if ( releaseOutgoingPacket( mem_h_tmp ) ) // we are on the safe side here as buffer out is not yet used
+/*+*/			if ( tester_releaseOutgoingPacket( mem_h_tmp ) ) // we are on the safe side here as buffer out is not yet used
 			{
 				zepto_response_to_request( mem_h_tmp );
 				INCREMENT_COUNTER( 89, "MAIN LOOP, packet sent sync with receiving [1]" );
 				sendMessage( mem_h_tmp );
 				zepto_response_to_request( mem_h_tmp );
-			}
+				assert( ugly_hook_get_request_size( mem_h_tmp ) == 0 && ugly_hook_get_response_size( mem_h_tmp ) == 0 );
+			}/*+*/
 		}
 
 		while ( ret_code == COMMLAYER_RET_PENDING )
@@ -148,14 +150,14 @@ getmsg:
 				// sync sending/receiving: release presently hold packet (if any), and cause this packet to be hold
 				{
 					uint16_t sz;
-					if ( releaseOutgoingPacket( mem_h_tmp ) ) // we are on the safe side here as buffer out is not yet used
+/*+*/					if ( tester_releaseOutgoingPacket( mem_h_tmp ) ) // we are on the safe side here as buffer out is not yet used
 					{
 						zepto_response_to_request( mem_h_tmp );
 						sendMessage( mem_h_tmp );
 						zepto_response_to_request( mem_h_tmp );
-						requestHoldingPacket();
+						tester_requestHoldingPacket();
 						INCREMENT_COUNTER( 90, "MAIN LOOP, packet sent sync with receiving [2] (because of timer)" );
-					}
+					}/*+*/
 				}
 
 				goto saspsend;
@@ -177,15 +179,15 @@ getmsg:
 			// sync sending/receiving
 			if ( ret_code == COMMLAYER_RET_OK )
 			{
-				if ( releaseOutgoingPacket( mem_h_tmp ) ) // we are on the safe side here as buffer out is not yet used
+/*+*/				if ( tester_releaseOutgoingPacket( mem_h_tmp ) ) // we are on the safe side here as buffer out is not yet used
 				{
 					INCREMENT_COUNTER( 93, "MAIN LOOP, packet sent sync with receiving [3]" );
 					zepto_response_to_request( mem_h_tmp );
 					sendMessage( mem_h_tmp );
 					zepto_response_to_request( mem_h_tmp );
-				}
+				}/*+*/
 
-				if ( shouldDropIncomingPacket() )
+				if ( tester_shouldDropIncomingPacket() )
 				{
 					INCREMENT_COUNTER( 92, "MAIN LOOP, incoming packet dropped [2]" );
 					goto getmsg;
@@ -200,7 +202,7 @@ getmsg:
 			goto getmsg;
 		}
 
-		registerIncomingPacket( mem_h );
+		tester_registerIncomingPacket( mem_h );
 		printf("Message from server received\n");
 		printf( "ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( mem_h ), ugly_hook_get_response_size( mem_h ) );
 
@@ -341,7 +343,7 @@ entry:
 			case YOCTOVM_PASS_LOWER:
 			{
 				 // test generation: sometimes master can start a new chain at not in-chain reason
-				bool restart_chain = get_rand_val() % 8 == 0;
+				bool restart_chain = tester_get_rand_val() % 8 == 0;
 				if ( restart_chain )
 				{
 					sagdp_init( data_buff + DADA_OFFSET_SAGDP );
@@ -354,8 +356,8 @@ entry:
 			}
 			case YOCTOVM_PASS_LOWER_THEN_IDLE:
 			{
-				bool start_now = get_rand_val() % 3 == 0;
-				wake_time_to_start_new_chain = start_now ? getTime() : getTime() + get_rand_val() % 8;
+				bool start_now = tester_get_rand_val() % 3 == 0;
+				wake_time_to_start_new_chain = start_now ? getTime() : getTime() + tester_get_rand_val() % 8;
 				wait_for_incoming_chain_with_timer = true;
 				break;
 			}
@@ -383,7 +385,7 @@ entry:
 				else
 				{
 					PRINTF( "   ===  YOCTOVM_OK, delayed chain restart  ===\n" );
-					wake_time_to_start_new_chain = getTime() + get_rand_val() % 8;
+					wake_time_to_start_new_chain = getTime() + tester_get_rand_val() % 8;
 					wait_for_incoming_chain_with_timer = true;
 					goto getmsg;
 				}
@@ -459,25 +461,25 @@ saspsend:
 
 	sendmsg:
 //		allowSyncExec();
-		registerOutgoingPacket( mem_h );
+		tester_registerOutgoingPacket( mem_h );
 
-		bool syncSendReceive;
-		if ( holdPacketOnRequest( mem_h ) )
+/*+*/		bool syncSendReceive;
+		if ( tester_holdPacketOnRequest( mem_h ) )
 		{
 			INCREMENT_COUNTER( 95, "MAIN LOOP, holdPacketOnRequest() called" );
 			syncSendReceive = false;
 		}
 		else
-			syncSendReceive = get_rand_val() % 4 == 0 && !isOutgoingPacketOnHold();
+			syncSendReceive = tester_get_rand_val() % 4 == 0 && !tester_isOutgoingPacketOnHold();
 
 		if ( syncSendReceive )
 		{
 			INCREMENT_COUNTER( 94, "MAIN LOOP, holdOutgoingPacket() called" );
-			holdOutgoingPacket( mem_h );
+			tester_holdOutgoingPacket( mem_h );
 		}
-		else
+		else/*+*/
 		{
-			if ( shouldInsertOutgoingPacket( mem_h_tmp ) )
+			if ( tester_shouldInsertOutgoingPacket( mem_h_tmp ) )
 			{
 				INCREMENT_COUNTER( 80, "MAIN LOOP, packet inserted" );
 				zepto_response_to_request( mem_h_tmp );
@@ -485,7 +487,7 @@ saspsend:
 				zepto_response_to_request( mem_h_tmp );
 			}
 
-			if ( !shouldDropOutgoingPacket() )
+			if ( !tester_shouldDropOutgoingPacket() )
 			{
 				ret_code = sendMessage( mem_h );
 				zepto_response_to_request( mem_h );
@@ -513,20 +515,21 @@ saspsend:
 
 int main(int argc, char *argv[])
 {
-//	return main_loop();
 	REQUEST_REPLY_HANDLE mem_h = 0;
-	uint8_t main_buff_pad[0x20000];
-	uint8_t* main_buff = main_buff_pad + 0x10000;
+	uint8_t main_buff_pad[0x40000];
+	memset( main_buff_pad, 0xde, 0x40000 );
+	uint8_t* main_buff = main_buff_pad + 0x20000;
 	memory_objects[ mem_h ].ptr = main_buff;
 	memory_objects[ mem_h ].rq_size = 0;
 	memory_objects[ mem_h ].rsp_size = 0;
 
 	REQUEST_REPLY_HANDLE mem_h_temp = 100;
-	uint8_t main_buff_pad_tmp[0x20000];
-	uint8_t*main_buff_tmp = main_buff_pad_tmp + 0x10000;
+	uint8_t main_buff_pad_tmp[0x40000];
+	memset( main_buff_pad_tmp, 0xde, 0x40000 );
+	uint8_t*main_buff_tmp = main_buff_pad_tmp + 0x20000;
 	memory_objects[ mem_h_temp ].ptr = main_buff_tmp;
 	memory_objects[ mem_h_temp ].rq_size = 0;
 	memory_objects[ mem_h_temp ].rsp_size = 0;
 
-	return main_loop2( mem_h, mem_h_temp );
+	return main_loop( mem_h, mem_h_temp );
 }

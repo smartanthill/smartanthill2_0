@@ -21,6 +21,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 // common includes
 #include <memory.h> // for memcpy(), memset(), memcmp(). Note: their implementation may or may not be more effective than just by-byte operation on a particular target platform
+#include <string.h> // for memmove()
 #include <assert.h>
 
 // data types

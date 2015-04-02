@@ -175,7 +175,7 @@ uint8_t master_start( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* st
 
 #else // MANUAL_TEST_DATA_ENTERING
 
-	uint16_t chain_ini_size = get_rand_val() % ( CHAIN_MAX_SIZE - 2 ) + 2;
+	uint16_t chain_ini_size = tester_get_rand_val() % ( CHAIN_MAX_SIZE - 2 ) + 2;
 
 #endif // MANUAL_TEST_DATA_ENTERING
 

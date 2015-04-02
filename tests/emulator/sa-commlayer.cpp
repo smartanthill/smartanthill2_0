@@ -134,7 +134,7 @@ uint8_t sendMessage( MEMORY_HANDLE mem_h )
 	msgSize = zepto_parsing_remaining_bytes( &po );
 	assert( msgSize <= 512 );
 	zepto_parse_read_block( &po, buff, msgSize );
-	printf( "message sent; size = %d\n", msgSize );
+	printf( "[%d] message sent; mem_h = %d, size = %d\n", GetTickCount(), mem_h, msgSize );
 	return sendMessage(&msgSize, buff);
 }
 
@@ -343,7 +343,8 @@ uint8_t tryGetMessage( MEMORY_HANDLE mem_h ) // returns immediately, but a packe
 	uint8_t ret = tryGetMessage( &msgSize, buff, 512 );
 	if ( ret == COMMLAYER_RET_OK )
 	{
-		printf( "message received; size = %d\n", msgSize );
+		printf( "[%d] message received; mem_h = %d, size = %d\n", GetTickCount(), mem_h, msgSize );
+		assert( ugly_hook_get_response_size( mem_h ) == 0 );
 		zepto_write_block( mem_h, buff, msgSize );
 	}
 	return ret;

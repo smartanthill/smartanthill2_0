@@ -50,7 +50,7 @@ int main_loop2( REQUEST_REPLY_HANDLE mem_h )
 	printf("STARTING SERVER...\n");
 	printf("==================\n\n");
 
-	initTestSystem();
+	tester_initTestSystem();
 
 
 	// in this preliminary implementation all memory segments are kept separately
@@ -271,7 +271,7 @@ processcmd:
 			case YOCTOVM_PASS_LOWER:
 			{
 				 // test generation: sometimes slave can start a new chain at not in-chain reason (although in this case it won't be accepted by Master)
-//				bool restart_chain = get_rand_val() % 8 == 0;
+//				bool restart_chain = tester_get_rand_val() % 8 == 0;
 				bool restart_chain = false;
 				if ( restart_chain )
 				{
@@ -285,9 +285,9 @@ processcmd:
 			}
 			case YOCTOVM_PASS_LOWER_THEN_IDLE:
 			{
-//				bool start_now = get_rand_val() % 3;
+//				bool start_now = tester_get_rand_val() % 3;
 				bool start_now = true;
-				wake_time_to_start_new_chain = start_now ? getTime() : getTime() + get_rand_val() % 8;
+				wake_time_to_start_new_chain = start_now ? getTime() : getTime() + tester_get_rand_val() % 8;
 				wait_for_incoming_chain_with_timer = true;
 				break;
 			}
@@ -299,7 +299,7 @@ processcmd:
 				// here, in general, two main options are present: 
 				// (1) to start a new chain immediately, or
 				// (2) to wait, during certain period of time, for an incoming chain, and then, if no packet is received, to start a new chain
-//				bool start_now = get_rand_val() % 3;
+//				bool start_now = tester_get_rand_val() % 3;
 				bool start_now = true;
 				if ( start_now )
 				{
@@ -308,14 +308,14 @@ processcmd:
 					zepto_response_to_request( mem_h );
 					assert( ret_code == YOCTOVM_PASS_LOWER );
 					// one more trick: wait for some time to ensure that master will start its own chain, and then send "our own" chain start
-/*					bool mutual = get_rand_val() % 5 == 0;
+/*					bool mutual = tester_get_rand_val() % 5 == 0;
 					if ( mutual )
 						justWait( 4 );*/
 				}
 				else
 				{
 					PRINTF( "   ===  YOCTOVM_OK, delayed chain restart  ===\n" );
-					wake_time_to_start_new_chain = getTime() + get_rand_val() % 8;
+					wake_time_to_start_new_chain = getTime() + tester_get_rand_val() % 8;
 					wait_for_incoming_chain_with_timer = true;
 					goto getmsg;
 				}
@@ -368,9 +368,9 @@ alt_entry:
 			{
 				// TODO: process reset
 				sagdp_init( data_buff + DADA_OFFSET_SAGDP );
-//				bool start_now = get_rand_val() % 3;
+//				bool start_now = tester_get_rand_val() % 3;
 				bool start_now = true;
-				wake_time_to_start_new_chain = start_now ? getTime() : getTime() + get_rand_val() % 8;
+				wake_time_to_start_new_chain = start_now ? getTime() : getTime() + tester_get_rand_val() % 8;
 				wait_for_incoming_chain_with_timer = true;
 				zepto_response_to_request( mem_h );
 				goto saspsend;
@@ -426,8 +426,9 @@ int main(int argc, char *argv[])
 {
 //	return main_loop();
 	REQUEST_REPLY_HANDLE mem_h = 0;
-	uint8_t main_buff_pad[0x20000];
-	uint8_t* main_buff = main_buff_pad + 0x10000;
+	uint8_t main_buff_pad[0x80000];
+	memset( main_buff_pad, 0xde, 0x80000 );
+	uint8_t* main_buff = main_buff_pad + 0x40000;
 	memory_objects[ mem_h ].ptr = main_buff;
 	memory_objects[ mem_h ].rq_size = 0;
 	memory_objects[ mem_h ].rsp_size = 0;
