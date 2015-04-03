@@ -196,17 +196,21 @@ void zepto_mem_man_init_memory_management()
 	memory_objects[ MEMORY_HANDLE_MAIN_LOOP ].rq_size = 0;
 	memory_objects[ MEMORY_HANDLE_MAIN_LOOP ].rsp_size = 0;
 	BASE_MEM_BLOCK[1] = 1;
-	memory_objects[ MEMORY_HANDLE_TEST_SUPPORT ].ptr = BASE_MEM_BLOCK + 2;
+	memory_objects[ MEMORY_HANDLE_SAGDP_LSM ].ptr = BASE_MEM_BLOCK + 2;
+	memory_objects[ MEMORY_HANDLE_SAGDP_LSM ].rq_size = 0;
+	memory_objects[ MEMORY_HANDLE_SAGDP_LSM ].rsp_size = 0;
+	BASE_MEM_BLOCK[2] = 1;
+	memory_objects[ MEMORY_HANDLE_TEST_SUPPORT ].ptr = BASE_MEM_BLOCK + 3;
 	memory_objects[ MEMORY_HANDLE_TEST_SUPPORT ].rq_size = 0;
 	memory_objects[ MEMORY_HANDLE_TEST_SUPPORT ].rsp_size = 0;
-	BASE_MEM_BLOCK[2] = 1;
-	memory_objects[ MEMORY_HANDLE_DBG_TMP ].ptr = BASE_MEM_BLOCK + 3;
+	BASE_MEM_BLOCK[3] = 1;
+	memory_objects[ MEMORY_HANDLE_DBG_TMP ].ptr = BASE_MEM_BLOCK + 4;
 	memory_objects[ MEMORY_HANDLE_DBG_TMP ].rq_size = 0;
 	memory_objects[ MEMORY_HANDLE_DBG_TMP ].rsp_size = 0;
 
-	uint16_t remains_at_right = BASE_MEM_BLOCK_SIZE - 3;
+	uint16_t remains_at_right = BASE_MEM_BLOCK_SIZE - 4;
 
-	zepto_mem_man_write_encoded_uint16_no_size_checks_forward( BASE_MEM_BLOCK + 3, remains_at_right );
+	zepto_mem_man_write_encoded_uint16_no_size_checks_forward( BASE_MEM_BLOCK + 4, remains_at_right );
 	zepto_mem_man_write_encoded_uint16_no_size_checks_backward( BASE_MEM_BLOCK + BASE_MEM_BLOCK_SIZE - 1, remains_at_right );
 
 	zepto_mem_man_check_sanity();
@@ -959,6 +963,56 @@ void zepto_convert_part_of_request_to_response( MEMORY_HANDLE mem_h, parser_obj*
 	po_end->mem_handle = MEMORY_HANDLE_INVALID;
 	memory_object_cut_and_make_response( ret_handle, po_start->offset, po_end->offset - po_start->offset );
 }
+
+void zepto_copy_response_to_response_of_another_handle( MEMORY_HANDLE mem_h, MEMORY_HANDLE target_mem_h )
+{
+	assert( mem_h != target_mem_h );
+	assert( mem_h != MEMORY_HANDLE_INVALID );
+	assert( target_mem_h != MEMORY_HANDLE_INVALID );
+	// cleanup
+	zepto_response_to_request( target_mem_h );
+	zepto_response_to_request( target_mem_h );
+	// copying
+	uint8_t* src_buff = memory_object_get_request_ptr( mem_h ) + memory_object_get_request_size( mem_h );
+	assert( src_buff != NULL );
+	uint8_t* dest_buff = memory_object_append( target_mem_h, memory_object_get_response_size( mem_h ) );
+	memcpy( dest_buff, src_buff, memory_object_get_response_size( mem_h ) );
+}
+
+void zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE mem_h, MEMORY_HANDLE target_mem_h )
+{
+	assert( mem_h != target_mem_h );
+	assert( mem_h != MEMORY_HANDLE_INVALID );
+	assert( target_mem_h != MEMORY_HANDLE_INVALID );
+	// cleanup
+	zepto_response_to_request( target_mem_h );
+	zepto_response_to_request( target_mem_h );
+	// copying
+	uint8_t* src_buff = memory_object_get_request_ptr( mem_h );
+	assert( src_buff != NULL );
+	uint8_t* dest_buff = memory_object_append( target_mem_h, memory_object_get_request_size( mem_h ) );
+	memcpy( dest_buff, src_buff, memory_object_get_request_size( mem_h ) );
+}
+
+
+void zepto_copy_part_of_request_to_response_of_another_handle( MEMORY_HANDLE mem_h, parser_obj* po_start, parser_obj* po_end, MEMORY_HANDLE target_mem_h )
+{
+	assert( mem_h != target_mem_h );
+	assert( mem_h != MEMORY_HANDLE_INVALID );
+	assert( po_start->mem_handle == mem_h );
+	assert( po_start->mem_handle == po_end->mem_handle );
+	assert( po_start->mem_handle < MEMORY_HANDLE_MAX ); 
+	assert( po_start->offset <= po_end->offset );
+	// cleanup
+	zepto_response_to_request( target_mem_h );
+	zepto_response_to_request( target_mem_h );
+	// copying
+	uint8_t* src_buff = memory_object_get_request_ptr( po_start->mem_handle ) + po_start->offset;
+	assert( src_buff != NULL );
+	uint8_t* dest_buff = memory_object_append( target_mem_h, po_end->offset - po_start->offset );
+	memcpy( dest_buff, src_buff, po_end->offset - po_start->offset );
+}
+
 /*
 void zepto_convert_part_of_request_to_response( MEMORY_HANDLE mem_h, parser_obj* po_start, uint16_t cutoff_cnt )
 {
@@ -988,6 +1042,7 @@ void zepto_write_prepend_block( MEMORY_HANDLE mem_h, const uint8_t* block, uint1
 
 
 // inspired by SAGDP: creating a copy of the packet
+/*
 uint16_t zepto_writer_get_response_size( MEMORY_HANDLE mem_h )
 {
 	return memory_object_get_response_size( mem_h );
@@ -997,7 +1052,7 @@ void zepto_writer_get_copy_of_response( MEMORY_HANDLE mem_h, uint8_t* buff )
 {
 	memcpy( buff, memory_object_get_response_ptr( mem_h ), memory_object_get_response_size( mem_h ) );
 }
-
+*/
 
 // specific encoded uint functions
 void shift_right_7( uint8_t* num_bytes, uint8_t cnt )

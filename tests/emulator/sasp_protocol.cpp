@@ -373,13 +373,14 @@ uint8_t handlerSASP_receive( uint8_t* pid, MEMORY_HANDLE mem_h, uint8_t* stack, 
 		// we do some strange manipulations: make output input, parse proper block, make input output
 		// TODO: think whether it is possible to do in more sane way... somehow as it was before
 		// uint8_t* new_nls = buffOut+2;
-		parser_obj po1, po2;
+		parser_obj po1;
 		zepto_parser_init( &po1, mem_h );
 //		zepto_response_to_request( mem_h );
 		zepto_parse_skip_block( &po1, 2 );
 //		zepto_parse_read_block( &po1, stack + SASP_NONCE_SIZE, SASP_NONCE_SIZE );
 		zepto_parser_decode_uint( &po1, stack + SASP_NONCE_SIZE, SASP_NONCE_SIZE );
 /*		zepto_parser_init( &po1, mem_h );
+		parser_obj po2;
 		zepto_parser_init( &po2, mem_h );
 		uint16_t packet_size = zepto_parsing_remaining_bytes( &po2 );
 		zepto_parse_skip_block( &po2, packet_size );

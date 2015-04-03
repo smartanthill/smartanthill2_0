@@ -76,7 +76,7 @@ void sagdp_init( uint8_t* data )
 //	memset( data + DATA_SAGDP_LRECEIVED_CHAIN_ID_OFFSET, 0xff, SAGDP_PACKETID_SIZE );
 }
 
-uint8_t handlerSAGDP_timer( uint8_t* timeout, uint8_t* nonce, REQUEST_REPLY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
+uint8_t handlerSAGDP_timer( uint8_t* timeout, uint8_t* nonce, REQUEST_REPLY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data )
 {
 	uint8_t state = *( data + DATA_SAGDP_STATE_OFFSET );
 	if ( state == SAGDP_STATE_WAIT_REMOTE )
@@ -86,8 +86,9 @@ uint8_t handlerSAGDP_timer( uint8_t* timeout, uint8_t* nonce, REQUEST_REPLY_HAND
 		memcpy( data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET, nonce, SAGDP_LSENT_PID_SIZE );
 		cappedExponentiateLTO( data + DATA_SAGDP_LTO_OFFSET );
 		*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
-		uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
-		zepto_write_block( mem_h, lsm, packet_sz );
+//		uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+//		zepto_write_block( mem_h, lsm, packet_sz );
+		zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_REMOTE; // note that PID can be changed!
 		return SAGDP_RET_TO_LOWER_REPEATED;
 	}
@@ -97,7 +98,7 @@ uint8_t handlerSAGDP_timer( uint8_t* timeout, uint8_t* nonce, REQUEST_REPLY_HAND
 	}
 }
 
-uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
+uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data )
 {
 			PRINTF( "handlerSAGDP_receiveNewUP():           pid: %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 	// sizeInOut represents a size of UP packet
@@ -181,8 +182,9 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 					memcpy( data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET, nonce, SAGDP_LSENT_PID_SIZE );
 
 					// re-send LSP
-					uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
-					zepto_write_block( mem_h, lsm, packet_sz );
+//					uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+//					zepto_write_block( mem_h, lsm, packet_sz );
+					zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
 					// SAGDP status remains the same
 					return SAGDP_RET_TO_LOWER_REPEATED;
 				}
@@ -256,8 +258,9 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 					// apply nonce
 					memcpy( data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET, nonce, SAGDP_LSENT_PID_SIZE );
 
-					uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
-					zepto_write_block( mem_h, lsm, packet_sz );
+//					uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+//					zepto_write_block( mem_h, lsm, packet_sz );
+					zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
 					return SAGDP_RET_TO_LOWER_REPEATED;
 				}
 				else
@@ -333,8 +336,9 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 				memcpy( data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET, nonce, SAGDP_LSENT_PID_SIZE );
 
 				// re-send LSP
-				uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
-				zepto_write_block( mem_h, lsm, packet_sz );
+//				uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+//				zepto_write_block( mem_h, lsm, packet_sz );
+				zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
 				// SAGDP status remains the same
 				return SAGDP_RET_TO_LOWER_REPEATED;
 			}
@@ -415,8 +419,9 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 				memcpy( data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET, nonce, SAGDP_LSENT_PID_SIZE );
 
 				// re-send LSP
-				uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
-				zepto_write_block( mem_h, lsm, packet_sz );
+//				uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+//				zepto_write_block( mem_h, lsm, packet_sz );
+				zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
 				// SAGDP status remains the same
 				return SAGDP_RET_TO_LOWER_REPEATED;
 			}
@@ -468,9 +473,18 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 					memcpy( buffOut, lsm, *sizeInOut );
 					buffOut[0] |= SAGDP_P_STATUS_NO_RESEND;*/
 					// TODO: construction below represents the logic above but is a little bit strange... think about proper processing
-					uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+
+/*					uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
 					zepto_write_block( mem_h, lsm+1, packet_sz-1 );
-					zepto_write_prepend_byte( mem_h, lsm[0] | SAGDP_P_STATUS_NO_RESEND );
+					zepto_write_prepend_byte( mem_h, lsm[0] | SAGDP_P_STATUS_NO_RESEND );*/
+					parser_obj po_lsm, po_lsm1;
+					zepto_parser_init( &po_lsm, MEMORY_HANDLE_SAGDP_LSM );
+					zepto_parser_init( &po_lsm1, MEMORY_HANDLE_SAGDP_LSM );
+					zepto_parse_skip_block( &po_lsm1, zepto_parsing_remaining_bytes( &po_lsm ) );
+					uint8_t first_byte_of_lsm = zepto_parse_uint8( &po_lsm );
+					first_byte_of_lsm |= SAGDP_P_STATUS_NO_RESEND;
+					zepto_copy_part_of_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, &po_lsm, &po_lsm1, mem_h );
+					zepto_write_prepend_byte( mem_h, first_byte_of_lsm );
 
 
 					*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_REMOTE; // note that PID can be changed!
@@ -547,8 +561,9 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 				// apply nonce
 				memcpy( data + DATA_SAGDP_NEXT_LSENT_PID_OFFSET, nonce, SAGDP_LSENT_PID_SIZE );
 
-				uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
-				zepto_write_block( mem_h, lsm, packet_sz );
+//				uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+//				zepto_write_block( mem_h, lsm, packet_sz );
+				zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
 				return SAGDP_RET_TO_LOWER_REPEATED;
 			}
 			else
@@ -595,10 +610,19 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 					/*sizeInOut = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
 					memcpy( buffOut, lsm, *sizeInOut );
 					buffOut[0] |= SAGDP_P_STATUS_NO_RESEND;*/
-					// TODO: construction below represents the logic above but is a little bit strange... think about proper processing
-					uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+					// TODO: construction below represents the logic above but is a little bit strange... think about proper 
+
+/*					uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
 					zepto_write_block( mem_h, lsm+1, packet_sz-1 );
-					zepto_write_prepend_byte( mem_h, lsm[0] | SAGDP_P_STATUS_NO_RESEND );
+					zepto_write_prepend_byte( mem_h, lsm[0] | SAGDP_P_STATUS_NO_RESEND );*/
+					parser_obj po_lsm, po_lsm1;
+					zepto_parser_init( &po_lsm, MEMORY_HANDLE_SAGDP_LSM );
+					zepto_parser_init( &po_lsm1, MEMORY_HANDLE_SAGDP_LSM );
+					zepto_parse_skip_block( &po_lsm1, zepto_parsing_remaining_bytes( &po_lsm ) );
+					uint8_t first_byte_of_lsm = zepto_parse_uint8( &po_lsm );
+					first_byte_of_lsm |= SAGDP_P_STATUS_NO_RESEND;
+					zepto_copy_part_of_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, &po_lsm, &po_lsm1, mem_h );
+					zepto_write_prepend_byte( mem_h, first_byte_of_lsm );
 
 					*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_REMOTE; // note that PID can be changed!
 					return SAGDP_RET_TO_LOWER_REPEATED;
@@ -666,13 +690,15 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, 
 	}
 }
 
-uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint8_t* nonce, MEMORY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
+uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint8_t* nonce, MEMORY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data )
 {
 	// SAGDP can legitimately receive a repeated packet in wait-remote state (the other side sounds like "we have not received anything from you; please resend, only then we will probably send you something new")
 	// LSP must be resent
 
-	uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
-	if ( packet_sz == 0 )
+//	uint16_t packet_sz = *(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET);
+	parser_obj po_lsm;
+	zepto_parser_init( &po_lsm, MEMORY_HANDLE_SAGDP_LSM );
+	if ( zepto_parsing_remaining_bytes( &po_lsm ) == 0 )
 	{
 		INCREMENT_COUNTER( 63, "handlerSAGDP_receiveRequestResendLSP(), no lsm" );
 		return SAGDP_RET_TO_LOWER_NONE;
@@ -692,7 +718,8 @@ uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint8_t* nonce, 
 
 		cappedExponentiateLTO( data + DATA_SAGDP_LTO_OFFSET );
 		*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
-		zepto_write_block( mem_h, lsm, packet_sz );
+//		zepto_write_block( mem_h, lsm, packet_sz );
+		zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_WAIT_REMOTE; // note that PID can be changed!
 		return SAGDP_RET_TO_LOWER_REPEATED;
 	}
@@ -709,7 +736,8 @@ uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint8_t* nonce, 
 
 		cappedExponentiateLTO( data + DATA_SAGDP_LTO_OFFSET );
 		*timeout = *(data + DATA_SAGDP_LTO_OFFSET);
-		zepto_write_block( mem_h, lsm, packet_sz );
+//		zepto_write_block( mem_h, lsm, packet_sz );
+		zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
 		*( data + DATA_SAGDP_STATE_OFFSET ) = SAGDP_STATE_IDLE; // note that PID can be changed!
 		return SAGDP_RET_TO_LOWER_REPEATED;
 	}
@@ -724,7 +752,7 @@ uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint8_t* nonce, 
 	}
 }
 
-uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, MEMORY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm )
+uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, MEMORY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data )
 {
 	// Important: sizeInOut is a size of the message; returned size: sizeInOut += SAGDP_LRECEIVED_PID_SIZE
 	//
@@ -789,8 +817,10 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, MEMORY_HANDLE
 		zepto_write_prepend_byte( mem_h, packet_status & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) );
 
 		// save a copy
-		*(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET) = zepto_writer_get_response_size( mem_h );
-		zepto_writer_get_copy_of_response( mem_h, lsm );
+//		*(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET) = zepto_writer_get_response_size( mem_h );
+//		zepto_writer_get_copy_of_response( mem_h, lsm );
+		zepto_copy_response_to_response_of_another_handle( mem_h, MEMORY_HANDLE_SAGDP_LSM );
+		zepto_response_to_request( MEMORY_HANDLE_SAGDP_LSM );
 
 		// request set timer
 		setIniLTO( data + DATA_SAGDP_LTO_OFFSET );
@@ -846,8 +876,10 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, MEMORY_HANDLE
 		zepto_write_prepend_byte( mem_h, packet_status & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) );
 
 		// save a copy
-		*(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET) = zepto_writer_get_response_size( mem_h );
-		zepto_writer_get_copy_of_response( mem_h, lsm );
+//		*(uint16_t*)(data+DATA_SAGDP_LSM_SIZE_OFFSET) = zepto_writer_get_response_size( mem_h );
+//		zepto_writer_get_copy_of_response( mem_h, lsm );
+		zepto_copy_response_to_response_of_another_handle( mem_h, MEMORY_HANDLE_SAGDP_LSM );
+		zepto_response_to_request( MEMORY_HANDLE_SAGDP_LSM );
 
 		// request set timer
 		setIniLTO( data + DATA_SAGDP_LTO_OFFSET );

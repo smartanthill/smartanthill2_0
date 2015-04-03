@@ -26,8 +26,9 @@ Copyright (C) 2015 OLogN Technologies AG
 
 // named memory handles
 #define MEMORY_HANDLE_MAIN_LOOP 0
-#define MEMORY_HANDLE_TEST_SUPPORT 1
-#define MEMORY_HANDLE_DBG_TMP 2
+#define MEMORY_HANDLE_SAGDP_LSM 1
+#define MEMORY_HANDLE_TEST_SUPPORT 2
+#define MEMORY_HANDLE_DBG_TMP 3
 
 #define MEMORY_HANDLE_MAX 8 // TODO: keep updated!!!
 
@@ -67,13 +68,18 @@ void zepto_write_block( REQUEST_REPLY_HANDLE mem_h, const uint8_t* block, uint16
 // extended writing functions
 void zepto_response_to_request( MEMORY_HANDLE mem_h );
 void zepto_convert_part_of_request_to_response( MEMORY_HANDLE mem_h, parser_obj* po_start, parser_obj* po_end );
+void zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE mem_h, MEMORY_HANDLE target_mem_h );
+void zepto_copy_response_to_response_of_another_handle( MEMORY_HANDLE mem_h, MEMORY_HANDLE target_mem_h );
+void zepto_copy_part_of_request_to_response_of_another_handle( MEMORY_HANDLE mem_h, parser_obj* po_start, parser_obj* po_end, MEMORY_HANDLE target_mem_h );
 //void zepto_convert_part_of_request_to_response( MEMORY_HANDLE mem_h, parser_obj* po_start, uint16_t cutoff_cnt )
 void zepto_write_prepend_byte( MEMORY_HANDLE mem_h, uint8_t bt );
 void zepto_write_prepend_block( MEMORY_HANDLE mem_h, const uint8_t* block, uint16_t size );
 
 // inspired by SAGDP: creating a copy of the packet
+/*
 uint16_t zepto_writer_get_response_size( MEMORY_HANDLE mem_h );
 void zepto_writer_get_copy_of_response( MEMORY_HANDLE mem_h, uint8_t* buff );
+*/
 
 // specific encoded uint functions
 void zepto_parser_encode_uint( const uint8_t* num_bytes, uint8_t num_sz_max, uint8_t** bytes_out );

@@ -69,15 +69,21 @@ Copyright (C) 2015 OLogN Technologies AG
 #define DATA_SAGDP_NEXT_LSENT_PID_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE ) // last sent packet ID
 #define DATA_SAGDP_PREV_FIRST_LSENT_PID_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE ) // last sent packet ID
 #define DATA_SAGDP_LTO_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LSENT_PID_SIZE ) // timer value
-#define DATA_SAGDP_LSM_SIZE_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LSENT_PID_SIZE + SAGDP_LTO_SIZE ) // last sent packet size, 2 bytes
-#define DATA_SAGDP_WAS_PREV ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LSENT_PID_SIZE + SAGDP_LTO_SIZE + 1 ) // last sent packet size, 2 bytes
+//#define DATA_SAGDP_LSM_SIZE_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LSENT_PID_SIZE + SAGDP_LTO_SIZE ) // last sent packet size, 2 bytes
+//#define DATA_SAGDP_WAS_PREV ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LSENT_PID_SIZE + SAGDP_LTO_SIZE + 1 ) // last sent packet size, 2 bytes
+#define DATA_SAGDP_WAS_PREV ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LSENT_PID_SIZE + SAGDP_LTO_SIZE ) // last sent packet size, 2 bytes
 
 // handlers
 void sagdp_init( uint8_t* data );
-
+/*
 uint8_t handlerSAGDP_timer( uint8_t* timeout, uint8_t* nonce, REQUEST_REPLY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
 uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
 uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint8_t* nonce, MEMORY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
 uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, MEMORY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
+*/
+uint8_t handlerSAGDP_timer( uint8_t* timeout, uint8_t* nonce, REQUEST_REPLY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data );
+uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data );
+uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint8_t* nonce, MEMORY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data );
+uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, MEMORY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data );
 
 #endif // __SAGDP_PROTOCOL_H__
