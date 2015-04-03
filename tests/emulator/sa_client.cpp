@@ -464,10 +464,12 @@ saspsend:
 		tester_registerOutgoingPacket( mem_h );
 
 /*+*/		bool syncSendReceive;
+		bool is_packet_to_send = true;
 		if ( tester_holdPacketOnRequest( mem_h ) )
 		{
 			INCREMENT_COUNTER( 95, "MAIN LOOP, holdPacketOnRequest() called" );
 			syncSendReceive = false;
+			is_packet_to_send = false;
 		}
 		else
 			syncSendReceive = tester_get_rand_val() % 4 == 0 && !tester_isOutgoingPacketOnHold();
@@ -489,14 +491,17 @@ saspsend:
 
 			if ( !tester_shouldDropOutgoingPacket() )
 			{
-				ret_code = sendMessage( mem_h );
-				zepto_response_to_request( mem_h );
-				if (ret_code != COMMLAYER_RET_OK )
+				if ( is_packet_to_send )
 				{
-					return -1;
+					ret_code = sendMessage( mem_h );
+					zepto_response_to_request( mem_h );
+					if (ret_code != COMMLAYER_RET_OK )
+					{
+						return -1;
+					}
+					INCREMENT_COUNTER( 82, "MAIN LOOP, packet sent" );
+					printf("\nMessage sent to comm peer\n");
 				}
-				INCREMENT_COUNTER( 82, "MAIN LOOP, packet sent" );
-				printf("\nMessage sent to comm peer\n");
 			}
 			else
 			{

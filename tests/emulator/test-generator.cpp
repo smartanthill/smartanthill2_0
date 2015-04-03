@@ -95,7 +95,7 @@ bool tester_shouldInsertOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
 
 bool tester_holdOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
 {
-	return false;
+//	return false;
 	uint8_t buff[ PACKET_MAX_SIZE ];
 	uint16_t packet_size;
 	// init parser object
@@ -104,12 +104,15 @@ bool tester_holdOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
 	packet_size = zepto_parsing_remaining_bytes( &po );
 	assert( packet_size <= PACKET_MAX_SIZE );
 	zepto_parse_read_block( &po, buff, packet_size );
-	return tester_holdOutgoingPacket( buff, &packet_size );
+	bool ret = tester_holdOutgoingPacket( buff, &packet_size );
+	if ( ret )
+		zepto_response_to_request( mem_h );
+	return ret;
 }
 
 bool tester_releaseOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
 {
-	return false;
+//	return false;
 	uint8_t buff[ PACKET_MAX_SIZE ];
 	uint16_t packet_size;
 	bool ret = tester_releaseOutgoingPacket( buff, &packet_size );
@@ -121,7 +124,7 @@ bool tester_releaseOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
 
 bool tester_holdPacketOnRequest( REQUEST_REPLY_HANDLE mem_h )
 {
-	return false;
+//	return false;
 	uint8_t buff[ PACKET_MAX_SIZE ];
 	uint16_t packet_size;
 	// init parser object
@@ -131,7 +134,10 @@ bool tester_holdPacketOnRequest( REQUEST_REPLY_HANDLE mem_h )
 	assert( packet_size <= PACKET_MAX_SIZE );
 	zepto_parse_read_block( &po, buff, packet_size );
 //	return tester_holdOutgoingPacket( buff, &packet_size );
-	return tester_holdPacketOnRequest( buff, &packet_size );
+	bool ret = tester_holdPacketOnRequest( buff, &packet_size );
+	if ( ret )
+		zepto_response_to_request( mem_h );
+	return ret;
 }
 
 

@@ -132,7 +132,7 @@ getmsg:
 		printf("Message from client received\n");
 		printf( "ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( mem_h ), ugly_hook_get_response_size( mem_h ) );
 
-rectosasp:
+//rectosasp:
 		// 2. Pass to SASP
 		ret_code = handlerSASP_receive( pid, mem_h, stack, stackSize, data_buff + DADA_OFFSET_SASP );
 		zepto_response_to_request( mem_h );

@@ -334,16 +334,26 @@ uint8_t handlerSASP_receive( uint8_t* pid, MEMORY_HANDLE mem_h, uint8_t* stack, 
 	// init parser object
 	parser_obj po;
 	zepto_parser_init( &po, mem_h );
+	uint16_t packet_size = zepto_parsing_remaining_bytes( &po );
+	if ( packet_size == 0 )
+	{
+		return SASP_RET_IGNORE;
+	}
+
 //	zepto_parse_read_block( &po, stack, SASP_NONCE_SIZE );
 	zepto_parser_decode_uint( &po, stack, SASP_NONCE_SIZE );
 	bool for_sasp = SASP_NonceIsIntendedForSasp( stack );
+	uint16_t debug_rem_b = zepto_parsing_remaining_bytes( &po );
 	if ( for_sasp )
 	{
 		PRINTF( "handlerSASP_receive(): for sasp; nonce: %02x %02x %02x %02x %02x %02x\n", stack[0], stack[1], stack[2], stack[3], stack[4], stack[5] );
 		PRINTF( "handlerSASP_receive(): packet size: %d\n", zepto_parsing_remaining_bytes( &po ) );
-		assert( zepto_parsing_remaining_bytes( &po ) == 2 * SASP_ENC_BLOCK_SIZE );
 	}
 	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( pid, mem_h, stack + SASP_NONCE_SIZE, stackSize );
+	if ( ipaad && for_sasp )
+	{
+		assert( debug_rem_b == 2 * SASP_ENC_BLOCK_SIZE );
+	}
 
 	PRINTF( "handlerSASP_receive(): PID: %02x %02x %02x %02x %02x %02x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 	if ( !ipaad )
