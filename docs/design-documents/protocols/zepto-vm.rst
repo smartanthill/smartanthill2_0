@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.2.5
+:Version:   v0.2.5a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
@@ -88,21 +88,21 @@ Reply Frames have the following structure:
 
 where OPTIONAL-HEADERS is described below, FLAGS-AND-SIZE is an Encoded-Unsigned-Int<max=2> field, and REPLY-BODY is data as returned from plugin (possibly truncated, see below), with the size determined by FLAGS-AND-SIZE field as described below.
 
-FLAGS-AND-SIZE field is an Encoded-Unsigned-Int<max=2> field, which provides an integer X. This integer X is interpreted as follows: 
+FLAGS-AND-SIZE field is an Encoded-Unsigned-Int<max=2> bitfield substrate, which is further considered as follows:
 
-* **X & 0x1** is a flag which specifies that there is no more optional headers (always equals 1 when REPLY-DATA immediately follows).
-* **X & 0x2** is a flag which specifies if REPLY-DATA has been truncated
-* **X >> 2** specifies size of the REPLY-DATA
+* bit [0] is a flag which specifies that there is no more optional headers (always equals 1 when REPLY-DATA immediately follows).
+* bit [1] is a flag which specifies if REPLY-DATA has been truncated
+* bits [2..] specify size of the REPLY-DATA
 
 OPTIONAL-HEADERS is one or more of optional headers. Each of optional headers has the following structure:
 
 **\| HEADER-FLAGS-AND-SIZE \| HEADER-DATA \|**
 
-where HEADER-FLAGS-AND-SIZE field is an Encoded-Unsigned-Int<max=2> field, which provides an integer X. This integer X is interpreted as follows: 
+where HEADER-FLAGS-AND-SIZE field is an Encoded-Unsigned-Int<max=2> bitfield substrate, which is further considered as follows:
 
-* **X & 0x1** is zero
-* **X & 0xE** is an type of optional header
-* **X >> 4** is the size of HEADER-DATA
+* bit [0] is zero
+* bits [1..3] is an type of optional header
+* bits [4..] is the size of HEADER-DATA
 
 Optional Headers
 ''''''''''''''''
@@ -130,10 +130,8 @@ Zepto VM Instructions
 Notation
 ^^^^^^^^
 
-* Through this document, '\|' denotes field boundaries. All fields (except for bitfields, which are described below) take a whole number of bytes.
+* Through this document, '\|' denotes field boundaries. All fields (including bitfield substrates, as described in :ref:`saprotostack` document) take a whole number of bytes.
 * All Zepto VM instructions have the same basic format: **\| OP-CODE \| OP-PARAMS \|**, where OP-CODE is a 1-byte operation code, and length and content of OP-PARAMS are implicitly defined by OP code.
-* If one of OP-PARAM fields is separated into bitfields, it is denoted as **\| SOME-BITFIELD,SOME-OTHER-BITFIELD \|**, and exact length of bitfields is specified in instruction description.
-* If one of the fields or bitfields in an enumerated value, it is denoted as **\| <SOME-ENUM-FIELD> \|**, and a list of possible values for this enumerated value is provided in instruction description.
 
 Zepto VM Opcodes
 ^^^^^^^^^^^^^^^^
@@ -176,10 +174,10 @@ Zepto VM Exceptions
 
 If Zepto VM encounters a problem, it reports it as an “VM exception” (not to be confused with Plugin-Exception, which is different; normally, on plugin exception Zepto VM records it in respective "reply frame", and continues program execution). Whenever Zepto VM exception characterized by EXCEPTION-CODE occurs, it is processed as follows:
 
-* “reply buffer” is converted into the following format: \|EXCEPTION-CODE\|FLAGS-AND-INSTRUCTION-POSITION\|EXISTING-REPLY-BUFFER-DATA\| , where all fields except for REPLY-BUFFER-DATA, are Encoded-Unsigned-Int<max=2>, and REPLY-BUFFER-DATA fills the rest of the message. In some cases (for example, if there is insufficient RAM), REPLY-BUFFER-DATA MAY be truncated (which is indicated in FLAGS-AND-INSTRUCTION-POSITION field). *Rationale: In certain scenarios, this REPLY-BUFFER-DATA, while incomplete, may allow SmartAnthill Client to extract useful information about the partially successful command.* FLAGS-AND-INSTRUCTION-POSITION field provides an integer X, which is treated as follows:
+* “reply buffer” is converted into the following format: \|EXCEPTION-CODE\|FLAGS-AND-INSTRUCTION-POSITION\|EXISTING-REPLY-BUFFER-DATA\| , where all fields except for REPLY-BUFFER-DATA, are Encoded-Unsigned-Int<max=2>, and REPLY-BUFFER-DATA fills the rest of the message. In some cases (for example, if there is insufficient RAM), REPLY-BUFFER-DATA MAY be truncated (which is indicated in FLAGS-AND-INSTRUCTION-POSITION field). *Rationale: In certain scenarios, this REPLY-BUFFER-DATA, while incomplete, may allow SmartAnthill Client to extract useful information about the partially successful command.* FLAGS-AND-INSTRUCTION-POSITION field is a 1-byte bitfield substrate, which is further considered as follows:
   
-  + **X & 0x1** - specifies if EXISTING-REPLY-BUFFER-DATA has been truncated
-  + **X >> 1** - specifies instruction position where VM exception has occurred
+  + bit [0] - specifies if EXISTING-REPLY-BUFFER-DATA has been truncated
+  + bits [1..] - specify instruction position where VM exception has occurred
 
 * This reply is passed to the underlying protocol as an 'exception'.
 
@@ -255,21 +253,22 @@ EXEC instruction invokes a plug-in which corresponds to BODYPART-ID, and passes 
 where ZEPTOVM_OP_PUSHREPLY is a 1-byte opcode, REPLY-BODY-SIZE is an Encoded-Unsigned-Int<max=2> (as defined in :ref:`saprotostack` document) size of REPLY-BODY field, and REPLY-BODY is opaque data to be pushed to reply buffer.
 PUSHREPLY instruction pushes an additional reply frame with DATA in it to reply buffer.
 
-**\| ZEPTOVM_OP_TRANSMITTER \| <ONOFF> \|**
+**\| ZEPTOVM_OP_TRANSMITTER \| ONOFF \|**
 
-where ZEPTOVM_OP_TRANSMITTER is a 1-byte opcode, and <ONOFF> is a 1-bit bitfield, taking values {0,1}
+where ZEPTOVM_OP_TRANSMITTER is a 1-byte opcode, and ONOFF is a 1-byte field, taking values {0,1}
 
-TRANSMITTER instruction turns transmitter on or off, according to the value of <ONOFF> field.
+TRANSMITTER instruction turns transmitter on or off, according to the value of ONOFF field.
 
 **\| ZEPTOVM_OP_SLEEP \| MSEC-DELAY \|**
 
 where ZEPTOVM_OP_SLEEP is a 1-byte opcode, and MSEC-DELAY is an Encoded-Unsigned-Int<max=4> field (as defined in :ref:`saprotostack` document).
 Pauses execution for approximately MSEC-DELAY milliseconds. Exact delay times are not guaranteed; specifically, SLEEP instruction MAY take significantly longer than requested.
 
-**\| ZEPTOVM_OP_MCUSLEEP \| SEC-DELAY \| <TRANSMITTERONWHENBACK>,<MAYDROPEARLIERINSTRUCTIONS> \|**
+**\| ZEPTOVM_OP_MCUSLEEP \| SEC-DELAY \| TRANSMITTERONWHENBACK-AND-MAYDROPEARLIERINSTRUCTIONS \|**
 
-where ZEPTOVM_OP_MCUSLEEP is a 1-byte opcode, SEC-DELAY is an Encoded-Unsigned-Int<max=4> field (as defined in :ref:`saprotostack` document), and <TRANSMITTERONWHENBACK> and <MAYDROPEARLIERINSTRUCTIONS> are 1-bit bitfields, each taking values {0,1}.
-MCUSLEEP instruction puts MCU into sleep-with-timer mode for approximately SEC-DELAY seconds. If sleep-with-timer mode is not available with current MCU, then such an instruction still may be sent to such a device, as a means of long delay, and SmartAnthill device MUST process it just by waiting for specified time. <TRANSMITTERONWHENBACK> specifies if device transmitter should be turned on after MCUSLEEP, and <MAYDROPEARLIERINSTRUCTIONS> is an optimization flag which specifies if MCUSLEEP is allowed to drop the portion of the ZeptoVM program which is located before MCUSLEEP, when going to sleep (this may allow to provide certain savings, see below).
+where ZEPTOVM_OP_MCUSLEEP is a 1-byte opcode, SEC-DELAY is an Encoded-Unsigned-Int<max=4> field (as defined in :ref:`saprotostack` document), and TRANSMITTERONWHENBACK-AND-MAYDROPEARLIERINSTRUCTIONS is a 1-byte bitfield substrate, with bit [0] being TRANSMITTERONWHENBACK, bit [1] being MAYDROPEARLIERINSTRUCTIONS, and bits [2..7] being reserved (MUST be zero).
+
+MCUSLEEP instruction puts MCU into sleep-with-timer mode for approximately SEC-DELAY seconds. If sleep-with-timer mode is not available with current MCU, then such an instruction still may be sent to such a device, as a means of long delay, and SmartAnthill device MUST process it just by waiting for specified time. TRANSMITTERONWHENBACK specifies if device transmitter should be turned on after MCUSLEEP, and MAYDROPEARLIERINSTRUCTIONS is an optimization flag which specifies if MCUSLEEP is allowed to drop the portion of the ZeptoVM program which is located before MCUSLEEP, when going to sleep (this may allow to provide certain savings, see below).
 
 As MCUSLEEP may disable device receiver, Zepto VM enforces relevant “Execution Layer Restrictions” when MCUSLEEP is invoked; to ensure consistent behavior between MCUs, these restriction MUST be enforced regardless of MCUSLEEP really disabling device receiver. Therefore (NB: these checks SHOULD be implemented for ZeptoVM-One; they MUST be implemented for all Zepto-VM levels other than ZeptoVM-One):
 
@@ -277,7 +276,7 @@ As MCUSLEEP may disable device receiver, Zepto VM enforces relevant “Execution
 * Zepto VM keeps track if MCUSLEEP was invoked; this 'mcusleep-invoked' flag is used by some other instructions.
 * NB: calling MCUSLEEP twice within the same program is allowed, so if 'mcusleep-invoked' flag is already set and MCUSLEEP is invoked, this is not a problem
 
-It should be noted that implementing MCUSLEEP instruction will implicitly require storing current program, current PC and current “reply buffer” either in EEPROM, or to request MPU to preserve RAM while waiting. This will be done automagically by Zepto VM, but it is not without it's cost. It might be useful to know that in some cases this cost is lower when amount of data to be preserved is small (for example, it happens when “reply buffer” is empty, and/or when <MAYDROPEARLIERINSTRUCTIONS> is used and the remaining program is small).
+It should be noted that implementing MCUSLEEP instruction will implicitly require storing current program, current PC and current “reply buffer” either in EEPROM, or to request MPU to preserve RAM while waiting. This will be done automagically by Zepto VM, but it is not without it's cost. It might be useful to know that in some cases this cost is lower when amount of data to be preserved is small (for example, it happens when “reply buffer” is empty, and/or when MAYDROPEARLIERINSTRUCTIONS is used and the remaining program is small).
 
 **\| ZEPTOVM_OP_POPREPLIES \| N-REPLIES \|**
 
@@ -285,9 +284,9 @@ where ZEPTOVM_OP_POPREPLIES is a 1-byte opcode (NB: it is the same as ZEPTOVM_OP
 
 NB: Zepto VM-One implements POPREPLIES instruction only partially (for N-REPLIES=0); Zepto VM-Tiny supports other values as described below, and behavior for N-REPLIES=0 which is supported by both Zepto VM-One and Zepto VM-Tiny is consistent for any Zepto VM implementation.
 
-**\| ZEPTOVM_OP_EXIT \| <REPLY-FLAGS>,<FORCED-PADDING-FLAG>,<RESERVED-5-BITS> \| (opt) FORCED-PADDING-TO \|**
+**\| ZEPTOVM_OP_EXIT \| REPLY-FLAGS-AND-FORCED-PADDING-FLAG \| (opt) FORCED-PADDING-TO \|**
 
-where ZEPTOVM_OP_EXIT is a 1-byte opcode (NB: it is the same as ZEPTOVM_OP_EXIT in Level Tiny), REPLY-FLAGS is a 2-bit bitfield taking one of the following values: {NONE,ISFIRST,ISLAST}, <FORCED-PADDING-FLAG> is a 1-bit bitfield which stores {0,1}, and FORCED-PADDING-TO is an Encoded-Unsigned-Int<max=2> (as defined in :ref:`saprotostack` document) field, which is present only if <FORCED-PADDING-FLAG> is equal to 1.
+where ZEPTOVM_OP_EXIT is a 1-byte opcode (NB: it is the same as ZEPTOVM_OP_EXIT in Level Tiny), REPLY-FLAGS-AND-FORCED-PADDING-FLAG is a 1-byte bitfield substrate, with bits[0..1] being REPLY-FLAGS bitfield, taking one of the following values: {NONE,ISFIRST,ISLAST}, bit [2] being FORCED-PADDING-FLAG bitfield which stores {0,1}, bits [3..7] being reserved (MUST be zero), and FORCED-PADDING-TO is an Encoded-Unsigned-Int<max=2> (as defined in :ref:`saprotostack` document) field, which is present only if <FORCED-PADDING-FLAG> is equal to 1.
 
 EXIT instruction posts all the replies which are currently in the “reply buffer”, back to SmartAnthill Central Controller, and terminates the program. Device receiver is kept turned on after the program exits (so the device is able to accept new commands).
 

@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.8
+:Version:   v0.2.8a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -266,12 +266,16 @@ In such cases, SmartAnthill uses **SmartAnthill Endianness**, which is **LITTLE-
 SmartAnthill Bitfields
 ^^^^^^^^^^^^^^^^^^^^^^
 
-In some cases, SmartAnthill Protocols use bitfields; in such cases, notation such as **\| <Bitfield-1>, <Bitfield-2> \|** is interpreted as that Bitfield-1 occupies most significant bits of the field, and Bitfield-2 occupies least significant bits of the field. For multi-byte fields with bitfields spanning several bytes, first bitfields are combined to obtain an multi-byte integer field according to the 'least significant bit-most significant bit' rules above, and then a multi-byte value is serialized according to *SmartAnthill Endianness* as described above.
+In some cases, SmartAnthill Protocols use bitfields; in such cases: 
+
+* bitfields MUST use 1-byte, 2-byte, or Encoded-Unsigned-Int<max=> field as a 'substrate'. 'Bitfield Substrate' is composed/parsed as an ordinary field, which is encoded using appropriate encodings described in this document.
+* as soon as 'substrate' is parsed, it is treated as an integer, out of which specific bits can be used; these bits are specified as [3] (specifying that single bit #3 is used), or [2..4] (specifying that bits from 2 to 4 - inclusive - are used)
+* if 'substrate' is an Encoded-Unsigned-Int field, then one of bitfields MAY be specified as [2..] - specifying that all the bits from 2 to the highest available one, are used for the bitfield.
 
 SmartAnthill Half-Float
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Some SmartAnthill commands use 'Half-Float' data as described here: http://en.wikipedia.org/wiki/Half-precision_floating-point_format . SmartAnthill serializes such data as **\| <SIGN-BIT>, <EXPONENT>, <FRACTION> \|**, where <SIGN-BIT> is a 1-bit bitfield, <EXPONENT> is a 5-bit bitfield, and <FRACTION> is an 11-bit bitfield. 
+Some SmartAnthill commands use 'Half-Float' data as described here: http://en.wikipedia.org/wiki/Half-precision_floating-point_format . SmartAnthill serializes such data as 2-byte substrate (encoded according to SmartAnthill Endianness), then considering Sign-Bit bitfield as bit [15], Exponent bitfield as bits [10..14], and Fraction bitfield as bits [0..9].
 
 Layering remarks
 ----------------
