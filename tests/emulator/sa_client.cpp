@@ -515,7 +515,9 @@ saspsend:
 
 int main(int argc, char *argv[])
 {
-	REQUEST_REPLY_HANDLE mem_h = 0;
+	zepto_mem_man_init_memory_management();
+
+/*	REQUEST_REPLY_HANDLE mem_h = 0;
 	uint8_t main_buff_pad[0x40000];
 	memset( main_buff_pad, 0xde, 0x40000 );
 	uint8_t* main_buff = main_buff_pad + 0x20000;
@@ -531,5 +533,6 @@ int main(int argc, char *argv[])
 	memory_objects[ mem_h_temp ].rq_size = 0;
 	memory_objects[ mem_h_temp ].rsp_size = 0;
 
-	return main_loop( mem_h, mem_h_temp );
+	return main_loop( mem_h, mem_h_temp );*/
+	return main_loop( MEMORY_HANDLE_MAIN_LOOP, MEMORY_HANDLE_TEST_SUPPORT );
 }

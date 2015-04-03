@@ -424,8 +424,7 @@ sendmsg:
 
 int main(int argc, char *argv[])
 {
-//	return main_loop();
-	REQUEST_REPLY_HANDLE mem_h = 0;
+/*	REQUEST_REPLY_HANDLE mem_h = 0;
 	uint8_t main_buff_pad[0x80000];
 	memset( main_buff_pad, 0xde, 0x80000 );
 	uint8_t* main_buff = main_buff_pad + 0x40000;
@@ -433,5 +432,8 @@ int main(int argc, char *argv[])
 	memory_objects[ mem_h ].rq_size = 0;
 	memory_objects[ mem_h ].rsp_size = 0;
 
-	return main_loop2( mem_h );
+	return main_loop2( mem_h );*/
+	zepto_mem_man_init_memory_management();
+
+	return main_loop2( MEMORY_HANDLE_MAIN_LOOP );
 }

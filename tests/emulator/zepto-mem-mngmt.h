@@ -24,6 +24,15 @@ Copyright (C) 2015 OLogN Technologies AG
 #define REQUEST_REPLY_HANDLE MEMORY_HANDLE
 #define MEMORY_HANDLE_INVALID 0xFF
 
+// named memory handles
+#define MEMORY_HANDLE_MAIN_LOOP 0
+#define MEMORY_HANDLE_TEST_SUPPORT 1
+#define MEMORY_HANDLE_DBG_TMP 2
+
+#define MEMORY_HANDLE_MAX 8 // TODO: keep updated!!!
+
+
+
 struct parser_obj
 {
 	MEMORY_HANDLE mem_handle;
@@ -31,26 +40,13 @@ struct parser_obj
 };
 
 // UGLY HOOK FOR BY-PARTS (INITIAL PHASE OF) DEVELOPMENT
-struct request_reply_mem_obj
-{ 
-	uint8_t* ptr;
-	uint16_t rq_size;
-	uint16_t rsp_size;
-};
-
-extern request_reply_mem_obj memory_objects[ 128 ];
-inline
-uint16_t ugly_hook_get_request_size( REQUEST_REPLY_HANDLE mem_h )
-{
-	return memory_objects[ mem_h ].rq_size;
-}
-inline
-uint16_t ugly_hook_get_response_size( REQUEST_REPLY_HANDLE mem_h )
-{
-	return memory_objects[ mem_h ].rsp_size;
-}
-
+uint16_t ugly_hook_get_request_size( REQUEST_REPLY_HANDLE mem_h );
+uint16_t ugly_hook_get_response_size( REQUEST_REPLY_HANDLE mem_h );
 // end of UGLY HOOK FOR BY-PARTS (INITIAL PHASE OF) DEVELOPMENT
+
+
+
+void zepto_mem_man_init_memory_management();
 
 
 // parsing functions
@@ -78,5 +74,10 @@ void zepto_write_prepend_block( MEMORY_HANDLE mem_h, const uint8_t* block, uint1
 // inspired by SAGDP: creating a copy of the packet
 uint16_t zepto_writer_get_response_size( MEMORY_HANDLE mem_h );
 void zepto_writer_get_copy_of_response( MEMORY_HANDLE mem_h, uint8_t* buff );
+
+// specific encoded uint functions
+void zepto_parser_encode_uint( const uint8_t* num_bytes, uint8_t num_sz_max, uint8_t** bytes_out );
+void zepto_parser_decode_uint( const uint8_t** packed_num_bytes, uint8_t* bytes_out, uint8_t target_size );
+void zepto_parser_decode_uint( parser_obj* po, uint8_t* bytes_out, uint8_t target_size );
 
 #endif // __ZEPTO_MEM_MNGMT_H__

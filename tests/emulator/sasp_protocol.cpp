@@ -283,24 +283,27 @@ void DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( MEMORY_HANDLE mem_h, uin
 
 
 	// TODO: if this debug code remains in use, lines below must be replaced by getting a new handle
-	REQUEST_REPLY_HANDLE mem_h2 = 110;
-	uint8_t x_buff1_x[1024], x_buff1_x2[1024];
+	uint8_t /*x_buff1_x[1024],*/ x_buff1_x2[1024];
+/*	REQUEST_REPLY_HANDLE mem_h2 = 110;
 	uint8_t* x_buff1 = x_buff1_x + 512;
 	memory_objects[ mem_h2 ].ptr = x_buff1;
 	memory_objects[ mem_h2 ].rq_size = 0;
-	memory_objects[ mem_h2 ].rsp_size = 0;
+	memory_objects[ mem_h2 ].rsp_size = 0;*/
 	// copy output to input of a new handle and restore
 	zepto_response_to_request( mem_h );
 	encr_sz = zepto_parsing_remaining_bytes( &po1 );
 	decr_sz = encr_sz;
 	zepto_parse_read_block( &po1, x_buff1_x2, encr_sz );
 	zepto_convert_part_of_request_to_response( mem_h, &po, &po1 ); // restore the picture
-	zepto_write_block( mem_h2, x_buff1_x2, encr_sz );
-	zepto_response_to_request( mem_h2 );
+	zepto_response_to_request( MEMORY_HANDLE_DBG_TMP );
+	zepto_write_block( MEMORY_HANDLE_DBG_TMP, x_buff1_x2, encr_sz );
+	zepto_response_to_request( MEMORY_HANDLE_DBG_TMP );
 
-	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( dbg_nonce, mem_h2, dbg_stack, 512 );
-	memcpy( checkedMsg, memory_objects[ mem_h2 ].ptr + memory_objects[ mem_h2 ].rq_size, memory_objects[ mem_h2 ].rsp_size );
-	decr_sz = memory_objects[ mem_h2 ].rsp_size;
+	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( dbg_nonce, MEMORY_HANDLE_DBG_TMP, dbg_stack, 512 );
+	zepto_response_to_request( MEMORY_HANDLE_DBG_TMP );
+	zepto_parser_init( &po, MEMORY_HANDLE_DBG_TMP );
+	decr_sz = zepto_parsing_remaining_bytes( &po );
+	zepto_parse_read_block( &po, checkedMsg, decr_sz );
 
 	PRINTF( "handlerSASP_send():     nonce: %02x %02x %02x %02x %02x %02x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
 	PRINTF( "handlerSASP_send(): dbg_nonce: %02x %02x %02x %02x %02x %02x\n", dbg_nonce[0], dbg_nonce[1], dbg_nonce[2], dbg_nonce[3], dbg_nonce[4], dbg_nonce[5] );
