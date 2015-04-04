@@ -40,8 +40,23 @@
         controller: 'DeviceAddOrEditCtrl'
       })
       .when('/devices/:deviceId', {
-        templateUrl: 'views/device_info.html',
-        controller: 'DeviceInfoCtrl'
+        templateUrl: 'views/device-info.html',
+        controller: 'DeviceInfoController',
+        controllerAs: 'vm',
+        resolve: {
+          deviceResource: ['$route', 'dataService',
+            function($route, dataService) {
+              return dataService.devices.get({
+                deviceId: $route.current.params.deviceId
+              }).$promise;
+            }
+          ],
+          operationsList: ['dataService',
+            function(dataService) {
+              return dataService.getOperations().$promise;
+            }
+          ]
+        }
       })
       .when('/devices', {
         templateUrl: 'views/devices.html',
@@ -69,7 +84,7 @@
           ],
           LoggerLevels: function getValidLoggerLevels() {
             // TODO: get available levels via API
-            return ['FATAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
+            return ['FATAL', 'ERROR', 'WARN', 'INFO', 'DEBUG'];
           }
         }
       })

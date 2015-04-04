@@ -23,67 +23,6 @@ angular.module('siteApp')
   $scope.devices = dataService.devices.query();
 })
 
-.controller('DeviceInfoCtrl', function($scope, $routeParams, $location,
-  $modal, dataService, notifyUser) {
-  $scope.operations = dataService.operations.query();
-  $scope.device = dataService.devices.get({
-      deviceId: $routeParams.deviceId
-    },
-    function(data) {
-      $scope.board = dataService.boards.get({
-        boardId: data.boardId
-      });
-    });
-
-  $scope.deleteDevice = function() {
-    if (!window.confirm('Are sure you want to delete this device?')) {
-      return false;
-    }
-
-    var devId = $scope.device.id;
-    $scope.device.$delete()
-
-    .then(function() {
-      notifyUser(
-        'success', 'Device #' + devId + ' has been successfully deleted!');
-
-      $location.path('/devices');
-
-    }, function(data) {
-      notifyUser(
-        'error', ('An unexpected error occurred when deleting device (' +
-          data.data + ')')
-      );
-    });
-  };
-
-  $scope.trainIt = function() {
-    var modalInstance = $modal.open({
-      templateUrl: 'views/device_trainit.html',
-      controller: 'DeviceTrainItCtrl',
-      backdrop: false,
-      keyboard: false,
-      resolve: {
-        device: function() {
-          return $scope.device;
-        },
-        operations: function() {
-          return $scope.operations;
-        }
-      }
-    });
-
-    modalInstance.result.then(function(result) {
-      notifyUser('success', result);
-    }, function(failure) {
-      if (failure) {
-        notifyUser('error', failure);
-      }
-    });
-  };
-
-})
-
 .controller('DeviceTrainItCtrl', function($q, $scope, $resource,
   $modalInstance, siteConfig, dataService, device, operations) {
 
@@ -165,9 +104,9 @@ angular.module('siteApp')
     })
 
   .then(function(result) {
-    console.log(result);
+      console.log(result);
       $modalInstance.close('The device has been successfully Train It!-ed. ' +
-                           result);
+        result);
     },
     function(failure) {
       if (!failure && $scope.btnDisabled.start) {
@@ -226,7 +165,7 @@ angular.module('siteApp')
   $scope.selectBoard = {};
   $scope.editMode = false;
   $scope.prevState = {};
-  $scope.operations = dataService.operations.query();
+  $scope.operations = dataService.getOperations();
   /**
    * Handlers
    */
@@ -276,9 +215,8 @@ angular.module('siteApp')
       $location.path('/devices/' + $scope.device.id);
     }, function(data) {
       notifyUser('error', ('An unexpected error occurred when ' + (
-        $scope.editMode ? 'updating' : 'adding') + ' settings (' +
-        data.data + ')')
-      );
+          $scope.editMode ? 'updating' : 'adding') + ' settings (' +
+        data.data + ')'));
       $scope.flipDeviceOperIDs();
     })
 

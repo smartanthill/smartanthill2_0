@@ -24,15 +24,15 @@
 
   function dataService($resource, siteConfig) {
     return {
-      operations: getOperations(),
       boards: getBoards(),
-      devices: getDevices(),
+      devices: getDevicesResource(),
       serialports: getSerialPorts(),
-      settings: getSettings()
+      settings: getSettings(),
+      getOperations: getOperations
     };
 
     function getOperations() {
-      return $resource(siteConfig.apiURL + 'operations');
+      return $resource(siteConfig.apiURL + 'operations').query();
     }
 
     function getBoards() {
@@ -41,7 +41,7 @@
       });
     }
 
-    function getDevices() {
+    function getDevicesResource() {
       return $resource(siteConfig.apiURL + 'devices/:deviceId', {
         deviceId: '@id'
       });
