@@ -34,7 +34,7 @@ class SAMultiService(MultiService):
         MultiService.__init__(self)
         self.setName(name)
         self.options = options
-        self.log = Logger(self.name, ConfigProcessor().get("logger.level"))
+        self.log = Logger(self.name)
 
         self._started = False
         self._onstarted = []

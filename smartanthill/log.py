@@ -19,6 +19,8 @@ import traceback
 from twisted.python import log
 from twisted.python.constants import FlagConstant, Flags
 
+from smartanthill.configprocessor import ConfigProcessor
+
 
 class Level(Flags):
 
@@ -31,8 +33,12 @@ class Level(Flags):
 
 class Logger(object):
 
-    def __init__(self, system="-", level=Level.INFO):
+    def __init__(self, system="-", level=None):
         self.system = system
+
+        if not level:
+            level = ConfigProcessor().get("logger.level")
+
         self.set_level(level)
 
     def set_level(self, level):
