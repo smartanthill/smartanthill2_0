@@ -67,8 +67,11 @@ int main_loop()
 	uint8_t ret_code;
 
 	// test setup values
-	bool wait_for_incoming_chain_with_timer;
+	bool wait_for_incoming_chain_with_timer = false;
 	uint16_t wake_time_to_start_new_chain;
+
+	uint8_t wait_to_continue_processing = 0;
+	uint16_t wake_time_continue_processing;
 
 	// do necessary initialization
 	sagdp_init( data_buff + DADA_OFFSET_SAGDP );
@@ -165,11 +168,24 @@ getmsg:
 				goto saspsend;
 				break;
 			}
-			else if ( wait_for_incoming_chain_with_timer && getTime() >= wake_time )
+			else if ( wait_for_incoming_chain_with_timer && getTime() >= wake_time_to_start_new_chain )
 			{
 				INCREMENT_COUNTER( 91, "MAIN LOOP, waiting for incoming chain by timer done; starting own chain" );
 				wait_for_incoming_chain_with_timer = false;
 				ret_code = master_start( MEMORY_HANDLE_MAIN_LOOP );
+				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+				goto entry;
+				break;
+			}
+			else if ( wait_to_continue_processing && getTime() >= wake_time_continue_processing )
+			{
+				INCREMENT_COUNTER( 98, "MAIN LOOP, continuing processing" );
+				wait_to_continue_processing = 0;
+#ifdef USED_AS_MASTER
+				ret_code = master_process_continue( MEMORY_HANDLE_MAIN_LOOP );
+#else
+				ret_code = slave_process_continue( MEMORY_HANDLE_MAIN_LOOP );
+#endif
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 				goto entry;
 				break;
@@ -333,7 +349,7 @@ rectosasp:
 
 processcmd:
 		// 4. Process received command (yoctovm)
-		ret_code = master_continue( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4, stack, stackSize*/ );
+		ret_code = master_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4, stack, stackSize*/ );
 /*		if ( ret_code == YOCTOVM_RESET_STACK )
 		{
 			sagdp_init( data_buff + DADA_OFFSET_SAGDP );
@@ -341,8 +357,12 @@ processcmd:
 			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
 		}*/
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-		printf( "YOCTO:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 entry:	
+		wait_for_incoming_chain_with_timer = false;
+		if ( ret_code == YOCTOVM_WAIT_TO_CONTINUE )
+			printf( "YOCTO:  ret: %d; rq_size: %d, rsp_size: %dwaiting to continue ...\n" );
+		else
+			printf( "YOCTO:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
 		switch ( ret_code )
 		{
@@ -395,6 +415,13 @@ entry:
 					wait_for_incoming_chain_with_timer = true;
 					goto getmsg;
 				}
+				break;
+			}
+			case YOCTOVM_WAIT_TO_CONTINUE:
+			{
+				if ( wait_to_continue_processing == 0 ) wait_to_continue_processing = 1;
+				wake_time_continue_processing = getTime() + wait_to_continue_processing;
+				goto getmsg;
 				break;
 			}
 			default:

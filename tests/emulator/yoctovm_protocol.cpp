@@ -40,8 +40,16 @@ uint16_t currChainIdBase[2] = { 0, ( MASTER_SLAVE_BIT << 15 ) };
 // End of Pure Testing Block 
 
 
+// currently processed chain
+uint8_t first_byte;
+uint16_t chain_id[2];
+uint16_t chain_ini_size;
+uint16_t reply_to_id;
+uint16_t self_id;
 
-uint8_t slave_process( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* stack, int stackSize*/ )
+
+
+uint8_t slave_process( uint8_t* wait_to_process_time, REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* stack, int stackSize*/ )
 {
 	// buffer assumes to contain an input message (including First Byte)
 	// FAKE structure of the buffer: First_Byte | fake_body (9-16 bytes)
@@ -51,6 +59,8 @@ uint8_t slave_process( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* s
 	// replying_to is a copy of self_id of the received packet (or 0 for the first packet ion the chain)
 	// rand_part is filled with some number of '-' ended by '>'
 
+	*wait_to_process_time = 0;
+
 	INCREMENT_COUNTER( 0, "slave_process(), packet received" );
 
 	// init parser object
@@ -58,19 +68,18 @@ uint8_t slave_process( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* s
 	zepto_parser_init( &po, mem_h );
 
 	uint16_t msg_size = zepto_parsing_remaining_bytes( &po ); // all these bytes + (potentially) {padding_size + padding} will be written
-	uint8_t first_byte = zepto_parse_uint8( &po );
+	first_byte = zepto_parse_uint8( &po );
 	if ( ( first_byte & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) == SAGDP_P_STATUS_ERROR_MSG )
 	{
 		PRINTF( "slave_process(): ERROR MESSAGE RECEIVED IN YOCTO\n" );
 		assert(0);
 	}
 
-	uint16_t chain_id[2];
 	chain_id[0] = zepto_parse_encoded_uint16( &po );
 	chain_id[1] = zepto_parse_encoded_uint16( &po );
-	uint16_t chain_ini_size = zepto_parse_encoded_uint16( &po );
-	uint16_t reply_to_id = zepto_parse_encoded_uint16( &po );
-	uint16_t self_id = zepto_parse_encoded_uint16( &po );
+	chain_ini_size = zepto_parse_encoded_uint16( &po );
+	reply_to_id = zepto_parse_encoded_uint16( &po );
+	self_id = zepto_parse_encoded_uint16( &po );
 	char tail[256];
 	uint16_t tail_sz = zepto_parsing_remaining_bytes( &po );
 	zepto_parse_read_block( &po, (uint8_t*)tail, tail_sz );
@@ -120,6 +129,25 @@ uint8_t slave_process( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* s
 	self_id++;
 	last_sent_id = self_id;
 
+	// scenario decision
+	if ( 1 )
+	{
+		// just go through
+		*wait_to_process_time = 0;
+		return slave_process_continue( mem_h );
+	}
+	else
+	{
+		// request to wait
+		*wait_to_process_time = 0;
+		return YOCTOVM_WAIT_TO_CONTINUE;
+	}
+}
+
+uint8_t slave_process_continue( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* stack, int stackSize*/ )
+{
+	zepto_response_to_request( mem_h );
+
 	zepto_write_uint8( mem_h, first_byte );
 	zepto_write_encoded_uint16( mem_h, chain_id[0] );
 	zepto_write_encoded_uint16( mem_h, chain_id[1] );
@@ -127,13 +155,14 @@ uint8_t slave_process( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* s
 	zepto_write_encoded_uint16( mem_h, reply_to_id );
 	zepto_write_encoded_uint16( mem_h, self_id );
 
+	char tail[256];
 	uint16_t varln = 6 - self_id % 7; // 0:6
 	for ( uint8_t i=0;i<varln; i++ )
 		tail[ i] = '-';
 	tail[ varln ] = '>';
 	tail[ varln + 1 ] = 0;
 	zepto_write_block( mem_h, (uint8_t*)tail, varln + 1 );
-	msg_size = 11+varln+1;
+	uint16_t msg_size = 11+varln+1;
 
 	// print outgoing packet
 	PRINTF( "Yocto: Packet sent    : [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", msg_size, first_byte, chain_id[0], chain_id[1], chain_ini_size, reply_to_id, self_id, tail );
@@ -161,7 +190,7 @@ uint8_t master_start( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* st
 	// Initial number of packets in the chain is currently entered manually by a tester
 	PRINT_COUNTERS();
 
-	uint8_t first_byte = SAGDP_P_STATUS_FIRST;
+	first_byte = SAGDP_P_STATUS_FIRST;
 
 #ifdef MANUAL_TEST_DATA_ENTERING
 
@@ -175,17 +204,16 @@ uint8_t master_start( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* st
 
 #else // MANUAL_TEST_DATA_ENTERING
 
-	uint16_t chain_ini_size = tester_get_rand_val() % ( CHAIN_MAX_SIZE - 2 ) + 2;
+	chain_ini_size = tester_get_rand_val() % ( CHAIN_MAX_SIZE - 2 ) + 2;
 
 #endif // MANUAL_TEST_DATA_ENTERING
 
 	currChainID[0] = ++( currChainIdBase[0] );
 	currChainID[1] = currChainIdBase[1];
-	uint16_t chain_id[2];
 	chain_id[0] = currChainID[0];
 	chain_id[1] = currChainID[1];
-	uint16_t reply_to_id = 0;
-	uint16_t self_id = 1;
+	reply_to_id = 0;
+	self_id = 1;
 	last_sent_id = self_id;
 
 	// prepare outgoing packet
@@ -217,9 +245,10 @@ uint8_t master_start( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* st
 	return YOCTOVM_PASS_LOWER;
 }
 
-uint8_t master_continue( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* stack, int stackSize*/ )
+uint8_t master_process( uint8_t* wait_to_process_time, REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* stack, int stackSize*/ )
 {
 	// by now master_continue() does the same as yocto_process
+	*wait_to_process_time = 0;
 
 	INCREMENT_COUNTER( 4, "master_continue(), packet received" );
 
@@ -228,7 +257,7 @@ uint8_t master_continue( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t*
 	zepto_parser_init( &po, mem_h );
 
 	uint16_t msg_size = zepto_parsing_remaining_bytes( &po ); // all these bytes + (potentially) {padding_size + padding} will be written
-	uint8_t first_byte = zepto_parse_uint8( &po );
+	first_byte = zepto_parse_uint8( &po );
 	if ( ( first_byte & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) == SAGDP_P_STATUS_ERROR_MSG )
 	{
 		PRINTF( "master_continue(): ERROR MESSAGE RECEIVED IN YOCTO\n" );
@@ -238,12 +267,11 @@ uint8_t master_continue( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t*
 		assert(0);
 	}
 
-	uint16_t chain_id[2];
 	chain_id[0] = zepto_parse_encoded_uint16( &po );
 	chain_id[1] = zepto_parse_encoded_uint16( &po );
-	uint16_t chain_ini_size = zepto_parse_encoded_uint16( &po );
-	uint16_t reply_to_id = zepto_parse_encoded_uint16( &po );
-	uint16_t self_id = zepto_parse_encoded_uint16( &po );
+	chain_ini_size = zepto_parse_encoded_uint16( &po );
+	reply_to_id = zepto_parse_encoded_uint16( &po );
+	self_id = zepto_parse_encoded_uint16( &po );
 	char tail[256];
 	uint16_t tail_sz = zepto_parsing_remaining_bytes( &po );
 	zepto_parse_read_block( &po, (uint8_t*)tail, tail_sz );
@@ -296,6 +324,26 @@ uint8_t master_continue( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t*
 	self_id++;
 	last_sent_id = self_id;
 
+
+	// scenario decision
+	if ( 1 )
+	{
+		// just go through
+		*wait_to_process_time = 0;
+		return master_process_continue( mem_h );
+	}
+	else
+	{
+		// request to wait
+		*wait_to_process_time = 0;
+		return YOCTOVM_WAIT_TO_CONTINUE;
+	}
+}
+
+uint8_t master_process_continue( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* stack, int stackSize*/ )
+{
+	zepto_response_to_request( mem_h );
+
 	zepto_write_uint8( mem_h, first_byte );
 	zepto_write_encoded_uint16( mem_h, chain_id[0] );
 	zepto_write_encoded_uint16( mem_h, chain_id[1] );
@@ -303,13 +351,14 @@ uint8_t master_continue( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t*
 	zepto_write_encoded_uint16( mem_h, reply_to_id );
 	zepto_write_encoded_uint16( mem_h, self_id );
 
+	char tail[256];
 	uint16_t varln = 6 - self_id % 7; // 0:6
 	for ( uint8_t i=0;i<varln; i++ )
 		tail[ i] = '-';
 	tail[ varln ] = '>';
 	tail[ varln + 1 ] = 0;
 	zepto_write_block( mem_h, (uint8_t*)tail, varln + 1 );
-	msg_size = 11+varln+1;
+	uint16_t msg_size = 11+varln+1;
 
 	// print outgoing packet
 	PRINTF( "Yocto: Packet sent    : [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", msg_size, first_byte, chain_id[0], chain_id[1], chain_ini_size, reply_to_id, self_id, tail );
