@@ -130,7 +130,7 @@ uint8_t slave_process( uint8_t* wait_to_process_time, REQUEST_REPLY_HANDLE mem_h
 	last_sent_id = self_id;
 
 	// scenario decision
-	if ( 1 )
+	if ( 0 )
 	{
 		// just go through
 		*wait_to_process_time = 0;
@@ -139,7 +139,7 @@ uint8_t slave_process( uint8_t* wait_to_process_time, REQUEST_REPLY_HANDLE mem_h
 	else
 	{
 		// request to wait
-		*wait_to_process_time = 0;
+		*wait_to_process_time = tester_get_rand_val() % 5;
 		return YOCTOVM_WAIT_TO_CONTINUE;
 	}
 }
@@ -326,7 +326,7 @@ uint8_t master_process( uint8_t* wait_to_process_time, REQUEST_REPLY_HANDLE mem_
 
 
 	// scenario decision
-	if ( 1 )
+	if ( 0 )
 	{
 		// just go through
 		*wait_to_process_time = 0;
@@ -335,7 +335,7 @@ uint8_t master_process( uint8_t* wait_to_process_time, REQUEST_REPLY_HANDLE mem_
 	else
 	{
 		// request to wait
-		*wait_to_process_time = 0;
+		*wait_to_process_time = tester_get_rand_val() % 5;
 		return YOCTOVM_WAIT_TO_CONTINUE;
 	}
 }

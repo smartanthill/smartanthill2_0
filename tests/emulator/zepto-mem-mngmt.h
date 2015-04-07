@@ -27,8 +27,9 @@ Copyright (C) 2015 OLogN Technologies AG
 // named memory handles
 #define MEMORY_HANDLE_MAIN_LOOP 0
 #define MEMORY_HANDLE_SAGDP_LSM 1
-#define MEMORY_HANDLE_TEST_SUPPORT 2
-#define MEMORY_HANDLE_DBG_TMP 3
+#define MEMORY_HANDLE_ADDITIONAL_ANSWER 2
+#define MEMORY_HANDLE_TEST_SUPPORT 3
+#define MEMORY_HANDLE_DBG_TMP 4
 
 #define MEMORY_HANDLE_MAX 8 // TODO: keep updated!!!
 

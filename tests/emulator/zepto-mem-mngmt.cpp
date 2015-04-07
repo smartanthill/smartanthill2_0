@@ -896,6 +896,10 @@ bool zepto_is_parsing_done( parser_obj* po )
 uint16_t zepto_parsing_remaining_bytes( parser_obj* po )
 {
 	assert( po->mem_handle != MEMORY_HANDLE_INVALID );
+if ( !(po->offset <= memory_object_get_request_size( po->mem_handle ) ) )
+{
+	printf( "zepto_parsing_remaining_bytes(): mem_h = %d, offset = %d, rq_sz = %d\n", po->mem_handle, po->offset, memory_object_get_request_size( po->mem_handle ) );
+}
 	assert( po->offset <= memory_object_get_request_size( po->mem_handle ) );
 	return memory_object_get_request_size( po->mem_handle ) - po->offset;
 }
