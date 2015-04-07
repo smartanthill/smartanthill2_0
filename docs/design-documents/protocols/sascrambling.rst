@@ -27,7 +27,7 @@
 SmartAnthill SCRAMBLING procedure and SmartAnthill Random Generation
 ====================================================================
 
-:Version:   v0.5
+:Version:   v0.5.1
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -46,7 +46,7 @@ SCRAMBLING procedure is a procedure of taking an input packet of arbitrary size,
 
 SCRAMBLING procedure requires both sides to share one secret AES-128 key. **SCRAMBLING key MUST be independent from any other key in the system, in particular, from SASP key.**
 
-For SCRAMBLING procedure to be efficient (in secure sense), caller SHOULD guarantee that there is a 15-byte block within input packet, where such block is at least statistically unique. Offset to such a block within the packet is an input *unique-block-offset* parameter for SCRAMBLING procedure. In practice, 15 bytes of SASP tag are used for this purpose.
+For SCRAMBLING procedure to be efficient (in secure sense), caller SHOULD guarantee that there is a 15-byte block within input packet, where such block is at least statistically unique, and the same block is statistically indistinguishable from white noise. Offset to such a block within the packet is an input *unique-block-offset* parameter for SCRAMBLING procedure. In practice, 15 bytes of SASP tag are used for this purpose.
 
 SmartAnthill Random Number Generation
 -------------------------------------
@@ -97,23 +97,33 @@ Procedure
 
 SCRAMBLING procedure works as follows:
 
-1. Form SCRAMBLING-Header which has the following format:
+1. Form SCRAMBLING-Header according to formatting schema (Default schema is described below, but SADLP-* implementations are allowed to define their own schemas if necessary).
 
-**\| Forced-Padding-Flag-And-Unique-Block-Offset \| Optional-Forced-Padding-Size \| unencrypted-pre-SCRAMBLING-Data \|**
+SCRAMBLING-Header, regardless of formatting schema, MUST specify Scrambled-Size and Forced-Padding-Size parameters. Scrambled-Size is a number of 16-byte blocks which were scrambled; *16\*Scrambled-Size* MUST be >= size of SCRAMBLING-Header. For security purposes, sender MAY scramble more bytes (and respectively specify Scrambled-Size) than strictly necessary. However, sender MUST NOT specify Scrambled-Size so that *16\*Scrambled-Size* is more than `sizeof(SCRAMBLING-Header)+sizeof(encrypted-pre-unique-pre-SCRAMBLING-Data)+sizeof(encrypted-post-unique-pre-SCRAMBLING-Data)+15`; otherwise, receiver MUST treat it as a malformed packet. 
 
-where Forced-Padding-Size-And-Unique-Block-Offset is an Encoded-Unsigned-Int<max=2> field, which acts as a substrate for bitfields Forced-Padding-Flag (takes bit [0]), and Unique-Block-Offset (takes bits [1..]), and Optional-Forced-Padding-Size is an Encoded-Unsigned-Int<max=2> field which is present only if Forced-Padding-Flag is equal to 1.
+2. Form pre-SCRAMBLED packet which has the following format:
 
-Unique-Block-Offset bitfield is equal to *unique-block-offset* parameter.
+**\| encrypted-unique-block \| SCRAMBLED-Header \| encrypted-pre-unique-pre-SCRAMBLING-Data \| encrypted-post-unique-pre-SCRAMBLING-Data \| Optional-Forced-Padding \|**
 
-2. Encrypt SCRAMBLING-Header-Size and SCRAMBLING-Header (concatenated together), using AES-128 in CTR mode, using SCRAMBLING key, and using `( encrypted-unique-block << 8 )` as initial counter for CTR. CTR mode, combined with statistical-uniqueness requirement for unique-block, ensures that SCRAMBLED data is indistinguishable from white noise for a potential attacker. NB: size of `( encrypted-unique-block << 8 )` is 128 bit, or one AES-128 block. NB2: this construct restrict the size of unencrypted-pre-SCRAMBLING-Data to 16*256=4096 bytes; it is orders of magnitude larger than any practical headers may require. 
+where Optional-Forced-Padding is optional forced padding, which has size of Forced-Padding-Size parameter from SCRAMBLING-Header. Forced-Padding, if present, MUST be generated using 'SmartAnthill Random Number Generation' procedure described above. 
 
-Here SCRAMBLING-Header-Size is Encoded-Unsigned-Int<max=2>, representing size of SCRAMBLING-HEADER.
+3. Encrypt a portion of pre-SCRAMBLED packet, starting from SCRAMBLED-HEADER, and with length of Scrambled-Size*16 (as specified in SCRAMBLING-Header), using AES-128 in CTR mode, using SCRAMBLING key, and using `( encrypted-unique-block << 8 )` as initial counter for CTR. CTR mode, combined with statistical-uniqueness requirement for unique-block, ensures that SCRAMBLED data is indistinguishable from white noise for a potential attacker. NB: size of `( encrypted-unique-block << 8 )` is 128 bit, or one AES-128 block. NB2: this construct restrict the size of unencrypted-pre-SCRAMBLING-Data to 16*256=4096 bytes; it is orders of magnitude larger than any practical headers may reasonably require. 
 
-3. Form output packet which has the following format:
+If *16\*Scrambled-Size* goes beyond encrypted-post-unique-pre-SCRAMBLING-DATA, remaining SCRAMBLING bytes are ignored; due to requirement on Scrambled-Size stated above, number of such ignored bytes cannot exceed 15.
 
-**\| encrypted-unique-block \| Encrypted-SCRAMBLED-Header-Size-and-SCRAMBLED-Header \| encrypted-pre-unique-pre-SCRAMBLING-Data \| encrypted-post-unique-pre-SCRAMBLING-Data \| Forced-Padding \|**
 
-where Forced-Padding is optional forced padding, which has size of Forced-Padding-Size. Forced-Padding MUST be generated using 'SmartAnthill Random Number Generation' procedure described above. 
+Default SCRAMBLING-Header Schema
+''''''''''''''''''''''''''''''''
+
+Default SCRAMBLING-Header Schema assumes that the size of encrypted-post-unique-pre-SCRAMBLING-Data is always zero (and that therefore *unique-block-offset* parameter is always equal to `pre_SCRAMBLING_packet_size-15`). This occurs when (a) SASP tag is located at the very end of the SASP packet (which is always the case for SASP as described in :ref:`sasp` document), and (b) all protocols below SASP add only headers, and not trailers (which is usually, but not strictly necessarily, the case for DLP protocols).
+
+If the size of encrypted-post-unique-pre-SCRAMBLING-Data is always zero, it means that there is no need to send *unique-block-offset* over the wire, as it can always be calculated on receiving side. Therefore, Default SCRAMBLING-Header Schema is defined as follows:
+
+
+**\| Forced-Padding-Flag-And-Scrambled-Size \| Optional-Forced-Padding-Size \| unencrypted-pre-SCRAMBLING-Data \|**
+
+where Forced-Padding-Flag-And-Scrambled-Size is an Encoded-Unsigned-Int<max=2> field, which acts as a substrate for bitfields Forced-Padding-Flag (takes bit [0]), and Scrambled-Size (takes bits [1..]), and Optional-Forced-Padding-Size is an Encoded-Unsigned-Int<max=2> field which is present only if Forced-Padding-Flag is equal to 1.
+
 
 DESCRAMBLING
 ------------

@@ -27,7 +27,7 @@
 SmartAnthill-over-IP Protocol (SAoIP) and SmartAnthill Router
 =============================================================
 
-:Version:   v0.2.4a
+:Version:   v0.2.5
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -72,9 +72,9 @@ SCRAMBLING is an optional feature of SAoIP. SAoIP SHOULD use SCRAMBLING whenever
 
 SAoIP uses SCRAMBLING procedure as described in :ref:`sascrambling` document. 
 
-SCRAMBLING requires that both parties share the same symmetric key (which normally consists out of two Speck-96 keys, as described in :ref:`sascrambling` document). **This symmetric key MUST be completely independent and separate from any other keys, in particular, from SASP keys**. 
+SCRAMBLING requires that both parties share the same symmetric key (for details, see :ref:`sascrambling` document). **This symmetric key MUST be completely independent and separate from any other keys, in particular, from SASP keys**. 
 
-To comply with requirements of SCRAMBLING procedure (as described in :ref:`sascrambling` document), SAoIP needs to calculate offset of the *unique-block* within SAoIP packet; for SAoIP, it always equals to *unique-block-offset* returned by SASP, and adjusted by position of SASP packet within SAoIP packet.
+SAoIP SCRAMBLING uses Default SCRAMBLING-Header formatting schema as described in :ref:`sascrambling` document.
 
 SCRAMBLING being optional
 ^^^^^^^^^^^^^^^^^^^^^^^^^
