@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.2.7
+:Version:   v0.2.7a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
@@ -229,23 +229,28 @@ DEVICECAPS instruction pushes Device-Capabilities-Reply to "reply buffer" as a "
 
 REQUESTED-FIELDS is a sequence of indicators which configuration parameters are requested:
 
-+--------------------------------+-----------------------------+
-| Indicator                      | Return Type                 |
-+================================+=============================+
-| SACCP_GUARANTEED_PAYLOAD       | Encoded-Unsigned-Int<max=2> |
-+--------------------------------+-----------------------------+
-| ZEPTOVM_LEVEL                  | 1 byte (enum)               |
-+--------------------------------+-----------------------------+
-| ZEPTOVM_REPLY_STACK_SIZE       | Encoded-Unsigned-Int<max=2> |
-+--------------------------------+-----------------------------+
-| ZEPTOVM_EXPR_STACK_SIZE        | Encoded-Unsigned-Int<max=2> |
-+--------------------------------+-----------------------------+
-| ZEPTOVM_EXPR_FLOAT_TYPE        | 1 byte (enum)               |
-+--------------------------------+-----------------------------+
-| ZEPTOVM_MAX_PSEUDOTHREADS      | Encoded-Unsigned-Int<max=2> |
-+--------------------------------+-----------------------------+
++------------------------------------------------+-----------------------------+
+| Indicator                                      | Return Type                 |
++================================================+=============================+
+| SACCP_GUARANTEED_PAYLOAD                       | Encoded-Unsigned-Int<max=2> |
++------------------------------------------------+-----------------------------+
+| ZEPTOVM_LEVEL                                  | 1 byte (enum)               |
++------------------------------------------------+-----------------------------+
+| ZEPTOVM_REPLY_BUFFER_AND_EXPR_STACK_BYTE_SIZES | See below                   |
++------------------------------------------------+-----------------------------+
+| ZEPTOVM_REPLY_STACK_SIZE                       | Encoded-Unsigned-Int<max=2> |
++------------------------------------------------+-----------------------------+
+| ZEPTOVM_EXPR_FLOAT_TYPE                        | 1 byte (enum)               |
++------------------------------------------------+-----------------------------+
+| ZEPTOVM_MAX_PSEUDOTHREADS                      | Encoded-Unsigned-Int<max=2> |
++------------------------------------------------+-----------------------------+
 
 Reply to DEVICECAPS instruction contains data which correspond to indicators (and come in the same order as indicators within the request).
+
+For ZEPTOVM_REPLY_BUFFER_AND_EXPR_STACK_BYTE_SIZES indicator, DEVICECAPS instruction returns 3 fields, each having type Encoded-Unsigned-Int<max=2>. First field is MAX_REPLY_BUFFER_SIZE (in bytes), second field is MAX_EXPR_STACK_BYTE_SIZE (in bytes, so to calculate number of stack entries one needs to use EXPR_FLOAT_TYPE), and third field is MAX_COMBINED_REPLY_BUFFER_SIZE_AND_EXPR_STACK_BYTE_SIZE (in bytes). If device implements "reply buffer" and "expression stack" separately, then device reports MAX_COMBINED_REPLY_BUFFER_SIZE_AND_EXPR_STACK_BYTE_SIZE as equal to MAX_REPLY_BUFFER_SIZE+MAX_EXPR_STACK_BYTE_SIZE; if they use shared portion of memory and one can grow at the expense of another one, then device may report, for example, MAX_REPLY_BUFFER_SIZE = MAX_EXPR_STACK_BYTE_SIZE = MAX_COMBINED_REPLY_BUFFER_SIZE_AND_EXPR_STACK_SIZE.
+
+IMPORTANT: for all the reported sizes, device MUST report them as if implementation does not use any of them for temporary purposes. For example, if implementation has an expression stack with size=8, but when processing a EXPRBINOP_EX2 instruction with PUSH-FLAG=0, implementation first temporarily pushes the result to the top of the stack, before modifying the appropriate value of the stack - such a device MUST report expression stack size reduced by 1 entry (the one used for temporary purposes), i.e. 7*stack_entry_size.
+
 
 **\| ZEPTOVM_OP_EXEC \| BODYPART-ID \| DATA-SIZE \| DATA \|**
 
@@ -386,7 +391,7 @@ Memory overhead of ZeptoVM-Tiny is (in addition to overhead of ZeptoVM-One) is 1
 Level Small
 ^^^^^^^^^^^
 
-Zepto VM-Small allows for even more complicated programs, including expressions and loops, at the cost of additional memory needed (in addition to Zepto VM-Tiny) being on the order of 9-17 bytes.
+Zepto VM-Small allows for even more complicated programs, including expressions and loops, at the cost of additional memory needed (in addition to Zepto VM-Tiny) being on the order of 9-33 (or more to support larger programs) bytes.
 Zepto VM-Small, in addition to instructions supported by Zepto VM-Tiny, additionally supports the following instructions:
 
 **\| ZEPTOVM_OP_PUSHEXPR_CONSTANT \| CONST \|**
@@ -533,7 +538,7 @@ To implement Zepto VM-Small, in addition to PC and reply-offset-stack required b
 Memory overhead
 '''''''''''''''
 
-Memory overhead of ZeptoVM-Small is (in addition to overhead of ZeptoVM-Tiny) is 1+2*ZEPTOVM_EXPR_STACK_SIZE.
+Memory overhead of ZeptoVM-Small is (in addition to overhead of ZeptoVM-Tiny) is 1+stack_entry_size*ZEPTOVM_EXPR_STACK_SIZE.
 
 Turing Completeness
 '''''''''''''''''''
@@ -595,7 +600,7 @@ Statistics for different Zepto-VM levels:
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
 |Zepto VM-Tiny  | TODO            |ZEPTOVM_REPLY_STACK_SIZE=4 to 8      | (1 to 2)+(5 to 9) = 6 to 11                      |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
-|Zepto VM-Small | TODO            |ZEPTOVM_EXPR_STACK_SIZE=4 to 8       | (6 to 11)+(9 to 17) = 15 to 28                   |
+|Zepto VM-Small | TODO            |ZEPTOVM_EXPR_STACK_SIZE=4 to 8       | (6 to 11)+(9 to 33) = 15 to 44                   |
 |               |                 |ZEPTOVM_EXPR_FLOAT_TYPE=HALF-FLOAT   |                                                  |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
 |Zepto VM-Medium| TODO            |ZEPTOVM_EXPR_STACK_SIZE=8 to 12      | TBD                                              |
