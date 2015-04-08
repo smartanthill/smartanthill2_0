@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.2.6
+:Version:   v0.2.7
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
@@ -156,8 +156,10 @@ Zepto VM Opcodes
 * ZEPTOVM_OP_PUSHEXPR_REPLYFIELD
 * ZEPTOVM_OP_EXPRUNOP
 * ZEPTOVM_OP_EXPRUNOP_EX
+* ZEPTOVM_OP_EXPRUNOP_EX2
 * ZEPTOVM_OP_EXPRBINOP
 * ZEPTOVM_OP_EXPRBINOP_EX
+* ZEPTOVM_OP_EXPRBINOP_EX2
 * ZEPTOVM_OP_JMPIFEXPR_LT
 * ZEPTOVM_OP_JMPIFEXPR_GT
 * ZEPTOVM_OP_JMPIFEXPR_EQ
@@ -416,20 +418,30 @@ where ZEPTOVM_OP_EXPRUNOP is a 1-byte opcode, and UNOP is 1-byte taking one of t
 +-----------+-------------------------------+
 |UNOP_NOT   | !                             |
 +-----------+-------------------------------+
-|UNOP_INC   | +=1                           |
+|UNOP_INC   | +1                            |
 +-----------+-------------------------------+
-|UNOP_DEC   | -=1                           |
+|UNOP_DEC   | -1                            |
 +-----------+-------------------------------+
 
-EXPRUNOP instruction pops topmost value from the expression stack, modifies it according to the table above, and pushes modified value back to expression stack. All operations are performed as specified in the table above; '-', '+=1' and '-=1' operations are performed as floating-point operation (see details below), for '~' and '!' operations the operand is first converted into integer with zero exponent (and then only fraction is involved in these operations). If expression stack is empty, it will cause a ZEPTOVM_EXPRSTACKUNDERFLOW VM exception. Overflows are handled in a normal manner for floats (NB: as it is float arithmetics, '+=1' and '-=1' operations MAY cause operand to stay without changes even if no 'infinity' has occurred; it means that if half-floats are used as expression stack values, 2048+1 results in 2048, causing potential for infinite loops TODO: check if it is 2048 or 2050).
+EXPRUNOP instruction pops topmost value from the expression stack, modifies it according to the table above, and pushes modified value back to expression stack. All operations are performed as specified in the table above; '-', '+1' and '-1' operations are performed as floating-point operation (see details below), for '~' and '!' operations the operand is first converted into integer with zero exponent (and then only fraction is involved in these operations). If expression stack is empty, it will cause a ZEPTOVM_EXPRSTACKUNDERFLOW VM exception. Overflows are handled in a normal manner for floats (NB: as it is float arithmetics, '+1' and '-1' operations MAY cause operand to stay without changes even if no 'infinity' has occurred; it means that if half-floats are used as expression stack values, 2048+1 results in 2048, causing potential for infinite loops TODO: check if it is 2048 or 2050).
 
-If UNOP is UNOP_POP, then no value is pushed back to the expression stack.
+If UNOP is UNOP_POP, then no value is pushed back to the expression stack (i.e. UNOP_POP causes one value to be removed from the expression stack).
 
 **\| ZEPTOVM_OP_EXPRUNOP_EX \| UNOP \| POP-FLAG-AND-EXPR-OFFSET \| OPTIONAL-IMMEDIATE-OPERAND \|**
 
-where ZEPTOVM_OP_EXPRUNOP_EX is a 1-byte opcode, UNOP is similar to that of in EXPRUNOP instruction, POP-FLAG-EXPR-OFFSET is an Encoded-Signed-Int<max=2> field, which acts as a substrate for POP-FLAG bitfield (occupies bit [0]), and EXPR-OFFSET bitfield (occupies bits [1..]), and OPTIONAL-IMMEDIATE-OPERAND is a half-float field, present only if EXPR-OFFSET is zero (see also below). EXPR-OFFSET specifies expression index which is used by EXPRUNOP_EX instruction, as follows: zero value means that the operand is an immediate operand, positie values of EXPR-OFFSET mean "values from top of the expression stack", so '1' means 'topmost value on the stack'; negative values mean 'values from beginning of the stack', so that '-1' means expr_stack[0], '-2' means expr_stack[1] and so on (negative values of EXPR-OFFSET can be used, for example, to simulate global variables). POP-FLAG specifies whether the slot specified by EXPR-OFFSET is removed from the expression stack after the operation (if it is not topmost value which is popped, it causes collapsing the stack as necessary). Accordingly, **\| EXPRUNOP_EX \| UNOP \| POP-FLAG=1, EXPR-OFFSET=1 \|** is equivalent to **\| EXPRUNOP \| UNOP \|**. If EXPR-OFFSET points beyond the current size of expression stack, this will cause a ZEPTOVM_EXPRSTACKINVALIDOFFSET exception. If POP-FLAG is 1 and popping would lead to the modification of "frozen" part of the expression stack (see description of "frozen" stack in the context of PARALLEL instruction), it will cause a ZEPTOVM_EXPRSTACKFROZENVIOLATION exception. If POP-FLAG is 1 and EXPR-OFFSET is zero (which would mean 'pop immediate operand'), it is ZEPTOVM_INVALIDPARAMETER exception.
+where ZEPTOVM_OP_EXPRUNOP_EX is a 1-byte opcode, UNOP is similar to that of in EXPRUNOP instruction, POP-FLAG-AND-EXPR-OFFSET is an Encoded-Signed-Int<max=2> field, which acts as a substrate for POP-FLAG bitfield (occupies bit [0]), and EXPR-OFFSET bitfield (occupies bits [1..]), and OPTIONAL-IMMEDIATE-OPERAND is a half-float field, present only if EXPR-OFFSET is zero (see also below). EXPR-OFFSET specifies expression index which is used by EXPRUNOP_EX instruction, as follows: zero value means that the operand is an immediate operand, positie values of EXPR-OFFSET mean "values from top of the expression stack", so '1' means 'topmost value on the stack'; negative values mean 'values from beginning of the stack', so that '-1' means expr_stack[0], '-2' means expr_stack[1] and so on (negative values of EXPR-OFFSET can be used, for example, to simulate global variables). POP-FLAG specifies whether the slot specified by EXPR-OFFSET is removed from the expression stack after the calculation is performed (if it is not topmost value which is popped, it causes collapsing the stack as necessary). Accordingly, **\| EXPRUNOP_EX \| UNOP \| POP-FLAG=1, EXPR-OFFSET=1 \|** is equivalent to **\| EXPRUNOP \| UNOP \|**. If EXPR-OFFSET points beyond the current size of expression stack, this will cause a ZEPTOVM_EXPRSTACKINVALIDOFFSET exception. If POP-FLAG is 1 and popping would lead to the modification of "frozen" part of the expression stack (see description of "frozen" stack in the context of PARALLEL instruction), it will cause a ZEPTOVM_EXPRSTACKFROZENVIOLATION exception. If POP-FLAG is 1 and EXPR-OFFSET is zero (which would mean 'pop immediate operand'), it is ZEPTOVM_INVALIDPARAMETER exception.
 
 EXPRUNOP_EX instruction is similar to EXPRUNOP instruction, but allows to use wider range of operands (with popping from the stack being optional).
+
+**\| ZEPTOVM_OP_EXPRUNOP_EX2 \| UNOP \| POP-FLAG-AND-EXPR-OFFSET \| OPTIONAL-IMMEDIATE-OPERAND \| PUSH-FLAG-AND-PUSH-EXPR-OFFSET \|**
+
+where ZEPTOVM_OP_EXPRUNOP_EX2 is a 1-byte opcode, UNOP, POP-FLAG-AND-EXPR-OFFSET, and OPTIONAL-IMMEDIATE-OPERAND are  similar to that of in EXPRUNOP_EX instruction, PUSH-FLAG-AND-EXPR-OFFSET is an Encoded-Signed-Int<max=2> field, which acts as a substrate for PUSH-FLAG bitfield (occupies bit [0]), and PUSH-EXPR-OFFSET bitfield (occupies bits [1..]). PUSH-EXPR-OFFSET specifies target expression index which is used by EXPRUNOP_EX2 instruction, as follows: 
+
+* PUSH-EXPR-OFFSET=0 means that result should be pushed on top of expression stack; PUSH-FLAG MUST be =1 in this case (otherwise it is ZEPTOVM_INVALIDPARAMETER exception). 
+* PUSH-FLAG=0 and PUSH-EXPR-OFFSET != 0 means that a value on expression stack (specified by PUSH-EXPR-OFFSET, which is treated similar to EXPR-OFFSET; in particular, both negative and positive values of PUSH-EXPR-OFFSET are valid) needs to be replaced with a result of calculation
+* PUSH-FLAG=1 and PUSH-EXPR-OFFSET != 0 means that a calculated value needs to be inserted within expression stack; index of the stack *before* which index such insertion needs to be made, is specified by PUSH-EXPR-OFFSET (in a manner similar to EXPR-OFFSET; in particular, both negative and positive values of PUSH-EXPR-OFFSET are valid; for example, PUSH-EXPR-OFFSET=-1 means that new value needs to be inserted into the very beginning of the stack, and PUSH-EXPR-OFFSET=1 means that new value should be inserted right before the topmost value - so it will become second-topmost after insertion).
+
+EXPRUNOP_EX2 instruction is similar to EXPRUNOP_EX instruction, but allows to specify where the result of calculation needs to be placed. **\| EXPRUNOP_EX2 \| UNOP \| POP-FLAG=1,EXPR-OFFSET=1 \| PUSH-FLAG=1, PUSH-EXPR-OFFSET=0 \|** is equivalent to **\| EXPRUNOP \| UNOP \|**.
 
 **\| ZEPTOVM_OP_EXPRBINOP \| BINOP \|**
 
@@ -461,9 +473,15 @@ EXPRBINOP instruction pops two topmost values from the expression stack, calcula
 
 **\| ZEPTOVM_OP_EXPRBINOP_EX \| BINOP \| OP1-POP-FLAG-AND-EXPR-OFFSET \| OPTIONAL-IMMEDIATE-OP1 \| OP2-POP-FLAG-AND-EXPR-OFFSET \| OPTIONAL-IMMEDIATE-OP2 \|**
 
-where ZEPTOVM_OP_EXPRBINOP_EX is a 1-byte opcode, BINOP is 1-byte taking the same values as for ZEPTOVM_OP_EXPRBINOP, OP1-POP-FLAG-AND-EXPR-OFFSET and OP2-POP-FLAG-AND-EXPR-OFFSET are similar to POP-FLAG-AND-EXPR-OFFSET in EXPRUNOP_EX operation, OPTIONAL-IMMEDIATE-OP1 is a half-float field present only if EXPR-OFFSET within OP1-POP-FLAG-AND-EXPR-OFFSET is zero, and OPTIONAL-IMMEDIATE-OP2 is a half-float field present only if EXPR-OFFSET within OP2-POP-FLAG-AND-EXPR-OFFSET is zero. 
+where ZEPTOVM_OP_EXPRBINOP_EX is a 1-byte opcode, BINOP is 1-byte taking the same values as for ZEPTOVM_OP_EXPRBINOP, OP1-POP-FLAG-AND-EXPR-OFFSET and OP2-POP-FLAG-AND-EXPR-OFFSET are similar to POP-FLAG-AND-EXPR-OFFSET in EXPRUNOP_EX instruction, OPTIONAL-IMMEDIATE-OP1 is a half-float field present only if EXPR-OFFSET within OP1-POP-FLAG-AND-EXPR-OFFSET is zero, and OPTIONAL-IMMEDIATE-OP2 is a half-float field present only if EXPR-OFFSET within OP2-POP-FLAG-AND-EXPR-OFFSET is zero. 
 
-EXPRBINOP_EX instruction is similar to EXPRBINOP instruction, but allows to use wider range of operands (with popping from the stack being optional).
+EXPRBINOP_EX instruction is similar to EXPRBINOP instruction, but allows to use wider range of operands (with popping from the stack being optional). **\| EXPRBINOP_EX \| BINOP \| POP-FLAG=1,EXPR-OFFSET=2 \| POP-FLAG=1,EXPR-OFFSET=1 \|** is equivalent to **\| EXPRBINOP \| BINOP \|**.
+
+**\| ZEPTOVM_OP_EXPRBINOP_EX2 \| BINOP \| OP1-POP-FLAG-AND-EXPR-OFFSET \| OPTIONAL-IMMEDIATE-OP1 \| OP2-POP-FLAG-AND-EXPR-OFFSET \| OPTIONAL-IMMEDIATE-OP2 \| PUSH-FLAG-AND-PUSH-EXPR-OFFSET \|**
+
+where ZEPTOVM_OP_EXPRBINOP_EX2 is a 1-byte opcode, BINOP, OP*-POP-FLAG-AND-EXPR-OFFSET and OPTIONAL-IMMEDIATE-OP* fields are similar to that of in EXPRBINOP_EX instruction, and PUSH-FLAG-AND-PUSH-EXPR-OFFSET is similar to that of in EXPRUNOP_EX2 instruction.
+
+EXPRBINOP_EX2 instruction is similar to EXPRBINOP_EX instruction, but allows to to specify where the result of calculation needs to be placed. **\| EXPRBINOP_EX2 \| BINOP \| POP-FLAG=1,EXPR-OFFSET=2 \| POP-FLAG=1,EXPR-OFFSET=1 \| PUSH-FLAG=1, PUSH-EXPR-OFFSET=0 \|** is equivalent to **\| EXPRBINOP \| BINOP \|**.
 
 **\| ZEPTOVM_OP_JMPIFEXPR <SUBCODE> \| THRESHOLD \| DELTA \|**
 
