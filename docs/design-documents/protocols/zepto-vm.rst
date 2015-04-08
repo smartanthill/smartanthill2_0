@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.2.7a
+:Version:   v0.2.7b
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
@@ -600,7 +600,7 @@ Statistics for different Zepto-VM levels:
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
 |Zepto VM-Tiny  | TODO            |ZEPTOVM_REPLY_STACK_SIZE=4 to 8      | (1 to 2)+(5 to 9) = 6 to 11                      |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
-|Zepto VM-Small | TODO            |ZEPTOVM_EXPR_STACK_SIZE=4 to 8       | (6 to 11)+(9 to 33) = 15 to 44                   |
+|Zepto VM-Small | TODO            |ZEPTOVM_EXPR_STACK_SIZE=4 to 16      | (6 to 11)+(9 to 33) = 15 to 44                   |
 |               |                 |ZEPTOVM_EXPR_FLOAT_TYPE=HALF-FLOAT   |                                                  |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
 |Zepto VM-Medium| TODO            |ZEPTOVM_EXPR_STACK_SIZE=8 to 12      | TBD                                              |
