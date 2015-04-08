@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.8a
+:Version:   v0.2.8b
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -268,9 +268,10 @@ SmartAnthill Bitfields
 
 In some cases, SmartAnthill Protocols use bitfields; in such cases: 
 
-* bitfields MUST use 1-byte, 2-byte, or Encoded-Unsigned-Int<max=> field as a 'substrate'. 'Bitfield Substrate' is composed/parsed as an ordinary field, which is encoded using appropriate encodings described in this document.
+* bitfields MUST use 1-byte, 2-byte, Encoded-Unsigned-Int<max=>, or Encoded-Signed-Int<max=> field as a 'substrate'. 'Bitfield Substrate' is composed/parsed as an ordinary field, which is encoded using appropriate encodings described in this document.
 * as soon as 'substrate' is parsed, it is treated as an integer, out of which specific bits can be used; these bits are specified as [3] (specifying that single bit #3 is used), or [2..4] (specifying that bits from 2 to 4 - inclusive - are used)
 * if 'substrate' is an Encoded-Unsigned-Int field, then one of bitfields MAY be specified as [2..] - specifying that all the bits from 2 to the highest available one, are used for the bitfield.
+* if 'substrate' is an Encoded-Signed-Int field, then one of bitfields MAY be specified as [2..] - specifying that all the bits from 2 to the highest available one, are used for the bitfield; in this example, the bitfield in question MUST be calculated as `substrate>>1`, where substrate is treated as signed (i.e. '>>' operator works extending sign bit).
 
 SmartAnthill Half-Float
 ^^^^^^^^^^^^^^^^^^^^^^^
