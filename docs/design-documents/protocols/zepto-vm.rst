@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.2.5a
+:Version:   v0.2.6
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
@@ -154,18 +154,20 @@ Zepto VM Opcodes
 * */\* starting from the next opcode, instructions are not supported by Zepto VM-Tiny and below \*/*
 * ZEPTOVM_OP_PUSHEXPR_CONSTANT
 * ZEPTOVM_OP_PUSHEXPR_REPLYFIELD
-* ZEPTOVM_OP_PUSHEXPR_EXPR
-* ZEPTOVM_OP_POPEXPR
 * ZEPTOVM_OP_EXPRUNOP
+* ZEPTOVM_OP_EXPRUNOP_EX
 * ZEPTOVM_OP_EXPRBINOP
+* ZEPTOVM_OP_EXPRBINOP_EX
 * ZEPTOVM_OP_JMPIFEXPR_LT
 * ZEPTOVM_OP_JMPIFEXPR_GT
 * ZEPTOVM_OP_JMPIFEXPR_EQ
 * ZEPTOVM_OP_JMPIFEXPR_NE
-* ZEPTOVM_OP_JMPIFEXPR_NOPOP_LT
-* ZEPTOVM_OP_JMPIFEXPR_NOPOP_GT
-* ZEPTOVM_OP_JMPIFEXPR_NOPOP_EQ
-* ZEPTOVM_OP_JMPIFEXPR_NOPOP_NE
+* ZEPTOVM_OP_JMPIFEXPR_EX_LT
+* ZEPTOVM_OP_JMPIFEXPR_EX_GT
+* ZEPTOVM_OP_JMPIFEXPR_EX_EQ
+* ZEPTOVM_OP_JMPIFEXPR_EX_NE
+* ZEPTOVM_OP_INCANDJMPIF
+* ZEPTOVM_OP_DECANDJMPIF
 * */\* starting from the next opcode, instructions are not supported by Zepto VM-Small and below \*/*
 * ZEPTOVM_OP_PARALLEL
 
@@ -183,13 +185,14 @@ If Zepto VM encounters a problem, it reports it as an “VM exception” (not to
 
 Currently, Zepto VM may issue the following exceptions:
 
-* ZEPTO_VM_INVALID_INSTRUCTION */\* Note that this exception may also be issued when an instruction is encountered which is legal in general, but is not supported by current level of Zepto VM. \*/*
+* ZEPTO_VM_INVALIDINSTRUCTION */\* Note that this exception may also be issued when an instruction is encountered which is legal in general, but is not supported by current level of Zepto VM. \*/*
 * ZEPTOVM_INVALIDENCODEDSIZE */\* Issued whenever Encoded-\*-Int<max=...> is an invalid encoding, as defined in* :ref:`saprotostack` document *\*/*
 * ZEPTOVM_PLUGINERROR
 * ZEPTOVM_INVALIDPARAMETER
 * ZEPTOVM_INVALIDREPLYNUMBER
 * ZEPTOVM_EXPRSTACKUNDERFLOW
-* ZEPTOVM_EXPRSTACKINVALIDINDEX
+* ZEPTOVM_EXPRSTACKINVALIDOFFSET
+* ZEPTOVM_EXPRSTACKFROZENVIOLATION
 * ZEPTOVM_EXPRSTACKOVERFLOW
 * ZEPTOVM_PROGRAMERROR_INVALIDREPLYFLAG
 * ZEPTOVM_PROGRAMERROR_INVALIDREPLYSEQUENCE
@@ -396,20 +399,6 @@ ZEPTOVM_OP_PUSHEXPR_REPLYFIELD is 1-byte opcode, REPLY-NUMBER and FIELD-SEQUENCE
 
 PUSHEXPR_REPLYFIELD takes a field (specified by FIELD-SEQUENCE) from reply frame (specified by REPLY-NUMBER), and pushes it to the expression stack (if expression stack is exceeded, it will cause ZEPTOVM_EXPRSTACKOVERFLOW VM exception). If data in the field doesn't fit into stack type (see below), it is an ZEPTOVM_INVALIDEXPRDATA exception. 
 
-**\| ZEPTOVM_OP_PUSHEXPR_EXPR \| EXPR-OFFSET \|**
-
-where ZEPTOVM_OP_PUSHEXPR_EXPR is a 1-byte opcode, and EXPR-OFFSET is an Encoded-Unsigned-Int<max=2> offset of the value within expression stack which needs to be duplicated on the top of the expression stack.
-
-PUSHEXPR_EXPR instruction peeks a value from the expression stack without removing it from the stack; the value is specified by EXPR-OFFSET, so that EXPR-OFFSET == 0 means "topmost value on the stack", EXPR-OFFSET == 1 means "second topmost value on the stack" and so on. If EXPR-OFFSET is greater than current expression stack size, this will cause ZEPTOVM_EXPRSTACKINVALIDINDEX exception.
-
-PUSHEXPR_EXPR instruction is mostly useful within PARALLEL environments (see note on it's specifics in description of ZeptoVM-Medium), but is supported in ZeptoVM-Small too.
-
-**\| ZEPTOVM_OP_POPEXPR \|**
-
-where ZEPTOVM_OP_POPEXPR is a 1-byte opcode
-
-POPEXPR instruction removes the topmost value from the expression stack.
-
 **\| ZEPTOVM_OP_EXPRUNOP \| UNOP \|**
 
 where ZEPTOVM_OP_EXPRUNOP is a 1-byte opcode, and UNOP is 1-byte taking one of the following values:
@@ -417,6 +406,10 @@ where ZEPTOVM_OP_EXPRUNOP is a 1-byte opcode, and UNOP is 1-byte taking one of t
 +-----------+-------------------------------+
 |UNOP       |Corresponding unary C operation|
 +===========+===============================+
+|UNOP_POP   | N/A                           |
++-----------+-------------------------------+
+|UNOP_COPY  | \=                            |
++-----------+-------------------------------+
 |UNOP_MINUS | \-                            |
 +-----------+-------------------------------+
 |UNOP_BITNEG| ~                             |
@@ -428,11 +421,19 @@ where ZEPTOVM_OP_EXPRUNOP is a 1-byte opcode, and UNOP is 1-byte taking one of t
 |UNOP_DEC   | -=1                           |
 +-----------+-------------------------------+
 
-EXPRUNOP instruction pops topmost value from the expression stack, modifies it according to the table above, and pushes modified value back to expression stack. All operations are performed as specified in the table above; '-', '+=1' and '-=1' operations are performed as floating-point operation (see details below), for '~' and '!' operations the operand is first converted into integer with zero exponent (and then only significand is involved in these operations). If expression stack is empty, it will cause a ZEPTOVM_EXPRSTACKUNDERFLOW VM exception. Overflows are handled in a normal manner for floats (NB: as it is float arithmetics, '+=1' and '-=1' operations MAY cause operand to stay without changes even if no 'infinity' has occurred; it means that if half-floats are used as expression stack values, 2048+1 results in 2048, causing potential for infinite loops TODO: check if it is 2048 or 2050).
+EXPRUNOP instruction pops topmost value from the expression stack, modifies it according to the table above, and pushes modified value back to expression stack. All operations are performed as specified in the table above; '-', '+=1' and '-=1' operations are performed as floating-point operation (see details below), for '~' and '!' operations the operand is first converted into integer with zero exponent (and then only fraction is involved in these operations). If expression stack is empty, it will cause a ZEPTOVM_EXPRSTACKUNDERFLOW VM exception. Overflows are handled in a normal manner for floats (NB: as it is float arithmetics, '+=1' and '-=1' operations MAY cause operand to stay without changes even if no 'infinity' has occurred; it means that if half-floats are used as expression stack values, 2048+1 results in 2048, causing potential for infinite loops TODO: check if it is 2048 or 2050).
+
+If UNOP is UNOP_POP, then no value is pushed back to the expression stack.
+
+**\| ZEPTOVM_OP_EXPRUNOP_EX \| UNOP \| POP-FLAG-AND-EXPR-OFFSET \| OPTIONAL-IMMEDIATE-OPERAND \|**
+
+where ZEPTOVM_OP_EXPRUNOP_EX is a 1-byte opcode, UNOP is similar to that of in EXPRUNOP instruction, POP-FLAG-EXPR-OFFSET is an Encoded-Signed-Int<max=2> field, which acts as a substrate for POP-FLAG bitfield (occupies bit [0]), and EXPR-OFFSET bitfield (occupies bits [1..]), and OPTIONAL-IMMEDIATE-OPERAND is a half-float field, present only if EXPR-OFFSET is zero (see also below). EXPR-OFFSET specifies expression index which is used by EXPRUNOP_EX instruction, as follows: zero value means that the operand is an immediate operand, positie values of EXPR-OFFSET mean "values from top of the expression stack", so '1' means 'topmost value on the stack'; negative values mean 'values from beginning of the stack', so that '-1' means expr_stack[0], '-2' means expr_stack[1] and so on (negative values of EXPR-OFFSET can be used, for example, to simulate global variables). POP-FLAG specifies whether the slot specified by EXPR-OFFSET is removed from the expression stack after the operation (if it is not topmost value which is popped, it causes collapsing the stack as necessary). Accordingly, **\| EXPRUNOP_EX \| UNOP \| POP-FLAG=1, EXPR-OFFSET=1 \|** is equivalent to **\| EXPRUNOP \| UNOP \|**. If EXPR-OFFSET points beyond the current size of expression stack, this will cause a ZEPTOVM_EXPRSTACKINVALIDOFFSET exception. If POP-FLAG is 1 and popping would lead to the modification of "frozen" part of the expression stack (see description of "frozen" stack in the context of PARALLEL instruction), it will cause a ZEPTOVM_EXPRSTACKFROZENVIOLATION exception. If POP-FLAG is 1 and EXPR-OFFSET is zero (which would mean 'pop immediate operand'), it is ZEPTOVM_INVALIDPARAMETER exception.
+
+EXPRUNOP_EX instruction is similar to EXPRUNOP instruction, but allows to use wider range of operands (with popping from the stack being optional).
 
 **\| ZEPTOVM_OP_EXPRBINOP \| BINOP \|**
 
-where ZEPTOVM_OP_EXPRBINOP is a 1-byte opcode, and BINOP is 1-byte taking the following values:
+where ZEPTOVM_OP_EXPRBINOP is a 1-byte opcode, and BINOP is 1-byte taking one of the following values:
 
 +------------+--------------------------------+
 |BINOP       |Corresponding binary C operation|
@@ -443,7 +444,9 @@ where ZEPTOVM_OP_EXPRBINOP is a 1-byte opcode, and BINOP is 1-byte taking the fo
 +------------+--------------------------------+
 |BINOP_SHL   | <<                             |
 +------------+--------------------------------+
-|BINOP_SHR   | <<                             |
+|BINOP_SHR   | >>                             |
++------------+--------------------------------+
+|BINOP_USHR  | Java-like >>>                  |
 +------------+--------------------------------+
 |BINOP_BITAND| &                              |
 +------------+--------------------------------+
@@ -456,12 +459,11 @@ where ZEPTOVM_OP_EXPRBINOP is a 1-byte opcode, and BINOP is 1-byte taking the fo
 
 EXPRBINOP instruction pops two topmost values from the expression stack, calculates result out of them according to the table above (as 'second topmost' op 'topmost'), and pushes calculated value back to the expression stack. All operations are performed as specified in the table above; '+' and '-' are performed as floating-point operations (see details below), for '<<', '>>', '&', '|', '&&', and '||' both operands are first converted into integers with zero exponent (and then only significands of operands are involved in these operations). If expression stack has less than two items, it will cause a ZEPTOVM_EXPRSTACKUNDERFLOW VM exception. Overflows are handled in a standard manner for floats (causing 'infinity' result when necessary). NB: there are no multiplication/division operations for Zepto VM-Small, they're introduced in higher Zepto-VM levels.
 
-**\| ZEPTOVM_OP_EXPRBINOP_IMMEDIATE \| BINOP \| IMMEDIATE-OPERAND \|**
+**\| ZEPTOVM_OP_EXPRBINOP_EX \| BINOP \| OP1-POP-FLAG-AND-EXPR-OFFSET \| OPTIONAL-IMMEDIATE-OP1 \| OP2-POP-FLAG-AND-EXPR-OFFSET \| OPTIONAL-IMMEDIATE-OP2 \|**
 
-where ZEPTOVM_OP_EXPRBINOP_IMMEDIATE is a 1-byte opcode, BINOP is 1-byte taking the same values as for ZEPTOVM_OP_EXPRBINOP, and IMMEDIATE-OPERAND is a 2-byte half-float. 
+where ZEPTOVM_OP_EXPRBINOP_EX is a 1-byte opcode, BINOP is 1-byte taking the same values as for ZEPTOVM_OP_EXPRBINOP, OP1-POP-FLAG-AND-EXPR-OFFSET and OP2-POP-FLAG-AND-EXPR-OFFSET are similar to POP-FLAG-AND-EXPR-OFFSET in EXPRUNOP_EX operation, OPTIONAL-IMMEDIATE-OP1 is a half-float field present only if EXPR-OFFSET within OP1-POP-FLAG-AND-EXPR-OFFSET is zero, and OPTIONAL-IMMEDIATE-OP2 is a half-float field present only if EXPR-OFFSET within OP2-POP-FLAG-AND-EXPR-OFFSET is zero. 
 
-**\| EXPRBINOP_IMMEDIATE \| BINOP \| IMMEDIATE-OPERAND \|** instruction acts as a shortcut to **\| PUSHEXPR_CONSTANT \| IMMEDIATE-OPERAND \| EXPRBINOP \| IMMEDIATE-OPERAND \|**. These two forms are strictly equivalent, but EXPRBINOP_IMMEDIATE saves one byte in byte-code, and requires one less (temporary) entry on expression stack.
-
+EXPRBINOP_EX instruction is similar to EXPRBINOP instruction, but allows to use wider range of operands (with popping from the stack being optional).
 
 **\| ZEPTOVM_OP_JMPIFEXPR <SUBCODE> \| THRESHOLD \| DELTA \|**
 
@@ -483,13 +485,25 @@ JMPIFEXPR <SUBCODE> instruction pops the topmost value from the expression stack
 
 TODO: can equivalents for LE/GE be strictly derived in case of floats?
 
-**\| ZEPTOVM_OP_JMPIFEXPR_NOPOP <SUBCODE> \| THRESHOLD \| DELTA \|**
+**\| ZEPTOVM_OP_JMPIFEXPR_EX <SUBCODE> \| POP-FLAG-AND-EXPR-OFFSET \| THRESHOLD \| DELTA \|**
 
-where <SUBCODE> is one of {LT,GT,EQ,NE}; ZEPTOVM_OP_JMPIFEXPR_NOPOP_LT, ZEPTOVM_OP_JMPIFEXPR_NOPOP_GT, ZEPTOVM_OP_JMPIFEXPR_NOPOP_EQ, and  ZEPTOVM_OP_JMPIFEXPR_NOPOP_NE are 1-byte opcodes, THRESHOLD is a 2-byte half-float constant (encoded as described in :ref:`saprotostack`), and interpretation of DELTA is similar to that of in JMP description.
+where <SUBCODE> is one of {LT,GT,EQ,NE}; ZEPTOVM_OP_JMPIFEXPR_EX_LT, ZEPTOVM_OP_JMPIFEXPR_EX_GT, ZEPTOVM_OP_JMPIFEXPR_EX_EQ, and  ZEPTOVM_OP_JMPIFEXPR_EX_NE are 1-byte opcodes, POP-FLAG-AND-EXPR-OFFSET is treated similar to that of in EXPRUNOP_EX instruction, THRESHOLD is a 2-byte half-float constant (encoded as described in :ref:`saprotostack`), and interpretation of DELTA is similar to that of in JMP description.
 
-JMPIFEXPR_NOPOP <SUBCODE> instruction peeks the topmost value on the expression stack without popping it, compares it with THRESHOLD according to <SUBCODE>, and updates Program Counter by DELTA if condition specified by comparison is met (as with JMP, DELTA is added to a PC positioned right after current instruction). If expression stack is empty, it will cause a ZEPTOVM_EXPRSTACKUNDERFLOW VM exception. For details on <SUBCODE>, see description of JMPIFEXPR <SUBCODE> instruction.
+JMPIFEXPR_EX <SUBCODE> instruction works similar to JMPIFEXPR instruction, but allows for a wider range of operands (with popping from the stack being optional).
 
-JMPIFEXPR_NOPOP instruction is useful for organizing loops based on a value stored on the expression stack: for example, sequence such as \|EXPRUNOP\|++\|JMPIFEXPR NOPOP LT\|5\|NEGATIVE-DELTA\| can be used at the end of the do{...;i++;}while(i<5); loop (use within while and for loops is similar).
+**\| ZEPTOVM_OP_INCANDJMPIF \| EXPR-OFFSET \| THRESHOLD \| DELTA \|**
+
+where ZEPTOVM_OP_INCANDJMPIF is a 1-byte opcode, EXPR-OFFSET is an Encoded-Signed-Int<max=2> (treated similar to EXPR-OFFSET bitfield in EXPRUNOP instruction), THRESHOLD is similar to that of in JMPIFEXPR instruction, and DELTA is similar to that of in JMP instruction. 
+
+**\| INCANDJMPIF \| EXPR-OFFSET \| THRESHOLD \| DELTA \|** instruction is a shortcut for **\| EXPRUNOP_EX \| UNOP_INC \| POP-FLAG=0,EXPR-OFFSET=EXPR-OFFSET \| JMPIFEXPR_EX LT \| POP-FLAG=0,EXPR-OFFSET=EXPR-OFFSET \| THRESHOLD \| DELTA \|**. It can be used, for example, at the end of the `for(int i=0; i < 5; i++) {...}` loop (use within while and do-while loops is similar).
+
+
+**\| ZEPTOVM_OP_DECANDJMPIF \| EXPR-OFFSET \| THRESHOLD \| DELTA \|**
+
+where ZEPTOVM_OP_DECANDJMPIF is a 1-byte opcode, EXPR-OFFSET is an Encoded-Signed-Int<max=2> (treated similar to EXPR-OFFSET bitfield in EXPRUNOP instruction), and DELTA is similar to that of in JMP instruction. 
+
+**\| DECANDJMPIF \| EXPR-OFFSET \| THRESHOLD \| DELTA \|** instruction is a shortcut for **\| EXPRUNOP_EX \| UNOP_DEC \| POP-FLAG=0,EXPR-OFFSET=EXPR-OFFSET \| JMPIFEXPR_EX GT \| POP-FLAG=0,EXPR-OFFSET=EXPR-OFFSET \| THRESHOLD \| DELTA \|**. It can be used, for example, at the end of the `for(int i=5; i > 0; i--) {...}` loop (use within while and do-while loops is similar).
+
 
 Implementation notes
 ''''''''''''''''''''
@@ -511,7 +525,7 @@ Starting from Zepto VM-Small, Zepto VM implementations are techically Turing com
 Zepto VM-Medium
 ^^^^^^^^^^^^^^^
 
-Zepto VM-Medium adds support for registers, call stack, multiplication/division, math pseudo-library, and parallel execution.
+Zepto VM-Medium adds support for call stack, multiplication/division, math pseudo-library, and parallel execution.
 
 **\| ZEPTOVM_OP_PARALLEL \| N-PSEUDO-THREADS \| PSEUDO-THREAD-1-INSTRUCTIONS-SIZE \| PSEUDO-THREAD-1-INSTRUCTIONS \| ... \| PSEUDO-THREAD-N-INSTRUCTIONS-SIZE \| PSEUDO-THREAD-N-INSTRUCTIONS \|**
 
@@ -519,15 +533,19 @@ where ZEPTOVM_OP_PARALLEL is 1-byte opcode, N-PSEUDO-THREADS is a number of "pse
 
 PARALLEL instruction starts processing of several pseudo-threads. PARALLEL instruction is considered completed when all the pseudo-threads reach the end of their respective instructions. Normally, it is implemented via state machines (see :ref:`sazeptoos` document for details), so it is functionally equivalent to "green threads" (and not to "native threads").
 
-When PARALLEL instruction execution is started, original "reply buffer" is "frozen" and cannot be accessed by any of the pseudo-threads; each pseudo-thread has it's own "reply buffer" which is empty at the beginning of the pseudo-thread execution. After PARALLEL instruction is completed (i.e. all pseudo-threads have been terminated), the original "reply buffer" which existed before PARALLEL instruction has started, is restored, and all the pseudo-thread "reply buffers" which existed right before after respective pseudo-threads are terminated, are added to the end of the original "reply buffer"; this allows to have instructions such as EXEC and PUSHREPLY within the pseudo-threads; this adding of pseudo-thread "reply buffers" to the end of original "reply buffer" always happens in order of pseudo-thread descriptions within the PARALLEL instruction (and is therefore does *not* depend on the race conditions between different pseudo-threads).
+When PARALLEL instruction execution is started, original "reply buffer" is "frozen" and cannot be modified by any of the pseudo-threads; each pseudo-thread has it's own "reply buffer" which is empty at the beginning of the pseudo-thread execution. After PARALLEL instruction is completed (i.e. all pseudo-threads have been terminated), the original "reply buffer" which existed before PARALLEL instruction has started, is restored, and all the pseudo-thread "reply buffers" which existed right before after respective pseudo-threads are terminated, are added to the end of the original "reply buffer"; this allows to have instructions such as EXEC and PUSHREPLY within the pseudo-threads; this adding of pseudo-thread "reply buffers" to the end of original "reply buffer" always happens in order of pseudo-thread descriptions within the PARALLEL instruction (and is therefore does *not* depend on the race conditions between different pseudo-threads).
 
-When PARALLEL instruction execution is started, original expression stack is "frozen" and cannot be manipulated by any of the pseudo-threads (though it may be read using PUSHEXPR_EXPR instruction as described below); each pseudo-thread has it's own expression stack which is empty at the beginning of the pseudo-thread execution. After PARALLEL instruction is completed (i.e. all pseudo-threads have been terminated), the original expression stack which existed before PARALLEL instruction has started, is restored, and all the pseudo-thread expression stacks remaining after respective pseudo-threads are terminated, are added to the top of this original stack; this allows to easily pass information from pseudo-threads to the main program; this adding of pseudo-thread expression stacks on top of original expression stack always happens in order of pseudo-thread descriptions within the PARALLEL instruction (and is therefore does *not* depend on the race conditions between different pseudo-threads).
+When PARALLEL instruction execution is started, original expression stack is "frozen" and cannot be modified by any of the pseudo-threads (though it may be read using EXPR*_EX instructions as described below); each pseudo-thread has it's own expression stack which is empty at the beginning of the pseudo-thread execution. After PARALLEL instruction is completed (i.e. all pseudo-threads have been terminated), the original expression stack which existed before PARALLEL instruction has started, is restored, and all the pseudo-thread expression stacks remaining after respective pseudo-threads are terminated, are added to the top of this original stack; this allows to easily pass information from pseudo-threads to the main program; this adding of pseudo-thread expression stacks on top of original expression stack always happens in order of pseudo-thread descriptions within the PARALLEL instruction (and is therefore does *not* depend on the race conditions between different pseudo-threads).
 
 **Caution:** in addition to any memory overhead listed for Zepto VM-Medium, there is an additional implicit memory overhead associated with PARALLEL instruction: namely, all the states of all the plugin state machines which are run in parallel, need to be kept in RAM simultaneously. Normally, it is not much, but for really constrained environments it might become a problem.
 
-**Note on \| ZEPTOVM_OP_PUSHEXPR_EXPR \| EXPR-OFFSET \| within PARALLEL pseudo-thread**
+**Note on \| ZEPTOVM_OP_EXPR*_EX \| within PARALLEL pseudo-thread**
 
-PUSHEXPR_EXPR instruction, when it is applied within PARALLEL pseudo-thread, allows to access original (pre-PARALLEL) expression stack. That is, first EXPR-OFFSET values identify expression stack items within the pseudo-thread, but when pseudo-thread values are exhausted, increasing EXPR-OFFSET starts to go into pre-PARALLEL expression stack. For example, if \|PUSHEXPR\|0\| is the first instruction of the pseudo-thread, it peeks a topmost value from the pre-PARALLEL expression stack and pushes it to the pseudo-thread's expression stack. This allows to easily pass information from the main program to pseudo-threads.
+EXPRUNOP_EX, EXPRBINOP_EX, and JMPIFEXPR_EX instructions, when applied within PARALLEL pseudo-thread, allow to access original (pre-PARALLEL) expression stack. That is:
+
+* for positive EXPR-OFFSET values, first EXPR-OFFSET values identify expression stack items within the pseudo-thread, but when pseudo-thread values are exhausted, increasing EXPR-OFFSET starts to go into pre-PARALLEL expression stack. 
+* negative EXPR-OFFSET values address pre-PARALLEL expression stack; if negative EXPR-OFFSET is exhausted, it is 
+* for all EXPR-OFFSET values, if POP-FLAG is specified and it would affect pre-PARALLEL expression stack, it causes an ZEPTOVM_EXPRSTACKFROZENVIOLATION exception.
 
 TODO: CALL (accounting for pseudo-threads), MOV (pseudo-threads-agnostic), multiplication/log/exp/sin(?), support for piecewise table maths (with piecewise table supplied as a part of command)
 
