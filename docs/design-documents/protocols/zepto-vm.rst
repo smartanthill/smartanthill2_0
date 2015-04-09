@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.2.7b
+:Version:   v0.2.8
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
@@ -168,6 +168,10 @@ Zepto VM Opcodes
 * ZEPTOVM_OP_JMPIFEXPR_EX_GT
 * ZEPTOVM_OP_JMPIFEXPR_EX_EQ
 * ZEPTOVM_OP_JMPIFEXPR_EX_NE
+* ZEPTOVM_OP_CALL
+* ZEPTOVM_OP_RET
+* ZEPTOVM_OP_SWITCH
+* ZEPTOVM_OP_SWITCH_EX
 * ZEPTOVM_OP_INCANDJMPIF
 * ZEPTOVM_OP_DECANDJMPIF
 * */\* starting from the next opcode, instructions are not supported by Zepto VM-Small and below \*/*
@@ -335,7 +339,7 @@ Zepto VM-Tiny allows for more complicated programs, including basic conditions, 
 
 **\| ZEPTOVM_OP_JMP \| DELTA \|**
 
-where ZEPTOVM_OP_JMP is a 1-byte opcode, and DELTA is an Encoded-Signed-Int<max=2> signed integer which denotes how PC (program counter) should be changed (DELTA is considered in relation to the end of JMP instruction, so JMP 0 is effectively a no-op).
+where ZEPTOVM_OP_JMP is a 1-byte opcode, and DELTA is an Encoded-Signed-Int<max=2> signed integer which denotes how PC (program counter) should be changed (DELTA is always considered in relation to the *end* of current instruction, so JMP 0 is effectively a no-op).
 
 **\| ZEPTOVM_OP_JMPIFREPLYFIELD_<SUBCODE> \| REPLY-NUMBER \| FIELD-SEQUENCE \| THRESHOLD \| DELTA \|**
 
@@ -391,7 +395,7 @@ Memory overhead of ZeptoVM-Tiny is (in addition to overhead of ZeptoVM-One) is 1
 Level Small
 ^^^^^^^^^^^
 
-Zepto VM-Small allows for even more complicated programs, including expressions and loops, at the cost of additional memory needed (in addition to Zepto VM-Tiny) being on the order of 9-33 (or more to support larger programs) bytes.
+Zepto VM-Small allows for even more complicated programs, including expressions and loops, at the cost of additional memory needed (in addition to Zepto VM-Tiny) being on the order of 9-65 (depending on complexity of programs to be supported) bytes.
 Zepto VM-Small, in addition to instructions supported by Zepto VM-Tiny, additionally supports the following instructions:
 
 **\| ZEPTOVM_OP_PUSHEXPR_CONSTANT \| CONST \|**
@@ -436,7 +440,7 @@ If UNOP is UNOP_POP, then no value is pushed back to the expression stack (i.e. 
 
 where ZEPTOVM_OP_EXPRUNOP_EX is a 1-byte opcode, UNOP is similar to that of in EXPRUNOP instruction, POP-FLAG-AND-EXPR-OFFSET is an Encoded-Signed-Int<max=2> field, which acts as a substrate for POP-FLAG bitfield (occupies bit [0]), and EXPR-OFFSET bitfield (occupies bits [1..]), and OPTIONAL-IMMEDIATE-OPERAND is a half-float field, present only if EXPR-OFFSET is zero (see also below). EXPR-OFFSET specifies expression index which is used by EXPRUNOP_EX instruction, as follows: zero value means that the operand is an immediate operand, positie values of EXPR-OFFSET mean "values from top of the expression stack", so '1' means 'topmost value on the stack'; negative values mean 'values from beginning of the stack', so that '-1' means expr_stack[0], '-2' means expr_stack[1] and so on (negative values of EXPR-OFFSET can be used, for example, to simulate global variables). POP-FLAG specifies whether the slot specified by EXPR-OFFSET is removed from the expression stack after the calculation is performed (if it is not topmost value which is popped, it causes collapsing the stack as necessary). Accordingly, **\| EXPRUNOP_EX \| UNOP \| POP-FLAG=1, EXPR-OFFSET=1 \|** is equivalent to **\| EXPRUNOP \| UNOP \|**. If EXPR-OFFSET points beyond the current size of expression stack, this will cause a ZEPTOVM_EXPRSTACKINVALIDOFFSET exception. If POP-FLAG is 1 and popping would lead to the modification of "frozen" part of the expression stack (see description of "frozen" stack in the context of PARALLEL instruction), it will cause a ZEPTOVM_EXPRSTACKFROZENVIOLATION exception. If POP-FLAG is 1 and EXPR-OFFSET is zero (which would mean 'pop immediate operand'), it is ZEPTOVM_INVALIDPARAMETER exception.
 
-EXPRUNOP_EX instruction is similar to EXPRUNOP instruction, but allows to use wider range of operands (with popping from the stack being optional).
+EXPRUNOP_EX instruction is similar to EXPRUNOP instruction, but allows to use wider range of the operand (with popping from the stack being optional).
 
 **\| ZEPTOVM_OP_EXPRUNOP_EX2 \| UNOP \| POP-FLAG-AND-EXPR-OFFSET \| OPTIONAL-IMMEDIATE-OPERAND \| PUSH-FLAG-AND-PUSH-EXPR-OFFSET \|**
 
@@ -512,7 +516,37 @@ TODO: can equivalents for LE/GE be strictly derived in case of floats?
 
 where <SUBCODE> is one of {LT,GT,EQ,NE}; ZEPTOVM_OP_JMPIFEXPR_EX_LT, ZEPTOVM_OP_JMPIFEXPR_EX_GT, ZEPTOVM_OP_JMPIFEXPR_EX_EQ, and  ZEPTOVM_OP_JMPIFEXPR_EX_NE are 1-byte opcodes, POP-FLAG-AND-EXPR-OFFSET is treated similar to that of in EXPRUNOP_EX instruction, THRESHOLD is a 2-byte half-float constant (encoded as described in :ref:`saprotostack`), and interpretation of DELTA is similar to that of in JMP description.
 
-JMPIFEXPR_EX <SUBCODE> instruction works similar to JMPIFEXPR instruction, but allows for a wider range of operands (with popping from the stack being optional).
+JMPIFEXPR_EX <SUBCODE> instruction works similar to JMPIFEXPR instruction, but allows for a wider range of the operand (with popping from the stack being optional).
+
+**\| ZEPTOVM_OP_CALL \| PROC-ADDR \|**
+
+where ZEPTOVM_OP_CALL is a 1-byte opcode, and PROC-ADDR is an Encoded-Unsigned-Int<max=2> which specifies an absolute address of the procedure/function being called.
+
+CALL instruction pushes current value of the Program Counter (PC) to the top of expression stack, and sets Program Counter to PROC-ADDR. 
+
+Passing parameters to a procedure/function is a matter of convention between caller and callee. For example, caller may  push values to the top of the expression stack, and callee may read them then; cleaning parameters from the stack may be performed by caller after callee returns. 
+
+*IMPORTANT: the way of the address being pushed to expression stack is not specified, and therefore it is prohibited to use RET instruction to implement calculated jumps. Debug versions of Zepto VM SHOULD implement an additional bit array specifying which expression stack entries are CALL entries, and raise a TBD exception whenever CALL stack entry is used for calculations, and whenever non-CALL stack entry is used for RET*
+
+**\| ZEPTOVM_OP_RET \|**
+
+where ZEPTOVM_OP_RET is a 1-byte opcode. 
+
+RET instruction pops value of the Program Counter (PC) from the expression stack (the one which has been previously pushed by CALL instruction), effectively performing return from the procedure/function.
+
+**\| ZEPTOVM_OP_SWITCH \| NUMBER-OF-ENTRIES \| SWITCH-ENTRY \| ... \| SWITCH-ENTRY \|**
+
+where ZEPTOVM_OP_SWITCH is a 1-byte opcode, NUMBER-OF-ENTRIES is an Encoded-Unsigned-Int<max=2> field, which specifies number of SWITCH-ENTRY's. 
+
+Each of SWITCH-ENTRY's has a format of **\| CASE-VALUE \| DELTA \|**, where CASE-VALUE is an Encoded-Signed-Int<max=depends-on-stack-expr-type> field, and DELTA is treated similar to that of in JMP instruction (as usual, DELTA is applied to the *end* of current instruction, i.e. to the end of SWITCH instruction). 
+
+SWITCH instruction pops a topmost value from the expression stack, converts it to the integer, and then compares it to CASE-VALUE's of each SWITCH-ENTRY, and performs jump if the (converted) value from expression stack matches an appropriate CASE-VALUE. If none of CASE-VALUE's matches, then execution continues after SWITCH instruction.
+
+**\| ZEPTOVM_OP_SWITCH_EX \| POP-FLAG-AND-EXPR-OFFSET \| NUMBER-OF-ENTRIES \| SWITCH-ENTRY \| ... \| SWITCH-ENTRY \|**
+
+where ZEPTOVM_OP_SWITCH_EX is a 1-byte opcode, POP-FLAG-AND-EXPR-OFFSET is treated similar to that of EXPRUNOP_EX instruction, and NUMBER-OF-ENTRIES and SWITCH-ENTRIES are similar to that of SWITCH instruction.
+
+SWITCH_EX instruction works similar to SWITCH instruction, but allows for a wider range of the operand (with popping from the stack being optional).
 
 **\| ZEPTOVM_OP_INCANDJMPIF \| EXPR-OFFSET \| THRESHOLD \| DELTA \|**
 
@@ -548,7 +582,7 @@ Starting from Zepto VM-Small, Zepto VM implementations are techically Turing com
 Zepto VM-Medium
 ^^^^^^^^^^^^^^^
 
-Zepto VM-Medium adds support for call stack, multiplication/division, math pseudo-library, and parallel execution.
+Zepto VM-Medium adds support for parallel execution, and TODO: remote debugging.
 
 **\| ZEPTOVM_OP_PARALLEL \| N-PSEUDO-THREADS \| PSEUDO-THREAD-1-INSTRUCTIONS-SIZE \| PSEUDO-THREAD-1-INSTRUCTIONS \| ... \| PSEUDO-THREAD-N-INSTRUCTIONS-SIZE \| PSEUDO-THREAD-N-INSTRUCTIONS \|**
 
@@ -570,7 +604,9 @@ EXPRUNOP_EX, EXPRBINOP_EX, and JMPIFEXPR_EX instructions, when applied within PA
 * negative EXPR-OFFSET values address pre-PARALLEL expression stack; if negative EXPR-OFFSET is exhausted, it is 
 * for all EXPR-OFFSET values, if POP-FLAG is specified and it would affect pre-PARALLEL expression stack, it causes an ZEPTOVM_EXPRSTACKFROZENVIOLATION exception.
 
-TODO: CALL (accounting for pseudo-threads), MOV (pseudo-threads-agnostic), multiplication/log/exp/sin(?), support for piecewise table maths (with piecewise table supplied as a part of command)
+TODO: (Medium Level) ZEPTOVM_NETINTERRUPT
+
+TODO: (orthogonal to VM level, starting from Small?) multiplication/division, multiplication/log/exp/sin(?), support for piecewise table maths (with piecewise table supplied as a part of command)
 
 Implementation notes
 ''''''''''''''''''''
@@ -584,9 +620,8 @@ To implement Zepto VM-Medium, in addition to PC, reply-offset-stack, and express
 Memory overhead
 '''''''''''''''
 
-Memory overhead of ZeptoVM-Medium is (in addition to overhead of ZeptoVM-Small) is 1+4*ZEPTOVM_MAX_PSEUDOTHREADS, though if PARALLEL instruction is intended to be used, an increase of ZEPTOVM_EXPR_STACK_SIZE parameter of ZeptoVM-Small is advised.
+Memory overhead of ZeptoVM-Medium is (in addition to overhead of ZeptoVM-Small) is 1+4*ZEPTOVM_MAX_PSEUDOTHREADS, though an increase of ZEPTOVM_EXPR_STACK_SIZE parameter of ZeptoVM-Small is advised.
 
-TODO: ZEPTOVM_INTERRUPT (? where?)
 
 Appendix
 --------
@@ -600,10 +635,10 @@ Statistics for different Zepto-VM levels:
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
 |Zepto VM-Tiny  | TODO            |ZEPTOVM_REPLY_STACK_SIZE=4 to 8      | (1 to 2)+(5 to 9) = 6 to 11                      |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
-|Zepto VM-Small | TODO            |ZEPTOVM_EXPR_STACK_SIZE=4 to 16      | (6 to 11)+(9 to 33) = 15 to 44                   |
+|Zepto VM-Small | TODO            |ZEPTOVM_EXPR_STACK_SIZE=4 to 32      | (6 to 11)+(9 to 65) = 15 to 76                   |
 |               |                 |ZEPTOVM_EXPR_FLOAT_TYPE=HALF-FLOAT   |                                                  |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
-|Zepto VM-Medium| TODO            |ZEPTOVM_EXPR_STACK_SIZE=8 to 12      | TBD                                              |
+|Zepto VM-Medium| TODO            |ZEPTOVM_EXPR_STACK_SIZE=32 to 128    | TBD                                              |
 |               |                 |ZEPTOVM_MAX_PSEUDOTHREADS=4 to 8     |                                                  |
 +---------------+-----------------+-------------------------------------+--------------------------------------------------+
 
