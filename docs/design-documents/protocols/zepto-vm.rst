@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.2.8
+:Version:   v0.2.8a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
@@ -601,7 +601,7 @@ When PARALLEL instruction execution is started, original expression stack is "fr
 EXPRUNOP_EX, EXPRBINOP_EX, and JMPIFEXPR_EX instructions, when applied within PARALLEL pseudo-thread, allow to access original (pre-PARALLEL) expression stack. That is:
 
 * for positive EXPR-OFFSET values, first EXPR-OFFSET values identify expression stack items within the pseudo-thread, but when pseudo-thread values are exhausted, increasing EXPR-OFFSET starts to go into pre-PARALLEL expression stack. 
-* negative EXPR-OFFSET values address pre-PARALLEL expression stack; if negative EXPR-OFFSET is exhausted, it is 
+* negative EXPR-OFFSET values address pre-PARALLEL expression stack (as usual, starting from the bottom of the stack); if pre-PARALLEL expression stack is exhausted, negative EXPR-OFFSET values start to address pseudo-thread's own expression stack
 * for all EXPR-OFFSET values, if POP-FLAG is specified and it would affect pre-PARALLEL expression stack, it causes an ZEPTOVM_EXPRSTACKFROZENVIOLATION exception.
 
 TODO: (Medium Level) ZEPTOVM_NETINTERRUPT
