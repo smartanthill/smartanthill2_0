@@ -41,132 +41,105 @@ const uint8_t rijndael_sbox[256] =
    0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16
 };
 
-
-#define AES_128_BLOCK_OFFSET 0
-#define AES_128_RCON_OFFSET 16
-#define AES_128_ROUND_OFFSET 17
-#define AES_128_KEY_STATE_OFFSET 18
-#define AES_128_TMP_OFFSET 34
-#define AES_128_A_OFFSET 34
-#define AES_128_B_OFFSET 35
-#define AES_128_C_OFFSET 36
-#define AES_128_D_OFFSET 37
-#define AES_128_E_OFFSET 38
-//#define AES_128_I_OFFSET 39
-//#define AES_128_BUFF_SIZE 40
-#define AES_128_BUFF_SIZE 39
-
-uint8_t i; // TODO: consider adding to main operating block or declaring in each particular function
-
 #define SA_AES_GALOIS_MUL_2( value )  ( ( (value) & 0x80) ? (((value) << 1) ^ 0x1b) : ((value) << 1) )
 
-void sa_aes_128_initKeyExp(const uint8_t* key, uint8_t* aes_128_buff)
+void sa_aes_128_nextKeyExp(uint8_t* ksc, uint8_t* rcon)
 {
-	for (i = 0; i < 16; (i)++)
-		(aes_128_buff + AES_128_KEY_STATE_OFFSET)[i] = key[i];
-	*(aes_128_buff + AES_128_RCON_OFFSET) = 1;
-}
+    ksc[0] ^= rijndael_sbox[ksc[13]] ^ *rcon;
+    ksc[1] ^= rijndael_sbox[ksc[14]];
+    ksc[2] ^= rijndael_sbox[ksc[15]];
+    ksc[3] ^= rijndael_sbox[ksc[12]]; // RotWord
 
-void sa_aes_128_nextKeyExp(uint8_t* aes_128_buff)
-{
-    (aes_128_buff + AES_128_KEY_STATE_OFFSET)[0] ^= rijndael_sbox[(aes_128_buff + AES_128_KEY_STATE_OFFSET)[13]] ^ *(aes_128_buff + AES_128_RCON_OFFSET);
-    (aes_128_buff + AES_128_KEY_STATE_OFFSET)[1] ^= rijndael_sbox[(aes_128_buff + AES_128_KEY_STATE_OFFSET)[14]];
-    (aes_128_buff + AES_128_KEY_STATE_OFFSET)[2] ^= rijndael_sbox[(aes_128_buff + AES_128_KEY_STATE_OFFSET)[15]];
-    (aes_128_buff + AES_128_KEY_STATE_OFFSET)[3] ^= rijndael_sbox[(aes_128_buff + AES_128_KEY_STATE_OFFSET)[12]]; // RotWord
-
-    for (i = 4; i < 16; i += 4)
+    for (uint8_t i = 4; i < 16; i += 4)
     {
-        (aes_128_buff + AES_128_KEY_STATE_OFFSET)[i] ^= (aes_128_buff + AES_128_KEY_STATE_OFFSET)[i-4];
-        (aes_128_buff + AES_128_KEY_STATE_OFFSET)[i+1] ^= (aes_128_buff + AES_128_KEY_STATE_OFFSET)[i-3];
-        (aes_128_buff + AES_128_KEY_STATE_OFFSET)[i+2] ^= (aes_128_buff + AES_128_KEY_STATE_OFFSET)[i-2];
-        (aes_128_buff + AES_128_KEY_STATE_OFFSET)[i+3] ^= (aes_128_buff + AES_128_KEY_STATE_OFFSET)[i-1];
+        ksc[i] ^= ksc[i-4];
+        ksc[i+1] ^= ksc[i-3];
+        ksc[i+2] ^= ksc[i-2];
+        ksc[i+3] ^= ksc[i-1];
     }
 
     // generate next Rcon
-    *(aes_128_buff + AES_128_RCON_OFFSET) = (*(aes_128_buff + AES_128_RCON_OFFSET) << 1) ^ ((*(aes_128_buff + AES_128_RCON_OFFSET) >> 7) & 1) * 0x1b;
+    *rcon = (*rcon << 1) ^ ((*rcon >> 7) & 1) * 0x1b;
 }
 
-void sa_aes_128_addRoundKey(uint8_t keyOffset, uint8_t* aes_128_buff)
+void sa_aes_128_shiftRows(uint8_t* block)
 {
-    for (i = 0; i < 16; (i)++)
-        (aes_128_buff + AES_128_BLOCK_OFFSET)[i] ^= (aes_128_buff + AES_128_KEY_STATE_OFFSET)[keyOffset + i];
-}
-
-void sa_aes_128_subBytes(uint8_t* aes_128_buff)
-{
-    for (i = 0; i < 16; (i)++)
-        (aes_128_buff + AES_128_BLOCK_OFFSET)[i] = rijndael_sbox[(aes_128_buff + AES_128_BLOCK_OFFSET)[i]];
-}
-
-void sa_aes_128_shiftRows(uint8_t* aes_128_buff)
-{
+	uint8_t tmp;
     // 2-nd row
-    *(aes_128_buff + AES_128_TMP_OFFSET) = (aes_128_buff + AES_128_BLOCK_OFFSET)[1];
-    (aes_128_buff + AES_128_BLOCK_OFFSET)[1] = (aes_128_buff + AES_128_BLOCK_OFFSET)[5];
-    (aes_128_buff + AES_128_BLOCK_OFFSET)[5] = (aes_128_buff + AES_128_BLOCK_OFFSET)[9];
-    (aes_128_buff + AES_128_BLOCK_OFFSET)[9] = (aes_128_buff + AES_128_BLOCK_OFFSET)[13];
-    (aes_128_buff + AES_128_BLOCK_OFFSET)[13] = *(aes_128_buff + AES_128_TMP_OFFSET);
+    tmp = block[1];
+    block[1] = block[5];
+    block[5] = block[9];
+    block[9] = block[13];
+    block[13] = tmp;
 
     // 3-rd row
-    *(aes_128_buff + AES_128_TMP_OFFSET) = (aes_128_buff + AES_128_BLOCK_OFFSET)[2];
-    (aes_128_buff + AES_128_BLOCK_OFFSET)[2] = (aes_128_buff + AES_128_BLOCK_OFFSET)[10];
-    (aes_128_buff + AES_128_BLOCK_OFFSET)[10] = *(aes_128_buff + AES_128_TMP_OFFSET);
-    *(aes_128_buff + AES_128_TMP_OFFSET) = (aes_128_buff + AES_128_BLOCK_OFFSET)[6];
-    (aes_128_buff + AES_128_BLOCK_OFFSET)[6] = (aes_128_buff + AES_128_BLOCK_OFFSET)[14];
-    (aes_128_buff + AES_128_BLOCK_OFFSET)[14] = *(aes_128_buff + AES_128_TMP_OFFSET);
+    tmp = block[2];
+    block[2] = block[10];
+    block[10] = tmp;
+    tmp = block[6];
+    block[6] = block[14];
+    block[14] = tmp;
 
     // 4-th row
-    *(aes_128_buff + AES_128_TMP_OFFSET) = (aes_128_buff + AES_128_BLOCK_OFFSET)[3];
-    (aes_128_buff + AES_128_BLOCK_OFFSET)[3] = (aes_128_buff + AES_128_BLOCK_OFFSET)[15];
-    (aes_128_buff + AES_128_BLOCK_OFFSET)[15] = (aes_128_buff + AES_128_BLOCK_OFFSET)[11];
-    (aes_128_buff + AES_128_BLOCK_OFFSET)[11] = (aes_128_buff + AES_128_BLOCK_OFFSET)[7];
-    (aes_128_buff + AES_128_BLOCK_OFFSET)[7] = *(aes_128_buff + AES_128_TMP_OFFSET);
+    tmp = block[3];
+    block[3] = block[15];
+    block[15] = block[11];
+    block[11] = block[7];
+    block[7] = tmp;
 }
 
-void sa_aes_128_mixColumns(uint8_t* aes_128_buff)
+void sa_aes_128_mixColumns(uint8_t* block)
 {
-    for (i = 0; i < 16; i += 4)
+	uint8_t a, b, c, d, e;
+    for (uint8_t i = 0; i < 16; i += 4)
     {
-        *(aes_128_buff + AES_128_A_OFFSET) = (aes_128_buff + AES_128_BLOCK_OFFSET)[i];
-        *(aes_128_buff + AES_128_B_OFFSET) = (aes_128_buff + AES_128_BLOCK_OFFSET)[i + 1];
-        *(aes_128_buff + AES_128_C_OFFSET) = (aes_128_buff + AES_128_BLOCK_OFFSET)[i + 2];
-        *(aes_128_buff + AES_128_D_OFFSET) = (aes_128_buff + AES_128_BLOCK_OFFSET)[i + 3];
-        *(aes_128_buff + AES_128_E_OFFSET) = *(aes_128_buff + AES_128_A_OFFSET) ^ *(aes_128_buff + AES_128_B_OFFSET) ^ *(aes_128_buff + AES_128_C_OFFSET) ^ *(aes_128_buff + AES_128_D_OFFSET);
+        a = block[i];
+        b = block[i + 1];
+        c = block[i + 2];
+        d = block[i + 3];
+        e = a ^ b ^ c ^ d;
 
-        (aes_128_buff + AES_128_BLOCK_OFFSET)[i] ^= *(aes_128_buff + AES_128_E_OFFSET) ^ SA_AES_GALOIS_MUL_2(*(aes_128_buff + AES_128_A_OFFSET) ^ *(aes_128_buff + AES_128_B_OFFSET));
-        (aes_128_buff + AES_128_BLOCK_OFFSET)[i+1] ^= *(aes_128_buff + AES_128_E_OFFSET) ^ SA_AES_GALOIS_MUL_2(*(aes_128_buff + AES_128_B_OFFSET) ^ *(aes_128_buff + AES_128_C_OFFSET));
-        (aes_128_buff + AES_128_BLOCK_OFFSET)[i+2] ^= *(aes_128_buff + AES_128_E_OFFSET) ^ SA_AES_GALOIS_MUL_2(*(aes_128_buff + AES_128_C_OFFSET) ^ *(aes_128_buff + AES_128_D_OFFSET));
-        (aes_128_buff + AES_128_BLOCK_OFFSET)[i+3] ^= *(aes_128_buff + AES_128_E_OFFSET) ^ SA_AES_GALOIS_MUL_2(*(aes_128_buff + AES_128_D_OFFSET) ^ *(aes_128_buff + AES_128_A_OFFSET));
+        block[i] ^= e ^ SA_AES_GALOIS_MUL_2(a ^ b);
+        block[i+1] ^= e ^ SA_AES_GALOIS_MUL_2(b ^ c);
+        block[i+2] ^= e ^ SA_AES_GALOIS_MUL_2(c ^ d);
+        block[i+3] ^= e ^ SA_AES_GALOIS_MUL_2(d ^ a);
     }
 }
 
-void sa_aes_128_init(uint8_t* key, const uint8_t* message, uint8_t* aes_128_buff)
+void sa_aes_128_encrypt_block( const uint8_t* key, const uint8_t* _block, uint8_t* res )
 {
-    for (i = 0; i < 16; (i)++)
-    	(aes_128_buff + AES_128_BLOCK_OFFSET)[i] = message[i];
-    sa_aes_128_initKeyExp(key, aes_128_buff);
-    *(aes_128_buff + AES_128_ROUND_OFFSET) = 0;
-}
+	uint8_t aes_128_buff[40];
+	uint8_t block[16], ksc[32];
+    memcpy( block, _block, 16 );
+	memcpy( ksc, key, 16 );
+	uint8_t rcon = 1;
 
-void sa_aes_128_encrypt(uint8_t* aes_128_buff)
-{
-    sa_aes_128_addRoundKey(0, aes_128_buff);
+	uint8_t i;
 
-	for ( *(aes_128_buff + AES_128_ROUND_OFFSET)=0; *(aes_128_buff + AES_128_ROUND_OFFSET)<9; (*(aes_128_buff + AES_128_ROUND_OFFSET))++ )
+    for (i = 0; i < 16; (i)++) // add round key
+        block[i] ^= ksc[i];
+
+	for ( uint8_t round=0; round<9; round++ )
 	{
-		sa_aes_128_subBytes(aes_128_buff);
-		sa_aes_128_shiftRows(aes_128_buff);
-		sa_aes_128_mixColumns(aes_128_buff);
+		for (i = 0; i < 16; (i)++) // subBytes
+			block[i] = rijndael_sbox[block[i]];
+		sa_aes_128_shiftRows(block);
+		sa_aes_128_mixColumns(block);
 
-		sa_aes_128_nextKeyExp(aes_128_buff);
-		sa_aes_128_addRoundKey(0, aes_128_buff);
+		sa_aes_128_nextKeyExp( ksc, &rcon );
+		for (i = 0; i < 16; (i)++) // add round key
+			block[i] ^= ksc[i];
 	}
 
-	sa_aes_128_subBytes(aes_128_buff);
-	sa_aes_128_shiftRows(aes_128_buff);
+    for (i = 0; i < 16; (i)++) // subBytes
+        block[i] = rijndael_sbox[block[i]];
+	sa_aes_128_shiftRows(block);
 
-    sa_aes_128_nextKeyExp(aes_128_buff);
-    sa_aes_128_addRoundKey(0, aes_128_buff);
+    sa_aes_128_nextKeyExp( ksc, &rcon );
+    for (i = 0; i < 16; (i)++) // add round key
+        block[i] ^= ksc[i];
+
+	memcpy( res, block, 16 );
 }
 
 #endif //__SA_AES_128_H__
