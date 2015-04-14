@@ -34,4 +34,5 @@ Protocols
     sasp
     saoip
     sascrambling
+    sapairing
 
