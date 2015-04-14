@@ -27,7 +27,7 @@
 SmartAnthill PAIRING procedure
 ==============================
 
-:Version:   v0.0.5
+:Version:   v0.0.6
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -96,7 +96,7 @@ SmartAnthill Single-LED Pairing is pairing mechanism, which requires absolute mi
 SmartAnthill Single-LED Pairing is based on Even Simpler Secure Pairing (ESSP) protocol, as described above. MITM Check for Single-LED Pairing is performed as follows:
 
 * User is asked to bring Device close to the webcam which is located on SmartAnthill Central Controller
-* Client sends a program which asks LED to blink, using `Binking-Function(random-nonce-sent-by-Client)=AES(key=random-nonce-sent-by-Client,data=MITM-check-key)` as a pattern. TODO: Built-in Plugin to produce AES(...) reply.
+* Client sends a program which asks LED to blink, using `Binking-Function(random-nonce-sent-by-Client)=AES(key=MITM-check-key,data=random-nonce-sent-by-Client)` as a pattern. TODO: Built-in Plugin to produce AES(...) reply.
 * Accordingly, Device starts blinking the LED
 * Client, using webcam, recognizes blinking pattern and makes sure that it matches expectations.
 * If expectations don't match, program may be repeated with a *different* random-nonce-sent-by-Client
