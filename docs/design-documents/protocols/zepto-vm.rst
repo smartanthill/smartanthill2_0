@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.2.8a
+:Version:   v0.2.9
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
@@ -68,6 +68,10 @@ Bodyparts and Plugins
 According to a more general SmartAnthill architecture, each SmartAnthill Device (a.k.a. 'Ant') has one or more sensors and/or actuators, with each sensor or actuator known as an 'ant body part'. Each 'body part' is assigned it's own id, which is stored in 'SmartAnthill Database' within SmartAnthill Client (which in turn is usually implemented by SmartAnthill Central Controller).
 For each body part type, there is a 'plugin' (so if there are body parts of the same type in the device, number of plugins can be smaller than number of body parts). Plugins are pieces of code which are written in C language and programmed into MCU of SmartAnthill device.
 
+Bodyparts are identified by BODYPART-ID. BODYPART-IDs MAY be negative. Non-negative values for BODYPART-IDs are used for device-specific body parts. Negative values for BODYPART-IDs are reserved for well-known built-int body parts. Currently, such body parts include:
+
+* **BUILTIN_BODYPART_PAIRING** (see :ref:`sapairing` document for details)
+* **BUILTIN_BODYPART_AES** (TODO; MUST NOT allow using any of Device keys, key MUST be provided as a plugin parameter)
 
 Reply Buffer and Reply Frames
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -258,7 +262,7 @@ IMPORTANT: for all the reported sizes, device MUST report them as if implementat
 
 **\| ZEPTOVM_OP_EXEC \| BODYPART-ID \| DATA-SIZE \| DATA \|**
 
-where ZEPTOVM_OP_EXEC is 1-byte opcode, BODYPART-ID is 1-byte id of the bodypart to be used, DATA-SIZE is an Encoded-Unsigned-Int<max=2> (as defined in :ref:`saprotostack` document) length of DATA field, and DATA in an opaque data to be passed to the plugin associated with body part identified by BODYPART-ID; DATA field has size DATA-SIZE.
+where ZEPTOVM_OP_EXEC is 1-byte opcode, BODYPART-ID is a Encoded-Signed-Int<max=2> id of the bodypart to be used, DATA-SIZE is an Encoded-Unsigned-Int<max=2> (as defined in :ref:`saprotostack` document) length of DATA field, and DATA in an opaque data to be passed to the plugin associated with body part identified by BODYPART-ID; DATA field has size DATA-SIZE.
 EXEC instruction invokes a plug-in which corresponds to BODYPART-ID, and passes DATA of DATA-SIZE  size to this plug-in. Plug-in always adds a reply to the reply-buffer; reply size may vary, but MUST be at least 1 byte in length; otherwise it is a ZEPTOVM_PLUGINERROR exception.
 
 

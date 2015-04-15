@@ -27,7 +27,7 @@
 SmartAnthill PAIRING procedure
 ==============================
 
-:Version:   v0.0.6
+:Version:   v0.0.7
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -56,14 +56,26 @@ SmartAnthill ESSP
 
 ESSP stands for 'Even Simpler Secure Pairing'. ESSP protocol provides security with minimal complexity involved.
 
+From ESSP perspective, SmartAnthill Device can be in one of the following pairing states: 
+
+* PRE-PAIRING
+* PAIRING-KEY-EXCHANGE
+* PAIRING-MITM-CHECK
+* PAIRING-COMPLETED
+
+Change from any of the states into PRE-PAIRING state MUST be implemented ONLY via physical manipulations of end-user with SmartAnthill Device (and NOT remotely). Examples of valid user interfaces to perform such a change include on-Device button (for example, if kept pressed for over N seconds) and on-Device PCB jumper.
+
+In PRE-PAIRING and PAIRING-KEY-EXCHANGE states, SASP MUST use 'zero' AES-128 key (with AES key consisting of all zeros).
+
+In PRE-PAIRING and PAIRING-KEY-EXCHANGE states, no programs are allowed to be sent to SACCP; only TODO SACCP packets are allowed. In PAIRING-MITM-CHECK state, SACCP programs are allowed; however, in this state, SACCP restricts EXEC command to the only Built-In bodypart (id=BUILTIN_BODYPART_PAIRING). 
+
 From security perspective, ESSP works as follows:
 
-* BOTH parties generate 256-bit keys (see TODO for details)
-* parties initiate anonymous Diffie-Hellman key exchange for generated 256-bit keys, obtaining a 256-bit shared key
-* from this point on, SASP uses first 128-bits of 256-bit shared key, as SASP AES key
-* parties use last 128 bits of the 256-bit shared key ("MITM check key") to perform MITM protection check depending on the flavour (during MITM protection check, SASP uses SASP AES key, but both parties keep a MITM-CHECK-IN-PROGRESS flag that this is not real work, and only SACCP programs with a special MITM-CHECK flag (TODO) are allowed to be executed).
-* When MITM-CHECK-IN-PROGRESS flag is set, Zepto VM allows access (TODO) only to those BODYPARTS which are specially designated as "MITM-CHECK" ones.
-* if MITM protection check indicates that everything is fine - MITM-CHECK-IN-PROGRESS flag is cleared, and normal work can be resumed.
+* BOTH parties generate 256-bit keys (see TODO for details; prohibition on zero SASP key?)
+* parties initiate anonymous Diffie-Hellman key exchange for generated 256-bit keys, obtaining a 256-bit shared key; this is reflected by PAIRING-KEY-EXCHANGE Device pairing state.
+* from this point on, on both sides SASP starts to use first 128-bits of 256-bit shared key, as SASP AES key
+* parties use last 128 bits of the 256-bit shared key ("MITM check key") to perform MITM protection check depending on the ESSP flavour. This is reflected by PAIRING-MITM-CHECK Device pairing state. 
+* if MITM protection check indicates that everything is fine - Device state is changed to PAIRING-COMPLETED, and normal work can be started.
 
 ESSP Protocol
 ^^^^^^^^^^^^^
@@ -81,7 +93,7 @@ TODO: error message?
 
 **ESSP PAIRING MITM PROGRAM**
 
-ESSP PAIRING PROGRAM is not really a special message. Instead, it is a regular Zepto VM program which goes over SACCP over SAGDP over SASP. SASP uses regular key (a part of 256-bit shared key from Diffie-Hellman exchange). There is a difference from regular program though: SACCP message for such a program contains a MITM-CHECK flag. Reply to such program is also designated with a MITM-CHECK flag. MITM-CHECK flag MUST match Device's own MITM-CHECK-IN-PROGRESS flag, otherwise it is a TODO error. MITM-CHECK flag disables access to all the bodyparts except the one which controls the LED, and enables built-in plugin which allows to calculate `BlinkingFunction()` as described below, and to reset Device's MITM-CHECK-IN-PROGRESS flag. 
+ESSP PAIRING PROGRAM is not really a special message. Instead, it is a regular Zepto VM program which goes over SACCP over SAGDP over SASP. There is a difference from regular program though: this program MUST come only in PAIRING-MITM-CHECK Device pairing state. In this state, SACCP (and/or Zepto VM) prohibits program to access any bodyparts, except for a Built-In bodypart with id=BUILTIN_BODYPART_PAIRING. This also ensures that despite there can be two bodyparts accessing the same LED (one is 'pairing' bodypart, another is regular bodypart), there is no possible conflict between the two. 
 
 ESSP DH Paramaters
 ''''''''''''''''''
