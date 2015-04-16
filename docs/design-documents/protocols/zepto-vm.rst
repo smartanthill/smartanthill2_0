@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.2.10
+:Version:   v0.2.11
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
@@ -148,6 +148,7 @@ Zepto VM Opcodes
 * ZEPTOVM_OP_MCUSLEEP
 * ZEPTOVM_OP_POPREPLIES *\* limited support in Zepto VM-One, full support from Zepto VM-Tiny \*/*
 * ZEPTOVM_OP_EXIT
+* ZEPTOVM_OP_APPENDTOREPLY *\* limited support in Zepto VM-One, full support from Zepto VM-Tiny \*/*
 * */\* starting from the next opcode, instructions are not supported by Zepto VM-One \*/*
 * ZEPTOVM_OP_JMP
 * ZEPTOVM_OP_JMPIFREPLYFIELD_LT
@@ -155,7 +156,6 @@ Zepto VM Opcodes
 * ZEPTOVM_OP_JMPIFREPLYFIELD_EQ
 * ZEPTOVM_OP_JMPIFREPLYFIELD_NE
 * ZEPTOVM_OP_MOVEREPLYTOFRONT
-* ZEPTOVM_OP_APPENDTOREPLY
 * */\* starting from the next opcode, instructions are not supported by Zepto VM-Tiny and below \*/*
 * ZEPTOVM_OP_PUSHEXPR_CONSTANT
 * ZEPTOVM_OP_PUSHEXPR_REPLYFIELD
@@ -301,7 +301,7 @@ It should be noted that implementing MCUSLEEP instruction will implicitly requir
 
 where ZEPTOVM_OP_POPREPLIES is a 1-byte opcode (NB: it is the same as ZEPTOVM_OP_POPREPLIES in Level Tiny), and N-REPLIES is an Encoded-Unsigned-Int<max=2> field, which MUST be 0 for Zepto VM-One (other values are allowed for Zepto VM-Tiny and above, as described below). If N-REPLIES is not 0 for Zepto VM-One POPREPLIES instruction, Zepto VM will issue a ZEPTOVM_INVALIDPARAMETER exception. \|POPREPLIES\|0\| means “remove all replies currently in reply buffer”.
 
-NB: Zepto VM-One implements POPREPLIES instruction only partially (for N-REPLIES=0); Zepto VM-Tiny supports other values as described below, and behavior for N-REPLIES=0 which is supported by both Zepto VM-One and Zepto VM-Tiny is consistent for any Zepto VM implementation.
+NB: Zepto VM-One implements POPREPLIES instruction only partially (for N-REPLIES=0); Zepto VM-Tiny and above support other values as described below, and behavior for N-REPLIES=0 which is supported by all Zepto VM levels, is exactly the same regardless of level.
 
 **\| ZEPTOVM_OP_EXIT \| REPLY-FLAGS-AND-FORCED-PADDING-FLAG \| (opt) FORCED-PADDING-TO \|**
 
@@ -321,6 +321,12 @@ FORCED-PADDING-TO field (if present) specifies 'enforced padding' as described i
 
 * if present, FORCED-PADDING-TO MUST specify length which is equal to or greater than the size of current "reply buffer"
 * if developer wants to avoid information leak from the fact that encrypted messages may have different lengths, she may specify the same FORCED-PADDING-TO for all the replies which should be indistinguishable.
+
+**\| ZEPTOVM_OP_APPENDTOREPLY \| REPLY-NUMBER \| DATA-TYPE \| DATA \|**
+
+where REPLY-NUMBER is a Encoded-Signed-Int<max=2> field, which MUST be equal to '-1' for Zepto VM-One, DATA-TYPE is 1-byte taking one of the valid values for FIELD-SEQUENCE field as described in JMPIFREPLYFIELD instruction, and DATA has size determined by DATA-TYPE field.
+
+NB: Zepto VM-One implements APPENDTOREPLY instruction only partially (for REPLY-NUMBER=-1); Zepto VM-Tiny and above support other values as described below, and behavior for REPLY-NUMBER=-1 which is supported by all Zepto VM levels, is exactly the same regardless of level.
 
 Implementation notes
 ''''''''''''''''''''
@@ -381,6 +387,8 @@ where ZEPTOVM_OP_POPREPLIES is a 1-byte opcode and N-REPLIES is an Encoded-Unsig
 
 POPREPLIES instruction removes last N-REPLIES of plugins from the reply buffer. If N-REPLIES is equal to zero, it means that all replies are removed. If N-REPLIES is more than number of replies in the buffer, it is a TODO exception. Usually, either \|POPREPLIES\|0\| (removing all the replies) or \|POPREPLIES\|1\| (removing only one reply) is used, but other values are also possible.
 
+NB: POPREPLIES instruction is partially implemented by Zepto VM-One (for N-REPLIES=0).
+
 **\| ZEPTOVM_OP_MOVEREPLYTOFRONT \| REPLY-NUMBER \|**
 
 where ZEPTOVM_OP_MOVEREPLYTOFRONT is a 1-byte opcode and REPLY-NUMBER is an Encoded-Signed-Int<max=2> field, which is interpreted as described in JMPIFREPLYFIELD instruction.
@@ -392,6 +400,8 @@ MOVEREPLYTOFRONT instruction is used to reorder reply frames within reply buffer
 where REPLY-NUMBER is interpreted as described in JMPIFREPLYFIELD instruction, DATA-TYPE is 1-byte taking one of the valid values for FIELD-SEQUENCE field as described in JMPIFREPLYFIELD instruction, and DATA has size determined by DATA-TYPE field.
 
 APPENDTOREPLY instruction appends DATA with DATA-TYPE to the end of reply specified by REPLY-NUMBER.
+
+NB: APPENDTOREPLY instruction is partially implemented by Zepto VM-One (for REPLY-NUMBER=-1).
 
 Implementation notes
 ''''''''''''''''''''
