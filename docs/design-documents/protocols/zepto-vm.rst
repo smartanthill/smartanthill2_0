@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.2.9
+:Version:   v0.2.10
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
@@ -155,6 +155,7 @@ Zepto VM Opcodes
 * ZEPTOVM_OP_JMPIFREPLYFIELD_EQ
 * ZEPTOVM_OP_JMPIFREPLYFIELD_NE
 * ZEPTOVM_OP_MOVEREPLYTOFRONT
+* ZEPTOVM_OP_APPENDTOREPLY
 * */\* starting from the next opcode, instructions are not supported by Zepto VM-Tiny and below \*/*
 * ZEPTOVM_OP_PUSHEXPR_CONSTANT
 * ZEPTOVM_OP_PUSHEXPR_REPLYFIELD
@@ -385,6 +386,12 @@ POPREPLIES instruction removes last N-REPLIES of plugins from the reply buffer. 
 where ZEPTOVM_OP_MOVEREPLYTOFRONT is a 1-byte opcode and REPLY-NUMBER is an Encoded-Signed-Int<max=2> field, which is interpreted as described in JMPIFREPLYFIELD instruction.
 
 MOVEREPLYTOFRONT instruction is used to reorder reply frames within reply buffer. It takes reply frame which has REPLY-NUMBER, and makes it the first one in the buffer, moving the rest of the replies back. Implementation note: need also to recalculate and update positions in offset stack.
+
+**\| ZEPTOVM_OP_APPENDTOREPLY \| REPLY-NUMBER \| DATA-TYPE \| DATA \|**
+
+where REPLY-NUMBER is interpreted as described in JMPIFREPLYFIELD instruction, DATA-TYPE is 1-byte taking one of the valid values for FIELD-SEQUENCE field as described in JMPIFREPLYFIELD instruction, and DATA has size determined by DATA-TYPE field.
+
+APPENDTOREPLY instruction appends DATA with DATA-TYPE to the end of reply specified by REPLY-NUMBER.
 
 Implementation notes
 ''''''''''''''''''''
