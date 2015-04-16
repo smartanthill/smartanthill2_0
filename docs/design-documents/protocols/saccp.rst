@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.2.4
+:Version:   v0.2.5
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -104,8 +104,22 @@ To re-use the same code which is used for SASP anyway, SACCP uses the following 
 SACCP Packets
 -------------
 
-SACCP packets are divided into SACCP command packets (from SmartAnthill Client to SmartAnthill Device) and SACCP reply packets (from SmartAnthill Device to SmartAnthill Client).
+SACCP packets are divided into SACCP pairing packets, SACCP command packets (from SmartAnthill Client to SmartAnthill Device) and SACCP reply packets (from SmartAnthill Device to SmartAnthill Client).
 
+SACCP Pairing Packets
+^^^^^^^^^^^^^^^^^^^^^
+
+NB: implementing Pairing Packets is NOT REQUIRED for SmartAnthill Devices which use Zero Pairing (such as Hobbyist Devices).
+
+**\| SACCP-OTA-PAIRING-REQUEST \| OTA-PAIRING-REQUEST-BODY \|**
+
+where SACCP-OTA-PAIRING-REQUEST is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_PAIRING 3-bit constant, bit [3] equal to 0, and bits [4..7] reserved (MUST be zeros), and OTA-PAIRING-REQUEST-BODY as described in :ref:`sapairing` document. 
+
+**\| SACCP-OTA-PAIRING-RESPONSE \| OTA-PAIRING-RESPONSE-BODY \|**
+
+where SACCP-OTA-PAIRING-RESPONSE is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_PAIRING 3-bit constant, bit [3] equal to 1, and bits [4..7] reserved (MUST be zeros), and OTA-PAIRING-RESPONSE-BODY as described in :ref:`sapairing` document. 
+
+SACCP-OTA-PAIRING-REQUEST is sent from Client to Device, and SACCP-OTA-PAIRING-RESPONSE is sent from Device to Client, forming a "packet chain".
 
 SACCP Command Packets
 ^^^^^^^^^^^^^^^^^^^^^
