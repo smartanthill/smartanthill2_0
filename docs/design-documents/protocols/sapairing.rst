@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.0.8
+:Version:   v0.0.9
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -69,7 +69,9 @@ Zero Paper Pairing requires each Device to:
   + 128-bit key is converted to a large unsigned integer (using SmartAnthill Endianness) from 0 to 2^128-1
   + this large unsigned integer is written as an integer using base 36 (i.e. using 36 digits in each position); to write digits 0-9 in this representation, symbols '0'-'9' are used; to write digits 10-35 in this representation, symbols 'A'-'Z' (upper case) are used. This representation will have at most 25 symbols (as 36^25 > 2^128); if there are less symbols than 25, they're left-padded with zeros to 25
   + these 25 symbols are written in dash-separated groups of five
-  + for example, all-zero key will be written as 00000-00000-00000-00000-00000
+  + checksum symbol is calculated as a modulo-36 sum of all the symbols
+  + checksum is appended (via dash) to dash-separated groups of five, forming XXXXX-XXXXX-XXXXX-XXXXX-X pattern
+  + for example, all-zero key will be written as 00000-00000-00000-00000-00000-0
 
 * this user-friendly form of 128-bit crypto-random key MUST be provided in a printed form with the device.
 
