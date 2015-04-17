@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.0.10
+:Version:   v0.0.10a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -210,7 +210,7 @@ All OtA Pairing Flavours run on top of SmartAnthill OtA Pairing Protocol, and di
 SmartAnthill OtA Single-LED Pairing
 '''''''''''''''''''''''''''''''''''
 
-SmartAnthill OtA Single-LED Pairing is pairing mechanism, which is automated (i.e. user is not required to enter any data), and which requires absolute minimum of resources on the Device side. Namely, all the Device needs to have (in addition to MCU) is one single LED. This LED MAY be any of existing LEDs on the Device. 
+SmartAnthill OtA Single-LED Pairing is pairing mechanism, which is semi-automated (i.e. user is not required to enter any data, but will be required to position devices in a certain way), and which requires absolute minimum of resources on the Device side. Namely, all the Device needs to have (in addition to MCU) is one single LED. This LED MAY be any of existing LEDs on the Device. 
 
 MITM-Check for Single-LED Pairing is performed as follows:
 
@@ -232,11 +232,6 @@ To re-iterate: being User-OPTIONAL means that while Device implementors still MU
 
 SINGLE-LED-PAIRING Built-In Plugin
 ##################################
-
-TODO
-
-SmartAnthill OtA Paper Pairing
-''''''''''''''''''''''''''''''
 
 TODO
 

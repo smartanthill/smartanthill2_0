@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Overall Architecture
 =====================================
 
-:Version:   v0.3e
+:Version:   v0.3.1
 
 **SmartAnthill** is an open IoT system which allows easy control over multiple microcontroller-powered devices, creating a home- or office-wide heterogeneous network out of these devices.
 
@@ -214,9 +214,9 @@ An important part of *SmartAnthill Hobbyist Device* (which is absent on SmartAnt
 SmartAnthill Mass-Market Device
 '''''''''''''''''''''''''''''''
 
-A diagram of a typical *SmartAnthill Mass Market Device* is also provided in the section :ref:`saoverdevices`. In addition to the components available on *SmartAnthill Hobbyist Device*, *SmartAnthill Mass-Market Device* additionally includes:
+A diagram of a typical *SmartAnthill Mass Market Device* is also provided in the section :ref:`saoverdevices`. In addition to the components available on *SmartAnthill Hobbyist Device*, *SmartAnthill Mass-Market Device* MAY additionally include:
 
-* **"Pairing" Interface** and **"Pairing" Module** responsible for handling "pairing" interface. "pairing" interface is used during "pairing" process as described below, and can be, for example, NFC or USB interface to handle USB stick.
+* an additional LED to support Single-LED Pairing. In practice, an existing LED MAY be re-used for this purpose.
 
 In addition, **Persistent Storage** on Mass-Market Devices stores *System-specific Data*. *System-specific Data* contains information such as bus-specific addresses and security keys; it is obtained during "pairing" process which is described below
 
@@ -263,22 +263,18 @@ Mass-market devices are expected to be shipped in already programmed state, with
 
 * **Initial State**. Initially (when shipped to the customer), SmartAnthill mass-market-oriented device contains a program which ensures it's operation. Re-programming capability and connector are optional for SmartAnthill mass-market-oriented devices.
 
-* **“Pairing” with Central Controller**. "Pairing" includes Central Controller (controlled via *SmartAnthill Dashboard*) generating and exchanging credentials with device, querying device configuration and capabilities, and entering credentials, configuration and capabilities into *SmartAnthill Database*.
+* **“Pairing” with Central Controller**. "Pairing" includes Central Controller (controlled via *SmartAnthill Dashboard*) generating and exchanging credentials with device, querying device configuration and capabilities, and entering credentials, configuration and capabilities into *SmartAnthill Database*. "Pairing" is described in detail in :ref:`sapairing` document. 
 
-  - Physically, “pairing” can be done in several different ways [TODO: check feasibility of each]:
+  - Physically, “pairing” can be done in one of two different ways:
 
-    + Using direct NFC (moving NFC-enabled device close to NFC-enabled Central Controller)
+    + OtA Single-LED Pairing. Requires user to point a webcam of Central Controller (or a phone camera with SmartAnthill app running - TODO) to the Device intended to be paired. On the Device side, requires only one single LED (existing LED MAY be re-used for "pairing")
+    + Zero Paper Pairing. Requires user to enter 26-symbol key into Central Controller. On the Device side, requires printed key (unique to the Device); additionally requires Device to fullfil Reprogramming Requirements as specified in :ref:`sapairing`.
 
-    + Using indirect NFC. It means: first, launching SmartAnthill-pairing app on an NFC-enabled smartphone; second, bringing the smartphone physically close to Central Controller; third, bringing the smartphone physically close to the device; fourth, bringing the smartphone physically close to Central Controller again.
-
-    + Using USB flash. Will need to insert USB flash stick sequentially: to Central Controller, to USB-enabled device, and again to Central Controller.
-
-  - Special considerations: to achieve reasonable levels of security, SmartAnthill Device MUST NOT allow to extract credentials; the only action allowed is to re-pair device with a different Central Controller, destroying previously existing credentials in the process. In other words, while it is possible to steal device to use with a different Central Controller, it should not be possible to impersonate device without access to Central Controller.
+  - Special considerations: SmartAnthill Device MUST NOT allow to extract keys; the only action allowed is to re-pair device with a different Central Controller, destroying previously existing credentials in the process. In other words, while it is possible to steal device to use with a different Central Controller, it should not be possible to impersonate device without access to Central Controller. In addition, re-pairing MUST be initiated on the Device itself (and Devices MUST NOT allow initiating re-pairing remotely); this is necessary to ensure that to hijack Device, attacker needs to be in physical possession of the Device. 
 
 * **Operation**. Operation of Mass-market-oriented device is the same as operation of Hobbyist-oriented device.
 
 SmartAnthill protocol stack
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-SmartAnthill protocol stack is described in detail in a separate document,
-:ref:`saprotostack`.
+SmartAnthill protocol stack is described in detail in a separate document, :ref:`saprotostack`.
 

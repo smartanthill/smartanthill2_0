@@ -1,4 +1,4 @@
-<mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" fold="1" page="1" pageScale="1" pageWidth="826" pageHeight="1169" style="default-style2" math="0">
+<mxGraphModel dx="1959" dy="1171" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" fold="1" page="1" pageScale="1" pageWidth="826" pageHeight="1169" style="default-style2" math="0">
    <root>
       <mxCell id="0" />
       <mxCell id="1" parent="0" />
@@ -112,14 +112,8 @@
             <mxPoint x="540" y="695" as="targetPoint" />
          </mxGeometry>
       </mxCell>
-      <mxCell id="39" value="&quot;Pairing&quot; Module&lt;br&gt;" style="whiteSpace=wrap;html=1;fontSize=16;gray" parent="1" vertex="1">
-         <mxGeometry x="68" y="570" width="140" height="30" as="geometry" />
-      </mxCell>
-      <mxCell id="40" value="" style="shape=step;whiteSpace=wrap;html=1;fontSize=16" parent="1" vertex="1">
-         <mxGeometry x="27" y="570" width="32" height="30" as="geometry" />
-      </mxCell>
-      <mxCell id="41" style="edgeStyle=none;rounded=0;html=1;exitX=1;exitY=0.5;exitPerimeter=0;entryX=0;entryY=0.5;endArrow=none;endFill=0;fontSize=16" parent="1" source="40" target="39" edge="1">
-         <mxGeometry relative="1" as="geometry" />
+      <mxCell id="39" value="LED" style="whiteSpace=wrap;html=1;fontSize=16;gray" parent="1" vertex="1">
+         <mxGeometry x="68" y="570" width="42" height="30" as="geometry" />
       </mxCell>
       <mxCell id="42" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0.25;entryY=0;endArrow=none;endFill=0;fontSize=16;dashed=1" parent="1" source="39" target="22" edge="1">
          <mxGeometry relative="1" as="geometry" />
@@ -133,8 +127,6 @@
       <mxCell id="48" value="Programming&lt;br&gt;Interface&lt;br&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1">
          <mxGeometry y="70" width="105" height="45" as="geometry" />
       </mxCell>
-      <mxCell id="49" value="&quot;Pairing&quot;&lt;br&gt;Interface&lt;br&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontSize=16" parent="1" vertex="1">
-         <mxGeometry y="525" width="90" height="45" as="geometry" />
-      </mxCell>
    </root>
 </mxGraphModel>
+
