@@ -27,7 +27,7 @@
 SmartAnthill SmartAnthill Random Number Generation and Key Generation
 =====================================================================
 
-:Version:   v0.1
+:Version:   v0.1.1
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -60,12 +60,11 @@ If Device doesn't have a pre-initialized Poor-Man's PRNG, it is known as Hardwar
 * on-line testing MUST be performed on a bit stream before any cryptographic primitives are applied (but SHOULD be performed after von Neumann bias removal)
 * Device MUST implement Fortuna RNG (as specified in TODO; note that Fortuna is very resource-intensive for an MCU). 
 * hardware-generated bit stream MUST be fed to a Fortuna PRNG (after 20000-bit blocks pass on-line testing)
-* it is Fortuna output which MUST be used as a RNG output
-* RNG MUST skip at least first 50000 bits of the Fortuna output bit stream, after each Device reset/reboot
-* on Device start, after skipping required amount of random data as specified above, and after performing all the additional Entropy-Needed - Entropy-Provided exchanges as specified in :ref:`sapairing` document, Device SHOULD initialize Poor-Man's PRNG with Fortuna's output
+* RNG MUST skip at least first TODO bits of the Fortuna output bit stream (before starting using Fortuna output), after each Device reset/reboot
+* on Device start, after skipping required amount of Fortuna output as specified above, and after performing all the additional Entropy-Needed - Entropy-Provided exchanges as specified in :ref:`sapairing` document, Device SHOULD initialize Poor-Man's PRNG with Fortuna's output. As soon as Poor-Man's PRNGs are initialized:
 
-  + as long as on-line bit stream testing indicates that everything is fine, Poor-Man's PRNG output SHOULD NOT be used (but it's state SHOULD be occasionally changed - TODO (XOR with Fortuna output?))
-  + if on-line testing reports failure after Poor-Man's PRNG is initialized, Device MAY continue working using Poor-Man's PRNG. 
+  + regardless of hardware RNG failures, to obtain one byte of output bit stream, RNG MUST take one byte from Fortuna output, and XOR it with one byte of Poor-Man's PRNG output 
+  + as long as hardware RNG doesn't fail (i.e. blocks do pass on-line testing as described above), Poor-Man's PRNG SHOULD be re-initialized approx. once per one hour of work (exact times MAY vary depending on typical Device patterns), by XOR-ing it's counter with next 128 bits of Fortuna output
 
 In addition, such Devices MUST perform additional Entropy-Needed requests during pairing procedure, as described in :ref:`sapairing` document.
 
@@ -78,7 +77,7 @@ If Device has both pre-initialized Poor-Man's PRNG and hardware-based entropy so
 * implementing on-line testing is not necessary
 * Device MUST implement Fortuna RNG
 * hardware-generated bit stream MUST be fed to a Fortuna PRNG
-* RNG MUST skip at least first 50000 bits of the Fortuna output bit stream, after each Device reset/reboot
+* RNG MUST skip at least first TODO bits of the Fortuna output bit stream, after each Device reset/reboot
 * to obtain one byte of output bit stream, RNG MUST take one byte from Fortuna output, and XOR it with one byte of Poor-Man's PRNG output
 
 SmartAnthill Client and Devices with Crypto-Safe RNG
