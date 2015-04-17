@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.2.6
+:Version:   v0.2.7
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -113,13 +113,21 @@ NB: implementing Pairing Packets is NOT REQUIRED for SmartAnthill Devices which 
 
 **\| SACCP-OTA-PAIRING-REQUEST \| OTA-PAIRING-REQUEST-BODY \|**
 
-where SACCP-OTA-PAIRING-REQUEST is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_PAIRING 3-bit constant, and bits [3..7] reserved (MUST be zeros), and OTA-PAIRING-REQUEST-BODY as described in :ref:`sapairing` document. 
+where SACCP-OTA-PAIRING-REQUEST is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_PAIRING 3-bit constant, bit [3] = 0, and bits [4..7] reserved (MUST be zeros), and OTA-PAIRING-REQUEST-BODY as described in :ref:`sapairing` document. 
+
+**\| SACCP-OTA-PAIRING-ENTROPY-PROVIDED-REQUEST \| OTA-PAIRING-ENTROPY-PROVIDED-REQUEST-BODY \|**
+
+where SACCP-OTA-PAIRING-ENTROPY-PROVIDED-REQUEST is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_PAIRING 3-bit constant, bit [3] = 1, and bits [4..7] reserved (MUST be zeros), and OTA-PAIRING-ENTROPY-PROVIDED-REQUEST-BODY as described in :ref:`sapairing` document. 
 
 **\| SACCP-OTA-PAIRING-RESPONSE \| OTA-PAIRING-RESPONSE-BODY \|**
 
-where SACCP-OTA-PAIRING-RESPONSE is a 1-byte bitfield substrate, with bits [0..2] equal to 0x7 (otherwise it is a different type of reply, see below), and bits [3..7] reserved (MUST be zeros), and OTA-PAIRING-RESPONSE-BODY as described in :ref:`sapairing` document. 
+where SACCP-OTA-PAIRING-RESPONSE is a 1-byte bitfield substrate, with bits [0..2] equal to 0x7 (otherwise it is a different type of reply, see below), bit [3] = 0, and bits [4..7] reserved (MUST be zeros), and OTA-PAIRING-RESPONSE-BODY as described in :ref:`sapairing` document. 
 
-SACCP-OTA-PAIRING-REQUEST is sent from Client to Device, and SACCP-OTA-PAIRING-RESPONSE is sent from Device to Client, forming a "packet chain".
+**\| SACCP-OTA-PAIRING-ENTROPY-NEEDED-RESPONSE \| OTA-PAIRING-ENTROPY-NEEDED-RESPONSE-BODY \|**
+
+where SACCP-OTA-PAIRING-ENTROPY-NEEDED-RESPONSE is a 1-byte bitfield substrate, with bits [0..2] equal to 0x7 (otherwise it is a different type of reply, see below), bit [3] = 1, and bits [4..7] reserved (MUST be zeros), and OTA-PAIRING-ENTROPY-NEEDED-RESPONSE-BODY as described in :ref:`sapairing` document. 
+
+SACCP-OTA-PAIRING-REQUEST and SACCP-OTA-PAIRING-ENTROPY-PROVIDED-REQUEST are sent from Client to Device, and SACCP-OTA-PAIRING-RESPONSE and SACCP-OTA-PAIRING-ENTROPY-NEEDED-RESPONSE are sent from Device to Client; they form a "packet chain" as described in :ref:`sapairing` document.
 
 SACCP Command Packets
 ^^^^^^^^^^^^^^^^^^^^^

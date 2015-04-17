@@ -27,11 +27,9 @@
 SmartAnthill Security Protocol (SASP)
 =====================================
 
-:Version:   v0.2.0
+:Version:   v0.2.0a
 
-*NB: this document relies on certain terms and concepts introduced in*
-:ref:`saoverarch` *and*
-:ref:`saprotostack` *documents, please make sure to read them before proceeding.*
+*NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
 SASP (SmartAnthill Security Protocol) aims to provide security guarantees for communications within SmartAnthill environments, in particular, prevention from unauthorized access to message content, message integrity guarantees, and protection from replay attacks.
 
@@ -193,7 +191,7 @@ Higher-level protocol is free to use "partial byte" (7 bits) of SASP payload, or
 5.2. SASP padding data
 ^^^^^^^^^^^^^^^^^^^^^^
 
-If present, padding data SHOULD be generated randomly. Depending on capabilities of the implementing device, upon necessity, this requirement MAY be relaxed. [TODO: describe approach with generating pseudorandom data using an independent encryption key and a current nonce]
+SASP padding data MUST be generated using Non-Key Random Stream as described in :ref:`sarng`.
 
 5.3. SASP enforced padding
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

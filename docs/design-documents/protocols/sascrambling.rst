@@ -24,10 +24,10 @@
 
 .. _sascrambling:
 
-SmartAnthill SCRAMBLING procedure and SmartAnthill Random Generation
-====================================================================
+SmartAnthill SCRAMBLING procedure
+=================================
 
-:Version:   v0.5.1
+:Version:   v0.5.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -47,36 +47,6 @@ SCRAMBLING procedure is a procedure of taking an input packet of arbitrary size,
 SCRAMBLING procedure requires both sides to share one secret AES-128 key. **SCRAMBLING key MUST be independent from any other key in the system, in particular, from SASP key.**
 
 For SCRAMBLING procedure to be efficient (in secure sense), caller SHOULD guarantee that there is a 15-byte block within input packet, where such block is at least statistically unique, and the same block is statistically indistinguishable from white noise. Offset to such a block within the packet is an input *unique-block-offset* parameter for SCRAMBLING procedure. In practice, 15 bytes of SASP tag are used for this purpose.
-
-SmartAnthill Random Number Generation
--------------------------------------
-
-All random numbers which are used for SmartAnthill SASP protocol (TODO: are there any?) and SCRAMBLING procedure, MUST be generated in the manner described below.
-
-Poor-Man's PRNG
-^^^^^^^^^^^^^^^
-
-Each device with Poor-Man's PRNG, has it's own AES-128 secret key (this key MUST NOT be stored outside of the device), and additionally keeps a counter. This counter MUST be kept in a way which guarantees that the same value of the counter is never reused; this includes both having counter of sufficient size, and proper commits to persistent storage to avoid re-use of the counter in case of accidental device reboot. As for commits to persistent storage - two such implementations are discussed in :ref:`sasp` document, in 'Implementation Details' section, with respect to storing nonces.
-
-Then, Poor-Man's PRNG simply encrypts current value of the counter with AES-128, increments counter (see note above about guarantees of no-reuse), and returns encrypted value of the counter as next 16 bytes of the random output.
-
-Devices without crypto-safe RNG
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Resource-constrained SmartAnthill Devices which don't have their own crypto-safe RNG, SHOULD use Poor-Man's PRNG. 
-
-However, such devices with only Poor-Man's PRNG, MUST NOT generate keys.
-
-Devices with crypto-safe RNG
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Even if the system where the SmartAnthill stack is running has a supposedly crypto-safe RNG (such as built-in crypto-safe /dev/urandom), SmartAnthill implementations still SHOULD employ Poor-Man's PRNG (as described above) in addition to system-provided crypto-safe PRNG. In such cases, each byte of SmartAnthill RNG (which is provided to the rest of SmartAnthill) SHOULD be a XOR of 1 byte of system-provided crypto-safe PRNG, and 1 byte of Poor-Man's PRNG. 
-
-The same procedure SHOULD also be used for generating random data which is used for SmartAnthill key generation. 
-
-*Rationale. This approach allows to reduce the impact of catastrophic failures of the system-provided crypto-safe PRNG (for example, it would mitigate effects of the Debian RNG disaster very significantly).*
-
-TODO: define key generation for Poor-Man's PRNG
 
 SCRAMBLING procedure
 --------------------
@@ -105,7 +75,7 @@ SCRAMBLING-Header, regardless of formatting schema, MUST specify Scrambled-Size 
 
 **\| encrypted-unique-block \| SCRAMBLED-Header \| encrypted-pre-unique-pre-SCRAMBLING-Data \| encrypted-post-unique-pre-SCRAMBLING-Data \| Optional-Forced-Padding \|**
 
-where Optional-Forced-Padding is optional forced padding, which has size of Forced-Padding-Size parameter from SCRAMBLING-Header. Forced-Padding, if present, MUST be generated using 'SmartAnthill Random Number Generation' procedure described above. 
+where Optional-Forced-Padding is optional forced padding, which has size of Forced-Padding-Size parameter from SCRAMBLING-Header. Forced-Padding, if present, MUST be generated using SmartAnthill Non-Key Random Stream (which is described in :ref:`sarng`).
 
 3. Encrypt a portion of pre-SCRAMBLED packet, starting from SCRAMBLED-HEADER, and with length of Scrambled-Size*16 (as specified in SCRAMBLING-Header), using AES-128 in CTR mode, using SCRAMBLING key, and using `( encrypted-unique-block << 8 )` as initial counter for CTR. CTR mode, combined with statistical-uniqueness requirement for unique-block, ensures that SCRAMBLED data is indistinguishable from white noise for a potential attacker. NB: size of `( encrypted-unique-block << 8 )` is 128 bit, or one AES-128 block. NB2: this construct restrict the size of unencrypted-pre-SCRAMBLING-Data to 16*256=4096 bytes; it is orders of magnitude larger than any practical headers may reasonably require. 
 
