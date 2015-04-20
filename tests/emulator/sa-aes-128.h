@@ -21,6 +21,22 @@ Copyright (C) 2015 OLogN Technologies AG
 #ifndef __SA_AES_128_H__
 #define __SA_AES_128_H__
 
+void sa_aes_print_block_16(const char* name, uint8_t* block)
+{
+    printf("%s", name);
+    for (uint8_t i = 0; i < 16; (i)++)
+    	printf("%02x ", block[i]);
+    printf("\n");
+}
+
+void sa_aes_print_msg(const char* name, uint8_t* msg, uint16_t msg_sz)
+{
+    printf("%s", name);
+    for (uint16_t i = 0; i < msg_sz; (i)++)
+    	printf("%02x ", msg[i]);
+    printf("\n");
+}
+
 const uint8_t rijndael_sbox[256] =
 {
    0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,

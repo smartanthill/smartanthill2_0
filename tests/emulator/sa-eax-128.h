@@ -89,7 +89,7 @@ void eax_128_update_cbc( const uint8_t* key, const uint8_t* block, uint8_t* cbc 
 	sa_aes_128_encrypt_block( key, temp_blk, cbc);
 }
 
-void eax_128_omac_t_of_single_block_message( const uint8_t* key, uint8_t t, uint8_t* block_in, uint8_t sz, uint8_t* block_out )
+void eax_128_omac_t_of_single_block_message( const uint8_t* key, uint8_t t, const uint8_t* block_in, uint8_t sz, uint8_t* block_out )
 {
 	assert( sz <= 16 );
 	uint8_t t_blk[16];
@@ -129,7 +129,7 @@ void eax_128_ctr_encrypt_and_step_ctr( const uint8_t* key, uint8_t* ctr, const u
 	}
 }
 
-void eax_128_init_ctr( const uint8_t* key, uint8_t* nonce, uint8_t nonce_sz, uint8_t* ctr, uint8_t* tag_out )
+void eax_128_init_ctr( const uint8_t* key, const uint8_t* nonce, uint8_t nonce_sz, uint8_t* ctr, uint8_t* tag_out )
 {
 	eax_128_omac_t_of_single_block_message( key, 0, nonce, nonce_sz, ctr );
 	memcpy( tag_out, ctr, 16 );
@@ -144,18 +144,18 @@ void eax_128_init_cbc_for_nonzero_msg( const uint8_t* key, uint8_t* msg_cbc_val 
 	eax_128_update_cbc( key, t_blk, msg_cbc_val );
 }
 
-void eax_128_process_header( const uint8_t* key, uint8_t* header, uint8_t header_sz, uint8_t* header_prim )
+void eax_128_process_header( const uint8_t* key, const uint8_t* header, uint8_t header_sz, uint8_t* header_prim )
 {
 	eax_128_omac_t_of_single_block_message( key, 1, header, header_sz, header_prim );
 }
 
-void eax_128_process_nonterminating_block( const uint8_t* key, uint8_t* ctr, const uint8_t* block_in, uint8_t* block_out, uint8_t* msg_cbc_val )
+void eax_128_process_nonterminating_block_encr( const uint8_t* key, uint8_t* ctr, const uint8_t* block_in, uint8_t* block_out, uint8_t* msg_cbc_val )
 {
 	eax_128_ctr_encrypt_and_step_ctr( key, ctr, block_in, block_out );
 	eax_128_update_cbc( key, block_out, msg_cbc_val );
 }
 
-void eax_128_process_terminating_block( const uint8_t* key, uint8_t* ctr, const uint8_t* block_in, uint8_t sz, uint8_t* block_out, uint8_t* msg_cbc_val )
+void eax_128_process_terminating_block_encr( const uint8_t* key, uint8_t* ctr, const uint8_t* block_in, uint8_t sz, uint8_t* block_out, uint8_t* msg_cbc_val )
 {
 	assert( sz != 0 );
 	uint8_t t_blk[16];
@@ -166,8 +166,29 @@ void eax_128_process_terminating_block( const uint8_t* key, uint8_t* ctr, const 
 	eax_128_update_cbc( key, t_blk, msg_cbc_val );
 }
 
+void eax_128_process_nonterminating_block_decr( const uint8_t* key, uint8_t* ctr, const uint8_t* block_in, uint8_t* block_out, uint8_t* msg_cbc_val )
+{
+	eax_128_update_cbc( key, block_in, msg_cbc_val );
+	eax_128_ctr_encrypt_and_step_ctr( key, ctr, block_in, block_out );
+}
+
+void eax_128_process_terminating_block_decr( const uint8_t* key, uint8_t* ctr, const uint8_t* block_in, uint8_t sz, uint8_t* block_out, uint8_t* msg_cbc_val )
+{
+	assert( sz != 0 );
+	// pad for omac
+	uint8_t t_blk[16];
+	eax_128_pad_block( key, block_in, sz, t_blk );
+	eax_128_update_cbc( key, t_blk, msg_cbc_val );
+	// decrypt
+	memcpy( t_blk, block_in, sz ); // just to ensure that a full-size block is formed
+	eax_128_ctr_encrypt_and_step_ctr( key, ctr, t_blk, block_out );
+}
+
 void eax_128_calc_tag( /*const uint8_t* key,*/ uint8_t* header_prim, uint8_t* msg_cbc_val, uint8_t* tag_out, uint8_t tag_out_sz )
 {
+/*	sa_aes_print_block_16("nonce_prim:     ", tag_out);
+	sa_aes_print_block_16("header_prim:    ", header_prim);
+	sa_aes_print_block_16("t_blk_out_omac: ", msg_cbc_val);*/
 	for ( uint8_t i=0; i<tag_out_sz; i++ )
 		tag_out[i] ^= header_prim[i] ^ msg_cbc_val[i];
 }
@@ -192,6 +213,10 @@ void eax_128_SAMPLE_CODE_eax_of_single_block_message( const uint8_t* key, uint8_
 	eax_128_ctr_encrypt_and_step_ctr( key, ctr, t_blk, t_blk_out ); // [[OK]]
 	// 4. get omac of encrypted message (of single block in this case)
 	eax_128_omac_t_of_single_block_message( key, 2, t_blk_out, sz, t_blk_out_omac ); // [?]
+	// 5.0. print intermediate vals
+	sa_aes_print_block_16("nonce_prim:     ", nonce_prim);
+	sa_aes_print_block_16("header_prim:    ", header_prim);
+	sa_aes_print_block_16("t_blk_out_omac: ", t_blk_out_omac);
 	// 5. calculate and fill tag
 	for ( uint8_t i=0; i<tag_out_sz; i++ )
 		tag_out[i] = nonce_prim[i] ^ header_prim[i] ^ t_blk_out_omac[i];
@@ -199,7 +224,7 @@ void eax_128_SAMPLE_CODE_eax_of_single_block_message( const uint8_t* key, uint8_
 	memcpy( block_out, t_blk_out, 16 );
 }
 
-void eax_128_SAMPLE_CODE_eax_of_message( const uint8_t* key, uint8_t* nonce, uint8_t nonce_sz, uint8_t* header, uint8_t header_sz, uint8_t* msg, uint16_t msg_sz, uint8_t* msg_out, uint8_t* tag_out, uint8_t tag_out_sz )
+void eax_128_SAMPLE_CODE_eax_of_message( const uint8_t* key, const uint8_t* nonce, uint8_t nonce_sz, const uint8_t* header, uint8_t header_sz, uint8_t* msg, uint16_t msg_sz, uint8_t* msg_out, uint8_t* tag_out, uint8_t tag_out_sz )
 {
 	uint8_t ctr[16];
 	uint8_t msg_cbc_val[16];
@@ -215,16 +240,16 @@ void eax_128_SAMPLE_CODE_eax_of_message( const uint8_t* key, uint8_t* nonce, uin
 		// in actual implementation using the same logic it's a place to write resulting packet encrypted part
 		while ( msg_sz >= 16 )
 		{
-			eax_128_process_nonterminating_block( key, ctr, msg, msg_out, msg_cbc_val );
+			eax_128_process_nonterminating_block_encr( key, ctr, msg, msg_out, msg_cbc_val );
 			msg += 16;
 			msg_out += 16;
 			msg_sz -= 16;
 		}
-		eax_128_process_terminating_block( key, ctr, msg, msg_sz, msg_out, msg_cbc_val );
+		eax_128_process_terminating_block_encr( key, ctr, msg, msg_sz, msg_out, msg_cbc_val );
 
 		// finalize
 		eax_128_process_header( key, header, header_sz, header_prim );
-		eax_128_calc_tag( /*const uint8_t* key,*/ header_prim, msg_cbc_val, tag_out, tag_out_sz );
+		eax_128_calc_tag( header_prim, msg_cbc_val, tag_out, tag_out_sz );
 	}
 	else // zero length is a special case
 	{
@@ -240,7 +265,61 @@ void eax_128_SAMPLE_CODE_eax_of_message( const uint8_t* key, uint8_t* nonce, uin
 
 		// finalize
 		eax_128_process_header( key, header, header_sz, header_prim );
-		eax_128_calc_tag( /*const uint8_t* key,*/ header_prim, msg_cbc_val, tag_out, tag_out_sz );
+		eax_128_calc_tag( header_prim, msg_cbc_val, tag_out, tag_out_sz );
+	}
+}
+
+bool eax_128_SAMPLE_CODE_check_eax_of_message( const uint8_t* key, const uint8_t* nonce, uint8_t nonce_sz, const uint8_t* header, uint8_t header_sz, uint8_t* msg, uint16_t msg_sz, uint8_t* msg_out, uint8_t* tag_received, uint8_t tag_sz )
+{
+	uint8_t tag_out[16];
+	uint8_t ctr[16];
+	uint8_t msg_cbc_val[16];
+//	uint8_t header_prim[16];
+	uint8_t* header_prim = ctr; // we will reuse it when ctr is no longer needed
+
+	if ( msg_sz )
+	{
+		eax_128_init_ctr( key, nonce, nonce_sz, ctr, tag_out ); // ctr is for respective use; tag_out gets a copy of ctr to be used in finalizing
+		eax_128_init_cbc_for_nonzero_msg( key, msg_cbc_val );
+
+		// process blocks
+		// in actual implementation using the same logic it's a place to write resulting packet encrypted part
+		while ( msg_sz >= 16 )
+		{
+			eax_128_process_nonterminating_block_decr( key, ctr, msg, msg_out, msg_cbc_val );
+			msg += 16;
+			msg_out += 16;
+			msg_sz -= 16;
+		}
+		eax_128_process_terminating_block_decr( key, ctr, msg, msg_sz, msg_out, msg_cbc_val );
+
+		// finalize
+		eax_128_process_header( key, header, header_sz, header_prim );
+		eax_128_calc_tag( header_prim, msg_cbc_val, tag_out, tag_sz );
+
+		for ( uint8_t i=0; i<tag_sz; i++ )
+			if ( tag_out[i] != tag_received[i] ) return false;
+		return true;
+	}
+	else // zero length is a special case
+	{
+
+		eax_128_init_ctr( key, nonce, nonce_sz, msg_cbc_val, tag_out ); // get cbc of nonce
+
+		memset( ctr, 0, 16 );
+		ctr[15] = 2;
+
+		eax_128_init_cbc( msg_cbc_val );
+		eax_128_pad_block( key, ctr, 16, ctr );
+		eax_128_update_cbc( key, ctr, msg_cbc_val );
+
+		// finalize
+		eax_128_process_header( key, header, header_sz, header_prim );
+		eax_128_calc_tag( /*const uint8_t* key,*/ header_prim, msg_cbc_val, tag_out, tag_sz );
+
+		for ( uint8_t i=0; i<tag_sz; i++ )
+			if ( tag_out[i] != tag_received[i] ) return false;
+		return true;
 	}
 }
 
