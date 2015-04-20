@@ -27,7 +27,7 @@
 SmartAnthill Programming, Bootloaders and OtA Programming
 =========================================================
 
-:Version:   v0.1.1
+:Version:   v0.1.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -102,7 +102,7 @@ OtA Abort Request: **\|** (empty body) *"Additional SACCP Bits": 0x3*
 
 OtA Abort Request instructs Device to abort current programming session. The only valid reply to OtA Abort Request is OtA Error Response with an error code OTA_ERROR_ABORTED.
 
-OtA Commit Request: **\| CURRENT-OFFSET \| DATA-SIZE \| DATA \| PROGRAM-SIZE \| SACCP-CHECKSUM \|** *"Additional SACCP Bits": 0x3*
+OtA Commit Request: **\| CURRENT-OFFSET \| DATA-SIZE \| DATA \| PROGRAM-SIZE \| SACCP-CHECKSUM \|** *"Additional SACCP Bits": 0x4*
 
 where CURRENT-OFFSET, DATA-SIZE and DATA are similar to that of in OtA Continue Request message, PROGRAM-SIZE is overall program size (PROGRAM-SIZE is redundant, and MUST match PROGRAM-SIZE in OtA Start Request message, otherwise it is a TODO error), and SACCP-CHECKSUM is a SACCP checksum (as defined in :ref:`saccp` document) of the whole program.  
 
