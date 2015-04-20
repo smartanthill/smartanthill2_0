@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.2.7
+:Version:   v0.2.8
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -128,6 +128,21 @@ where SACCP-OTA-PAIRING-RESPONSE is a 1-byte bitfield substrate, with bits [0..2
 where SACCP-OTA-PAIRING-ENTROPY-NEEDED-RESPONSE is a 1-byte bitfield substrate, with bits [0..2] equal to 0x7 (otherwise it is a different type of reply, see below), bit [3] = 1, and bits [4..7] reserved (MUST be zeros), and OTA-PAIRING-ENTROPY-NEEDED-RESPONSE-BODY as described in :ref:`sapairing` document. 
 
 SACCP-OTA-PAIRING-REQUEST and SACCP-OTA-PAIRING-ENTROPY-PROVIDED-REQUEST are sent from Client to Device, and SACCP-OTA-PAIRING-RESPONSE and SACCP-OTA-PAIRING-ENTROPY-NEEDED-RESPONSE are sent from Device to Client; they form a "packet chain" as described in :ref:`sapairing` document.
+
+SACCP OtA Programming Packets
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+NB: implementing OtA Programming Packets is OPTIONA for SmartAnthill Devices.
+
+**\| SACCP-OTA-PROGRAMMING-REQUEST \| OTA-PROGRAMMING-REQUEST-BODY \|**
+
+where SACCP-OTA-PROGRAMMING-REQUEST is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_PROGRAMMING 3-bit constant, and bits [3..7] reserved (MUST be zeros), and OTA-PROGRAMMING-REQUEST-BODY as described in :ref:`sabootload` document. 
+
+**\| SACCP-OTA-PROGRAMMING-RESPONSE \| OTA-PROGRAMMING-RESPONSE-BODY \|**
+
+where SACCP-OTA-PROGRAMMING-RESPONSE is a 1-byte bitfield substrate, with bits [0..2] equal to 0x6 (otherwise it is a different type of reply, see below), and bits [3..7] reserved (MUST be zeros), and OTA-PROGRAMMING-RESPONSE-BODY as described in :ref:`sabootload` document. 
+
+TODO: blocking all other messages (return TODO error) while OtA Programming Session is in progress (i.e. OtA Programming State being OTA_PROGRAMMING_INPROGRESS).
 
 SACCP Command Packets
 ^^^^^^^^^^^^^^^^^^^^^
