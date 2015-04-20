@@ -27,7 +27,7 @@
 SmartAnthill Programming, Bootloaders and OtA Programming
 =========================================================
 
-:Version:   v0.1.4
+:Version:   v0.1.5
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -123,7 +123,7 @@ OtA Abort Request instructs Device to abort current programming session. The onl
 
 OtA Commit Request: **\| CURRENT-OFFSET \| DATA-SIZE \| DATA \| PROGRAM-SIZE \| SACCP-CHECKSUM \|** *"Additional SACCP Bits": 0x5*
 
-where CURRENT-OFFSET, DATA-SIZE and DATA are similar to that of in OtA Continue Request message, PROGRAM-SIZE is overall program size (PROGRAM-SIZE is redundant, and MUST match PROGRAM-SIZE in OtA Start Request message, otherwise it is a TODO error), and SACCP-CHECKSUM is a SACCP checksum (as defined in :ref:`saccp` document) of the whole program.  
+where CURRENT-OFFSET, DATA-SIZE and DATA are similar to that of in OtA Continue Request message, PROGRAM-SIZE is overall program size (PROGRAM-SIZE is redundant, and MUST match PROGRAM-SIZE in OtA Start Request message, otherwise it is a TODO error), and SACCP-CHECKSUM is a 16-byte SACCP checksum (as defined in :ref:`saccp` document) of the whole program.  
 
 OtA Commit Request message instructs the Device to check integrity of the program (using SACCP-CHECKSUM), and to "commit" current changes. In particular, for OTA-TYPE=OTA_ROBUST_BOOTLOADER and for OTA-TYPE=OTA_ROBUST_OS, Device MUST ensure atomic switch from existing bootloader to new (loaded) one. For example, it MAY be implemented as rewriting one single address within one single JMP instruction in the very beginning of the bootloader; it MUST NOT be implemented as copying of new bootloader to the old location (as it is not possible to ensure atomicity in this case, and bootloader might be lost).
 
@@ -158,8 +158,6 @@ Currently supported functions include:
 | DYNAMIC_LINK_EAX_AES128_ENCRYPTAUTH         | TODO                                                                 |
 +---------------------------------------------+----------------------------------------------------------------------+
 | DYNAMIC_LINK_EAX_AES128_DECRYPTAUTHCHECK    | TODO                                                                 |
-+---------------------------------------------+----------------------------------------------------------------------+
-| DYNAMIC_LINK_SACCP_CHECKSUM                 | TODO                                                                 |
 +---------------------------------------------+----------------------------------------------------------------------+
 
 TODO: more if applicable
