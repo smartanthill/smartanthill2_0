@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.0.10a
+:Version:   v0.1
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -158,23 +158,27 @@ Pairing-Request: **\| OTA-PROTOCOL-VERSION-NUMBER \| DH-REQUEST \| ENTROPY \| CL
 
 where OTA-PROTOCOL-VERSION-NUMBER is an Encoded-Unsigned-Int<max=2> field, DH-REQUEST is a 128-bit field, representing `g^a mod p` from DH key exchange (using SmartAnthill Endianness), ENTROPY is a 32-byte field with crypto-safe random data, and CLIENT-CAPABILITIES is TBD. ENTROPY is used for key generation as specified in :ref:`sarng` document; note that :ref:`sarng` requires 16 bytes of entropy per 128 bits of key, so to get 256 bits of key required for OtA Pairing, 32 bytes of ENTROPY is needed; first 16 bytes of ENTROPY are to be used to generate first 128 bits of key, and last 16 bytes of ENTROPY are to be used to generate last 256 bits of key. 
 
-Pairing-Request is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message. 
+Pairing-Request is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SACCP-OTA-PAIRING-REQUEST message being 0x0.
 
 Pairing-Response: **\| DH-REPLY \| ACCEPTED-OTA-FLAVOUR \| DEVICE-SASP-CAPABILITIES \|**
 
 where DH-REPLY is a 128-bit field, representing `g^b mod p` (using SmartAnthill Endianness), ACCEPTED-OTA-FLAVOUR is a 1-byte field containing an ID of accepted OtA flavour (TBD), and DEVICE-SASP-CAPABILITIES TBD.
 
-Pairing-Response is sent as a payload for a SACCP SACCP-OTA-PAIRING-RESPONSE message. 
+Pairing-Response is sent as a payload for a SACCP SACCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for SACCP-OTA-PAIRING-RESPONSE being 0x0.
 
 Instead of Pairing-Response, Device MAY (and in certain situations - MUST, see below) send an Pairing-Entropy-Needed-Response message (as a payload for a SACCP SACCP-OTA-PAIRING-ENTROPY-NEEDED-RESPONSE message):
 
 Pairing-Entropy-Needed-Response: **\|** (empty body)
 
-In response to Pairing-Entropy-Needed-Response, Client MUST reply with a Pairing-Entropy-Provided-Request (as a payload for a SACCP SACCP-OTA-PAIRING-ENTROPY-PROVIDED-REQUEST message)
+Pairing-Entropy-Needed-Response is sent as a payload for a SACCP SACCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for SACCP-OTA-PAIRING-RESPONSE being 0x1.
+
+In response to Pairing-Entropy-Needed-Response, Client MUST reply with a Pairing-Entropy-Provided-Request.
 
 Pairing-Entropy-Provided-Request: **\| ENTROPY \|**
 
 where ENTROPY is a 16-byte field with cryptographically safe random data. 
+
+Pairing-Entropy-Provided-Request is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SACCP-OTA-PAIRING-REQUEST message being 0x1.
 
 When Device is satisfied with the amount of entropy it has, it should return a Pairing-Response to complete pairing. All the messages within one pairing procedure form a single "packet chain". That is, "packet chaing" may look as follows: Pairing-Request - Pairing-Entropy-Needed-Response - Pairing-Entropy-Provided-Request - [optionally more pairs of Entropy-Needed-Response and Entropy-Provided-Request] - Pairing-Response.
 
