@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.2.10
+:Version:   v0.2.11
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -128,11 +128,11 @@ NB: implementing OtA Programming Packets is OPTIONA for SmartAnthill Devices.
 
 **\| SACCP-OTA-PROGRAMMING-REQUEST \| OTA-PROGRAMMING-REQUEST-BODY \|**
 
-where SACCP-OTA-PROGRAMMING-REQUEST is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_PROGRAMMING 3-bit constant, and bits [3..7] reserved (MUST be zeros), and OTA-PROGRAMMING-REQUEST-BODY as described in :ref:`sabootload` document. 
+where SACCP-OTA-PROGRAMMING-REQUEST is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_PROGRAMMING 3-bit constant, bits [3..5] are "additional bits" passed from SAOtAPP alongside with OTA-PROGRAMMING-REQUEST-BODY, bits [6..7] reserved (MUST be zeros), and OTA-PROGRAMMING-REQUEST-BODY is described in :ref:`sabootload` document. 
 
 **\| SACCP-OTA-PROGRAMMING-RESPONSE \| OTA-PROGRAMMING-RESPONSE-BODY \|**
 
-where SACCP-OTA-PROGRAMMING-RESPONSE is a 1-byte bitfield substrate, with bits [0..2] equal to 0x6 (otherwise it is a different type of reply, see below), and bits [3..7] reserved (MUST be zeros), and OTA-PROGRAMMING-RESPONSE-BODY as described in :ref:`sabootload` document. 
+where SACCP-OTA-PROGRAMMING-RESPONSE is a 1-byte bitfield substrate, with bits [0..2] equal to 0x6 (otherwise it is a different type of reply, see below), bits [3..5] being "additional bits" passed from SAOtAPP alongside with OTA-PROGRAMMING-RESPONSE-BODY, bits [6..7] reserved (MUST be zeros), and OTA-PROGRAMMING-RESPONSE-BODY is described in :ref:`sabootload` document. 
 
 TODO: blocking all other messages (return TODO error) while OtA Programming Session is in progress (i.e. OtA Programming State being OTA_PROGRAMMING_INPROGRESS).
 
