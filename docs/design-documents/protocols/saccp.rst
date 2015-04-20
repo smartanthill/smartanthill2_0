@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.2.11
+:Version:   v0.2.12
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -93,13 +93,7 @@ To ensure correct operation of an underlying protocol, there are certain rules (
 SACCP Checksum
 --------------
 
-To re-use the same code which is used for SASP anyway, SACCP uses the following checksum algorithm:
-
-* prepend input with input-size (encoded as Encoded-Size<max=2>). This ensures that CBC-MAC is secure (because prepending length as Encoded-Size guarantees that there are no two distinct messages which are prefixes of each other; not that we really need it).
-* split input (with prepended input-size) into 16-byte blocks; if there is an incomplete block, pad it with zeros
-* calculate CBC-MAC on sequence of these blocks, using AES-128, with a pre-defined AES-128 key, where each byte of the pre-defined key is 0xA5.
-* calculated CBC-MAC represents 128 bits (16 bytes) of checksum
-* starting from the beginning of the 128-bit (16-byte) checksum, take as many bytes as necessary (up to 16)
+To re-use the same code which is used for SASP anyway, SACCP uses OMAC-AES128 (as used for EAX), with a fixed key consisting of byte 0xA5 repeated 16 times, as "SACCP Checksum". Further, SACCP Checksum MAY be truncated to required number of bytes (starting from the beginning of 16-byte OMAC tag) as necessary.
 
 SACCP Packets
 -------------
