@@ -15,12 +15,10 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
+#if !defined __SA_UNIT_TESTS_AES_EAX_H__
+#define __SA_UNIT_TESTS_AES_EAX_H__
 
-#include "sa-common.h"
+void test_aes_and_eax_128();
 
-#ifndef __SA_AES_128_H__
-#define __SA_AES_128_H__
 
-void sa_aes_128_encrypt_block( const uint8_t* key, const uint8_t* _block, uint8_t* res );
-
-#endif //__SA_AES_128_H__
+#endif
