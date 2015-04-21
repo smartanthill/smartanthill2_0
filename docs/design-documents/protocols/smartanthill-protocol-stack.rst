@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.8d
+:Version:   v0.2.9
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -214,36 +214,23 @@ The following table shows how many Encoded-Unsigned-Int bytes is necessary to en
 Encoded-Signed-Int
 ''''''''''''''''''
 
-Encoded-Signed-Int is an encoding for signed integers, derived from Encoded-Unsigned-Int. Encoded-Signed-Int is decoded as Encoded-Unsigned-Int first (NB: actual implementations MAY and probably SHOULD differ), and then, depending on number of bytes in the encoding (when it was treated as Encoded-Unsigned-Int), a certain constant is deducted. For example, if we need Encoded-Signed-Int, have read it as Encoded-Unsigned-Int, and got 1 byte, we need to subtract 64 to get Encoded-Signed-Int. Therefore, Encoded-Signed-Int encoding which consists out of one byte with value 64, means '0'. The following table show the way how to calculate Encoded-Signed-Int (within the table, "EUI" means "value of Encoded-Unsigned-Int"):
+Encoded-Signed-Int is an encoding for signed integers, derived from Encoded-Unsigned-Int. Encoded-Signed-Int is decoded as Encoded-Unsigned-Int first (NB: actual implementations MAY and probably SHOULD differ, see details below), and then, depending on number of bytes in the encoding (when it was treated as Encoded-Unsigned-Int), certain calculations are performed. For example, if we need Encoded-Signed-Int, have read it as Encoded-Unsigned-Int, and got 1 byte, we need to subtract 64 to get Encoded-Signed-Int. Therefore, Encoded-Signed-Int encoding which consists out of one byte with value 64, means '0'. The following table show the way how to calculate Encoded-Signed-Int (within the table, "EUI" means "value of Encoded-Unsigned-Int"):
 
-+---------------------+-------------------+-------------------------+
-| Encoded-Unsigned-Int| Encoded-Signed-Int|Encoded-Signed-Int       |
-| Bytes               |                   |Values                   |
-+=====================+===================+=========================+
-| 1                   | EUI - 64          | -64 to 63               |
-+---------------------+-------------------+-------------------------+
-| 2                   | EUI - 8256        | -8256 to 8255           |
-+---------------------+-------------------+-------------------------+
-| 3                   | EUI - 1056832     | -1056832 to 1056831     |
-+---------------------+-------------------+-------------------------+
-| 4                   | EUI - 135274560   | -135274560 to 135274559 |
-+---------------------+-------------------+-------------------------+
-| 5                   | EUI - 17315143744 | -17315143744 to         |
-|                     |                   | 17315143743             |
-+---------------------+-------------------+-------------------------+
-| 6                   | EUI -             | -2216338399296 to       |
-|                     | 2216338399296     | 2216338399295           |
-+---------------------+-------------------+-------------------------+
-| 7                   | EUI -             | -283691315109952 to     |
-|                     | 283691315109952   | 283691315109951         |
-+---------------------+-------------------+-------------------------+
-| 8                   | EUI -             | -36312488334073920 to   |
-|                     | 36312488334073920 | 36312488334073919       |
-+---------------------+-------------------+-------------------------+
-| 9                   |EUI -              | -4647998506761461824 to |
-|                     |4647998506761461824| 4647998506761461823     |
-+---------------------+-------------------+-------------------------+
++---------------------+-------------------------------------------------------------------------------+----------------------------------------------------+
+| Encoded-Unsigned-Int| Encoded-Signed-Int                                                            |Encoded-Signed-Int Values                           |
+| Bytes               |                                                                               |                                                    |
++=====================+===============================================================================+====================================================+
+| 1                   | EUI - 64                                                                      | -64 to 63                                          |
++---------------------+-------------------------------------------------------------------------------+----------------------------------------------------+
+| 2                   | (EUI-128)<8192 ? -64-((EUI-128)-8192) : 64+(EUI-128)-8192                     | -8256 to 8255                                      |
++---------------------+-------------------------------------------------------------------------------+----------------------------------------------------+
+| 3                   | (EUI-16512)<1048576 ? -8256-((EUI-16512)-1048576) : 8256+(EUI-16512)-1048576  | -1056832 to 1056831                                |
++---------------------+-------------------------------------------------------------------------------+----------------------------------------------------+
+| 4                   | (EUI-2113664)<134217728 ? -1056832-((EUI-2113664)-134217728) :                | −135274560 to 135274559                            |
+|                     | 1056832+(EUI-2113664)-134217728                                               |                                                    |
++---------------------+-------------------------------------------------------------------------------+----------------------------------------------------+
 
+Note that when calculating, say, result of 2-byte encoding, all we need is `(EUI-128)` (which occurs naturally when decoding Encoded-Unsigned-Int<>, see above), comparing of `EUI-128` with 8192 (which is equivalent to checking one bit), and `(EUI-128)-8192` (which is equivalent to masking 1 bit out of `(EUI-128)`). It MAY speed up implementations significantly at least on 8-bit MCUs.
 
 Encoded-\*-Int<max=>
 ''''''''''''''''''''
