@@ -103,8 +103,7 @@ void sa_aes_128_mixColumns(uint8_t* block)
 
 void sa_aes_128_encrypt_block( const uint8_t* key, const uint8_t* _block, uint8_t* res )
 {
-	uint8_t aes_128_buff[40];
-	uint8_t block[16], ksc[32];
+	uint8_t block[16], ksc[16];
     memcpy( block, _block, 16 );
 	memcpy( ksc, key, 16 );
 	uint8_t rcon = 1;
