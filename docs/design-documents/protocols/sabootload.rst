@@ -27,7 +27,7 @@
 SmartAnthill Programming, Bootloaders and OtA Programming
 =========================================================
 
-:Version:   v0.1.5
+:Version:   v0.1.4a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 

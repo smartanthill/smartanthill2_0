@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.8c
+:Version:   v0.2.8d
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -160,7 +160,7 @@ There are some encodings and encoding conventions which are used throughout Smar
 SmartAnthill Encoded-Unsigned-Int
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In several places in SmartAnthill Protocol Stack, there is a need to encode integers, which happen to be small most of the time (one such example is sizes, another example is some kinds of incrementally-increased ids). To encode them efficiently, SmartAnthill Protocol Stack uses a compact encoding, which encodes small integers with smaller number of bytes. Encoded-Unsigned-Int is equivalent to *Variable-length quantity (VLQ)* as described here: http://en.wikipedia.org/wiki/Variable-length_quantity ("General structure" section); note that other encodings such as Encoded-Signed-Int are different from what is described on that page.
+In several places in SmartAnthill Protocol Stack, there is a need to encode integers, which happen to be small most of the time (one such example is sizes, another example is some kinds of incrementally-increased ids). To encode them efficiently, SmartAnthill Protocol Stack uses a compact encoding, which encodes small integers with smaller number of bytes. Encoded-Unsigned-Int is not the same as *Variable-length quantity (VLQ)*, VLQ is redundant and allows, for example, for 2-byte representation of numbers below 128, Encoded-Unsigned-Int<> has only one representation for each number); note that other encodings such as Encoded-Signed-Int are different from what is described on that page.
 
 Encoded-Unsigned-Int is a variable-length encoding of integers (with the idea being somewhat similar to the idea behind UTF-8). Namely:
 
