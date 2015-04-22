@@ -50,6 +50,10 @@ int main_loop()
 	printf("STARTING SERVER...\n");
 	printf("==================\n\n");
 
+	// TODO: actual key loading, etc
+	uint8_t sasp_key[16];
+	memcpy( sasp_key, "16-byte fake key", 16 );
+
 	tester_initTestSystem();
 
 
@@ -74,6 +78,7 @@ int main_loop()
 
 	// do necessary initialization
 	sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+	SASP_initAtLifeStart( data_buff + DADA_OFFSET_SASP ); // TODO: replace by more extensive restore-from-backup-etc
 
 
 	printf("\nAwaiting client connection... \n" );
@@ -134,7 +139,7 @@ printf( "Processing continued...\n" );
 				}
 				if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
-					ret_code = handlerSASP_get_nonce( nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+					ret_code = handler_sasp_get_packet_id( nonce, SASP_NONCE_SIZE, data_buff + DADA_OFFSET_SASP );
 					assert( ret_code == SASP_RET_NONCE );
 //					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
@@ -168,7 +173,7 @@ printf( "Processing continued...\n" );
 
 //rectosasp:
 		// 2. Pass to SASP
-		ret_code = handlerSASP_receive( pid, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+		ret_code = handler_sasp_receive( sasp_key, pid, MEMORY_HANDLE_MAIN_LOOP, data_buff + DADA_OFFSET_SASP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		printf( "SASP1:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
@@ -210,7 +215,7 @@ printf( "Processing continued...\n" );
 				}
 				if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
-					ret_code = handlerSASP_get_nonce( nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+					ret_code = handler_sasp_get_packet_id( nonce, SASP_NONCE_SIZE, data_buff + DADA_OFFSET_SASP );
 					assert( ret_code == SASP_RET_NONCE );
 //					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
@@ -242,7 +247,7 @@ printf( "Processing continued...\n" );
 		}
 		else if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
-			ret_code = handlerSASP_get_nonce( nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+			ret_code = handler_sasp_get_packet_id( nonce, SASP_NONCE_SIZE, data_buff + DADA_OFFSET_SASP );
 			assert( ret_code == SASP_RET_NONCE );
 //			ret_code = handlerSAGDP_receiveUP( &timer_val, nonce, pid, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 			ret_code = handlerSAGDP_receiveUP( &timer_val, nonce, pid, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
@@ -391,7 +396,7 @@ alt_entry:
 		ret_code = handlerSAGDP_receiveHLP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
 		if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
-			ret_code = handlerSASP_get_nonce( nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+			ret_code = handler_sasp_get_packet_id( nonce, SASP_NONCE_SIZE, data_buff + DADA_OFFSET_SASP );
 			assert( ret_code == SASP_RET_NONCE );
 //			ret_code = handlerSAGDP_receiveHLP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 			ret_code = handlerSAGDP_receiveHLP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
@@ -441,7 +446,7 @@ alt_entry:
 
 		// SASP
 saspsend:
-		ret_code = handlerSASP_send( nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+		ret_code = handler_sasp_send( sasp_key, nonce, MEMORY_HANDLE_MAIN_LOOP, data_buff + DADA_OFFSET_SASP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		printf( "SASP2:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
@@ -475,6 +480,31 @@ sendmsg:
 
 	return 0;
 }
+
+#if 0
+//#include "def"
+void main_soc()
+{
+   int   sd;
+   struct   sockaddr_in server;
+   char buf[512];
+   int rc;
+
+   server.sin_family = AF_INET;
+   server.sin_addr.s_addr = htonl(INADDR_ANY);
+   server.sin_port = htons(12345);
+
+   sd = socket (AF_INET,SOCK_DGRAM,0);
+
+   bind ( sd, (SA *) &server, sizeof(server));
+   
+   for(;;){
+      rc = recv (sd, buf, sizeof(buf), 0);
+      buf[rc]= (char) NULL;
+      printf("Received: %s\n", buf);
+   }
+}
+#endif
 
 int main(int argc, char *argv[])
 {

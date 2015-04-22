@@ -54,6 +54,10 @@ int main_loop()
 		requestSyncExec();
 	}*/
 
+	// TODO: actual key loading, etc
+	uint8_t sasp_key[16];
+	memcpy( sasp_key, "16-byte fake key", 16 );
+
 	// in this preliminary implementation all memory segments are kept separately
 	// All memory objects are listed below
 	// TODO: revise memory management
@@ -174,7 +178,7 @@ printf( "Processing continued...\n" );
 				wake_time = 0;
 				if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
-					ret_code = handlerSASP_get_nonce(  nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+					ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, data_buff + DADA_OFFSET_SASP );
 					assert( ret_code == SASP_RET_NONCE );
 //					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
@@ -244,7 +248,7 @@ printf( "Processing continued...\n" );
 
 rectosasp:
 		// 2. Pass to SASP
-		ret_code = handlerSASP_receive( pid, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+		ret_code = handler_sasp_receive( sasp_key, pid, MEMORY_HANDLE_MAIN_LOOP, data_buff + DADA_OFFSET_SASP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		printf( "SASP1:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
@@ -286,7 +290,7 @@ rectosasp:
 				}
 				else if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
-					ret_code = handlerSASP_get_nonce(  nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+					ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, data_buff + DADA_OFFSET_SASP );
 					assert( ret_code == SASP_RET_NONCE );
 //					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
@@ -310,7 +314,7 @@ rectosasp:
 		ret_code = handlerSAGDP_receiveUP( &timer_val, NULL, pid, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
 		if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
-			ret_code = handlerSASP_get_nonce(  nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+			ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, data_buff + DADA_OFFSET_SASP );
 			assert( ret_code == SASP_RET_NONCE );
 //			ret_code = handlerSAGDP_receiveUP( &timer_val, nonce, pid, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 			ret_code = handlerSAGDP_receiveUP( &timer_val, nonce, pid, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
@@ -457,7 +461,7 @@ printf( "Processing in progress... (period = %d, time = %d)\n", wait_to_continue
 		ret_code = handlerSAGDP_receiveHLP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
 		if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
-			ret_code = handlerSASP_get_nonce(  nonce, SASP_NONCE_SIZE, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+			ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, data_buff + DADA_OFFSET_SASP );
 			assert( ret_code == SASP_RET_NONCE );
 //			ret_code = handlerSAGDP_receiveHLP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 			ret_code = handlerSAGDP_receiveHLP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
@@ -491,7 +495,7 @@ printf( "Processing in progress... (period = %d, time = %d)\n", wait_to_continue
 
 		// SASP
 saspsend:
-		ret_code = handlerSASP_send( nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SASP );
+		ret_code = handler_sasp_send( sasp_key, nonce, MEMORY_HANDLE_MAIN_LOOP, data_buff + DADA_OFFSET_SASP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		printf( "SASP2: ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
@@ -569,9 +573,82 @@ saspsend:
 	return 0;
 }
 
+#define USE_128
 
+#include "sa-aes-128.h"
+
+
+#if 0
+#include <sys/types.h>
+#ifdef _MSC_VER
+#include <winsock2.h>
+#include <Ws2tcpip.h>
+#else
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#endif  
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+ int main_CL(void)
+  {
+    struct sockaddr_in stSockAddr;
+    int Res;
+    int SocketFD = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+ 
+    if (-1 == SocketFD)
+    {
+      perror("cannot create socket");
+      exit(EXIT_FAILURE);
+    }
+ 
+    memset(&stSockAddr, 0, sizeof(stSockAddr));
+ 
+    stSockAddr.sin_family = AF_INET;
+    stSockAddr.sin_port = htons(1100);
+    Res = inet_pton(AF_INET, "192.168.1.3", &stSockAddr.sin_addr);
+ 
+    if (0 > Res)
+    {
+      perror("error: first parameter is not a valid address family");
+//      close(SocketFD);
+      closesocket(SocketFD);
+      exit(EXIT_FAILURE);
+    }
+    else if (0 == Res)
+    {
+      perror("char string (second parameter does not contain valid ipaddress)");
+//      close(SocketFD);
+      closesocket(SocketFD);
+      exit(EXIT_FAILURE);
+    }
+ 
+    if (-1 == connect(SocketFD, (struct sockaddr *)&stSockAddr, sizeof(stSockAddr)))
+    {
+      perror("connect failed");
+//      close(SocketFD);
+      closesocket(SocketFD);
+      exit(EXIT_FAILURE);
+    }
+ 
+    /* perform read write operations ... */
+ 
+//    (void) shutdown(SocketFD, SHUT_RDWR);
+    (void) shutdown(SocketFD, SD_BOTH);
+ 
+//    close(SocketFD);
+      closesocket(SocketFD);
+    return EXIT_SUCCESS;
+  }
+#endif // 0
+
+#include "sa-unit-tests-aes-eax.h"
 int main(int argc, char *argv[])
 {
+//	test_aes_and_eax_128(); return 0;
+	
 	zepto_mem_man_init_memory_management();
 
 	return main_loop();

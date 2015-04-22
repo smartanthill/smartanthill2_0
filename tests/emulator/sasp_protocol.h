@@ -49,9 +49,9 @@ void SASP_initAtLifeStart( uint8_t* dataBuff );
 void SASP_restoreFromBackup( uint8_t* dataBuff );
 
 // handlers
-uint8_t handlerSASP_receive( uint8_t* pid, MEMORY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data );
-uint8_t handlerSASP_send( const uint8_t* nonce, MEMORY_HANDLE mem_h, uint8_t* stack, int stackSize, uint8_t* data );
-uint8_t handlerSASP_get_nonce( uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data );
+uint8_t handler_sasp_receive( const uint8_t* key, uint8_t* packet_id, MEMORY_HANDLE mem_h, uint8_t* data );
+uint8_t handler_sasp_send( const uint8_t* key, const uint8_t* packet_id, MEMORY_HANDLE mem_h, uint8_t* data );
+uint8_t handler_sasp_get_packet_id( uint8_t* buffOut, int buffOutSize, uint8_t* data );
 
 
 #endif // __SASP_PROTOCOL_H__

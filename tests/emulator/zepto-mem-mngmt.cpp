@@ -1183,19 +1183,22 @@ void zepto_parser_decode_uint( uint8_t** packed_num_bytes, uint8_t* bytes_out, u
 	{
 		if ( (**packed_num_bytes & 0x80) == 0 )
 		{
-			*bytes_out = (uint8_t)interm;
-			bytes_out++;
-			assert( bytes_out - bytes_out_start < 8); // TODO: implement and test for larger sizes
+			if ( interm )
+			{
+				*bytes_out = (uint8_t)interm;
+				bytes_out++;
+			}
+			assert( bytes_out - bytes_out_start <= target_size );
 			(*packed_num_bytes)++;
 			return;
 		}
-		assert( bytes_out - bytes_out_start < 8); // TODO: implement and test for larger sizes
+		assert( bytes_out - bytes_out_start <= target_size );
 		(*packed_num_bytes)++;
 //		interm += 128;
 		interm += (1+(uint16_t)( **packed_num_bytes & 0x7F )) << (7-i);
 		*bytes_out = (uint8_t)interm;
 		bytes_out++;
-		assert( bytes_out - bytes_out_start < 8); // TODO: implement and test for larger sizes
+		assert( bytes_out - bytes_out_start <= target_size );
 		interm >>= 8;
 	}
 }
@@ -1210,6 +1213,80 @@ void zepto_parser_decode_uint( parser_obj* po, uint8_t* bytes_out, uint8_t targe
 	po->offset += end - buff;
 }
 
+void zepto_parser_encode_and_append_uint( MEMORY_HANDLE mem_h, const uint8_t* num_bytes, uint8_t num_sz_max )
+{
+	assert( num_sz_max ); 
+	assert( num_sz_max <= 16 ); // TODO: reason behind this limitation is fixed-size intermediate buffers declared below. If greater sizes desired, then either haave larger buffers (remember about stack size!), or implement a version that works locally over a few consequtive bytes
+	uint8_t src_buff[16];
+	uint8_t out_buff[16];
+	uint8_t* out_buff_end = out_buff;
+	while ( num_sz_max && ( num_bytes[ num_sz_max - 1 ] == 0 ) ) num_sz_max--;
+	if ( num_sz_max == 0 )
+	{
+		*out_buff = 0;
+		out_buff_end++;
+	}
+	else
+	{
+		memcpy( src_buff, num_bytes, num_sz_max );
+
+		for(;;)
+		{
+			*out_buff_end = *src_buff & 0x7F;
+			if ( is_less_128( src_buff, num_sz_max ) ) 
+			{
+				out_buff_end++;
+				break;
+			}
+			*out_buff_end |= 128;
+			out_buff_end++;
+			shift_right_7( src_buff, num_sz_max );
+			subtract_1( src_buff, num_sz_max );
+		}
+	}
+
+	uint8_t sz = out_buff_end - out_buff;
+	printf( "zepto_parser_encode_and_append_uint(..., ..., %d) resulted in %d bytes\n", num_sz_max, sz );
+	uint8_t* buff = memory_object_append( mem_h, sz );
+	memcpy( buff, out_buff, sz );
+}
+
+void zepto_parser_encode_and_prepend_uint( MEMORY_HANDLE mem_h, const uint8_t* num_bytes, uint8_t num_sz_max )
+{
+	assert( num_sz_max ); 
+	assert( num_sz_max <= 16 ); // TODO: reason behind this limitation is fixed-size intermediate buffers declared below. If greater sizes desired, then either haave larger buffers (remember about stack size!), or implement a version that works locally over a few consequtive bytes
+	uint8_t src_buff[16];
+	uint8_t out_buff[16];
+	uint8_t* out_buff_end = out_buff;
+	while ( num_sz_max && ( num_bytes[ num_sz_max - 1 ] == 0 ) ) num_sz_max--;
+	if ( num_sz_max == 0 )
+	{
+		*out_buff = 0;
+		out_buff_end++;
+	}
+	else
+	{
+		memcpy( src_buff, num_bytes, num_sz_max );
+
+		for(;;)
+		{
+			*out_buff_end = *src_buff & 0x7F;
+			if ( is_less_128( src_buff, num_sz_max ) ) 
+			{
+				out_buff_end++;
+				break;
+			}
+			*out_buff_end |= 128;
+			out_buff_end++;
+			shift_right_7( src_buff, num_sz_max );
+			subtract_1( src_buff, num_sz_max );
+		}
+	}
+
+	uint8_t sz = out_buff_end - out_buff;
+	printf( "zepto_parser_encode_and_prepend_uint(..., ..., %d) resulted in %d bytes\n", num_sz_max, sz );
+	memory_object_prepend( mem_h, out_buff, sz );
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

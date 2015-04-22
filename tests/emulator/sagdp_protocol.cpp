@@ -1030,9 +1030,10 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, MEMORY_HANDLE
 		zepto_parse_skip_block( &po1, body_size );
 		zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
 //		zepto_write_prepend_block( mem_h, data + DATA_SAGDP_LRECEIVED_CHAIN_ID_OFFSET, SAGDP_LRECEIVED_PID_SIZE );
-		uint8_t* enc_pid_end = stack;
+/*		uint8_t* enc_pid_end = stack;
 		zepto_parser_encode_uint( data + DATA_SAGDP_LRECEIVED_CHAIN_ID_OFFSET, SAGDP_LRECEIVED_PID_SIZE, &enc_pid_end );
-		zepto_write_prepend_block( mem_h, stack, enc_pid_end - stack );
+		zepto_write_prepend_block( mem_h, stack, enc_pid_end - stack );*/
+		zepto_parser_encode_and_prepend_uint( mem_h, data + DATA_SAGDP_LRECEIVED_CHAIN_ID_OFFSET, SAGDP_LRECEIVED_PID_SIZE );
 		zepto_write_prepend_byte( mem_h, packet_status & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) );
 
 		// save a copy
@@ -1092,9 +1093,10 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, MEMORY_HANDLE
 		zepto_parse_skip_block( &po1, body_size );
 		zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
 //		zepto_write_prepend_block( mem_h, data + DATA_SAGDP_LRECEIVED_PID_OFFSET, SAGDP_LRECEIVED_PID_SIZE );
-		uint8_t* enc_pid_end = stack;
+/*		uint8_t* enc_pid_end = stack;
 		zepto_parser_encode_uint( data + DATA_SAGDP_LRECEIVED_PID_OFFSET, SAGDP_LRECEIVED_PID_SIZE, &enc_pid_end );
-		zepto_write_prepend_block( mem_h, stack, enc_pid_end - stack );
+		zepto_write_prepend_block( mem_h, stack, enc_pid_end - stack );*/
+		zepto_parser_encode_and_prepend_uint( mem_h, data + DATA_SAGDP_LRECEIVED_PID_OFFSET, SAGDP_LRECEIVED_PID_SIZE );
 		zepto_write_prepend_byte( mem_h, packet_status & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) );
 
 		// save a copy
