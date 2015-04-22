@@ -24,6 +24,13 @@ Copyright (C) 2015 OLogN Technologies AG
 #include <string.h> // for memmove()
 #include <assert.h>
 
+#define SA_DEBUG
+
+#define SA_LITTLE_ENDIAN 0
+#define SA_BIG_ENDIAN 1
+#define SA_USED_ENDIANNES SA_LITTLE_ENDIAN
+//#define SA_USED_ENDIANNES SA_BIG_ENDIAN
+
 // data types
 #define uint8_t unsigned char
 #define int8_t char

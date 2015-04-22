@@ -79,7 +79,8 @@ int main_loop()
 
 	// do necessary initialization
 	sagdp_init( data_buff + DADA_OFFSET_SAGDP );
-	SASP_initAtLifeStart( data_buff + DADA_OFFSET_SASP );
+	SASP_DATA sasp_data;
+	SASP_initAtLifeStart( &sasp_data );
 
 	// Try to open a named pipe; wait for it, if necessary. 
 	if ( !communicationInitializeAsClient() )
@@ -178,7 +179,7 @@ printf( "Processing continued...\n" );
 				wake_time = 0;
 				if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
-					ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, data_buff + DADA_OFFSET_SASP );
+					ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
 					assert( ret_code == SASP_RET_NONCE );
 //					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
@@ -248,7 +249,7 @@ printf( "Processing continued...\n" );
 
 rectosasp:
 		// 2. Pass to SASP
-		ret_code = handler_sasp_receive( sasp_key, pid, MEMORY_HANDLE_MAIN_LOOP, data_buff + DADA_OFFSET_SASP );
+		ret_code = handler_sasp_receive( sasp_key, pid, MEMORY_HANDLE_MAIN_LOOP, &sasp_data );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		printf( "SASP1:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
@@ -290,7 +291,7 @@ rectosasp:
 				}
 				else if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
-					ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, data_buff + DADA_OFFSET_SASP );
+					ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
 					assert( ret_code == SASP_RET_NONCE );
 //					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
@@ -314,7 +315,7 @@ rectosasp:
 		ret_code = handlerSAGDP_receiveUP( &timer_val, NULL, pid, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
 		if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
-			ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, data_buff + DADA_OFFSET_SASP );
+			ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
 			assert( ret_code == SASP_RET_NONCE );
 //			ret_code = handlerSAGDP_receiveUP( &timer_val, nonce, pid, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 			ret_code = handlerSAGDP_receiveUP( &timer_val, nonce, pid, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
@@ -461,7 +462,7 @@ printf( "Processing in progress... (period = %d, time = %d)\n", wait_to_continue
 		ret_code = handlerSAGDP_receiveHLP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
 		if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
-			ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, data_buff + DADA_OFFSET_SASP );
+			ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
 			assert( ret_code == SASP_RET_NONCE );
 //			ret_code = handlerSAGDP_receiveHLP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 			ret_code = handlerSAGDP_receiveHLP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
@@ -495,7 +496,7 @@ printf( "Processing in progress... (period = %d, time = %d)\n", wait_to_continue
 
 		// SASP
 saspsend:
-		ret_code = handler_sasp_send( sasp_key, nonce, MEMORY_HANDLE_MAIN_LOOP, data_buff + DADA_OFFSET_SASP );
+		ret_code = handler_sasp_send( sasp_key, nonce, MEMORY_HANDLE_MAIN_LOOP, &sasp_data );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		printf( "SASP2: ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 

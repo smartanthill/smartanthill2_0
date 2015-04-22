@@ -19,6 +19,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __SASP_PROTOCOL_H__
 
 #include "sa-common.h"
+#include "sa-uint48.h"
 #include "sa-eeprom.h"
 #include "zepto-mem-mngmt.h"
 
@@ -38,20 +39,30 @@ Copyright (C) 2015 OLogN Technologies AG
 #define SASP_TAG_SIZE SASP_ENC_BLOCK_SIZE
 
 
+// data types
+typedef sa_uint48_t sasp_nonce_type;
+
+
 // data structures
-#define DATA_SASP_SIZE (SASP_NONCE_SIZE+SASP_NONCE_SIZE+SASP_TAG_SIZE)
-#define DATA_SASP_NONCE_LW_OFFSET 0 // Nonce Lower Watermark
-#define DATA_SASP_NONCE_LS_OFFSET SASP_NONCE_SIZE // Nonce to use For Sending
-#define DATA_SASP_LRPS_OFFSET (SASP_NONCE_SIZE+SASP_NONCE_SIZE) // Last Received Packet Signature TODO: Check whether we need it
+struct SASP_DATA
+{
+	sasp_nonce_type nonce_lw;
+	sasp_nonce_type nonce_ls;
+};
+//#define DATA_SASP_SIZE (SASP_NONCE_SIZE+SASP_NONCE_SIZE+SASP_TAG_SIZE)
+//#define DATA_SASP_NONCE_LW_OFFSET 0 // Nonce Lower Watermark
+//#define DATA_SASP_NONCE_LS_OFFSET SASP_NONCE_SIZE // Nonce to use For Sending
+//#define DATA_SASP_LRPS_OFFSET (SASP_NONCE_SIZE+SASP_NONCE_SIZE) // Last Received Packet Signature TODO: Check whether we need it
+
 
 // initializing and backup
-void SASP_initAtLifeStart( uint8_t* dataBuff );
-void SASP_restoreFromBackup( uint8_t* dataBuff );
+void SASP_initAtLifeStart( SASP_DATA* sasp_data );
+void SASP_restoreFromBackup( SASP_DATA* sasp_data );
 
 // handlers
-uint8_t handler_sasp_receive( const uint8_t* key, uint8_t* packet_id, MEMORY_HANDLE mem_h, uint8_t* data );
-uint8_t handler_sasp_send( const uint8_t* key, const uint8_t* packet_id, MEMORY_HANDLE mem_h, uint8_t* data );
-uint8_t handler_sasp_get_packet_id( uint8_t* buffOut, int buffOutSize, uint8_t* data );
+uint8_t handler_sasp_receive( const uint8_t* key, uint8_t* packet_id, MEMORY_HANDLE mem_h, SASP_DATA* sasp_data );
+uint8_t handler_sasp_send( const uint8_t* key, const uint8_t* packet_id, MEMORY_HANDLE mem_h, SASP_DATA* sasp_data );
+uint8_t handler_sasp_get_packet_id( uint8_t* buffOut, int buffOutSize, SASP_DATA* sasp_data );
 
 
 #endif // __SASP_PROTOCOL_H__

@@ -1058,6 +1058,8 @@ void zepto_writer_get_copy_of_response( MEMORY_HANDLE mem_h, uint8_t* buff )
 }
 */
 
+#if (SA_USED_ENDIANNES == SA_LITTLE_ENDIAN)
+
 // specific encoded uint functions
 void shift_right_7( uint8_t* num_bytes, uint8_t cnt )
 {
@@ -1203,6 +1205,13 @@ void zepto_parser_decode_uint( uint8_t** packed_num_bytes, uint8_t* bytes_out, u
 	}
 }
 
+#elif (SA_USED_ENDIANNES == SA_BIG_ENDIAN)
+// TODO: implement
+#error not implemented; just do it
+#elif
+#error SA_USED_ENDIANNES has unexpected value
+#endif
+
 void zepto_parser_decode_uint( parser_obj* po, uint8_t* bytes_out, uint8_t target_size )
 {
 	assert( po->mem_handle != MEMORY_HANDLE_INVALID );
@@ -1212,6 +1221,9 @@ void zepto_parser_decode_uint( parser_obj* po, uint8_t* bytes_out, uint8_t targe
 	zepto_parser_decode_uint( &end, bytes_out, target_size );
 	po->offset += end - buff;
 }
+
+
+#if (SA_USED_ENDIANNES == SA_LITTLE_ENDIAN)
 
 void zepto_parser_encode_and_append_uint( MEMORY_HANDLE mem_h, const uint8_t* num_bytes, uint8_t num_sz_max )
 {
@@ -1287,6 +1299,14 @@ void zepto_parser_encode_and_prepend_uint( MEMORY_HANDLE mem_h, const uint8_t* n
 	printf( "zepto_parser_encode_and_prepend_uint(..., ..., %d) resulted in %d bytes\n", num_sz_max, sz );
 	memory_object_prepend( mem_h, out_buff, sz );
 }
+
+#elif (SA_USED_ENDIANNES == SA_BIG_ENDIAN)
+// TODO: implement
+#error not implemented; just do it
+#elif
+#error SA_USED_ENDIANNES has unexpected value
+#endif
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
