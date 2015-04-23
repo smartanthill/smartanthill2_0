@@ -20,8 +20,6 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "zepto-mem-mngmt.h"
 #include "sa-eax-128.h"
 
-//#define NEW_APPROACH
-
 
 
 void SASP_initAtLifeStart( SASP_DATA* sasp_data )
@@ -29,9 +27,6 @@ void SASP_initAtLifeStart( SASP_DATA* sasp_data )
 	sa_uint48_set_zero( sasp_data->nonce_lw );
 	sa_uint48_set_zero( sasp_data->nonce_ls );
 	sa_uint48_increment( sasp_data->nonce_ls );
-/*	memset( dataBuff + DATA_SASP_NONCE_LW_OFFSET, 0, SASP_NONCE_SIZE );
-	memset( dataBuff + DATA_SASP_NONCE_LS_OFFSET, 0, SASP_NONCE_SIZE );
-	*( dataBuff + DATA_SASP_NONCE_LS_OFFSET ) = 1;*/
 
 	eeprom_write( DATA_SASP_NONCE_LW_ID, sasp_data->nonce_lw, sizeof(sasp_data->nonce_lw) );
 	eeprom_write( DATA_SASP_NONCE_LS_ID, sasp_data->nonce_ls, sizeof(sasp_data->nonce_ls) );
@@ -49,28 +44,6 @@ void SASP_restoreFromBackup( SASP_DATA* sasp_data )
 	assert( size == sizeof(sasp_data->nonce_ls) );
 	eeprom_read_fixed_size( DATA_SASP_NONCE_LS_ID, sasp_data->nonce_ls, size);
 }
-/*
-void SASP_NonceLS_increment(  uint8_t* nonce )
-{
-	int8_t i;
-	for ( i=0; i<SASP_NONCE_SIZE; i++ )
-	{
-		nonce[i] ++;
-		if ( nonce[i] ) break;
-	}
-}
-
-int8_t SASP_NonceCompare( const uint8_t* nonce1, const uint8_t* nonce2 )
-{
-	int8_t i;
-	for ( i=SASP_NONCE_SIZE-1; i>=0; i-- )
-	{
-		if ( nonce1[i] > nonce2[i] ) return int8_t(1);
-		if ( nonce1[i] < nonce2[i] ) return int8_t(-1);
-	}
-	return 0;
-}
-*/
 
 inline
 void sasp_make_nonce_for_encryption( const sa_uint48_t packet_id, uint8_t master_slave_bit, uint8_t nonce[16] )
@@ -95,8 +68,6 @@ void SASP_EncryptAndAddAuthenticationData( REQUEST_REPLY_HANDLE mem_h, const uin
 	bool read_ok;
 
 	uint8_t nonce[16];
-/*	memcpy( nonce, packet_id, 6 );
-	nonce[6] = MASTER_SLAVE_BIT;*/
 	sasp_make_nonce_for_encryption( packet_id, MASTER_SLAVE_BIT, nonce );
 
 	// intermediate buffers for EAX
@@ -164,9 +135,6 @@ bool SASP_IntraPacketAuthenticateAndDecrypt( const uint8_t* key, REQUEST_REPLY_H
 	sa_uint48_init_by( pid, nonce_received );
 	uint8_t nonce[ 16 ];
 	sasp_make_nonce_for_encryption( nonce_received, 1 - MASTER_SLAVE_BIT, nonce );
-//	zepto_parser_decode_uint( &po, nonce, 6 );
-//	memcpy( pid, nonce, 6 );
-//	nonce[6] = 1 - MASTER_SLAVE_BIT;
 
 	// read blocks one by one, authenticate, decrypt, write
 	bool read_ok;
@@ -295,11 +263,8 @@ uint8_t handler_sasp_send( const uint8_t* key, const sa_uint48_t packet_id, MEMO
 
 uint8_t handler_sasp_receive( const uint8_t* key, uint8_t* pid, MEMORY_HANDLE mem_h, SASP_DATA* sasp_data )
 {
-//	uint8_t header[ SASP_HEADER_SIZE ];
-
 	INCREMENT_COUNTER( 11, "handler_sasp_receive()" );
 	// 1. Perform intra-packet authentication
-	// init parser object
 	parser_obj po;
 	zepto_parser_init( &po, mem_h );
 	uint16_t packet_size = zepto_parsing_remaining_bytes( &po );
@@ -356,24 +321,26 @@ uint8_t handler_sasp_receive( const uint8_t* key, uint8_t* pid, MEMORY_HANDLE me
 	int8_t nonceCmp = sa_uint48_compare( pid, sasp_data->nonce_lw );
 	if ( nonceCmp <= 0 ) // error message must be prepared
 	{
+#ifdef SA_DEBUG
 		INCREMENT_COUNTER( 15, "handler_sasp_receive(), error old nonce" );
 		PRINTF( "handler_sasp_receive(): old nonce; packet for SASP is being prepared...\n" );
 		PRINTF( "   nonce received: %02x %02x %02x %02x %02x %02x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 		uint8_t* nlw = sasp_data->nonce_lw;
 		PRINTF( "   current    NLW: %02x %02x %02x %02x %02x %02x\n", nlw[0], nlw[1], nlw[2], nlw[3], nlw[4], nlw[5] );
+#endif
 
 		zepto_response_to_request( mem_h ); // we have to create a new response (with error old nonce)
 		// we are to create a brand new output
 		zepto_write_uint8( mem_h, 0x80 ); // First Byte; TODO: use bit field processing instead (should we?)
 		zepto_write_uint8( mem_h, 0 ); // Reserved Byte
-		zepto_parser_encode_and_append_uint( mem_h, nlw, SASP_NONCE_SIZE );
+		zepto_parser_encode_and_append_uint( mem_h, sasp_data->nonce_lw, SASP_NONCE_SIZE );
 		zepto_response_to_request( mem_h );
 
 		uint8_t ne[ SASP_HEADER_SIZE ];
 		memcpy( ne, pid, SASP_NONCE_SIZE );
 		SASP_EncryptAndAddAuthenticationData( mem_h,key, ne );
 		PRINTF( "handler_sasp_receive(): ------------------- ERROR OLD NONCE WILL BE SENT ----------------------\n" );
-		assert( ugly_hook_get_response_size( mem_h ) <= 39 );
+//		assert( ugly_hook_get_response_size( mem_h ) <= 39 );
 		return SASP_RET_TO_LOWER_ERROR;
 	}
 
