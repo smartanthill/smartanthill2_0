@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.2.12
+:Version:   v0.2.13
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -111,7 +111,7 @@ where SACCP-OTA-PAIRING-REQUEST is a 1-byte bitfield substrate, with bits [0..2]
 
 **\| SACCP-OTA-PAIRING-RESPONSE \| OTA-PAIRING-RESPONSE-BODY \|**
 
-where SACCP-OTA-PAIRING-RESPONSE is a 1-byte bitfield substrate, with bits [0..2] equal to 0x7 (otherwise it is a different type of reply, see below), bits [3..4] are "additional bits" passed from Pairing Protocol alongside with OTA-PAIRING-RESPONSE-BODY, bits [5..7] are reserved (MUST be zeros), and OTA-PAIRING-RESPONSE-BODY as described in :ref:`sapairing` document. 
+where SACCP-OTA-PAIRING-RESPONSE is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits [0..2] equal to 0x7 (otherwise it is a different type of reply, see below), bits [3..4] are "additional bits" passed from Pairing Protocol alongside with OTA-PAIRING-RESPONSE-BODY, bits [5..] are reserved (MUST be zeros), and OTA-PAIRING-RESPONSE-BODY as described in :ref:`sapairing` document. 
 
 SACCP-OTA-PAIRING-REQUEST is sent from Client to Device, and SACCP-OTA-PAIRING-RESPONSE is sent from Device to Client; they form a "packet chain" as described in :ref:`sapairing` document.
 
@@ -126,7 +126,7 @@ where SACCP-OTA-PROGRAMMING-REQUEST is a 1-byte bitfield substrate, with bits [0
 
 **\| SACCP-OTA-PROGRAMMING-RESPONSE \| OTA-PROGRAMMING-RESPONSE-BODY \|**
 
-where SACCP-OTA-PROGRAMMING-RESPONSE is a 1-byte bitfield substrate, with bits [0..2] equal to 0x6 (otherwise it is a different type of reply, see below), bits [3..5] being "additional bits" passed from SAOtAPP alongside with OTA-PROGRAMMING-RESPONSE-BODY, bits [6..7] reserved (MUST be zeros), and OTA-PROGRAMMING-RESPONSE-BODY is described in :ref:`sabootload` document. 
+where SACCP-OTA-PROGRAMMING-RESPONSE is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits [0..2] equal to 0x6 (otherwise it is a different type of reply, see below), bits [3..5] being "additional bits" passed from SAOtAPP alongside with OTA-PROGRAMMING-RESPONSE-BODY, bits [6..] reserved (MUST be zeros), and OTA-PROGRAMMING-RESPONSE-BODY is described in :ref:`sabootload` document. 
 
 TODO: blocking all other messages (return TODO error) while OtA Programming Session is in progress (i.e. OtA Programming State being OTA_PROGRAMMING_INPROGRESS).
 
@@ -168,13 +168,13 @@ SACCP Reuse Fragments
 
 Each of the fragments in SACCP_REUSE_OLD_PROGRAM command packet is one of the following:
 
-**\| SACCP_REUSE_FRAME_VERBATIM \| Fragment-Length \| Fragment \|**
+**\| SACCP_REUSE_FRAGMENT_VERBATIM \| Fragment-Length \| Fragment \|**
 
-where SACCP_REUSE_FRAME_VERBATIM is a 1-byte constant, Fragment-Length is Encoded-Size<max=2> field, and Fragment has size of Fragment-Length. TODO: Truncated-Encoded-Size (also for FRAME_REFERENCE)?
+where SACCP_REUSE_FRAGMENT_VERBATIM is a 1-byte constant, Fragment-Length is Encoded-Size<max=2> field, and Fragment has size of Fragment-Length. TODO: Truncated-Encoded-Size (also for FRAGMENT_REFERENCE)?
 
-**\| SACCP_REUSE_FRAME_REFERENCE \| Fragment-Length \| Fragment-Offset \|**
+**\| SACCP_REUSE_FRAGMENT_REFERENCE \| Fragment-Length \| Fragment-Offset \|**
 
-where SACCP_REUSE_FRAME_REFERENCE is a 1-byte constant, Fragment-Length is Encoded-Size<max=2> field, and Fragment-Offset is Encoded-Size<max=2> field, indicating offset of the fragment within existing program.
+where SACCP_REUSE_FRAGMENT_REFERENCE is a 1-byte constant, Fragment-Length is Encoded-Size<max=2> field, and Fragment-Offset is Encoded-Size<max=2> field, indicating offset of the fragment within existing program.
 
 
 SACCP Reply Packets
