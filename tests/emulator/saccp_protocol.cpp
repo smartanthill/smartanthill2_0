@@ -94,9 +94,30 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #ifdef USED_AS_MASTER
 
-void saccp_control_program( parser_obj* po_start, parser_obj* po_end )
+void saccp_control_program_prepare_program( MEMORY_HANDLE mem_h )
 {
 	// TODO: process
+	zepto_write_block( mem_h, (const uint8_t*)"first message with a new design", 32 );
+}
+
+uint8_t handler_sacpp_send_new_program( MEMORY_HANDLE mem_h )
+{
+	// TODO: process
+	saccp_control_program_prepare_program( mem_h );
+	uint8_t hdr = SACCP_NEW_PROGRAM; //TODO: we may want to add extra headers
+	zepto_write_prepend_byte( mem_h, hdr );
+	zepto_write_prepend_byte( mem_h, SAGDP_P_STATUS_FIRST );
+	return SACCP_RET_PASS_LOWER;
+}
+
+void saccp_control_program_process_incoming( MEMORY_HANDLE mem_h, parser_obj* po, uint16_t sz )
+{
+	// TODO: process
+	uint8_t buff[100];
+	memset( buff, '?', 99 );
+	buff[99] = 0;
+	zepto_parse_read_block( po, buff, sz );
+	PRINTF( "reply received [%d bytes]: %s\n", sz, buff );
 }
 
 uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
@@ -339,7 +360,7 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 			if ( packet_head_byte & 0xF0 ) // TODO: use bit field processing instead
 			{
 				form_error_packet( mem_h, SACCP_ERROR_INVALID_FORMAT, first_byte & SAGDP_P_STATUS_MASK, chain_id ); // TODO: use bit field processing instead
-				return SACCP_RET_OK; //+++ TODO: should it be FAILED?
+				return SACCP_RET_PASS_LOWER; //+++ TODO: should it be FAILED?
 			}
 			uint8_t are_headers = packet_head_byte & 0x8; // TODO: use bit field processing instead
 			if ( are_headers != 0 ) // TODO: use bit field processing instead
@@ -360,7 +381,7 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 							if ( sz ) // cannot happen in a valid packet
 							{
 								form_error_packet( mem_h, SACCP_ERROR_INVALID_FORMAT, first_byte & SAGDP_P_STATUS_MASK, chain_id ); // TODO: use bit field processing instead
-								return SACCP_RET_OK; //+++ TODO: should it be FAILED?
+								return SACCP_RET_PASS_LOWER; //+++ TODO: should it be FAILED?
 							}
 							break;
 						}
@@ -387,7 +408,7 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 
 				handler_zepto_vm( mem_h ); // TODO: it can be implemented as an additional layer
 			}
-			return SACCP_RET_OK;
+			return SACCP_RET_PASS_LOWER;
 			break;
 		}
 		case SACCP_REPEAT_OLD_PROGRAM:

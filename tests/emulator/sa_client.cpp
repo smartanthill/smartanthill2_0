@@ -16,12 +16,21 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 
+#define MODEL_IN_EFFECT 2
+
+
 #include "sa-common.h"
 #include "sa-commlayer.h"
 #include "sa-timer.h"
 #include "sasp_protocol.h"
 #include "sagdp_protocol.h"
+#if MODEL_IN_EFFECT == 1
 #include "yoctovm_protocol.h"
+#elif MODEL_IN_EFFECT == 2
+#include "saccp_protocol.h"
+#else
+#error #error Unexpected value of MODEL_IN_EFFECT
+#endif
 #include "test-generator.h"
 #include <stdio.h> 
 
@@ -31,10 +40,6 @@ uint8_t data_buff[BUF_SIZE];
 //uint8_t msgLastSent[BUF_SIZE];
 uint8_t pid[ SASP_NONCE_SIZE ];
 uint8_t nonce[ SASP_NONCE_SIZE ];
-
-
-
-
 
 
 int main_loop()
@@ -89,7 +94,13 @@ int main_loop()
 
 
 
+#if MODEL_IN_EFFECT == 1
 	ret_code = master_start( MEMORY_HANDLE_MAIN_LOOP );
+#elif MODEL_IN_EFFECT == 2
+	ret_code = handler_sacpp_send_new_program( MEMORY_HANDLE_MAIN_LOOP );
+#else
+#error #error Unexpected value of MODEL_IN_EFFECT
+#endif
 	zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 	goto entry;
 
@@ -97,6 +108,7 @@ int main_loop()
 	for (;;)
 	{
 getmsg:
+#if MODEL_IN_EFFECT == 1
 		if ( wait_to_continue_processing && getTime() >= wake_time_continue_processing )
 		{
 printf( "Processing continued...\n" );
@@ -111,6 +123,10 @@ printf( "Processing continued...\n" );
 			goto entry;
 			break;
 		}
+#elif MODEL_IN_EFFECT == 2
+#else
+#error #error Unexpected value of MODEL_IN_EFFECT
+#endif
 
 		// 1. Get message from comm peer
 		printf("Waiting for a packet from server...\n");
@@ -151,6 +167,7 @@ printf( "Processing continued...\n" );
 		while ( ret_code == COMMLAYER_RET_PENDING )
 		{
 			waitForTimeQuantum();
+#if MODEL_IN_EFFECT == 1
 			if ( wait_to_continue_processing && getTime() >= wake_time_continue_processing )
 			{
 printf( "Processing continued...\n" );
@@ -165,6 +182,10 @@ printf( "Processing continued...\n" );
 				goto entry;
 				break;
 			}
+#elif MODEL_IN_EFFECT == 2
+#else
+#error #error Unexpected value of MODEL_IN_EFFECT
+#endif
 			if ( timer_val != 0 && getTime() >= wake_time )
 			{
 				printf( "no reply received; the last message (if any) will be resent by timer\n" );
@@ -206,7 +227,12 @@ printf( "Processing continued...\n" );
 			{
 				INCREMENT_COUNTER( 91, "MAIN LOOP, waiting for incoming chain by timer done; starting own chain" );
 				wait_for_incoming_chain_with_timer = false;
+#if MODEL_IN_EFFECT == 1
 				ret_code = master_start( MEMORY_HANDLE_MAIN_LOOP );
+#elif MODEL_IN_EFFECT == 2
+#else
+#error #error Unexpected value of MODEL_IN_EFFECT
+#endif
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 				goto entry;
 				break;
@@ -350,8 +376,13 @@ rectosasp:
 			{
 				sagdp_init( data_buff + DADA_OFFSET_SAGDP );
 				// TODO: reinit the rest of stack (where applicable)
+#if MODEL_IN_EFFECT == 1
 				ret_code = master_error( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4, stack, stackSize*/ );
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+#elif MODEL_IN_EFFECT == 2
+#else
+#error Unexpected value of MODEL_IN_EFFECT
+#endif
 				goto entry;
 				break;
 			}
@@ -367,6 +398,8 @@ rectosasp:
 				break;
 			}
 		}
+
+#if MODEL_IN_EFFECT == 1
 
 processcmd:
 		// 4. Process received command (yoctovm)
@@ -455,7 +488,23 @@ printf( "Processing in progress... (period = %d, time = %d)\n", wait_to_continue
 			}
 		}
 
-			
+#elif MODEL_IN_EFFECT == 2
+
+processcmd:
+		// 4. Process received command (yoctovm)
+		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL ); //master_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP );
+/*		if ( ret_code == YOCTOVM_RESET_STACK )
+		{
+			sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+			// TODO: reinit the rest of stack (where applicable)
+			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
+		}*/
+		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+entry:	
+
+#else
+#error Unexpected value of MODEL_IN_EFFECT
+#endif
 			
 		// 5. SAGDP
 //		ret_code = handlerSAGDP_receiveHLP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );

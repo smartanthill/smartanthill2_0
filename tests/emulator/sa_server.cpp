@@ -16,13 +16,22 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 
+#define MODEL_IN_EFFECT 2
+
+
 #include "sa-common.h"
 #include "sa-uint48.h"
 #include "sa-commlayer.h"
 #include "sa-timer.h"
 #include "sasp_protocol.h"
 #include "sagdp_protocol.h"
+#if MODEL_IN_EFFECT == 1
 #include "yoctovm_protocol.h"
+#elif MODEL_IN_EFFECT == 2
+#include "saccp_protocol.h"
+#else
+#error #error Unexpected value of MODEL_IN_EFFECT
+#endif
 #include "test-generator.h"
 #include <stdio.h> 
 
@@ -94,6 +103,7 @@ int main_loop()
 	for (;;)
 	{
 getmsg:
+#if MODEL_IN_EFFECT == 1
 		if ( wait_to_continue_processing && getTime() >= wake_time_continue_processing )
 		{
 printf( "Processing continued...\n" );
@@ -108,6 +118,10 @@ printf( "Processing continued...\n" );
 			goto entry;
 			break;
 		}
+#elif MODEL_IN_EFFECT == 2
+#else
+#error #error Unexpected value of MODEL_IN_EFFECT
+#endif
 
 		// 1. Get message from comm peer
 		ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP );
@@ -116,6 +130,7 @@ printf( "Processing continued...\n" );
 		while ( ret_code == COMMLAYER_RET_PENDING )
 		{
 			waitForTimeQuantum();
+#if MODEL_IN_EFFECT == 1
 			if ( wait_to_continue_processing && getTime() >= wake_time_continue_processing )
 			{
 printf( "Processing continued...\n" );
@@ -130,6 +145,10 @@ printf( "Processing continued...\n" );
 				goto entry;
 				break;
 			}
+#elif MODEL_IN_EFFECT == 2
+#else
+#error #error Unexpected value of MODEL_IN_EFFECT
+#endif
 			if ( timer_val && getTime() >= wake_time )
 			{
 				printf( "no reply received; the last message (if any) will be resent by timer\n" );
@@ -155,7 +174,12 @@ printf( "Processing continued...\n" );
 			else if ( wait_for_incoming_chain_with_timer && getTime() >= wake_time_to_start_new_chain )
 			{
 				wait_for_incoming_chain_with_timer = false;
+#if MODEL_IN_EFFECT == 1
 				ret_code = master_start( MEMORY_HANDLE_MAIN_LOOP );
+#elif MODEL_IN_EFFECT == 2
+#else
+#error #error Unexpected value of MODEL_IN_EFFECT
+#endif
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 				goto alt_entry;
 				break;
@@ -300,6 +324,7 @@ printf( "Processing continued...\n" );
 			}
 		}
 
+#if MODEL_IN_EFFECT == 1
 processcmd:
 		// 4. Process received command (yoctovm)
 		ret_code = slave_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4, stack, stackSize*/ );
@@ -390,6 +415,55 @@ printf( "Processing in progress... (period = %d, time = %d)\n", wait_to_continue
 			}
 		}
 
+#elif MODEL_IN_EFFECT == 2
+
+processcmd:
+		// 4. Process received command (yoctovm)
+		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL ); // slave_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP );
+/*		if ( ret_code == YOCTOVM_RESET_STACK )
+		{
+			sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+			printf( "slave_process(): ret_code = YOCTOVM_RESET_STACK\n" );
+			// TODO: reinit the rest of stack (where applicable)
+			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
+		}*/
+		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+entry:
+		wait_for_incoming_chain_with_timer = false;
+/*		if ( ret_code == YOCTOVM_WAIT_TO_CONTINUE )
+			printf( "YOCTO:  ret: %d; waiting to continue ...\n", ret_code );
+		else
+			printf( "YOCTO:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );*/
+
+		switch ( ret_code )
+		{
+			case SACCP_RET_PASS_LOWER:
+			{
+				 // test generation: sometimes slave can start a new chain at not in-chain reason (although in this case it won't be accepted by Master)
+//				bool restart_chain = tester_get_rand_val() % 8 == 0;
+				bool restart_chain = false;
+				if ( restart_chain )
+				{
+					sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+					ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL ); // master_start( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4, stack, stackSize*/ )
+					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+					assert( ret_code == SACCP_RET_PASS_LOWER );
+				}
+				// regular processing will be done below in the next block
+				break;
+			}
+/*			case YOCTOVM_PASS_LOWER_THEN_IDLE:
+			{
+//				bool start_now = tester_get_rand_val() % 3;
+				bool start_now = true;
+				wake_time_to_start_new_chain = start_now ? getTime() : getTime() + tester_get_rand_val() % 8;
+				wait_for_incoming_chain_with_timer = true;
+				break;
+			}*/
+		}
+#else
+#error #error Unexpected value of MODEL_IN_EFFECT
+#endif
 			
 			
 		// 5. SAGDP

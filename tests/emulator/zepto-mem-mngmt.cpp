@@ -218,7 +218,7 @@ void zepto_mem_man_init_memory_management()
 
 	uint16_t remains_at_right = BASE_MEM_BLOCK_SIZE - 6;
 
-	zepto_mem_man_write_encoded_uint16_no_size_checks_forward( BASE_MEM_BLOCK + 4, remains_at_right );
+	zepto_mem_man_write_encoded_uint16_no_size_checks_forward( BASE_MEM_BLOCK + 6, remains_at_right );
 	zepto_mem_man_write_encoded_uint16_no_size_checks_backward( BASE_MEM_BLOCK + BASE_MEM_BLOCK_SIZE - 1, remains_at_right );
 
 	zepto_mem_man_check_sanity();
