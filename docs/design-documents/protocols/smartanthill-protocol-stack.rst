@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.9
+:Version:   v0.2.10
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -160,26 +160,28 @@ There are some encodings and encoding conventions which are used throughout Smar
 SmartAnthill Encoded-Unsigned-Int
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In several places in SmartAnthill Protocol Stack, there is a need to encode integers, which happen to be small most of the time (one such example is sizes, another example is some kinds of incrementally-increased ids). To encode them efficiently, SmartAnthill Protocol Stack uses a compact encoding, which encodes small integers with smaller number of bytes. Encoded-Unsigned-Int is not the same as *Variable-length quantity (VLQ)*, VLQ is redundant and allows, for example, for 2-byte representation of numbers below 128, Encoded-Unsigned-Int<> has only one representation for each number); note that other encodings such as Encoded-Signed-Int are different from what is described on that page.
+In several places in SmartAnthill Protocol Stack, there is a need to encode integers, which happen to be small most of the time (one such example is sizes, another example is some kinds of incrementally-increased ids). To encode them efficiently, SmartAnthill Protocol Stack uses a compact encoding, which encodes small integers with smaller number of bytes. Encoded-Unsigned-Int is very close to *Variable-length quantity (VLQ)* (see http://en.wikipedia.org/wiki/Variable-length_quantity), however, SmartAnthill Encoded-Unsigned-Int<> encoding enforces "canonical" VLQ representation, prohibiting non-optimal encodings such as two-byte encoding of '0'. Also note that other encodings such as Encoded-Signed-Int are different from what is described on VLQ Wikipedia page.
 
-Encoded-Unsigned-Int is a variable-length encoding of integers (with the idea being somewhat similar to the idea behind UTF-8). Namely:
+Encoded-Unsigned-Int is a variable-length encoding of unsigned integers. Namely:
 
 * if the first byte of Encoded-Unsigned-Int is c1 <= 127, then the value of Encoded-Unsigned-Int is equal to c1
 * if the first byte of Encoded-Unsigned-Int is c1 >= 128, then the next byte c2 is needed:
 
-  + if the second byte of Encoded-Unsigned-Int is c2 <= 127, then the value of Encoded-Unsigned-Int is equal to *128+((uint16)(c1&0x7F) | ((uint16)c2 << 7))*.
+  + if the second byte of Encoded-Unsigned-Int is c2 <= 127, then the value of Encoded-Unsigned-Int is equal to *((uint16)(c1&0x7F) | ((uint16)c2 << 7))*.
   + if the second byte of Encoded-Unsigned-Int is c2 >= 128, then the next byte c3 is needed:
     
-    * if the third byte of Encoded-Unsigned-Int is c3 <= 127, then the value of Encoded-Unsigned-Int is equal to *16512+((uint32)(c1&0x7F) | ((uint32)(c2&0x7F) << 7)) | ((uint32)c3 << 14))* (note that 16512 is 2^7+2^14).
+    * if the third byte of Encoded-Unsigned-Int is c3 <= 127, then the value of Encoded-Unsigned-Int is equal to *((uint32)(c1&0x7F) | ((uint32)(c2&0x7F) << 7)) | ((uint32)c3 << 14))*.
     * if the third byte of Encoded-Unsigned-Int is c3 >= 128, then the next byte c4 is needed:
 
-      + if the fourth byte of Encoded-Unsigned-Int is c4 <= 127, then the value of Encoded-Unsigned-Int is equal to *2113664+((uint32)(c1&0x7F) | ((uint32)(c2&0x7F) << 7)) | ((uint32)(c3&0x7F) << 14)) | ((uint32)c4 << 21))* (note that 2113664 is 2^7+2^14+2^21).
+      + if the fourth byte of Encoded-Unsigned-Int is c4 <= 127, then the value of Encoded-Unsigned-Int is equal to *((uint32)(c1&0x7F) | ((uint32)(c2&0x7F) << 7)) | ((uint32)(c3&0x7F) << 14)) | ((uint32)c4 << 21))*.
       + if the fourth byte of Encoded-Unsigned-Int is c4 >= 128, then the next byte c5 is needed.
 
         * for nth byte:
 
-          + if the nth byte of Encoded-Unsigned-Int is cn <= 127, then the value of Encoded-Unsigned-Int is equal to *start+((uintNN)(c1&0x7F) | ((uintNN)(c2&0x7F) << 7)) | ((uintNN)(c3&0x7F) << 14)) | ... | ((uintNN)(c<n-1>&0x7F) << (7*(n-2))))) | ((uintNN)cn << (7*(n-1))))*, where *start=2^7+2^14+...+2^(n-1)*, and uintNN is sufficient to store the result. *NB: in practice, for Encoded-Unsigned-Ints over 4 bytes, implementation is likely to be quite different from, but equivalent to, the formula given*
+          + if the nth byte of Encoded-Unsigned-Int is cn <= 127, then the value of Encoded-Unsigned-Int is equal to *((uintNN)(c1&0x7F) | ((uintNN)(c2&0x7F) << 7)) | ((uintNN)(c3&0x7F) << 14)) | ... | ((uintNN)(c<n-1>&0x7F) << (7*(n-2))))) | ((uintNN)cn << (7*(n-1))))*, where uintNN is sufficient to store the result. *NB: in practice, for Encoded-Unsigned-Ints over 4 bytes, implementation is likely to be quite different from, but equivalent to, the formula given*
           + if the nth byte of Encoded-Unsigned-Int is cn >= 128, then the <n+1>th byte is needed.
+
+IMPORTANT: Encoded-Unsigned-Int enforces "canonical" representation. It means that all integers MUST be encoded with the smallest number of bytes possible. This requirement is equivalent to a requirement that for encodings with length > 1, last byte of encoding MUST NOT be equal to zero. This MUST be checked by compliant implementations (and MUST generate invalid-encoding exception, with effects depending on the point where it has occurred). 
  
 The following table shows how many Encoded-Unsigned-Int bytes is necessary to encode ranges of Encoded-Unsigned-Int values:
 
@@ -189,48 +191,72 @@ The following table shows how many Encoded-Unsigned-Int bytes is necessary to en
 +=========================+=====================+==================+==================+
 | 0-127                   | 1                   | 7 bits           | 1 byte           |
 +-------------------------+---------------------+------------------+------------------+
-| 128-16 511              | 2                   | 14 bits          | 2 bytes          |
+| 128-16 383              | 2                   | 14 bits          | 2 bytes          |
 +-------------------------+---------------------+------------------+------------------+
-| 16 512-2 113 663        | 3                   | 21 bits          | 3 bytes          |
+| 16 512-2 097 151        | 3                   | 21 bits          | 3 bytes          |
 +-------------------------+---------------------+------------------+------------------+
-| 2 113 664-270 549 119   | 4                   | 28 bits          | 4 bytes          |
+| 2 097 152-268 435 455   | 4                   | 28 bits          | 4 bytes          |
 +-------------------------+---------------------+------------------+------------------+
-| 270 549 120-            | 5                   | 35 bits          | 5 bytes          |
-| 34 630 287 487          |                     |                  |                  |
+| 268 435 456-            | 5                   | 35 bits          | 5 bytes          |
+| 34 359 738 367          |                     |                  |                  |
 +-------------------------+---------------------+------------------+------------------+
-| 34 630 287 487-         | 6                   | 42 bits          | 6 bytes          |
-| 4 432 676 798 591       |                     |                  |                  |
+| 34 359 738 368-         | 6                   | 42 bits          | 6 bytes          |
+| 4 398 046 511 103       |                     |                  |                  |
 +-------------------------+---------------------+------------------+------------------+
-| 4 432 676 798 592-      | 7                   | 49 bits          | 7 bytes          |
-| 567 382 630 219 903     |                     |                  |                  |
+| 4 398 046 511 104-      | 7                   | 49 bits          | 7 bytes          |
+| 562 949 953 421 311     |                     |                  |                  |
 +-------------------------+---------------------+------------------+------------------+
-| 567 382 630 219 904-    | 8                   | 56 bits          | 8 bytes          |
-| 72 624 976 668 147 839  |                     |                  |                  |
+| 562 949 953 421 312-    | 8                   | 56 bits          | 8 bytes          |
+| 72 057 594 037 927 935  |                     |                  |                  |
 +-------------------------+---------------------+------------------+------------------+
-|72 624 976 668 147 840-  | 9                   | 63 bits          | 8 bytes          |
-|9 295 997 013 522 923 647|                     |                  |                  |
+|72 057 594 037 927 936-  | 9                   | 63 bits          | 8 bytes          |
+|9 223 372 036 854 775 808|                     |                  |                  |
 +-------------------------+---------------------+------------------+------------------+
+
+IMPORTANT: parsers of Encoded-Unsigned-Int MUST take into account "max=N" parameter (see below), and raise an exception as soon as maximum number of bytes needed by "canonical" representation, is exceeded. For example, if Encoded-Unsigned-Int<max=2> is parsed, then as soon as 3rd byte in encoding is > 127, an exception MUST be raised (as non-canonical representations are expressly prohibited).
+
+Table of correspondence of "max=" parameter and maximum possible encoding length: 
+
++---------------------+---------------------------------------+
+| max=                | maximum Encoded-Unsigned-Int bytes    |
++=====================+=======================================+
+| 1                   | 2                                     |
++---------------------+---------------------------------------+
+| 2                   | 3                                     |
++---------------------+---------------------------------------+
+| 3                   | 4                                     |
++---------------------+---------------------------------------+
+| 4                   | 5                                     |
++---------------------+---------------------------------------+
+| 5                   | 6                                     |
++---------------------+---------------------------------------+
+| 6                   | 7                                     |
++---------------------+---------------------------------------+
+| 7                   | 8                                     |
++---------------------+---------------------------------------+
+| 8                   | 10                                    |
++---------------------+---------------------------------------+
 
 Encoded-Signed-Int
 ''''''''''''''''''
 
-Encoded-Signed-Int is an encoding for signed integers, derived from Encoded-Unsigned-Int. Encoded-Signed-Int is decoded as Encoded-Unsigned-Int first (NB: actual implementations MAY and probably SHOULD differ, see details below), and then, depending on number of bytes in the encoding (when it was treated as Encoded-Unsigned-Int), certain calculations are performed. For example, if we need Encoded-Signed-Int, have read it as Encoded-Unsigned-Int, and got 1 byte, we need to subtract 64 to get Encoded-Signed-Int. Therefore, Encoded-Signed-Int encoding which consists out of one byte with value 64, means '0'. The following table show the way how to calculate Encoded-Signed-Int (within the table, "EUI" means "value of Encoded-Unsigned-Int"):
+Encoded-Signed-Int is an encoding for signed integers, based on Zig-Zag conversion from signed integer to unsigned integer, and subsequent Encoded-Unsigned-Int encoding of unsigned integer. 
 
-+---------------------+-------------------------------------------------------------------------------+----------------------------------------------------+
-| Encoded-Unsigned-Int| Encoded-Signed-Int                                                            |Encoded-Signed-Int Values                           |
-| Bytes               |                                                                               |                                                    |
-+=====================+===============================================================================+====================================================+
-| 1                   | EUI - 64                                                                      | -64 to 63                                          |
-+---------------------+-------------------------------------------------------------------------------+----------------------------------------------------+
-| 2                   | (EUI-128)<8192 ? -64-((EUI-128)-8192) : 64+(EUI-128)-8192                     | -8256 to 8255                                      |
-+---------------------+-------------------------------------------------------------------------------+----------------------------------------------------+
-| 3                   | (EUI-16512)<1048576 ? -8256-((EUI-16512)-1048576) : 8256+(EUI-16512)-1048576  | -1056832 to 1056831                                |
-+---------------------+-------------------------------------------------------------------------------+----------------------------------------------------+
-| 4                   | (EUI-2113664)<134217728 ? -1056832-((EUI-2113664)-134217728) :                | −135274560 to 135274559                            |
-|                     | 1056832+(EUI-2113664)-134217728                                               |                                                    |
-+---------------------+-------------------------------------------------------------------------------+----------------------------------------------------+
+Zig-Zag conversion is the same as described here: https://developers.google.com/protocol-buffers/docs/encoding?csw=1#types. For example, to convert int16_t *sx* to uint16_t *ux*, the following C language expression is used: 
 
-Note that when calculating, say, result of 2-byte encoding, all we need is `(EUI-128)` (which occurs naturally when decoding Encoded-Unsigned-Int<>, see above), comparing of `EUI-128` with 8192 (which is equivalent to checking one bit), and `(EUI-128)-8192` (which is equivalent to masking 1 bit out of `(EUI-128)`). It MAY speed up implementations significantly at least on 8-bit MCUs.
+`ux = (uint16_t)((sx << 1) ^ (sx>>15))`
+
+To convert int32_t *sx* to uint32_t *ux*, expression becomes `ux = (uint32_t)((sx << 1) ^ (sx>>31))`, and so on. 
+
+Note that right shift in these expressions is a signed shift, making it equivalent creating a bitmask of appropriate length, consisting out of all '0' or out of all '1's (equal to the sign bit of original signed integer). This allows, for example, to calculate one byte of this mask by signed-shifting highest byte of *sx* to the right by 7, and then to use this byte for XORing with all the bytes of left-shifted sx; this trick should speed up implementations on 8-bit MCUs. 
+
+After *ux* is calculated, it is stored as an Encoded-Unsigned-Int of the appropriate size, as described above.
+
+To perform Zig-Zag conversion back (from Zig-Zag-encoded unsigned *ux* to original signed *sx*), the following expression may be used (for 16-bit conversions, for the others expressions are very similar):
+
+`sx = (int16_t)((ux >> 1) ^ (-(ux & 1)))`
+
+Note that once again, all bits (and therefore bytes) of `(-(ux&1))` are the same, so one byte can be calculated (this time - based on lowest byte) and then used for XORing with all the bytes of right-shifted *ux*.
 
 Encoded-\*-Int<max=>
 ''''''''''''''''''''
