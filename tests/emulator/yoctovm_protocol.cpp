@@ -149,11 +149,11 @@ uint8_t slave_process_continue( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, u
 	zepto_response_to_request( mem_h );
 
 	zepto_write_uint8( mem_h, first_byte );
-	zepto_write_encoded_uint16( mem_h, chain_id[0] );
-	zepto_write_encoded_uint16( mem_h, chain_id[1] );
-	zepto_write_encoded_uint16( mem_h, chain_ini_size );
-	zepto_write_encoded_uint16( mem_h, reply_to_id );
-	zepto_write_encoded_uint16( mem_h, self_id );
+	zepto_parser_encode_and_append_uint16( mem_h, chain_id[0] );
+	zepto_parser_encode_and_append_uint16( mem_h, chain_id[1] );
+	zepto_parser_encode_and_append_uint16( mem_h, chain_ini_size );
+	zepto_parser_encode_and_append_uint16( mem_h, reply_to_id );
+	zepto_parser_encode_and_append_uint16( mem_h, self_id );
 
 	char tail[256];
 	uint16_t varln = 6 - self_id % 7; // 0:6
@@ -218,11 +218,11 @@ uint8_t master_start( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* st
 
 	// prepare outgoing packet
 	zepto_write_uint8( mem_h, first_byte );
-	zepto_write_encoded_uint16( mem_h, chain_id[0] );
-	zepto_write_encoded_uint16( mem_h, chain_id[1] );
-	zepto_write_encoded_uint16( mem_h, chain_ini_size );
-	zepto_write_encoded_uint16( mem_h, reply_to_id );
-	zepto_write_encoded_uint16( mem_h, self_id );
+	zepto_parser_encode_and_append_uint16( mem_h, chain_id[0] );
+	zepto_parser_encode_and_append_uint16( mem_h, chain_id[1] );
+	zepto_parser_encode_and_append_uint16( mem_h, chain_ini_size );
+	zepto_parser_encode_and_append_uint16( mem_h, reply_to_id );
+	zepto_parser_encode_and_append_uint16( mem_h, self_id );
 
 	char tail[256];
 	uint16_t varln = 6 - self_id % 7; // 0:6
@@ -345,11 +345,11 @@ uint8_t master_process_continue( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, 
 	zepto_response_to_request( mem_h );
 
 	zepto_write_uint8( mem_h, first_byte );
-	zepto_write_encoded_uint16( mem_h, chain_id[0] );
-	zepto_write_encoded_uint16( mem_h, chain_id[1] );
-	zepto_write_encoded_uint16( mem_h, chain_ini_size );
-	zepto_write_encoded_uint16( mem_h, reply_to_id );
-	zepto_write_encoded_uint16( mem_h, self_id );
+	zepto_parser_encode_and_append_uint16( mem_h, chain_id[0] );
+	zepto_parser_encode_and_append_uint16( mem_h, chain_id[1] );
+	zepto_parser_encode_and_append_uint16( mem_h, chain_ini_size );
+	zepto_parser_encode_and_append_uint16( mem_h, reply_to_id );
+	zepto_parser_encode_and_append_uint16( mem_h, self_id );
 
 	char tail[256];
 	uint16_t varln = 6 - self_id % 7; // 0:6

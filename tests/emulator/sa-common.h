@@ -35,6 +35,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define uint8_t unsigned char
 #define int8_t char
 #define uint16_t unsigned short
+#define int16_t short
 
 // Master/Slave distinguishing bit; USED_AS_MASTER is assumed to be a preprocessor definition if necessary
 #ifdef USED_AS_MASTER

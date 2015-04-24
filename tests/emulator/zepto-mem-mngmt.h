@@ -28,8 +28,9 @@ Copyright (C) 2015 OLogN Technologies AG
 #define MEMORY_HANDLE_MAIN_LOOP 0
 #define MEMORY_HANDLE_SAGDP_LSM 1
 #define MEMORY_HANDLE_ADDITIONAL_ANSWER 2
-#define MEMORY_HANDLE_TEST_SUPPORT 3
-#define MEMORY_HANDLE_DBG_TMP 4
+#define MEMORY_HANDLE_DEFAULT_PLUGIN 3
+#define MEMORY_HANDLE_TEST_SUPPORT 4
+#define MEMORY_HANDLE_DBG_TMP 5
 
 #define MEMORY_HANDLE_MAX 8 // TODO: keep updated!!!
 
@@ -55,7 +56,6 @@ void zepto_mem_man_init_memory_management();
 void zepto_parser_init( parser_obj* po, REQUEST_REPLY_HANDLE mem_h );
 void zepto_parser_init( parser_obj* po, const parser_obj* po_base );
 uint8_t zepto_parse_uint8( parser_obj* po );
-uint16_t zepto_parse_encoded_uint16( parser_obj* po );
 bool zepto_parse_read_block( parser_obj* po, uint8_t* block, uint16_t size );
 bool zepto_parse_skip_block( parser_obj* po, uint16_t size );
 bool zepto_is_parsing_done( parser_obj* po );
@@ -63,7 +63,7 @@ uint16_t zepto_parsing_remaining_bytes( parser_obj* po );
 
 // writing functions
 void zepto_write_uint8( REQUEST_REPLY_HANDLE mem_h, uint8_t val );
-void zepto_write_encoded_uint16( REQUEST_REPLY_HANDLE mem_h, uint16_t val );
+//void zepto_write_encoded_uint16( REQUEST_REPLY_HANDLE mem_h, uint16_t val );
 void zepto_write_block( REQUEST_REPLY_HANDLE mem_h, const uint8_t* block, uint16_t size );
 
 // extended writing functions
@@ -71,7 +71,9 @@ void zepto_response_to_request( MEMORY_HANDLE mem_h );
 void zepto_convert_part_of_request_to_response( MEMORY_HANDLE mem_h, parser_obj* po_start, parser_obj* po_end );
 void zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE mem_h, MEMORY_HANDLE target_mem_h );
 void zepto_copy_response_to_response_of_another_handle( MEMORY_HANDLE mem_h, MEMORY_HANDLE target_mem_h );
+void zepto_append_response_to_response_of_another_handle( MEMORY_HANDLE mem_h, MEMORY_HANDLE target_mem_h );
 void zepto_copy_part_of_request_to_response_of_another_handle( MEMORY_HANDLE mem_h, parser_obj* po_start, parser_obj* po_end, MEMORY_HANDLE target_mem_h );
+void zepto_append_part_of_request_to_response_of_another_handle( MEMORY_HANDLE mem_h, parser_obj* po_start, parser_obj* po_end, MEMORY_HANDLE target_mem_h );
 //void zepto_convert_part_of_request_to_response( MEMORY_HANDLE mem_h, parser_obj* po_start, uint16_t cutoff_cnt )
 void zepto_write_prepend_byte( MEMORY_HANDLE mem_h, uint8_t bt );
 void zepto_write_prepend_block( MEMORY_HANDLE mem_h, const uint8_t* block, uint16_t size );
@@ -85,8 +87,12 @@ void zepto_writer_get_copy_of_response( MEMORY_HANDLE mem_h, uint8_t* buff );
 // specific encoded uint functions
 //void zepto_parser_encode_uint( const uint8_t* num_bytes, uint8_t num_sz_max, uint8_t** bytes_out );
 //void zepto_parser_decode_uint( const uint8_t** packed_num_bytes, uint8_t* bytes_out, uint8_t target_size );
+//uint16_t zepto_parse_encoded_uint16( parser_obj* po );
+uint16_t zepto_parse_encoded_uint16( parser_obj* po );
 void zepto_parser_decode_uint( parser_obj* po, uint8_t* bytes_out, uint8_t target_size );
 
+void zepto_parser_encode_and_append_uint16( MEMORY_HANDLE mem_h, uint16_t num );
 void zepto_parser_encode_and_append_uint( MEMORY_HANDLE mem_h, const uint8_t* num_bytes, uint8_t num_sz_max );
+void zepto_parser_encode_and_prepend_uint16( MEMORY_HANDLE mem_h, uint16_t num );
 void zepto_parser_encode_and_prepend_uint( MEMORY_HANDLE mem_h, const uint8_t* num_bytes, uint8_t num_sz_max );
 #endif // __ZEPTO_MEM_MNGMT_H__

@@ -19,7 +19,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __SASP_PROTOCOL_H__
 
 #include "sa-common.h"
-#include "sa-uint48.h"
+#include "sa-data-types.h"
 #include "sa-eeprom.h"
 #include "zepto-mem-mngmt.h"
 
@@ -37,10 +37,6 @@ Copyright (C) 2015 OLogN Technologies AG
 #define SASP_HEADER_SIZE SASP_NONCE_SIZE
 #define SASP_ENC_BLOCK_SIZE 16
 #define SASP_TAG_SIZE SASP_ENC_BLOCK_SIZE
-
-
-// data types
-typedef sa_uint48_t sasp_nonce_type;
 
 
 // data structures

@@ -43,7 +43,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define SAGDP_STATE_WAIT_LOCAL 3
 
 
-// packet statuses
+// packet statuses within the chain
 #define SAGDP_P_STATUS_INTERMEDIATE 0
 #define SAGDP_P_STATUS_FIRST 1
 #define SAGDP_P_STATUS_TERMINATING 2
