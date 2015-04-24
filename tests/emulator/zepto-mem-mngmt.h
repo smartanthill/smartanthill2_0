@@ -78,9 +78,8 @@ void zepto_append_part_of_request_to_response_of_another_handle( MEMORY_HANDLE m
 void zepto_write_prepend_byte( MEMORY_HANDLE mem_h, uint8_t bt );
 void zepto_write_prepend_block( MEMORY_HANDLE mem_h, const uint8_t* block, uint16_t size );
 
-// inspired by SAGDP: creating a copy of the packet
-/*
 uint16_t zepto_writer_get_response_size( MEMORY_HANDLE mem_h );
+/*
 void zepto_writer_get_copy_of_response( MEMORY_HANDLE mem_h, uint8_t* buff );
 */
 

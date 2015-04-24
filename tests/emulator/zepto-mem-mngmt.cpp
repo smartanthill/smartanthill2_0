@@ -1080,13 +1080,13 @@ void zepto_write_prepend_block( MEMORY_HANDLE mem_h, const uint8_t* block, uint1
 
 
 
-// inspired by SAGDP: creating a copy of the packet
-/*
 uint16_t zepto_writer_get_response_size( MEMORY_HANDLE mem_h )
 {
 	return memory_object_get_response_size( mem_h );
 }
 
+// inspired by SAGDP: creating a copy of the packet
+/*
 void zepto_writer_get_copy_of_response( MEMORY_HANDLE mem_h, uint8_t* buff )
 {
 	memcpy( buff, memory_object_get_response_ptr( mem_h ), memory_object_get_response_size( mem_h ) );

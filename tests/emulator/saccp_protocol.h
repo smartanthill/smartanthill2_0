@@ -26,7 +26,8 @@ Copyright (C) 2015 OLogN Technologies AG
 
 // RET codes
 #define SACCP_RET_OK 0 // packet must be sent to a communication peer
-#define SACCP_RET_FAILED 1 // any failure
+#define SACCP_RET_IGNORE 1 // do nothing
+#define SACCP_RET_FAILED 2 // any failure
 
 
 // handlers

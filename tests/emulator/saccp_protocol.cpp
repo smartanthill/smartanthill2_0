@@ -92,8 +92,91 @@ Copyright (C) 2015 OLogN Technologies AG
 
 
 
+#ifdef USED_AS_MASTER
+
+void saccp_control_program( parser_obj* po_start, parser_obj* po_end )
+{
+	// TODO: process
+}
+
+uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
+{
+	parser_obj po;
+	zepto_parser_init( &po, mem_h );
+
+	uint8_t first_byte = zepto_parse_uint8( &po );
+	uint16_t packet_head = zepto_parse_encoded_uint16( &po );
+	uint8_t packet_type = packet_head & 0x7; // TODO: use bit field processing instead
+
+	switch ( packet_type )
+	{
+		case SACCP_PAIRING_RESPONSE:
+		{
+			assert( NULL == "Error: not implemented\n" );
+			break;
+		}
+		case SACCP_PROGRAMMING_RESPONSE:
+		{
+			assert( NULL == "Error: not implemented\n" );
+			break;
+		}
+		case SACCP_REPLY_OK:
+		{
+/*			if ( packet_head_byte & 0xF0 ) // TODO: use bit field processing instead
+			{
+				form_error_packet( mem_h, SACCP_ERROR_INVALID_FORMAT, first_byte & SAGDP_P_STATUS_MASK, chain_id ); // TODO: use bit field processing instead
+				return SACCP_RET_OK; //+++ TODO: should it be FAILED?
+			}*/
+			uint8_t is_truncated = packet_head & 0x8; // TODO: use bit field processing instead
+			uint16_t data_full_sz = packet_head >> 4;
+			assert( data_full_sz == zepto_parsing_remaining_bytes( &po ) ); // TODO: can it be not so?
+			if ( is_truncated != 0 ) // TODO: use bit field processing instead
+			{
+				assert( NULL == "Error: not implemented\n" );
+			}
+			if ( data_full_sz ) // TODO: is it legitimate to have here zero
+			{
+				bool more_frames = true;
+				// read frames one by one until the end of the packet
+				do
+				{
+					uint16_t hh = zepto_parse_encoded_uint16( &po );
+					// TODO: use bit field processing instead in the code below where applicable
+					uint16_t frame_sz = hh >> 3;
+				}
+				while ( zepto_parsing_remaining_bytes( &po ) );
+			}
+			return SACCP_RET_IGNORE;
+			break;
+		}
+		case SACCP_REPLY_EXCEPTION:
+		{
+			assert( NULL == "Error: not implemented\n" );
+			break;
+		}
+		case SACCP_REPLY_ERROR:
+		{
+			assert( NULL == "Error: not implemented\n" );
+			break;
+		}
+		default:
+		{
+			assert( NULL == "Error: unexpected value of packet type\n" );
+		}
+	}
+
+}
+
+#else // USED_AS_MASTER
+
 void handler_zepto_test_plugin( MEMORY_HANDLE mem_h )
 {
+	parser_obj po, po1;
+	zepto_parser_init( &po, mem_h );
+	zepto_parser_init( &po1, mem_h );
+	zepto_parse_skip_block( &po1, zepto_parsing_remaining_bytes( &po ) );
+
+	zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
 }
 
 void handler_zepto_vm( MEMORY_HANDLE mem_h )
@@ -106,12 +189,14 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h )
 	bool commands_remain = true;
 	do
 	{
+		if ( zepto_parsing_remaining_bytes( &po ) == 0 )
+			break;
+
 		op_code = zepto_parse_uint8( &po );
 		switch( op_code )
 		{
 			case ZEPTOVM_OP_EXEC:
 			{
-				break;
 	//			int16_t body_part = zepto_parse_encoded_int16( &po );
 				// TODO: code below is HIGHLY temporary stub and should be replaced by the commented line above (with proper implementation of the respective function ASAP
 				// (for the sake of quick progress of mainstream development currently we assume that the value of body_part is within single +/- decimal digit)
@@ -128,8 +213,16 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h )
 				zepto_response_to_request( MEMORY_HANDLE_DEFAULT_PLUGIN );
 
 				handler_zepto_test_plugin( MEMORY_HANDLE_DEFAULT_PLUGIN );
+				// now we have raw data from plugin; form a frame
+				// TODO: here is a place to form optional headers, if any
+				uint16_t ret_data_sz = zepto_writer_get_response_size( MEMORY_HANDLE_DEFAULT_PLUGIN );
+				uint16_t prefix = (uint16_t)1 | ( ret_data_sz << 2 ); // TODO: if data were truncated, add a respective bit; TODO: usi bit field processing instead
+				zepto_parser_encode_and_prepend_uint16( MEMORY_HANDLE_DEFAULT_PLUGIN, prefix );
 
-				zepto_append_part_of_request_to_response_of_another_handle( MEMORY_HANDLE_DEFAULT_PLUGIN, mem_h );
+				zepto_append_response_to_response_of_another_handle( MEMORY_HANDLE_DEFAULT_PLUGIN, mem_h );
+				zepto_response_to_request( MEMORY_HANDLE_DEFAULT_PLUGIN );
+				zepto_response_to_request( MEMORY_HANDLE_DEFAULT_PLUGIN );
+				break;
 			}
 			case ZEPTOVM_OP_DEVICECAPS:
 			case ZEPTOVM_OP_PUSHREPLY:
@@ -179,6 +272,20 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h )
 		}
 	}
 	while ( commands_remain );
+
+	if ( explicit_exit_called )
+	{
+		assert( NULL == "Error: not implemented\n" );
+	}
+	else
+	{
+		uint16_t ret_data_full_sz = zepto_writer_get_response_size( mem_h );
+		uint16_t reply_hdr;
+		// TODO: it's a place to set TRUNCATED flag for the whole reply, if necessary
+		reply_hdr = ret_data_full_sz << 4;
+		zepto_parser_encode_and_prepend_uint16( mem_h, reply_hdr );
+		zepto_write_prepend_byte( mem_h, SAGDP_P_STATUS_TERMINATING );
+	}
 }
 
 inline
@@ -217,7 +324,7 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 
 	switch ( packet_type )
 	{
-		case SACCP_PAIRING_RESPONSE:
+		case SACCP_PAIRING:
 		{
 			assert( NULL == "Error: not implemented\n" );
 			break;
@@ -280,6 +387,7 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 
 				handler_zepto_vm( mem_h ); // TODO: it can be implemented as an additional layer
 			}
+			return SACCP_RET_OK;
 			break;
 		}
 		case SACCP_REPEAT_OLD_PROGRAM:
@@ -303,3 +411,4 @@ uint8_t handler_sacpp_reply( MEMORY_HANDLE mem_h )
 {
 }
 */
+#endif // USED_AS_MASTER
