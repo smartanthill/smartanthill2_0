@@ -98,6 +98,9 @@ void saccp_control_program_prepare_program( MEMORY_HANDLE mem_h )
 {
 	// TODO: process
 	zepto_write_block( mem_h, (const uint8_t*)"first message with a new design", 32 );
+	zepto_parser_encode_and_prepend_uint16( mem_h, 32 ); // data size
+	zepto_parser_encode_and_prepend_uint16( mem_h, 0 ); // body part ID
+	zepto_write_prepend_byte( mem_h, ZEPTOVM_OP_EXEC );
 }
 
 uint8_t handler_sacpp_send_new_program( MEMORY_HANDLE mem_h )
@@ -163,7 +166,16 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 				{
 					uint16_t hh = zepto_parse_encoded_uint16( &po );
 					// TODO: use bit field processing instead in the code below where applicable
-					uint16_t frame_sz = hh >> 3;
+					uint16_t frame_sz = hh >> 2;
+					// TODO: truncated flag
+					uint8_t is_last = hh & 1;
+					if ( is_last == 1 )
+					{
+						parser_obj po1;
+						zepto_parser_init( &po1, &po );
+						zepto_parse_skip_block( &po, frame_sz );
+						saccp_control_program_process_incoming( mem_h, &po1, frame_sz );
+					}
 				}
 				while ( zepto_parsing_remaining_bytes( &po ) );
 			}
@@ -229,8 +241,8 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h )
 
 				//+++ TODO: rethink memory management
 				zepto_parser_init( &po1, &po );
-				zepto_parse_skip_block( &po1, zepto_parsing_remaining_bytes( &po ) );
-				zepto_copy_part_of_request_to_response_of_another_handle( mem_h, &po, &po1, MEMORY_HANDLE_DEFAULT_PLUGIN );
+				zepto_parse_skip_block( &po, zepto_parsing_remaining_bytes( &po ) );
+				zepto_copy_part_of_request_to_response_of_another_handle( mem_h, &po1, &po, MEMORY_HANDLE_DEFAULT_PLUGIN );
 				zepto_response_to_request( MEMORY_HANDLE_DEFAULT_PLUGIN );
 
 				handler_zepto_test_plugin( MEMORY_HANDLE_DEFAULT_PLUGIN );
@@ -398,16 +410,16 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 					}
 				}
 				while ( more_headers );
-
-				// now a packet body remains; it will be forwarded to Execution-Layer-Program
-				parser_obj po1;
-				zepto_parser_init( &po1, &po );
-				zepto_parse_skip_block( &po1, zepto_parsing_remaining_bytes( &po ) );
-				zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
-				zepto_response_to_request( mem_h );
-
-				handler_zepto_vm( mem_h ); // TODO: it can be implemented as an additional layer
 			}
+
+			// now a packet body remains; it will be forwarded to Execution-Layer-Program
+			parser_obj po1;
+			zepto_parser_init( &po1, &po );
+			zepto_parse_skip_block( &po1, zepto_parsing_remaining_bytes( &po ) );
+			zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
+			zepto_response_to_request( mem_h );
+
+			handler_zepto_vm( mem_h ); // TODO: it can be implemented as an additional layer
 			return SACCP_RET_PASS_LOWER;
 			break;
 		}
