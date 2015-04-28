@@ -19,74 +19,10 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "saccp_protocol.h"
 #include "sagdp_protocol.h" // for packet status in chain
 #include "sa-uint48.h"
+#include "saccp_protocol_constants.h"
 
 
-#define SACCP_PAIRING 0x0            /*Master: sends; Slave: receives*/
-#define SACCP_PROGRAMMING 0x1        /*Master: sends; Slave: receives*/
-#define SACCP_NEW_PROGRAM 0x2        /*Master: sends; Slave: receives*/
-#define SACCP_REPEAT_OLD_PROGRAM 0x3 /*Master: sends; Slave: receives*/
-#define SACCP_REUSE_OLD_PROGRAM 0x4  /*Master: sends; Slave: receives*/
 
-#define SACCP_PAIRING_RESPONSE 0x7     /*Master: receives; Slave: sends*/
-#define SACCP_PROGRAMMING_RESPONSE 0x6 /*Master: receives; Slave: sends*/
-#define SACCP_REPLY_OK 0x0             /*Master: receives; Slave: sends*/
-#define SACCP_REPLY_EXCEPTION 0x1      /*Master: receives; Slave: sends*/
-#define SACCP_REPLY_ERROR 0x2          /*Master: receives; Slave: sends*/
-
-
-// extra headers types
-#define END_OF_HEADERS 0
-#define ENABLE_ZEPTOERR 1
-
-
-// error codes
-#define SACCP_ERROR_INVALID_FORMAT 1
-#define SACCP_ERROR_OLD_PROGRAM_CHECKSUM_DOESNT_MATCH 2
-
-
-// op codes
-
-#define ZEPTOVM_OP_DEVICECAPS 0x1
-#define ZEPTOVM_OP_EXEC 0x2
-#define ZEPTOVM_OP_PUSHREPLY 0x3
-#define ZEPTOVM_OP_SLEEP 0x4
-#define ZEPTOVM_OP_TRANSMITTER 0x5
-#define ZEPTOVM_OP_MCUSLEEP 0x6
-#define ZEPTOVM_OP_POPREPLIES 0x7  /* limited support in Zepto VM-One, full support from Zepto VM-Tiny */
-#define ZEPTOVM_OP_EXIT 0x8
-#define ZEPTOVM_OP_APPENDTOREPLY 0x9 /* limited support in Zepto VM-One, full support from Zepto VM-Tiny */
-/* starting from the next opcode, instructions are not supported by Zepto VM-One */
-#define ZEPTOVM_OP_JMP 0xA
-#define ZEPTOVM_OP_JMPIFREPLYFIELD_LT 0xB
-#define ZEPTOVM_OP_JMPIFREPLYFIELD_GT 0xC
-#define ZEPTOVM_OP_JMPIFREPLYFIELD_EQ 0xD
-#define ZEPTOVM_OP_JMPIFREPLYFIELD_NE 0xE
-#define ZEPTOVM_OP_MOVEREPLYTOFRONT 0xF
-/* starting from the next opcode, instructions are not supported by Zepto VM-Tiny and below */
-#define ZEPTOVM_OP_PUSHEXPR_CONSTANT 0x10
-#define ZEPTOVM_OP_PUSHEXPR_REPLYFIELD 0x11
-#define ZEPTOVM_OP_EXPRUNOP 0x12
-#define ZEPTOVM_OP_EXPRUNOP_EX 0x13
-#define ZEPTOVM_OP_EXPRUNOP_EX2 0x14
-#define ZEPTOVM_OP_EXPRBINOP 0x15
-#define ZEPTOVM_OP_EXPRBINOP_EX 0x16
-#define ZEPTOVM_OP_EXPRBINOP_EX2 0x17
-#define ZEPTOVM_OP_JMPIFEXPR_LT 0x18
-#define ZEPTOVM_OP_JMPIFEXPR_GT 0x19
-#define ZEPTOVM_OP_JMPIFEXPR_EQ 0x1A
-#define ZEPTOVM_OP_JMPIFEXPR_NE 0x1B
-#define ZEPTOVM_OP_JMPIFEXPR_EX_LT 0x1C
-#define ZEPTOVM_OP_JMPIFEXPR_EX_GT 0x1D
-#define ZEPTOVM_OP_JMPIFEXPR_EX_EQ 0x1E
-#define ZEPTOVM_OP_JMPIFEXPR_EX_NE 0x1F
-#define ZEPTOVM_OP_CALL 0x20
-#define ZEPTOVM_OP_RET 0x21
-#define ZEPTOVM_OP_SWITCH 0x22
-#define ZEPTOVM_OP_SWITCH_EX 0x23
-#define ZEPTOVM_OP_INCANDJMPIF 0x24
-#define ZEPTOVM_OP_DECANDJMPIF 0x25
-/* starting from the next opcode, instructions are not supported by Zepto VM-Small and below */
-#define ZEPTOVM_OP_PARALLEL 0x26
 
 
 
@@ -94,7 +30,11 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #ifdef USED_AS_MASTER
 
-void saccp_control_program_prepare_program( MEMORY_HANDLE mem_h )
+#include "sa_test_control_prog.h"
+
+
+
+void saccp_control_program_prepare_program( MEMORY_HANDLE mem_h, void* control_prog_state )
 {
 	// TODO: process
 	zepto_write_block( mem_h, (const uint8_t*)"first message with a new design", 32 );
@@ -103,27 +43,40 @@ void saccp_control_program_prepare_program( MEMORY_HANDLE mem_h )
 	zepto_write_prepend_byte( mem_h, ZEPTOVM_OP_EXEC );
 }
 
-uint8_t handler_sacpp_send_new_program( MEMORY_HANDLE mem_h )
+uint8_t handler_sacpp_start_new_chain( MEMORY_HANDLE mem_h, void* control_prog_state )
 {
 	// TODO: process
-	saccp_control_program_prepare_program( mem_h );
+/*	saccp_control_program_prepare_program( mem_h );
 	uint8_t hdr = SACCP_NEW_PROGRAM; //TODO: we may want to add extra headers
 	zepto_write_prepend_byte( mem_h, hdr );
-	zepto_write_prepend_byte( mem_h, SAGDP_P_STATUS_FIRST );
+	zepto_write_prepend_byte( mem_h, SAGDP_P_STATUS_FIRST );*/
+	default_test_control_program_start_new( control_prog_state, mem_h );
 	return SACCP_RET_PASS_LOWER;
 }
 
-void saccp_control_program_process_incoming( MEMORY_HANDLE mem_h, parser_obj* po, uint16_t sz )
+uint8_t handler_sacpp_continue_chain( MEMORY_HANDLE mem_h, void* control_prog_state )
 {
 	// TODO: process
-	uint8_t buff[100];
+/*	saccp_control_program_prepare_program( mem_h );
+	uint8_t hdr = SACCP_NEW_PROGRAM; //TODO: we may want to add extra headers
+	zepto_write_prepend_byte( mem_h, hdr );
+	zepto_write_prepend_byte( mem_h, SAGDP_P_STATUS_FIRST );*/
+	default_test_control_program_start_new( control_prog_state, mem_h );
+	return SACCP_RET_PASS_LOWER;
+}
+
+uint8_t saccp_control_program_process_incoming( MEMORY_HANDLE mem_h, parser_obj* po, uint16_t sz, void* control_prog_state )
+{
+	// TODO: process
+/*	uint8_t buff[100];
 	memset( buff, '?', 99 );
 	buff[99] = 0;
 	zepto_parse_read_block( po, buff, sz );
-	PRINTF( "reply received [%d bytes]: %s\n", sz, buff );
+	PRINTF( "reply received [%d bytes]: %s\n", sz, buff );*/
+	return 0;
 }
 
-uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
+uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, void* control_prog_state )
 {
 	parser_obj po;
 	zepto_parser_init( &po, mem_h );
@@ -174,12 +127,13 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 						parser_obj po1;
 						zepto_parser_init( &po1, &po );
 						zepto_parse_skip_block( &po, frame_sz );
-						saccp_control_program_process_incoming( mem_h, &po1, frame_sz );
+//						saccp_control_program_process_incoming( mem_h, &po1, frame_sz, control_prog_state );
+						default_test_control_program_accept_reply( control_prog_state, first_byte & SAGDP_P_STATUS_MASK, &po1, frame_sz );
 					}
 				}
 				while ( zepto_parsing_remaining_bytes( &po ) );
 			}
-			return SACCP_RET_IGNORE;
+			return (first_byte & SAGDP_P_STATUS_MASK) == SAGDP_P_STATUS_TERMINATING ? SACCP_RET_CHAIN_DONE : SACCP_RET_CHAIN_CONTINUED;
 			break;
 		}
 		case SACCP_REPLY_EXCEPTION:
@@ -202,6 +156,18 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 
 #else // USED_AS_MASTER
 
+#include "sa_test_plugins.h"
+
+DefaultTestingPluginConfig pl_conf;
+DefaultTestingPluginState pl_state;
+
+void zepto_vm_init()
+{
+	default_test_plugin_handler_init( (void*)(&pl_conf), (void*)(&pl_state) );
+}
+
+
+
 void handler_zepto_test_plugin( MEMORY_HANDLE mem_h )
 {
 	parser_obj po, po1;
@@ -219,7 +185,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h )
 
 	uint8_t op_code;
 	bool explicit_exit_called = false;
-	bool commands_remain = true;
+	uint8_t reply_packet_in_chain_flags = SAGDP_P_STATUS_TERMINATING;
 	do
 	{
 		if ( zepto_parsing_remaining_bytes( &po ) == 0 )
@@ -230,7 +196,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h )
 		{
 			case ZEPTOVM_OP_EXEC:
 			{
-	//			int16_t body_part = zepto_parse_encoded_int16( &po );
+//				int16_t body_part = zepto_parse_encoded_int16( &po );
 				// TODO: code below is HIGHLY temporary stub and should be replaced by the commented line above (with proper implementation of the respective function ASAP
 				// (for the sake of quick progress of mainstream development currently we assume that the value of body_part is within single +/- decimal digit)
 				uint16_t body_part = zepto_parse_uint8( &po );
@@ -245,7 +211,10 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h )
 				zepto_copy_part_of_request_to_response_of_another_handle( mem_h, &po1, &po, MEMORY_HANDLE_DEFAULT_PLUGIN );
 				zepto_response_to_request( MEMORY_HANDLE_DEFAULT_PLUGIN );
 
-				handler_zepto_test_plugin( MEMORY_HANDLE_DEFAULT_PLUGIN );
+//				handler_zepto_test_plugin( MEMORY_HANDLE_DEFAULT_PLUGIN );
+				parser_obj po3;
+				zepto_parser_init( &po3, MEMORY_HANDLE_DEFAULT_PLUGIN );
+				default_test_plugin_handler( &pl_conf, &pl_state, &po3, MEMORY_HANDLE_DEFAULT_PLUGIN/*, WaitingFor* waiting_for*/ );
 				// now we have raw data from plugin; form a frame
 				// TODO: here is a place to form optional headers, if any
 				uint16_t ret_data_sz = zepto_writer_get_response_size( MEMORY_HANDLE_DEFAULT_PLUGIN );
@@ -257,13 +226,19 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h )
 				zepto_response_to_request( MEMORY_HANDLE_DEFAULT_PLUGIN );
 				break;
 			}
+			case ZEPTOVM_OP_EXIT:
+			{
+				explicit_exit_called = true;
+				uint16_t flags = zepto_parse_uint8( &po );
+				reply_packet_in_chain_flags = flags & 3;
+				break;
+			}
 			case ZEPTOVM_OP_DEVICECAPS:
 			case ZEPTOVM_OP_PUSHREPLY:
 			case ZEPTOVM_OP_SLEEP:
 			case ZEPTOVM_OP_TRANSMITTER:
 			case ZEPTOVM_OP_MCUSLEEP:
 			case ZEPTOVM_OP_POPREPLIES:
-			case ZEPTOVM_OP_EXIT:
 			case ZEPTOVM_OP_APPENDTOREPLY:
 			case ZEPTOVM_OP_JMP:
 			case ZEPTOVM_OP_JMPIFREPLYFIELD_LT:
@@ -304,20 +279,20 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h )
 			}
 		}
 	}
-	while ( commands_remain );
+	while ( !explicit_exit_called );
 
-	if ( explicit_exit_called )
+/*	if ( explicit_exit_called )
 	{
 		assert( NULL == "Error: not implemented\n" );
 	}
-	else
+	else*/
 	{
 		uint16_t ret_data_full_sz = zepto_writer_get_response_size( mem_h );
 		uint16_t reply_hdr;
 		// TODO: it's a place to set TRUNCATED flag for the whole reply, if necessary
 		reply_hdr = ret_data_full_sz << 4;
 		zepto_parser_encode_and_prepend_uint16( mem_h, reply_hdr );
-		zepto_write_prepend_byte( mem_h, SAGDP_P_STATUS_TERMINATING );
+		zepto_write_prepend_byte( mem_h, reply_packet_in_chain_flags );
 	}
 }
 

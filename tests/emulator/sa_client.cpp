@@ -28,6 +28,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "yoctovm_protocol.h"
 #elif MODEL_IN_EFFECT == 2
 #include "saccp_protocol.h"
+#include "sa_test_control_prog.h"
 #else
 #error #error Unexpected value of MODEL_IN_EFFECT
 #endif
@@ -73,6 +74,8 @@ int main_loop()
 	uint16_t wake_time;
 	// TODO: revise time/timer management
 
+	DefaultTestingControlProgramState control_prog_state;
+
 	uint8_t ret_code;
 
 	// test setup values
@@ -86,6 +89,7 @@ int main_loop()
 	sagdp_init( data_buff + DADA_OFFSET_SAGDP );
 	SASP_DATA sasp_data;
 	SASP_initAtLifeStart( &sasp_data );
+	default_test_control_program_init( &control_prog_state );
 
 	// Try to open a named pipe; wait for it, if necessary. 
 	if ( !communicationInitializeAsClient() )
@@ -97,7 +101,7 @@ int main_loop()
 #if MODEL_IN_EFFECT == 1
 	ret_code = master_start( MEMORY_HANDLE_MAIN_LOOP );
 #elif MODEL_IN_EFFECT == 2
-	ret_code = handler_sacpp_send_new_program( MEMORY_HANDLE_MAIN_LOOP );
+	ret_code = default_test_control_program_start_new( &control_prog_state, MEMORY_HANDLE_MAIN_LOOP );
 #else
 #error #error Unexpected value of MODEL_IN_EFFECT
 #endif
@@ -492,13 +496,34 @@ printf( "Processing in progress... (period = %d, time = %d)\n", wait_to_continue
 
 processcmd:
 		// 4. Process received command (yoctovm)
-		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL ); //master_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP );
+		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL, &control_prog_state ); //master_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP );
 /*		if ( ret_code == YOCTOVM_RESET_STACK )
 		{
 			sagdp_init( data_buff + DADA_OFFSET_SAGDP );
 			// TODO: reinit the rest of stack (where applicable)
 			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
 		}*/
+		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+		switch ( ret_code )
+		{
+			case SACCP_RET_CHAIN_DONE:
+			{
+				ret_code = handler_sacpp_start_new_chain( MEMORY_HANDLE_MAIN_LOOP, &control_prog_state );
+				break;
+			}
+			case SACCP_RET_CHAIN_CONTINUED:
+			{
+				ret_code = handler_sacpp_continue_chain( MEMORY_HANDLE_MAIN_LOOP, &control_prog_state );
+				break;
+			}
+			default:
+			{
+				// unexpected ret_code
+				printf( "Unexpected ret_code %d\n", ret_code );
+				assert( 0 );
+				break;
+			}
+		}
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 entry:	
 
@@ -507,13 +532,11 @@ entry:
 #endif
 			
 		// 5. SAGDP
-//		ret_code = handlerSAGDP_receiveHLP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 		ret_code = handlerSAGDP_receiveHLP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
 		if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
 			ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
 			assert( ret_code == SASP_RET_NONCE );
-//			ret_code = handlerSAGDP_receiveHLP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
 			ret_code = handlerSAGDP_receiveHLP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
 			assert( ret_code != SAGDP_RET_NEED_NONCE );
 		}

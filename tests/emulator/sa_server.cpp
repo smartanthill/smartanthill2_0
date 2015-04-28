@@ -29,6 +29,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "yoctovm_protocol.h"
 #elif MODEL_IN_EFFECT == 2
 #include "saccp_protocol.h"
+#include "sa_test_plugins.h"
 #else
 #error #error Unexpected value of MODEL_IN_EFFECT
 #endif
@@ -79,6 +80,9 @@ int main_loop()
 	uint16_t wake_time;
 	// TODO: revise time/timer management
 
+//	DefaultTestingPluginConfig pl_conf;
+//	DefaultTestingPluginState pl_state;
+
 	uint8_t ret_code;
 
 	// test setup values
@@ -91,6 +95,7 @@ int main_loop()
 	// do necessary initialization
 	SASP_initAtLifeStart( &sasp_data ); // TODO: replace by more extensive restore-from-backup-etc
 	sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+	void zepto_vm_init();
 
 
 	printf("\nAwaiting client connection... \n" );
