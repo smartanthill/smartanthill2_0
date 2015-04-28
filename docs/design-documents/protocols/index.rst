@@ -33,6 +33,7 @@ Protocols
     sagdp
     sasp
     saoip
+    samp
     sascrambling
     sarng
     sapairing
