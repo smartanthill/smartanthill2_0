@@ -16,13 +16,15 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 
-#define MODEL_IN_EFFECT 2
+#define MODEL_IN_EFFECT 1
+//#define MODEL_IN_EFFECT 2
 
 
 #include "sa-common.h"
 #include "sa-uint48.h"
 #include "sa-commlayer.h"
 #include "sa-timer.h"
+#include "saoudp_protocol.h"
 #include "sasp_protocol.h"
 #include "sagdp_protocol.h"
 #if MODEL_IN_EFFECT == 1
@@ -76,8 +78,8 @@ int main_loop()
 	uint8_t miscBuff[BUF_SIZE];
 	uint8_t* stack = miscBuff; // first two bytes are used for sizeInOut
 	int stackSize = BUF_SIZE / 4 - 2;
-	uint8_t timer_val;
-	uint16_t wake_time;
+	uint8_t timer_val = 0;
+	uint16_t wake_time = 0;
 	// TODO: revise time/timer management
 
 //	DefaultTestingPluginConfig pl_conf;
@@ -203,8 +205,29 @@ printf( "Processing continued...\n" );
 		printf("Message from client received\n");
 		printf( "ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
-//rectosasp:
-		// 2. Pass to SASP
+
+		// 2.1. Pass to SAoUDP
+		ret_code = handler_saoudp_receive( MEMORY_HANDLE_MAIN_LOOP );
+		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+
+		switch ( ret_code )
+		{
+			case SAOUDP_RET_OK:
+			{
+				// regular processing will be done below in the next block
+				break;
+			}
+			default:
+			{
+				// unexpected ret_code
+				printf( "Unexpected ret_code %d\n", ret_code );
+				assert( 0 );
+				break;
+			}
+		}
+
+
+		// 2.2. Pass to SASP
 		ret_code = handler_sasp_receive( sasp_key, pid, MEMORY_HANDLE_MAIN_LOOP, &sasp_data );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		printf( "SASP1:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
@@ -219,7 +242,7 @@ printf( "Processing continued...\n" );
 			}
 			case SASP_RET_TO_LOWER_ERROR:
 			{
-				goto sendmsg;
+				goto saoudp_send;
 				break;
 			}
 			case SASP_RET_TO_HIGHER_NEW:
@@ -548,6 +571,28 @@ saspsend:
 			}
 		}
 
+
+		// Pass to SAoUDP
+saoudp_send:
+		ret_code = handler_saoudp_send( MEMORY_HANDLE_MAIN_LOOP );
+		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+
+		switch ( ret_code )
+		{
+			case SAOUDP_RET_OK:
+			{
+				// regular processing will be done below in the next block
+				break;
+			}
+			default:
+			{
+				// unexpected ret_code
+				printf( "Unexpected ret_code %d\n", ret_code );
+				assert( 0 );
+				break;
+			}
+		}
+
 sendmsg:
 			ret_code = sendMessage( MEMORY_HANDLE_MAIN_LOOP );
 			if (ret_code != COMMLAYER_RET_OK )
@@ -562,31 +607,6 @@ sendmsg:
 
 	return 0;
 }
-
-#if 0
-//#include "def"
-void main_soc()
-{
-   int   sd;
-   struct   sockaddr_in server;
-   char buf[512];
-   int rc;
-
-   server.sin_family = AF_INET;
-   server.sin_addr.s_addr = htonl(INADDR_ANY);
-   server.sin_port = htons(12345);
-
-   sd = socket (AF_INET,SOCK_DGRAM,0);
-
-   bind ( sd, (SA *) &server, sizeof(server));
-   
-   for(;;){
-      rc = recv (sd, buf, sizeof(buf), 0);
-      buf[rc]= (char) NULL;
-      printf("Received: %s\n", buf);
-   }
-}
-#endif
 
 int main(int argc, char *argv[])
 {

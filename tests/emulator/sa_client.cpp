@@ -16,12 +16,14 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 
-#define MODEL_IN_EFFECT 2
+#define MODEL_IN_EFFECT 1
+//#define MODEL_IN_EFFECT 2
 
 
 #include "sa-common.h"
 #include "sa-commlayer.h"
 #include "sa-timer.h"
+#include "saoudp_protocol.h"
 #include "sasp_protocol.h"
 #include "sagdp_protocol.h"
 #if MODEL_IN_EFFECT == 1
@@ -74,7 +76,10 @@ int main_loop()
 	uint16_t wake_time;
 	// TODO: revise time/timer management
 
+#if MODEL_IN_EFFECT == 2
 	DefaultTestingControlProgramState control_prog_state;
+	default_test_control_program_init( &control_prog_state );
+#endif
 
 	uint8_t ret_code;
 
@@ -89,7 +94,6 @@ int main_loop()
 	sagdp_init( data_buff + DADA_OFFSET_SAGDP );
 	SASP_DATA sasp_data;
 	SASP_initAtLifeStart( &sasp_data );
-	default_test_control_program_init( &control_prog_state );
 
 	// Try to open a named pipe; wait for it, if necessary. 
 	if ( !communicationInitializeAsClient() )
@@ -158,14 +162,14 @@ printf( "Processing continued...\n" );
 				goto getmsg;
 			}
 
-/*+*/			if ( tester_releaseOutgoingPacket( MEMORY_HANDLE_TEST_SUPPORT ) ) // we are on the safe side here as buffer out is not yet used
+			if ( tester_releaseOutgoingPacket( MEMORY_HANDLE_TEST_SUPPORT ) ) // we are on the safe side here as buffer out is not yet used
 			{
 				zepto_response_to_request( MEMORY_HANDLE_TEST_SUPPORT );
 				INCREMENT_COUNTER( 89, "MAIN LOOP, packet sent sync with receiving [1]" );
 				sendMessage( MEMORY_HANDLE_TEST_SUPPORT );
 				zepto_response_to_request( MEMORY_HANDLE_TEST_SUPPORT );
 				assert( ugly_hook_get_request_size( MEMORY_HANDLE_TEST_SUPPORT ) == 0 && ugly_hook_get_response_size( MEMORY_HANDLE_TEST_SUPPORT ) == 0 );
-			}/*+*/
+			}
 		}
 
 		while ( ret_code == COMMLAYER_RET_PENDING )
@@ -276,9 +280,27 @@ printf( "Processing continued...\n" );
 		printf( "ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
 
+		// 2.1. Pass to SAoUDP
+		ret_code = handler_saoudp_receive( MEMORY_HANDLE_MAIN_LOOP );
+		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 
-rectosasp:
-		// 2. Pass to SASP
+		switch ( ret_code )
+		{
+			case SAOUDP_RET_OK:
+			{
+				// regular processing will be done below in the next block
+				break;
+			}
+			default:
+			{
+				// unexpected ret_code
+				printf( "Unexpected ret_code %d\n", ret_code );
+				assert( 0 );
+				break;
+			}
+		}
+
+		// 2.2. Pass to SASP
 		ret_code = handler_sasp_receive( sasp_key, pid, MEMORY_HANDLE_MAIN_LOOP, &sasp_data );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		printf( "SASP1:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
@@ -293,7 +315,7 @@ rectosasp:
 			}
 			case SASP_RET_TO_LOWER_ERROR:
 			{
-				goto sendmsg;
+				goto saoudp_send;
 				break;
 			}
 			case SASP_RET_TO_HIGHER_NEW:
@@ -588,11 +610,32 @@ saspsend:
 			}
 		}
 
+		// SAoUDP
+saoudp_send:
+		ret_code = handler_saoudp_send( MEMORY_HANDLE_MAIN_LOOP );
+		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+
+		switch ( ret_code )
+		{
+			case SAOUDP_RET_OK:
+			{
+				// regular processing will be done below in the next block
+				break;
+			}
+			default:
+			{
+				// unexpected ret_code
+				printf( "Unexpected ret_code %d\n", ret_code );
+				assert( 0 );
+				break;
+			}
+		}
+
 	sendmsg:
 //		allowSyncExec();
 		tester_registerOutgoingPacket( MEMORY_HANDLE_MAIN_LOOP );
 
-/*+*/		bool syncSendReceive;
+		bool syncSendReceive;
 		bool is_packet_to_send = true;
 		if ( tester_holdPacketOnRequest( MEMORY_HANDLE_MAIN_LOOP ) )
 		{
@@ -608,7 +651,7 @@ saspsend:
 			INCREMENT_COUNTER( 94, "MAIN LOOP, holdOutgoingPacket() called" );
 			tester_holdOutgoingPacket( MEMORY_HANDLE_MAIN_LOOP );
 		}
-		else/*+*/
+		else
 		{
 			if ( tester_shouldInsertOutgoingPacket( MEMORY_HANDLE_TEST_SUPPORT ) )
 			{
@@ -646,82 +689,8 @@ saspsend:
 	return 0;
 }
 
-#define USE_128
-
-#include "sa-aes-128.h"
-
-
-#if 0
-#include <sys/types.h>
-#ifdef _MSC_VER
-#include <winsock2.h>
-#include <Ws2tcpip.h>
-#else
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#endif  
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
- int main_CL(void)
-  {
-    struct sockaddr_in stSockAddr;
-    int Res;
-    int SocketFD = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
- 
-    if (-1 == SocketFD)
-    {
-      perror("cannot create socket");
-      exit(EXIT_FAILURE);
-    }
- 
-    memset(&stSockAddr, 0, sizeof(stSockAddr));
- 
-    stSockAddr.sin_family = AF_INET;
-    stSockAddr.sin_port = htons(1100);
-    Res = inet_pton(AF_INET, "192.168.1.3", &stSockAddr.sin_addr);
- 
-    if (0 > Res)
-    {
-      perror("error: first parameter is not a valid address family");
-//      close(SocketFD);
-      closesocket(SocketFD);
-      exit(EXIT_FAILURE);
-    }
-    else if (0 == Res)
-    {
-      perror("char string (second parameter does not contain valid ipaddress)");
-//      close(SocketFD);
-      closesocket(SocketFD);
-      exit(EXIT_FAILURE);
-    }
- 
-    if (-1 == connect(SocketFD, (struct sockaddr *)&stSockAddr, sizeof(stSockAddr)))
-    {
-      perror("connect failed");
-//      close(SocketFD);
-      closesocket(SocketFD);
-      exit(EXIT_FAILURE);
-    }
- 
-    /* perform read write operations ... */
- 
-//    (void) shutdown(SocketFD, SHUT_RDWR);
-    (void) shutdown(SocketFD, SD_BOTH);
- 
-//    close(SocketFD);
-      closesocket(SocketFD);
-    return EXIT_SUCCESS;
-  }
-#endif // 0
-
-#include "sa-unit-tests-aes-eax.h"
 int main(int argc, char *argv[])
 {
-//	test_aes_and_eax_128(); return 0;
-	
 	zepto_mem_man_init_memory_management();
 
 	return main_loop();
