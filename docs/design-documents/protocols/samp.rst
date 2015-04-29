@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.1
+:Version:   v0.0.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -47,6 +47,18 @@ SAMP is optimized based on the following assumptions:
 
 SAMP has the following types of actors: Root (normally implemented by Central Controller), Retransmitting Device, and non-Retransmitting Device. All these actors are collectively named Nodes.
 
+Underlying Protocol Requirements
+--------------------------------
+
+SAMP underlying protocol (normally SADLP-\*), MUST support the following operations:
+
+* bus broadcast (addressed to all the Devices on the bus)
+* bus multi-cast (addressed to a list of the Devices on the bus)
+* bus uni-cast
+* bus uni-cast with ACK
+
+NB: in many cases, these operations may be simulated using very few operations as primitives; for example, PHY-level broadcast can be used to create SADLP-\*-level multi-cast by adding, for example, NEXT-HOP-NODE-ID.
+
 SmartAnthill Retransmitting Devices
 -----------------------------------
 
@@ -59,9 +71,11 @@ Routing Tables
 
 Each Retransmitting Device, after pairing, MUST keep a Routing Table: list of (TARGET-ID,BUS-ID,INTRA-BUS-ID) tuples. Routing Table has semantics of "next hop to route packet addressed to TARGET-ID". TODO: omitting BUS-ID if there is only one bus, size reporting to Root (as # of entries). 
 
+Routing Tables SHOULD be stored in a 'canonical' way (ordered from lower TARGET-IDs to higher ones; duplicate entries for the same TARGET-ID are currently prohibited); this is necessary to simplify calculations of the Routing Table checksums. TODO: specify Routing-Table-Checksum field
+
 On non-Retransmitting Devices, Routing Table is rudimentary: it contains only one row with TARGET-ID=0: (0,BUS-ID,INTRA-BUS-ID). Moreover, on non-Retransmitting Devices Routing Table is OPTIONAL; if non-Retransmitting Device does not keep Routing Table - it MUST be reflected in a TODO CAPABILITIES flag during "pairing"; in this case Root MUST send requests specifying target 
 
-All Routing Tables on both Retransmitting and non-Retransmitting Devices are essentially copies of "Master Routing Tables" which are kept on Root. It is a responsibility of Root to maintain Routing Tables for all the Devices (both Retransmitting and non-Retransmitting); it is up to Root which entries to store in each Routing Table. 
+All Routing Tables on both Retransmitting and non-Retransmitting Devices are essentially copies of "Master Routing Tables" which are kept on Root. It is a responsibility of Root to maintain Routing Tables for all the Devices (both Retransmitting and non-Retransmitting); it is up to Root which entries to store in each Routing Table. In some cases, Routing Table might need to be truncated; in this case, it is responsibility of Root to use VIA field in Target-Address (see below) to ensure that the packet can be routed given the Routing Tables present. In any case, Routing Table MUST be able to contain at least one entry, with TARGET-ID=0 (Root). This guarantees that path to Root can always be found without VIA field.
 
 TODO: no mobile non-Retransmitting (TODO reporting 'mobile' in pairing CAPABILITIES, plus heuristics), priorities (low->high): non-Retransmitting, Retransmitting.
 
@@ -75,6 +89,22 @@ SAMP supports two ways of addressing devices: non-paired and paired.
 Non-paired addressing is used for temporary addressing Devices which are not "paired" with SmartAnthill Central Controller (yet). Non-paired addressing is used ONLY during "Pairing" process, as described in :ref:`sapairing` document. As soon as "pairing" is completed, Device obtains it's own SAMP-NODE-ID (TODO: add to pairing document), and all further communications with Device is performed using  "paired" addressing. Non-paired addressing is a triplet (NODE-ID,BUS-ID,INTRA-BUS-ID).
 
 Paired addressing is used for addressing Devices which has already been "paired". It is always one single item SAMP-NODE-ID. Root always has SAMP-NODE-ID=0. 
+
+Recovery Philosophy
+-------------------
+
+Recovery from route changes/failures is vital for any mesh protocol. SAMP does it as follows:
+
+* by default, most of the transfers are not acknowledged at SAMP level (go as Samp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag)
+* however, upper-layer protocol (normally SAGDP) issues it's own retransmits and passed retransmit number to SAMP
+* on retransmit #N, SAMP switches GUARANTEED-DELIVERY flag on
+* when GUARANTEED-DELIVERY flag is set, SAMP uses "bus unicast with ACK" underlying-protocol mode
+* if "bus unicast with ACK" fails for M times (with exponentially increasing timeouts), link failure is assumed
+* link failure is reported to the Root, so it can initiate route discovery to the node on the other side of the failed link (using Samp-From-Santa-Data-Packet)
+
+  + if link failure is detected from the side of the link which is close to Root, link failure reporting is done by sending Routing-Error (which always come in GUARANTEED-DELIVERY mode) back to Root
+  + if link failure is detected from the side of the link which is far from Root, link failure reporting is done by broadcasting Samp-To-Santa-Data-Or-Error-Packet, which is then converted into Samp-Forward-To-Santa-Data-Or-Error-Packet (which is always sent in GUARANTEED-DELIVERY mode) by all Retransmitting Devices which have received it.
+
 
 Target-Address, Multiple-Target-Addresses, and Multiple-Target-Addresses-With-Extra-Data
 ----------------------------------------------------------------------------------------
@@ -105,7 +135,7 @@ Time-To-Live (TTL) is a field which is intended to address misconfigured/inconsi
 During normal operation, it SHOULD NOT occur. Whenever the packet is dropped because TTL is down to zero (except for Routing-Error SAMP packets), it MUST cause a TODO Routing-Error to be sent to Root.
 
 Uni-Cast Processing
-----------------------
+-------------------
 
 Whenever a Uni-Cast packet (the one with a Target-Address field) is received by Retransmitting Device, the procedure is the following:
 
@@ -122,6 +152,23 @@ Whenever a Uni-Cast packet (the one with a Target-Address field) is received by 
 
 * if any of VIA fields in the Target-Address is the same as the next hop - remove all such VIA fields from the Target-Address
 * find bus for the next hop and send modified packet (see on TTL and VIA modifications above) over this bus
+
+Guaranteed Uni-Cast
+^^^^^^^^^^^^^^^^^^^
+
+If packet is to be delivered to the next hop in 'Guaranteed' mode, it is sent using underlying protocol's "bus uni-cast with ACK". If this operation returns 'failure' (i.e. ACK wasn't received), SAMP retries it 5 (TODO) times (with exponentially increasing timeouts - TODO) - it is treated as 'Routing-Error'. In particular:
+
+* if the packet has Root as Target-Address: 
+
+  + packet Samp-To-Santa-Data-Or-Error-Packet containing TBD Routing-Error as PAYLOAD (and with IS_ERROR flag set) is broadcasted
+  + if possible, the packet which wasn't delivered, SHOULD be preserved (**TODO: what to do if it cannot be?**), and retransmitted as soon as route to the Root is restored
+
+* if the packet has anything except for Root as Target-Address (and therefore is coming from Root):
+
+  + packet Samp-Routing-Error containing TBD Routing-Error is sent (towards Root)
+  + the packet which wasn't delivered, doesn't need to be preserved (TODO: identify packet which has been lost within Routing-Error)
+
+As described in detail below, all Samp uni-cast packet types, except for Samp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag, are sent in 'Guaranteed Uni-Cast' mode. 
 
 Multi-Cast Processing
 ---------------------
@@ -147,21 +194,23 @@ Whenever a Multi-Cast packet (the one with Multiple-Target-Addresses field) is p
 
   + if there is multiple next hops for this bus:
 
-    - if the bus supports multi-casting - send the modified packet using multi-cast bus addressing over the bus. NB: bus broadcasts (without INTRA-BUS-ID) MUST NOT be used for this purpose to avoid unnecessary multiplying number of packets; however, PHY-level broadcast can be used to create SADLP-\*-level multi-cast by adding, for example, NEXT-HOP-NODE-ID.
+    - if the bus supports multi-casting - send the modified packet using multi-cast bus addressing over the bus. NB: bus broadcasts (without INTRA-BUS-ID) MUST NOT be used for this purpose to avoid unnecessary multiplying number of packets.
     - otherwise, send the modified packet using uni-cast bus addressing to each of the hops
 
 SAMP Packets
 ------------
 
-Samp-Unicast-Data-Packet: **\| SAMP-UNICAST-DATA-PACKET-AND-FLAGS \| Target-Address \| PAYLOAD \|**
+Samp-Unicast-Data-Packet: **\| SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL \| Target-Address \| PAYLOAD \|**
 
-where SAMP-UNICAST-DATA-PACKET-AND-FLAGS is a 1-byte bitfield substrate, with bits[0..2] equal to a 3-bit constant SAMP_UNICAST_DATA_PACKET, bit[3] being ACK-EACH-LEG (**TODO: describe meaning**), and bits [4..7] reserved (MUST be zeros); Target-Address is described above, and PAYLOAD is a payload to be passed to the upper-layer protocol.
+where SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits[0..2] equal to a 3-bit constant SAMP_UNICAST_DATA_PACKET, bit[3] being GUARANTEED-DELIVERY flag, bit [4] reserved (MUST be zero), and bits [5..] being TTL; Target-Address is described above, and PAYLOAD is a payload to be passed to the upper-layer protocol.
 
-Samp-Unicast-Data-Packet is processed as specified in Uni-Cast Processing section above. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
+If Target-Address is Root, it MUST NOT contain VIA fields within.
 
-Samp-From-Santa-Data-Packet: **\| SAMP-FROM-SANTA-DATA-PACKET \| MULTIPLE-RETRANSMITTING-ADDRESSES \| BROADCAST-BUS-TYPE-LIST \| Target-Address \| PAYLOAD \|**
+Samp-Unicast-Data-Packet is processed as specified in Uni-Cast Processing section above; if GUARANTEED-DELIVERY flag is set, packet is sent in 'Guaranteed Uni-Cast' mode. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
 
-where SAMP-FROM-SANTA-DATA-PACKET is a 1-byte bitfield substrate, with bits[0..2] equal to a 3-bit constant SAMP_FROM_SANTA_DATA_PACKET, and bits [4..7] reserved (MUST be zeros); MULTIPLE-RETRANSMITTING-ADDRESSES is a Multiple-Target-Addresses-With-Extra-Data field described above (with Extra-Data being Encoded-Unsigned-Int<max=2> DELAY field **TODO**), BROADCAST-BUS-TYPE-LIST is a zero-terminated list of `BUS-TYPE+1` values (enum values for BUS-TYPE TBD), Target-Address is described above, and PAYLOAD is a payload to be passed to the upper-layer protocol.
+Samp-From-Santa-Data-Packet: **\| SAMP-FROM-SANTA-DATA-PACKET-AND-TTL \| DELAY-UNIT \| MULTIPLE-RETRANSMITTING-ADDRESSES \| BROADCAST-BUS-TYPE-LIST \| Target-Address \| PAYLOAD \|**
+
+where SAMP-FROM-SANTA-DATA-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits[0..2] equal to a 3-bit constant SAMP_FROM_SANTA_DATA_PACKET, bits [3..4] reserved (MUST be zeros), and bits[5..] being TTL; DELAY-UNIT is an Encoded-Unsigned-Int<max=2> field, which specifies (in TODO way) units for subsequent DELAY fields, MULTIPLE-RETRANSMITTING-ADDRESSES is a Multiple-Target-Addresses-With-Extra-Data field described above (with Extra-Data being Encoded-Unsigned-Int<max=2> DELAY field expressed in DELAY-UNIT units), BROADCAST-BUS-TYPE-LIST is a zero-terminated list of `BUS-TYPE+1` values (enum values for BUS-TYPE TBD), Target-Address is described above, and PAYLOAD is a payload to be passed to the upper-layer protocol.
 
 Samp-From-Santa-Data-Packet is a packet sent by Root, which is intended to find destination which is 'somewhere around', but exact location is unknown. When Root needs to pass data to a Node for which it has no valid route, Root sends SAMP-FROM-SANTA-DATA-PACKET (or multiple packets), to each of Retransmitting Devices, in hope to find target Device and to pass the packet. 
 
@@ -176,16 +225,37 @@ Samp-From-Santa-Data-Packet is processed as specified in Multi-Cast Processing s
 
   + right before broadcasting each modified packet - further modify all DELAY fields within MULTIPLE-RETRANSMITTING-ADDRESSES by subtracting time which passes between beginning receiving the incoming packet and beginning transmitting the outgoing packet. **TODO: <0 ?**
 
-Samp-To-Santa-Data-Packet: **\| SAMP-TO-SANTA-DATA-PACKET \| PAYLOAD \|**
+Samp-To-Santa-Data-Or-Error-Packet: **\| SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL \| PAYLOAD \|**
 
-where SAMP-TO-SANTA-DATA-PACKET is a 1-byte bitfield substrate, with bits[0..2] equal to a 3-bit constant SAMP_TO_SANTA_DATA_PACKET, and bits [4..7] reserved (MUST be zeros)
+where SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits[0..2] equal to a 3-bit constant SAMP_TO_SANTA_DATA_OR_ERROR_PACKET, bit [3] being IS_ERROR (indicating that PAYLOAD is in fact Routing-Error), bit [4] reserved (MUST be zero), and bits[5..] being TTL.
 
-Samp-To-Santa-Data-Packet is a packet sent from Device (either Retransmitting or non-Retransmitting) to Root. It is used by Device when the message is marked as Urgent by upper-layer protocol, or Device's previous TODO attempts to send Data packet have failed.
+Samp-To-Santa-Data-Or-Error-Packet is a packet intended from Device (either Retransmitting or non-Retransmitting) to Root. It is broadcasted by Device when the message is marked as Urgent by upper-layer protocol, or when Device needs to report Routing-Error to Root when it has found that Root is not directly accessible.
 
-On receiving Samp-To-Santa-Data-Packet, Retransmitting Device sends a Samp-Unicast-Data-Packet addressed to Root, with ACK-EACH-LEG flag set. TODO: what if it fails? TODO: heuristic NODEID-based time separation?. 
+On receiving Samp-To-Santa-Data-Or-Error-Packet, Retransmitting Device sends a Samp-Forward-To-Santa-Data-Or-Error-Packet, in 'Guaranteed Uni-Cast' mode. **TODO: heuristic NODEID-based (or random?) time separation?.**
 
-TODO: Samp-Route-Update
-TODO: BACKWARD-VIA in Unicast?
-TODO: failure handling (first, switch to ACK-EACH-LEG, if ACK-EACH-LEG fails when it comes from Root - simple Routing-Error, if comes in the opposite direction - Samp-To-Santa with Routing-Error as a payload)
-TODO: ACK-EACH-LEG for genuine loops?
+Samp-Forward-To-Santa-Data-Or-Error-Packet: **\| SAMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL \| PAYLOAD \|**
+
+where SAMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits[0..2] equal to a 3-bit constant SAMP_FORWARD_TO_SANTA_DATA_OR_ERROR_PACKET, bit [3] being IS_ERROR (indicating that PAYLOAD is in fact Routing-Error), bit [4] reserved (MUST be zero), and bits [5..] being TTL.
+
+Samp-Forward-To-Santa-Data-Or-Error-Packet is sent by Retransmitting Device when it receives Samp-To-Santa-Data-Or-Error-Packet. On receiving Samp-Forward-To-Santa-Data-Or-Error-Packet, it is it is processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Guaranteed Uni-Cast' mode.
+
+Samp-Routing-Error-Packet: **\| SAMP-ROUTING-ERROR-PACKET-AND-TTL \| ERROR-CODE \| TODO \|**
+
+where SAMP-ROUTING-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits[0..2] equal to a 3-bit constant SAMP_ROUTING_ERROR_PACKET, bits [3..4] reserved (MUST be zeros), and bits [5..] being TTL
+
+On receiving Samp-Routing-Error-Packet, it is processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Guaranteed Uni-Cast' mode.
+
+Samp-Route-Update-Packet: **\| SAMP-ROUTE-UPDATE-PACKET-FLAGS-AND-TTL \| Target-Address \| OPTIONAL-ORIGINAL-RT-CHECKSUM \| MODIFICATIONS-LIST \| RESULTING-RT-CHECKSUM \|**
+
+where SAMP-ROUTE-UPDATE-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits[0..2] equal to a 3-bit constant SAMP_ROUTE_UPDATE_PACKET, bit [3] being DISCARD-FIRST, bit[4] reserved (MUST be 0), and bits[5..] being TTL; Target-Address is the Target-Address field; OPTIONAL-ORIGINAL-RT-CHECKSUM is present only if DISCARD-FIRST flag is not set; OPTIONAL-ORIGINAL-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table checksum before the change is applied; if OPTIONAL-ORIGINAL-RT-CHECKSUM doesn't match to that of the Routing Table - it is TODO Routing-Error; MODIFICATIONS-LIST described below; RESULTING-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table Checksum after the change has been applied (if RESULTING-RT-CHECKSUM doesn't match - it is TODO Routing-Error). 
+
+MODIFICATIONS-LIST consists of entries, where each entry looks as follows: **\| TARGET-ID-PLUS-1 \| OPTIONAL-BUS-ID-PLUS-1 \| OPTIONAL-INTRA-BUS-ID \|**
+
+where TARGET-ID-PLUS-1 (TODO!: change if negatives are supported!) is an Encoded-Unsigned-Int<max=2> field, equal to 0 to indicate end of list, and to `TARGET-ID + 1` otherwise; OPTIONAL-BUS-ID-PLUS-1 is an Encoded-Unsigned-Int<max=2> field, present only if TARGET-ID-PLUS-1 is not 0, and equal to 0 to indicate that the route with TARGET-ID should be deleted from the Routing Table, and to `BUS-ID + 1` otherwise (in this case triplet (TARGET-ID,BUS-ID,INTRA-BUS-ID) should be added to the Routing Table); OPTIONAL-INTRA-BUS-ID is an Encoded-Unsigned-Int<max=4> field, present only if both TARGET-ID-PLUS-1 is not 0, and BUS-ID-PLUS-1 is not 0.
+
+Samp-Route-Update-Packet always go in one direction - from Root to Retransmitting Device; it's Target-Address MUST NOT be 0; it is processed as described in Uni-Cast processing section above, and is always sent in 'Guaranteed Uni-Cast' mode.
+
+TODO: GUARANTEED-DELIVERY for genuine loops?
+TODO: header checksums!
+TODO: negative NODE-ID (TARGET-ID etc.) to facilitate ID-based time delays for Samp-To-Santa packets?
 
