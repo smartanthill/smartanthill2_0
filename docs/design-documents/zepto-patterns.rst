@@ -33,7 +33,7 @@ Zepto Programming Patterns
 
 Zepto VM does not intend to provide highly sophisticated and/or mathematics-oriented functionality; instead, it intends to support very limited but highly practical scenarios, which allow to minimize communications between SmartAnthill Central Controller and SmartAnthill Device, therefore allowing to minimize power consumption on the side of SmartAnthill Device.
 
-Currently, Zepto programming patterns are described in terms of Zepto JavaScript. This in an extremely limited version of normal JaaScript ("zepto" means "10^-21", so you get about 10^-21 functionality out of original language). Basically, whatever is not in these examples, you shouldn't use.
+Currently, Zepto programming patterns are described in terms of Zepto JavaScript. This in an extremely limited version of normal JavaScript ("zepto" means "10^-21", so you get about 10^-21 functionality out of original language). Basically, whatever is not in these examples, you shouldn't use.
 
 .. contents::
 
