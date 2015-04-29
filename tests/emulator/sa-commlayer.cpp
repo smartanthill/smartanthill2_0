@@ -22,6 +22,16 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #define BUFSIZE 512
 
+
+#define COMM_MEAN_PIPE 1
+#define COMM_MEAN_SOCKET 2
+
+//#define COMM_MEAN_TYPE COMM_MEAN_PIPE
+#define COMM_MEAN_TYPE COMM_MEAN_SOCKET
+
+
+#if COMM_MEAN_TYPE == COMM_MEAN_PIPE
+
 #ifdef _MSC_VER
 
 #include <Windows.h>
@@ -376,4 +386,283 @@ uint8_t tryGetMessage(uint16_t* msgSize, uint8_t * buff, int maxSize) // returns
 
 #else // _MSC_VER
 #error not implemented
+#endif
+
+
+#elif COMM_MEAN_TYPE == COMM_MEAN_SOCKET
+
+
+
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/types.h>
+
+#ifdef _MSC_VER
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <stdio.h>
+
+#pragma comment(lib, "Ws2_32.lib")
+
+#define CLOSE_SOCKET( x ) closesocket( x )
+
+#else // _MSC_VER
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h> // for close() for socket 
+
+#define CLOSE_SOCKET( x ) close( x )
+
+#endif // _MSC_VER
+
+const char* inet_addr_as_string = "127.0.0.1";
+int sock;
+struct sockaddr_in sa_self, sa_other;
+
+#ifdef USED_AS_MASTER
+uint16_t self_port_num = 7667;
+uint16_t other_port_num = 7654;
+#else // USED_AS_MASTER
+uint16_t self_port_num = 7654;
+uint16_t other_port_num = 7667;
+#endif
+
+uint8_t buffer_in[ BUFSIZE ];
+uint8_t buffer_out[ BUFSIZE ];
+
+
+
+bool communicationInitialize()
+{
+#ifdef _MSC_VER
+	// do Windows magic
+	WSADATA wsaData;
+	int iResult;
+	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (iResult != 0) 
+	{
+		printf("WSAStartup failed with error: %d\n", iResult);
+		return false;
+	}
+#endif
+
+	//Zero out socket address
+	memset(&sa_self, 0, sizeof sa_self);
+	memset(&sa_other, 0, sizeof sa_other);
+
+	//create an internet, datagram, socket using UDP
+	sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (-1 == sock) /* if socket failed to initialize, exit */
+	{
+		printf("Error Creating Socket\n");
+		return false;
+	}
+
+	//The address is ipv4
+	sa_other.sin_family = AF_INET;
+	sa_self.sin_family = AF_INET;
+
+	//ip_v4 adresses is a uint32_t, convert a string representation of the octets to the appropriate value
+	sa_self.sin_addr.s_addr = inet_addr( inet_addr_as_string );
+	sa_other.sin_addr.s_addr = inet_addr( inet_addr_as_string );
+
+	//sockets are unsigned shorts, htons(x) ensures x is in network byte order, set the port to 7654
+	sa_self.sin_port = htons( self_port_num );
+	sa_other.sin_port = htons( other_port_num );
+
+	if (-1 == bind(sock, (struct sockaddr *)&sa_self, sizeof(sa_self)))
+	{
+		printf( "error bind failed\n" );
+		CLOSE_SOCKET(sock);
+		return false;
+	}
+
+#ifdef _MSC_VER
+    unsigned long ul = 1;
+    ioctlsocket(sock, FIONBIO, &ul);
+#else
+    fcntl(sock,F_SETFL,O_NONBLOCK);
+#endif
+	return true;
+}
+
+bool communicationInitializeAsServer()
+{
+	return communicationInitialize();
+}
+
+bool communicationInitializeAsClient()
+{
+	return communicationInitialize();
+}
+
+void communicationTerminate()
+{
+	CLOSE_SOCKET(sock);
+}
+
+uint8_t sendMessage( MEMORY_HANDLE mem_h )
+{
+	parser_obj po;
+	zepto_parser_init( &po, mem_h );
+	uint16_t sz = zepto_parsing_remaining_bytes( &po );
+	assert( sz <= BUFSIZE );
+	zepto_parse_read_block( &po, buffer_out, sz );
+
+	
+	int bytes_sent = sendto(sock, (char*)buffer_out, sz, 0, (struct sockaddr*)&sa_other, sizeof sa_other);
+	if (bytes_sent < 0) 
+	{
+#ifdef _MSC_VER
+		int error = WSAGetLastError();
+		printf( "Error %d sending packet\n", error );
+#else
+		printf("Error sending packet: %s\n", strerror(errno));
+#endif
+		return COMMLAYER_RET_FAILED;
+	}
+	return COMMLAYER_RET_OK;
+}
+
+uint8_t tryGetMessage( MEMORY_HANDLE mem_h )
+{
+	socklen_t fromlen = sizeof(sa_other);
+	int recsize = recvfrom(sock, (char *)buffer_in, sizeof(buffer_in), 0, (struct sockaddr *)&sa_other, &fromlen);
+	if (recsize < 0) 
+	{
+#ifdef _MSC_VER
+		int error = WSAGetLastError();
+		if ( error == WSAEWOULDBLOCK )
+#else
+		int error = errno;
+		if ( error == EAGAIN || error == EWOULDBLOCK )
+#endif
+		{
+			return COMMLAYER_RET_PENDING;
+		}
+		else
+		{
+			printf( "unexpected error %d received while getting message\n", error );
+			return COMMLAYER_RET_FAILED;
+		}
+	}
+	else
+	{
+		zepto_write_block( mem_h, buffer_in, recsize );
+		return COMMLAYER_RET_OK;
+	}
+
+}
+
+
+
+ 
+int xxx(void)
+{
+	printf("STARTING SERVER...\n");
+	printf("==================\n\n");
+
+	// do Windows magic
+	WSADATA wsaData;
+	int iResult;
+	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (iResult != 0) {
+		printf("WSAStartup failed with error: %d\n", iResult);
+		return 1;
+	}
+
+	// declarations
+	int bytes_sent;
+	int recsize;
+	char buffer_out[1024];
+	char buffer_in[1024];
+
+	int sock;
+	struct sockaddr_in sa_self, sa_other;
+
+	// data initializing
+
+	//Zero out socket address
+	memset(&sa_self, 0, sizeof sa_self);
+	memset(&sa_other, 0, sizeof sa_other);
+
+	//create an internet, datagram, socket using UDP
+	sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (-1 == sock) /* if socket failed to initialize, exit */
+	{
+		printf("Error Creating Socket\n");
+		exit(EXIT_FAILURE);
+	}
+
+	//The address is ipv4
+	sa_other.sin_family = AF_INET;
+	sa_self.sin_family = AF_INET;
+
+	//ip_v4 adresses is a uint32_t, convert a string representation of the octets to the appropriate value
+	sa_self.sin_addr.s_addr = inet_addr("127.0.0.1");
+	sa_other.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+	//sockets are unsigned shorts, htons(x) ensures x is in network byte order, set the port to 7654
+	sa_self.sin_port = htons(7667);
+	sa_other.sin_port = htons(7654);
+
+	if (-1 == bind(sock, (struct sockaddr *)&sa_self, sizeof(sa_self)))
+	{
+		perror("error bind failed");
+		closesocket(sock);
+		exit(EXIT_FAILURE);
+	}
+
+	socklen_t fromlen = sizeof(sa_other);
+
+#ifdef _WIN32
+    unsigned long ul = 1;
+    ioctlsocket(sock, FIONBIO, &ul);
+#else
+    fcntl(sock,F_SETFL,O_NONBLOCK);
+#endif
+
+	for ( int i=0;;i++)
+	{
+		printf("recv test....\n");
+		recsize = recvfrom(sock, (char *)buffer_in, sizeof(buffer_in), 0, (struct sockaddr *)&sa_other, &fromlen);
+		if (recsize < 0) 
+		{
+//			fprintf(stderr, "%s\n", strerror(errno));
+//			exit(EXIT_FAILURE);
+			Sleep(100);
+			continue;
+		}
+		printf("recsize: %d\n ", recsize);
+		Sleep(1);
+		printf("datagram: %.*s\n", (int)recsize, buffer_in);
+//		printf( "received from port: %d\n", sa_from.sin_port );
+
+		// echo back
+
+		//sendto(int socket, char data, int dataLength, flags, destinationAddress, int destinationStructureLength)
+//		int sz_to_send = strlen(buffer);
+		buffer_in[recsize] = 0;
+		sprintf( buffer_out, "[%d]%s", i, buffer_in );
+		bytes_sent = sendto(sock, buffer_out, strlen(buffer_out)+1, 0, (struct sockaddr*)&sa_other, sizeof sa_other);
+		if (bytes_sent < 0) {
+			printf("Error sending packet: %s\n", strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+	}
+}
+
+
+
+#elif
+#error unknown COMM_MEAN_TYPE
 #endif
