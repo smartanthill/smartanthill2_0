@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.3
+:Version:   v0.0.4
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -69,7 +69,7 @@ Highly mobile Devices SHOULD NOT be Retransmitting Devices. Building a reliable 
 Routing Tables
 --------------
 
-Each Retransmitting Device, after pairing, MUST keep a Routing Table: list of (TARGET-ID,BUS-ID,INTRA-BUS-ID) tuples. Routing Table has semantics of "next hop to route packet addressed to TARGET-ID". TODO: omitting BUS-ID if there is only one bus, size reporting to Root (as # of entries). 
+Each Retransmitting Device, after pairing, MUST keep a Routing Table: list of (TARGET-ID,BUS-ID,INTRA-BUS-ID,NEXT-HOP-ACK) tuples. Routing Table has semantics of "next hop to route packet addressed to TARGET-ID". TODO: omitting BUS-ID if there is only one bus, size reporting to Root (as # of entries). NEXT-HOP-ACK is a flag which set if the nearest hop (over (BUS-ID,INTRA-BUS-ID)) is known to be able not only to receive packets, but to send ACKs back via "bus uni-cast with ACK" SADLP-\* operation; in general, NEXT-HOP-ACK cannot be calculated based only on bus type, and may change for the same link during system operation. SAMP is built to try using links with NEXT-HOP-ACK as much as possible, but MAY use links without NEXT-HOP-ACK if there are no alternatives.
 
 Routing Tables SHOULD be stored in a 'canonical' way (ordered from lower TARGET-IDs to higher ones; duplicate entries for the same TARGET-ID are currently prohibited); this is necessary to simplify calculations of the Routing Table checksums. TODO: specify Routing-Table-Checksum field
 
@@ -156,7 +156,20 @@ Whenever a Uni-Cast packet (the one with a Target-Address field) is received by 
 Guaranteed Uni-Cast
 ^^^^^^^^^^^^^^^^^^^
 
-If packet is to be delivered to the next hop in 'Guaranteed' mode, it is sent using underlying protocol's "bus uni-cast with ACK". If this operation returns 'failure' (i.e. ACK wasn't received), SAMP retries it 5 (TODO) times (with exponentially increasing timeouts - TODO) - it is treated as 'Routing-Error'. In particular:
+As described in detail below, all SAMP uni-cast packet types, except for Samp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag and Samp-Loop-Ack-Packet, are sent in 'Guaranteed Uni-Cast' mode. 
+
+Processing by Retransmitting Devices
+''''''''''''''''''''''''''''''''''''
+
+If packet is to be delivered to the next hop in 'Guaranteed' mode by Retransmitting Device, it is processed in the following manner:
+
+If the packet already has LOOP-ACK extra header (see below), and next hop has NEXT-HOP-ACK flag set in the Routing Table, then Retransmitting Device:
+
+* sends Samp-Loop-Ack-Packet (see below) back to the requestor specified in LOOP-ACK extra header 
+* removes LOOP-ACK extra header
+* continues processing as specified below
+
+If the next hop has NEXT-HOP-ACK flag set in the Routing Table, the packet is sent using underlying protocol's "bus uni-cast with ACK". If this operation returns 'failure' (i.e. ACK wasn't received), SAMP retries it 5 (TODO) times (with exponentially increasing timeouts - TODO) - it is treated as 'Routing-Error'. In particular:
 
 * if the packet has Root as Target-Address: 
 
@@ -168,7 +181,31 @@ If packet is to be delivered to the next hop in 'Guaranteed' mode, it is sent us
   + packet Samp-Routing-Error containing TBD Routing-Error is sent (towards Root)
   + the packet which wasn't delivered, doesn't need to be preserved (TODO: identify packet which has been lost within Routing-Error)
 
-As described in detail below, all Samp uni-cast packet types, except for Samp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag, are sent in 'Guaranteed Uni-Cast' mode. 
+If the packet doesn't have LOOP-ACK extra header, next hop doesn't have NEXT-HOP-ACK flag set in the Routing Table, then Retransmitting Device:
+
+* adds LOOP-ACK extra header (which is described below) to the packet (if it is not already present)
+* sends modified packet using "bus unicast" operation
+* and sets timer to TODO
+
+  + if the sender doesn't receive Samp-Loop-Ack-Packet until timer expires - it retransmits the packet at SAMP level. 
+  
+    - if such attempts don't succeed for 5 (TODO) times (with exponentially increasing timeouts - TODO) - it is treated as 'Routing-Error' (the same way as described above, depending on packet having Root as a Target-Address).
+
+If the packet already has LOOP-ACK extra header, and next hop doesn't have NEXT-HOP-ACK flag set in the Routing Table, then Retransmitting Device:
+
+* keeps LOOP-ACK extra header
+* sends packet using "bus unicast" operation
+* doesn't set any timers
+
+LOOP-ACK on Destination
+'''''''''''''''''''''''
+
+If packet with LOOP-ACK extra header is received by destination Device, destination Device MUST send Samp-Loop-Ack-Packet back to the node specified in LOOP-ACK extra header. If destination Device is a non-Retransmitting Device, it will send Samp-Loop-Ack-Packet with Target-Address specified in LOOP-ACK, but to the next hop specified in Root's Routing Table entry. TODO: is it possible that Device doesn't have a route to Root yet? 
+
+LOOP-ACK and Routing
+''''''''''''''''''''
+
+As LOOP-ACK currently doesn't support VIA routing, it means that Root MUST ensure that all the nodes on the "loop" route already know the routes without VIA fields; it applies both to the route from the loop beginning to the loop end, and back from the loop end to the loop beginning (as for request-response cycle, LOOP-ACKs go both directions). When speaking about 'back from the loop end to the loop beginning', it MUST be taken into account that, as specified above, non-Retransmitting Device will send a Samp-Loop-Ack-Packet in the direction of the Root (but with Target-Address equal to the address from LOOP-ACK extra header), so there MUST be an already-defined route from this next-hop-in-direction-of-Root to the loop beginning.
 
 Multi-Cast Processing
 ---------------------
@@ -200,9 +237,17 @@ Whenever a Multi-Cast packet (the one with Multiple-Target-Addresses field) is p
 SAMP Packets
 ------------
 
-Samp-Unicast-Data-Packet: **\| SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL \| Target-Address \| PAYLOAD \|**
+Samp-Unicast-Data-Packet: **\| SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| Target-Address \| PAYLOAD \|**
 
-where SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits[0..1] equal to a 2-bit constant SAMP_UNICAST_DATA_PACKET, bit[2] being GUARANTEED-DELIVERY flag, bit [3] being BACKWARD-GUARANTEED-DELIVERY, bit [4] reserved (MUST be zero), and bits [5..] being TTL; Target-Address is described above, and PAYLOAD is a payload to be passed to the upper-layer protocol.
+where SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] equal to 0, bit[1] being GUARANTEED-DELIVERY flag, bit [2] being BACKWARD-GUARANTEED-DELIVERY, bit [3] being EXTRA-HEADERS-PRESENT, bit[4] being reserved (MUST be zero), and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set and is described below; Target-Address is described above, and PAYLOAD is a payload to be passed to the upper-layer protocol.
+
+OPTIONAL-EXTRA-HEADERS is a sequence of the following items:
+
+* **\| UNICAST-EXTRA-DATA-LOOP-ACK \| LOOP-ACK-ID \|**
+
+  where UNICAST-EXTRA-DATA-LOOP-ACK is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-DATA list, bits[1..2] equal to 2-bit constant UNICAST_EXTRA_DATA_LOOP_ACK, and bits[3..] representing NODE-ID of the address where to send the LOOP-ACK, and LOOP-ACK-ID is an Encoded-Unsigned-Int<max=2> field representing ID of the LOOP-ACK to be returned.
+
+* other types of items MAY be added as necessary.
 
 If Target-Address is Root (i.e. =0), it MUST NOT contain VIA fields within; in addition, if Target-Address is Root (i.e. =0), the packet MUST NOT have BACKWARD-GUARANTEED-DELIVERY flag set.
 
@@ -212,7 +257,7 @@ When target Device receives the packet, and sends reply back, it MUST set GUARAN
 
 Samp-From-Santa-Data-Packet: **\| SAMP-FROM-SANTA-DATA-PACKET-AND-TTL \| DELAY-UNIT \| MULTIPLE-RETRANSMITTING-ADDRESSES \| BROADCAST-BUS-TYPE-LIST \| Target-Address \| PAYLOAD \|**
 
-where SAMP-FROM-SANTA-DATA-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits[0..1] equal to a 2-bit constant SAMP_SANTA_DATA_PACKET, bit[2]=0, bits [3..4] reserved (MUST be zeros), and bits[5..] being TTL; DELAY-UNIT is an Encoded-Unsigned-Int<max=2> field, which specifies (in TODO way) units for subsequent DELAY fields, MULTIPLE-RETRANSMITTING-ADDRESSES is a Multiple-Target-Addresses-With-Extra-Data field described above (with Extra-Data being Encoded-Unsigned-Int<max=2> DELAY field expressed in DELAY-UNIT units), BROADCAST-BUS-TYPE-LIST is a zero-terminated list of `BUS-TYPE+1` values (enum values for BUS-TYPE TBD), Target-Address is described above, and PAYLOAD is a payload to be passed to the upper-layer protocol.
+where SAMP-FROM-SANTA-DATA-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_FROM_SANTA_DATA_PACKET, bit [4] reserved (MUST be zero), and bits[5..] being TTL; DELAY-UNIT is an Encoded-Unsigned-Int<max=2> field, which specifies (in TODO way) units for subsequent DELAY fields, MULTIPLE-RETRANSMITTING-ADDRESSES is a Multiple-Target-Addresses-With-Extra-Data field described above (with Extra-Data being Encoded-Unsigned-Int<max=2> DELAY field expressed in DELAY-UNIT units), BROADCAST-BUS-TYPE-LIST is a zero-terminated list of `BUS-TYPE+1` values (enum values for BUS-TYPE TBD), Target-Address is described above, and PAYLOAD is a payload to be passed to the upper-layer protocol.
 
 Samp-From-Santa-Data-Packet is a packet sent by Root, which is intended to find destination which is 'somewhere around', but exact location is unknown. When Root needs to pass data to a Node for which it has no valid route, Root sends SAMP-FROM-SANTA-DATA-PACKET (or multiple packets), to each of Retransmitting Devices, in hope to find target Device and to pass the packet. 
 
@@ -227,62 +272,73 @@ Samp-From-Santa-Data-Packet is processed as specified in Multi-Cast Processing s
 
   + right before broadcasting each modified packet - further modify all DELAY fields within MULTIPLE-RETRANSMITTING-ADDRESSES by subtracting time which passes between beginning receiving the incoming packet and beginning transmitting the outgoing packet. **TODO: <0 ?**
 
-Samp-To-Santa-Data-Or-Error-Packet: **\| SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL \| PAYLOAD \|**
+Samp-To-Santa-Data-Or-Error-Packet: **\| SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-NO-TTL \| PAYLOAD \|**
 
-where SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits[0..1] equal to a 2-bit constant SAMP_SANTA_DATA_PACKET, bit[2]=1, bit [3] being IS_ERROR (indicating that PAYLOAD is in fact Routing-Error), bit [4] reserved (MUST be zero), and bits[5..] being TTL.
+where SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-NO-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_TO_SANTA_DATA_OR_ERROR_PACKET, bit [4] being IS_ERROR (indicating that PAYLOAD is in fact Routing-Error), and bits [5..] reserved (MUST be zero); note that Samp-To-Santa-Data-Or-Error-Packet doesn't contain TTL (as it is never retransmitted 'as is').
 
 Samp-To-Santa-Data-Or-Error-Packet is a packet intended from Device (either Retransmitting or non-Retransmitting) to Root. It is broadcasted by Device when the message is marked as Urgent by upper-layer protocol, or when Device needs to report Routing-Error to Root when it has found that Root is not directly accessible.
 
-On receiving Samp-To-Santa-Data-Or-Error-Packet, Retransmitting Device sends a Samp-Forward-To-Santa-Data-Or-Error-Packet, in 'Guaranteed Uni-Cast' mode. **TODO: heuristic NODEID-based (or random?) time separation?.**
+On receiving Samp-To-Santa-Data-Or-Error-Packet, Retransmitting Device sends a Samp-Forward-To-Santa-Data-Or-Error-Packet towards Root, in 'Guaranteed Uni-Cast' mode. **TODO: heuristic NODEID-based (or random?) time separation?.**
 
 Samp-Forward-To-Santa-Data-Or-Error-Packet: **\| SAMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL \| PAYLOAD \|**
 
-where SAMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits[0..1] equal to a 2-bit constant SAMP_FORWARD_TO_SANTA_OR_ELSE_PACKET, bit[2]=0, bit [3] being IS_ERROR (indicating that PAYLOAD is in fact Routing-Error), bit [4] reserved (MUST be zero), and bits [5..] being TTL.
+where SAMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_FORWARD_TO_SANTA_DATA_OR_ERROR_PACKET, bit [4] being IS_ERROR (indicating that PAYLOAD is in fact Routing-Error), and bits [5..] being TTL.
 
-Samp-Forward-To-Santa-Data-Or-Error-Packet is sent by Retransmitting Device when it receives Samp-To-Santa-Data-Or-Error-Packet. On receiving Samp-Forward-To-Santa-Data-Or-Error-Packet, it is it is processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Guaranteed Uni-Cast' mode.
+Samp-Forward-To-Santa-Data-Or-Error-Packet is sent by Retransmitting Device when it receives Samp-To-Santa-Data-Or-Error-Packet (with TTL=MAX_TTL-1 to account for original Samp-To-Santa-Data-Or-Error-Packet). On receiving Samp-Forward-To-Santa-Data-Or-Error-Packet by a Retransmitting Device, it is  processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Guaranteed Uni-Cast' mode.
 
 Samp-Routing-Error-Packet: **\| SAMP-ROUTING-ERROR-PACKET-AND-TTL \| ERROR-CODE \| TODO \|**
 
-where SAMP-ROUTING-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits[0..1] equal to a 2-bit constant SAMP_ROUTE_ERROR_OR_UPDATE_PACKET, bit[2]=0, bits [3..4] reserved (MUST be zeros), and bits [5..] being TTL
+where SAMP-ROUTING-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_ROUTING_ERROR_PACKET, bit [4] reserved (MUST be zero), and bits [5..] being TTL
 
 On receiving Samp-Routing-Error-Packet, it is processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Guaranteed Uni-Cast' mode.
 
 Samp-Route-Update-Packet: **\| SAMP-ROUTE-UPDATE-PACKET-FLAGS-AND-TTL \| Target-Address \| OPTIONAL-ORIGINAL-RT-CHECKSUM \| MODIFICATIONS-LIST \| RESULTING-RT-CHECKSUM \|**
 
-where SAMP-ROUTE-UPDATE-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits[0..1] equal to a 2-bit constant SAMP_ROUTE_ERROR_OR_UPDATE_PACKET, bit[2]=1, bit [3] being DISCARD-FIRST, bit[4] reserved (MUST be 0), and bits[5..] being TTL; Target-Address is the Target-Address field; OPTIONAL-ORIGINAL-RT-CHECKSUM is present only if DISCARD-FIRST flag is not set; OPTIONAL-ORIGINAL-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table checksum before the change is applied; if OPTIONAL-ORIGINAL-RT-CHECKSUM doesn't match to that of the Routing Table - it is TODO Routing-Error; MODIFICATIONS-LIST described below; RESULTING-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table Checksum after the change has been applied (if RESULTING-RT-CHECKSUM doesn't match - it is TODO Routing-Error). 
+where SAMP-ROUTE-UPDATE-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_ROUTE_UPDATE_PACKET, bit [4] being DISCARD-FIRST (indicating that before processing MODIFICATIONS-LIST, the whole Routing Table must be discarded), and bits[5..] being TTL; Target-Address is the Target-Address field; OPTIONAL-ORIGINAL-RT-CHECKSUM is present only if DISCARD-FIRST flag is not set; OPTIONAL-ORIGINAL-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table checksum before the change is applied; if OPTIONAL-ORIGINAL-RT-CHECKSUM doesn't match to that of the Routing Table - it is TODO Routing-Error; MODIFICATIONS-LIST described below; RESULTING-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table Checksum after the change has been applied (if RESULTING-RT-CHECKSUM doesn't match - it is TODO Routing-Error). 
 
-MODIFICATIONS-LIST consists of entries, where each entry looks as follows: **\| TARGET-ID-PLUS-1 \| OPTIONAL-BUS-ID-PLUS-1 \| OPTIONAL-INTRA-BUS-ID \|**
+MODIFICATIONS-LIST consists of entries, where each entry looks as follows: **\| TARGET-ID-PLUS-1 \| OPTIONAL-BUS-ID-PLUS-1 \| OPTIONAL-NEXT-HOP-ACK-AND-INTRA-BUS-ID \|**
 
-where TARGET-ID-PLUS-1 (TODO!: change if negatives are supported!) is an Encoded-Unsigned-Int<max=2> field, equal to 0 to indicate end of list, and to `TARGET-ID + 1` otherwise; OPTIONAL-BUS-ID-PLUS-1 is an Encoded-Unsigned-Int<max=2> field, present only if TARGET-ID-PLUS-1 is not 0, and equal to 0 to indicate that the route with TARGET-ID should be deleted from the Routing Table, and to `BUS-ID + 1` otherwise (in this case triplet (TARGET-ID,BUS-ID,INTRA-BUS-ID) should be added to the Routing Table); OPTIONAL-INTRA-BUS-ID is an Encoded-Unsigned-Int<max=4> field, present only if both TARGET-ID-PLUS-1 is not 0, and BUS-ID-PLUS-1 is not 0.
+where TARGET-ID-PLUS-1 (TODO!: change if negatives are supported!) is an Encoded-Unsigned-Int<max=2> field, equal to 0 to indicate end of list, and to `TARGET-ID + 1` otherwise; OPTIONAL-BUS-ID-PLUS-1 is an Encoded-Unsigned-Int<max=2> field, present only if TARGET-ID-PLUS-1 is not 0, and equal to 0 to indicate that the route with TARGET-ID should be deleted from the Routing Table, and to `BUS-ID + 1` otherwise (in this case triplet (TARGET-ID,BUS-ID,INTRA-BUS-ID) should be added to the Routing Table); OPTIONAL-NEXT-HOP-ACK-AND-INTRA-BUS-ID is an Encoded-Unsigned-Int<max=4> bitfield substrate, present only if both TARGET-ID-PLUS-1 is not 0, and BUS-ID-PLUS-1 is not 0; bit[0] is a NEXT-HOP-ACK flag for the Routing Table Entry, and bits[1..] represent INTRA-BUS-ID.
 
 Samp-Route-Update-Packet always go in one direction - from Root to Retransmitting Device; it's Target-Address MUST NOT be 0; it is processed as described in Uni-Cast processing section above, and is always sent in 'Guaranteed Uni-Cast' mode.
 
-Type of Samp packets
-^^^^^^^^^^^^^^^^^^^^
+Samp-Loop-Ack-Packet: **\| SAMP-LOOP-ACK-AND-TTL \| Target-Address \| LOOP-ACK-ID \|**
 
-As described above, type of Samp packet is always defined by bits [0..2] of the first field (which is always Encoded-Unsigned-Int<max=2> bitfield substrate):
+where SAMP-LOOP-ACK-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_LOOP_ACK_PACKET, bit [4] being reserved (MUST be zero), and bits [5..] being TTL; Target-Address is described above, and LOOP-ACK-ID is copied from LOOP-ACK extra header of Samp-Unicast-Data-Packet. 
 
-+-------------------------------------+------------------------------+--------------------------------------------+
-| bits [0..1]                         | bit[2]                       | SAMP packet type                           |
-+=====================================+==============================+============================================+
-| SAMP_UNICAST_DATA_PACKET            | ANY                          | Samp-Unicast-Data-Packet                   |
-+-------------------------------------+------------------------------+--------------------------------------------+
-| SAMP_SANTA_DATA_PACKET              | 0                            | Samp-From-Santa-Data-Packet                |
-+-------------------------------------+------------------------------+--------------------------------------------+
-| SAMP_SANTA_DATA_PACKET              | 1                            | Samp-To-Santa-Data-Packet                  |
-+-------------------------------------+------------------------------+--------------------------------------------+
-| SAMP_ROUTE_ERROR_OR_UPDATE_PACKET   | 0                            | Samp-Routing-Error-Packet                  |
-+-------------------------------------+------------------------------+--------------------------------------------+
-| SAMP_ROUTE_ERROR_OR_UPDATE_PACKET   | 1                            | Samp-Route-Update-Packet                   |
-+-------------------------------------+------------------------------+--------------------------------------------+
-| SAMP_FORWARD_TO_SANTA_OR_ELSE_PACKET| 0                            | Samp-Forward-To-Santa-Data-Or-Error-Packet |
-+-------------------------------------+------------------------------+--------------------------------------------+
-| SAMP_FORWARD_TO_SANTA_OR_ELSE_PACKET| 1                            | RESERVED                                   |
-+-------------------------------------+------------------------------+--------------------------------------------+
+Samp-Loop-Ack-Packet is generated either by destination, or by the node which has found that the next hop already has NEXT-HOP-ACK flag (see details in 'Guaranteed Uni-Cast' section above); generating node always specifies itself as a target. 
 
-bit [4] of the first field is currently reserved for future expansion, for each of the packet types. If future protocol changes are using this reserved bit[4], they SHOULD allow for further expansion by adding at least another byte with another at least one reserved bit.
+Samp-Loop-Ack-Packet is processed as specified in 'Uni-cast processing' section above; Samp-Loop-Ack packet is never sent using 'Guaranteed uni-cast' delivery. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
 
-TODO: GUARANTEED-DELIVERY for genuine loops?
+
+Type of Samp packet
+^^^^^^^^^^^^^^^^^^^
+
+As described above, type of Samp packet is always defined by bits [0..3] of the first field (which is always Encoded-Unsigned-Int<max=2> bitfield substrate):
+
++-------------------------------------+--------------------------------------------+--------------------------------------------+
+| bit [0]                             | bits[1..3]                                 | SAMP packet type                           |
++=====================================+============================================+============================================+
+| 0                                   | ANY (used for other purposes)              | Samp-Unicast-Data-Packet                   |
++-------------------------------------+--------------------------------------------+--------------------------------------------+
+| 1                                   | SAMP_FROM_SANTA_DATA_PACKET                | Samp-From-Santa-Data-Packet                |
++-------------------------------------+--------------------------------------------+--------------------------------------------+
+| 1                                   | SAMP_TO_SANTA_DATA_OR_ERROR_PACKET         | Samp-To-Santa-Data-Packet                  |
++-------------------------------------+--------------------------------------------+--------------------------------------------+
+| 1                                   | SAMP_FORWARD_TO_SANTA_DATA_OR_ERROR_PACKET | Samp-Forward-To-Santa-Data-Or-Error-Packet |
++-------------------------------------+--------------------------------------------+--------------------------------------------+
+| 1                                   | SAMP_ROUTING_ERROR_PACKET                  | Samp-Routing-Error-Packet                  |
++-------------------------------------+--------------------------------------------+--------------------------------------------+
+| 1                                   | SAMP_ROUTE_UPDATE_PACKET                   | Samp-Route-Update-Packet                   |
++-------------------------------------+--------------------------------------------+--------------------------------------------+
+| 1                                   | SAMP_LOOP_ACK_PACKET                       | Samp-Loop-Ack-Packet                       |
++-------------------------------------+--------------------------------------------+--------------------------------------------+
+| 1                                   | 2 more values                              | RESERVED                                   |
++-------------------------------------+--------------------------------------------+--------------------------------------------+
+
+TODO: Probe-Packet?
+TODO: store and update MAX_TTL for Retransmitting Devices
+TODO: Route-Update for non-Retransmitting Devices?
 TODO: header (or full packet?) checksums! (or is it SADLP-\*'s responsibility?)
 TODO: negative NODE-ID (TARGET-ID etc.) to facilitate ID-based time delays for Samp-To-Santa packets? (TODO: time delays to cover the whole the path?)
 TODO: urgent messages
