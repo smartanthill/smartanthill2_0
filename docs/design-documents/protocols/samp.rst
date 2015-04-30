@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.6
+:Version:   v0.0.7
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -281,7 +281,7 @@ Samp-From-Santa-Data-Packet is processed as specified in Multi-Cast Processing s
 
   + right before broadcasting each modified packet - further modify all DELAY fields within MULTIPLE-RETRANSMITTING-ADDRESSES by subtracting time which passes between beginning receiving the incoming packet and beginning transmitting the outgoing packet. **TODO: <0 ?**
 
-If IS-PROBE flag is set, then PAYLOAD is treated differently. When destination receives Samp-From-Santa-Data-Packet with IS-PROBE flag set, destination doesn't pass PAYLOAD to upper-layer protocol. Instead, destination processes the packet in the same way as described for the processing of Samp-Unicast-Data-Packet with IS-PROBE flag set. 
+If IS-PROBE flag is set, then PAYLOAD is treated differently. When destination receives Samp-From-Santa-Data-Packet with IS-PROBE flag set, destination doesn't pass PAYLOAD to upper-layer protocol. Instead, destination processes the packet in the same way as described for the processing of Samp-Unicast-Data-Packet with IS-PROBE flag set. A special case of Samp-From-Santa-Data-Packet with IS-PROBE set is when Target-Address is Root (=0). Such packets (a.k.a. 'discovery' packets) are ignored by Root, but are replied to only by Devices which are not paired yet (i.e. have no node id). All such 'discovery' packets with Target-Address=0 MUST have IS-PROBE flag set.
 
 Samp-To-Santa-Data-Or-Error-Packet: **\| SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-NO-TTL \| OPTIONAL-EXTRA-HEADERS \| PAYLOAD \|**
 
@@ -292,7 +292,6 @@ Samp-To-Santa-Data-Or-Error-Packet is a packet intended from Device (either Retr
 * when the message is marked as Urgent by upper-layer protocol
 * when Device needs to report Routing-Error to Root when it has found that Root is not directly accessible.
 * when requested to do so via a packet with IS-PROBE flag and PROBE-TYPE==PROBE_TO_SANTA
-* when requested to do so via a packet with IS-DISCOVERY flag (**TODO**)
 
 In any case, if Samp-To-Santa-Data-Or-Error-Packet is sent in response to a Samp-From-Santa-Data-Packet flag (regardless of packet being first or not from SAGDP point of view), Device MUST provide TOSANTA-EXTRA-HEADER-LAST-INCOMING-HOP extra header, filling it from LAST-HOP field of the Samp-From-Santa-Data-Packet.
 
@@ -354,9 +353,14 @@ As described above, type of Samp packet is always defined by bits [0..3] of the 
 | 1                                   | 2 more values                              | RESERVED                                   |
 +-------------------------------------+--------------------------------------------+--------------------------------------------+
 
+Packet Urgency
+--------------
+
+From SAMP point of view, all upper-layer-protocol packets can have one of three urgency levels. If the packet has urgency URGENCY_LAZY, it is first sent as a Samp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent with GUARANTEED-DELIVERY). If the packet has urgency URGENCY_URGENT, it is first sent as a Samp-Unicast-Data-Packet with GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent as a Samp-\*-Santa-\* packet). If the packet has urgency URGENCY_TRIPLE_GALOP, 
+then it is first sent as a Samp-From-Santa-Data-Packet or Samp-To-Santa-Data-Packet (depending on source being Root or Device). 
+
 TODO: store and update MAX_TTL for Retransmitting Devices
 TODO: Route-Update for non-Retransmitting Devices?
 TODO: header (or full packet?) checksums! (or is it SADLP-\*'s responsibility?)
 TODO: negative NODE-ID (TARGET-ID etc.) to facilitate ID-based time delays for Samp-To-Santa packets? (TODO: time delays to cover the whole the path?)
-TODO: urgent messages
 
