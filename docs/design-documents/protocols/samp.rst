@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.7
+:Version:   v0.0.8
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -44,6 +44,7 @@ SAMP is optimized based on the following assumptions:
 * SAMP combines data with route requests
 * SAMP allows to send "urgent" data packets, which sacrifice traffic and energy consumption for the best possible delivery speed
 * SAMP relies on upper-layer protocol (SAGDP) to send retransmits in case if packet has not been delivered, and to provide SAMP with an information about retransmit number (i.e., original packet having retransmit-number=0, first retransmit having retransmit-number=1, and so on).
+* SAMP relies on upper-layer protocol (SAGDP) to provide information if the Device on the other side is required to have it's transmitter on for upper-layer protocol purposes. For SAGDP, there are states which do guarantee this (in fact, it stands in almost all SAGDP states except for IDLE).
 
 SAMP has the following types of actors: Root (normally implemented by Central Controller), Retransmitting Device, and non-Retransmitting Device. All these actors are collectively named Nodes.
 
@@ -77,9 +78,9 @@ On non-Retransmitting Devices, Routing Table is rudimentary: it contains only on
 
 All Routing Tables on both Retransmitting and non-Retransmitting Devices are essentially copies of "Master Routing Tables" which are kept on Root. It is a responsibility of Root to maintain Routing Tables for all the Devices (both Retransmitting and non-Retransmitting); it is up to Root which entries to store in each Routing Table. In some cases, Routing Table might need to be truncated; in this case, it is responsibility of Root to use VIA field in Target-Address (see below) to ensure that the packet can be routed given the Routing Tables present. In any case, Routing Table MUST be able to contain at least one entry, with TARGET-ID=0 (Root). This guarantees that path to Root can always be found without VIA field.
 
-TODO: no mobile non-Retransmitting (TODO reporting 'mobile' in pairing CAPABILITIES, plus heuristics), priorities (low->high): non-Retransmitting, Retransmitting.
+In addition, on Rentransmitting Devices the following parameters are kept (and updated by Root): MAX-TTL, FORWARD-TO-SANTA-DELAY-UNIT, FORWARD-TO-SANTA-DELAY.
 
-TODO: RT self-healing, re-sync, etc.
+TODO: no mobile non-Retransmitting (TODO reporting 'mobile' in pairing CAPABILITIES, plus heuristics), priorities (low->high): non-Retransmitting, Retransmitting.
 
 Addressing
 ----------
@@ -249,11 +250,11 @@ OPTIONAL-EXTRA-HEADERS is a sequence of the following items:
 
 * **\| GENERIC-EXTRA-HEADER-FLAGS \|**
 
-  where GENETIC-EXTRA-HEADER-FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-HEADER list, bits[1..3] equal to 3-bit constant GENERIC_EXTRA_HEADER_FLAGS, bit[4] being IS-PROBE flag, and bits [5..] reserved (MUST be zeros).
+  where GENETIC-EXTRA-HEADER-FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-HEADER list, bits[1..3] equal to 3-bit constant GENERIC_EXTRA_HEADER_FLAGS, bit[4] being IS-PROBE flag, bit [5] being TARGET-COLLECT-LAST-HOPS (this bit MUST NOT be set for any packet except for Samp-From-Santa-Data-Packet), and bits [6..] reserved (MUST be zeros).
 
 * **\| TOSANTA-EXTRA-HEADER-LAST-INCOMING-HOP \|**
 
-  where TOSANTA-EXTRA-HEADER-FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-HEADER list, bits[1..3] equal to 3-bit constant TOSANTA_EXTRA_HEADER_LAST_INCOMING_HOP, and bits [5..] being node id. This extra header MUST NOT be present for Samp-Unicast-Data-Packets.
+  where TOSANTA-EXTRA-HEADER-FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-HEADER list, bits[1..3] equal to 3-bit constant TOSANTA_EXTRA_HEADER_LAST_INCOMING_HOP, and bits [5..] being node id. This extra header MUST NOT be present for Samp-Unicast-Data-Packets. There can be multiple TOSANTA-EXTRA-HEADER-LAST-INCOMING-HOP extra headers within single packet.
 
 If Target-Address is Root (i.e. =0), it MUST NOT contain VIA fields within; in addition, if Target-Address is Root (i.e. =0), the packet MUST NOT have BACKWARD-GUARANTEED-DELIVERY flag set.
 
@@ -263,9 +264,11 @@ Samp-Unicast-Data-Packet is processed as specified in Uni-Cast Processing sectio
 
 When target Device receives the packet, and sends reply back, it MUST set GUARANTEED-DELIVERY flag in reply to BACKWARD-GUARANTEED-DELIVERY flag in original packet; this logic applies to all the packets, including 'first' packets in SAGDP "packet chain" (as they're still sent in reply to some SAMP packet coming from the Root).
 
-Samp-From-Santa-Data-Packet: **\| SAMP-FROM-SANTA-DATA-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| DELAY-UNIT \| MULTIPLE-RETRANSMITTING-ADDRESSES \| BROADCAST-BUS-TYPE-LIST \| Target-Address \| PAYLOAD \|**
+Samp-From-Santa-Data-Packet: **\| SAMP-FROM-SANTA-DATA-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| REQUEST-ID \| DELAY-UNIT \| MULTIPLE-RETRANSMITTING-ADDRESSES \| BROADCAST-BUS-TYPE-LIST \| Target-Address \| TARGET-DELAY \| PAYLOAD \|**
 
-where SAMP-FROM-SANTA-DATA-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_FROM_SANTA_DATA_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits[5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is similar to that of in Samp-Unicast-Data-Packet (though only GENERIC-\* extra headers MUST NOT be present), LAST-HOP is an Encoded-Unsigned-Int<max=2> representing node id of the last sender, DELAY-UNIT is an Encoded-Unsigned-Int<max=2> field, which specifies (in TODO way) units for subsequent DELAY fields, MULTIPLE-RETRANSMITTING-ADDRESSES is a Multiple-Target-Addresses-With-Extra-Data field described above (with Extra-Data being Encoded-Unsigned-Int<max=2> DELAY field expressed in DELAY-UNIT units), BROADCAST-BUS-TYPE-LIST is a zero-terminated list of `BUS-TYPE+1` values (enum values for BUS-TYPE TBD), Target-Address is described above, and PAYLOAD is a payload to be passed to the upper-layer protocol.
+where SAMP-FROM-SANTA-DATA-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_FROM_SANTA_DATA_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits[5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is similar to that of in Samp-Unicast-Data-Packet (though only GENERIC-\* extra headers MUST NOT be present), LAST-HOP is an Encoded-Unsigned-Int<max=2> representing node id of the last sender, REQUEST-ID is an Encoded-Unsigned-Int<max=4> field, DELAY-UNIT is an Encoded-Signed-Int<max=2> field, which specifies (in TODO way) units for subsequent DELAY fields, MULTIPLE-RETRANSMITTING-ADDRESSES is a Multiple-Target-Addresses-With-Extra-Data field described above (with Extra-Data being Encoded-Unsigned-Int<max=2> DELAY field taking into account DELAY-UNIT as described below), BROADCAST-BUS-TYPE-LIST is a zero-terminated list of `BUS-TYPE+1` values (enum values for BUS-TYPE TBD), Target-Address is described above, TARGET-REPLY-DELAY has the same type as DELAY fields, and represents delay for the target Device (also taking into account DELAY-UNIT). PAYLOAD is a payload to be passed to the upper-layer protocol.
+
+To calculate delay for specific DELAY and DELAY-UNIT, the following formula is used (the formula as written is assumed to be in floating-point; other equivalent implementations are possible depending in particular on timer resolution for specific Device): `delay = 1 millisecond * DELAY * (2^DELAY_UNIT)`; that is, DELAY-UNIT=0 and DELAY=1 means 1 milliseconds, DELAY-UNIT=1 and DELAY=1 means 2 milliseconds, and DELAY-UNIT =-2 and DELAY=1 means 0.25 milliseconds.
 
 Samp-From-Santa-Data-Packet is a packet sent by Root, which is intended to find destination which is 'somewhere around', but exact location is unknown. When Root needs to pass data to a Node for which it has no valid route, Root sends SAMP-FROM-SANTA-DATA-PACKET (or multiple packets), to each of Retransmitting Devices, in hope to find target Device and to pass the packet. 
 
@@ -279,7 +282,14 @@ Samp-From-Santa-Data-Packet is processed as specified in Multi-Cast Processing s
 
 * for each bus which is on the broadcast-bus-list - broadcast modified packet over this bus
 
-  + right before broadcasting each modified packet - further modify all DELAY fields within MULTIPLE-RETRANSMITTING-ADDRESSES by subtracting time which passes between beginning receiving the incoming packet and beginning transmitting the outgoing packet. **TODO: <0 ?**
+  + right before broadcasting each modified packet - further modify all DELAY (including TARGET-REPLY-DELAY) fields within MULTIPLE-RETRANSMITTING-ADDRESSES by subtracting time which passes between beginning receiving the incoming packet and beginning transmitting the outgoing packet. **TODO: <0 ?**
+
+On target Device, Samp-From-Santa-Data-Packet waits until reply payload is ready (which is almost immediately if IS-PROBE is set, including 'discovery' packets, see below), then it is processed as follows:
+
+* if TARGET-DELAY (expressed in DELAY-UNITs) has not passed yet, Device waits until TARGET-DELAY passes
+
+  + if the incoming packet has TARGET-COLLECT-LAST-HOPS flag set (which is normally set for all the packets which have IS-PROBE flag), then target Device traces all the incoming packets addressed to it and having the same REQUEST-ID and makes a list extra-last-hops consisting of LAST-HOP headers from all of them
+  + when sending Samp-To-Santa-Data-Or-Error-Packet reply back, target Device adds LAST-INCOMING-HOP extra header for LAST-HOP within incoming packet, *plus* LAST-INCOMING-HOP headers for extra-last-hops (if such list exists, see above)
 
 If IS-PROBE flag is set, then PAYLOAD is treated differently. When destination receives Samp-From-Santa-Data-Packet with IS-PROBE flag set, destination doesn't pass PAYLOAD to upper-layer protocol. Instead, destination processes the packet in the same way as described for the processing of Samp-Unicast-Data-Packet with IS-PROBE flag set. A special case of Samp-From-Santa-Data-Packet with IS-PROBE set is when Target-Address is Root (=0). Such packets (a.k.a. 'discovery' packets) are ignored by Root, but are replied to only by Devices which are not paired yet (i.e. have no node id). All such 'discovery' packets with Target-Address=0 MUST have IS-PROBE flag set.
 
@@ -295,7 +305,7 @@ Samp-To-Santa-Data-Or-Error-Packet is a packet intended from Device (either Retr
 
 In any case, if Samp-To-Santa-Data-Or-Error-Packet is sent in response to a Samp-From-Santa-Data-Packet flag (regardless of packet being first or not from SAGDP point of view), Device MUST provide TOSANTA-EXTRA-HEADER-LAST-INCOMING-HOP extra header, filling it from LAST-HOP field of the Samp-From-Santa-Data-Packet.
 
-On receiving Samp-To-Santa-Data-Or-Error-Packet, Retransmitting Device sends a Samp-Forward-To-Santa-Data-Or-Error-Packet towards Root, in 'Guaranteed Uni-Cast' mode. **TODO: heuristic NODEID-based (or random?) time separation?.**
+On receiving Samp-To-Santa-Data-Or-Error-Packet, Retransmitting Device sends a Samp-Forward-To-Santa-Data-Or-Error-Packet towards Root, in 'Guaranteed Uni-Cast' mode. To avoid congestion at this point, each Retransmitting Device delays according to (FORWARD-TO-SANTA-DELAY,FORWARD-TO-SANTA-DELAY-UNIT) tuple (using the same formula as described above for (DELAY,DELAY-UNIT)), where FORWARD-TO-SANTA-DELAY and FORWARD-TO-SANTA-DELAY-UNIT are the values which are locally stored on Retransmitting Device.
 
 Samp-Forward-To-Santa-Data-Or-Error-Packet: **\| SAMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL \| PAYLOAD \|**
 
@@ -317,7 +327,7 @@ MODIFICATIONS-LIST consists of entries, where each entry looks as follows: **\| 
 
 where TARGET-ID-PLUS-1 (TODO!: change if negatives are supported!) is an Encoded-Unsigned-Int<max=2> field, equal to 0 to indicate end of list, and to `TARGET-ID + 1` otherwise; OPTIONAL-BUS-ID-PLUS-1 is an Encoded-Unsigned-Int<max=2> field, present only if TARGET-ID-PLUS-1 is not 0, and equal to 0 to indicate that the route with TARGET-ID should be deleted from the Routing Table, and to `BUS-ID + 1` otherwise (in this case triplet (TARGET-ID,BUS-ID,INTRA-BUS-ID) should be added to the Routing Table); OPTIONAL-NEXT-HOP-ACK-AND-INTRA-BUS-ID is an Encoded-Unsigned-Int<max=4> bitfield substrate, present only if both TARGET-ID-PLUS-1 is not 0, and BUS-ID-PLUS-1 is not 0; bit[0] is a NEXT-HOP-ACK flag for the Routing Table Entry, and bits[1..] represent INTRA-BUS-ID.
 
-Samp-Route-Update-Packet always go in one direction - from Root to Retransmitting Device; it's Target-Address MUST NOT be 0; it is processed as described in Uni-Cast processing section above, and is always sent in 'Guaranteed Uni-Cast' mode.
+Samp-Route-Update-Packet always go in one direction - from Root to Device; it's Target-Address MUST NOT be 0; it is processed as described in Uni-Cast processing section above, and is always sent in 'Guaranteed Uni-Cast' mode. Samp-Route-Update-Packet MAY be sent either to Retransmitting or to non-Retransmitting Device; however, if sending it to a non-Retransmitting Device, Root MUST be sure that non-Retransmitting Device has it's transmitter turned on (because upper-layer protocol state guarantees it).
 
 Samp-Loop-Ack-Packet: **\| SAMP-LOOP-ACK-AND-TTL \| Target-Address \| LOOP-ACK-ID \|**
 
@@ -359,8 +369,8 @@ Packet Urgency
 From SAMP point of view, all upper-layer-protocol packets can have one of three urgency levels. If the packet has urgency URGENCY_LAZY, it is first sent as a Samp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent with GUARANTEED-DELIVERY). If the packet has urgency URGENCY_URGENT, it is first sent as a Samp-Unicast-Data-Packet with GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent as a Samp-\*-Santa-\* packet). If the packet has urgency URGENCY_TRIPLE_GALOP, 
 then it is first sent as a Samp-From-Santa-Data-Packet or Samp-To-Santa-Data-Packet (depending on source being Root or Device). 
 
-TODO: store and update MAX_TTL for Retransmitting Devices
-TODO: Route-Update for non-Retransmitting Devices?
+TODO: piggy-back (for example, Route-Update on Unicast-Data for non-Retransmitting Device; is it ONLY Route-Update which can piggy-back?)
+TODO: update MAX-TTL, TOSANTA-DELAY-UNIT, and TOSANTA-DELAY for Retransmitting Devices
+TODO: optional explicit loop begin (alongside VIA?)
 TODO: header (or full packet?) checksums! (or is it SADLP-\*'s responsibility?)
-TODO: negative NODE-ID (TARGET-ID etc.) to facilitate ID-based time delays for Samp-To-Santa packets? (TODO: time delays to cover the whole the path?)
 
