@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.8
+:Version:   v0.0.9
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -235,30 +235,40 @@ Whenever a Multi-Cast packet (the one with Multiple-Target-Addresses field) is p
     - if the bus supports multi-casting - send the modified packet using multi-cast bus addressing over the bus. NB: bus broadcasts (without INTRA-BUS-ID) MUST NOT be used for this purpose to avoid unnecessary multiplying number of packets.
     - otherwise, send the modified packet using uni-cast bus addressing to each of the hops
 
+OPTIONAL-EXTRA-HEADERS
+-----------------------
+
+Most of SAMP packets have OPTIONAL-EXTRA-HEADERS field. It has a generic structure, but interpretations depend on the packet type. More specifically, OPTIONAL-EXTRA-HEADERS is a sequence of the following items:
+
+* **\| GENERIC-EXTRA-HEADER-FLAGS \|**
+
+  where GENERIC-EXTRA-HEADER-FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-HEADER list, bits[1..2] equal to 2-bit constant GENERIC_EXTRA_HEADER_FLAGS, and further bits interpreted depending on packet type:
+
+  + bit[3]. If the packet type is Samp-Unicast-Data-Packet, Samp-From-Santa-Data-Packet, Samp-To-Santa-Data-Or-Error-Packet - bit[3] is IS-PROBE flag. For other packet types - RESERVED (MUST be zero)
+  + bit[4]. If the packet type is Samp-From-Santa-Data-Packet, bit[4] is TARGET-COLLECT-LAST-HOPS flag. If the packet type is Samp-Route-Update-Packet, it is an UPDATE-MAX-TTL flag. For other packet types - RESERVED (MUST be zero)
+  + bit[5]. If the packet type is Samp-Route-Update-Packet, it is an UPDATE-FORWARD-TO-SANTA-DELAY flag. For other packet types - RESERVED (MUST be zero)
+  + bits [6..] - RESERVED (MUST be zeros)
+
+* **\| UNICAST-EXTRA-HEADER-LOOP-ACK \| LOOP-ACK-ID \|**
+
+  where UNICAST-EXTRA-HEADER-LOOP-ACK is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-DATA list, bits[1..2] equal to a 2-bit constant UNICAST_EXTRA_HEADER_LOOP_ACK, and bits[3..] representing NODE-ID of the address where to send the LOOP-ACK, and LOOP-ACK-ID is an Encoded-Unsigned-Int<max=2> field representing ID of the LOOP-ACK to be returned. This extra header MUST NOT be present for packets other than Samp-Unicast-Packet.
+
+* **\| TOSANTA-EXTRA-HEADER-LAST-INCOMING-HOP \|**
+
+  where TOSANTA-EXTRA-HEADER-FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-HEADER list, bits[1..3] equal to 3-bit constant TOSANTA_EXTRA_HEADER_LAST_INCOMING_HOP, and bits [5..] being node id. This extra header MUST NOT be present for packets other than Samp-To-Santa-Data-Or-Error-Packet. There can be multiple TOSANTA-EXTRA-HEADER-LAST-INCOMING-HOP extra headers within single packet.
+
+*NB: 2-bit extra header type constants MAY overlap as long as applicable types are different.*
+
 SAMP Packets
 ------------
 
 Samp-Unicast-Data-Packet: **\| SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| Target-Address \| PAYLOAD \|**
 
-where SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] equal to 0, bit[1] being GUARANTEED-DELIVERY flag, bit [2] being BACKWARD-GUARANTEED-DELIVERY, bit [3] being EXTRA-HEADERS-PRESENT, bit[4] being reserved (MUST be zero), and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set and is described below; Target-Address is described above, and PAYLOAD is a payload to be passed to the upper-layer protocol.
-
-OPTIONAL-EXTRA-HEADERS is a sequence of the following items:
-
-* **\| UNICAST-EXTRA-HEADER-LOOP-ACK \| LOOP-ACK-ID \|**
-
-  where UNICAST-EXTRA-HEADER-LOOP-ACK is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-DATA list, bits[1..3] equal to 3-bit constant UNICAST_EXTRA_HEADER_LOOP_ACK, and bits[4..] representing NODE-ID of the address where to send the LOOP-ACK, and LOOP-ACK-ID is an Encoded-Unsigned-Int<max=2> field representing ID of the LOOP-ACK to be returned.
-
-* **\| GENERIC-EXTRA-HEADER-FLAGS \|**
-
-  where GENETIC-EXTRA-HEADER-FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-HEADER list, bits[1..3] equal to 3-bit constant GENERIC_EXTRA_HEADER_FLAGS, bit[4] being IS-PROBE flag, bit [5] being TARGET-COLLECT-LAST-HOPS (this bit MUST NOT be set for any packet except for Samp-From-Santa-Data-Packet), and bits [6..] reserved (MUST be zeros).
-
-* **\| TOSANTA-EXTRA-HEADER-LAST-INCOMING-HOP \|**
-
-  where TOSANTA-EXTRA-HEADER-FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-HEADER list, bits[1..3] equal to 3-bit constant TOSANTA_EXTRA_HEADER_LAST_INCOMING_HOP, and bits [5..] being node id. This extra header MUST NOT be present for Samp-Unicast-Data-Packets. There can be multiple TOSANTA-EXTRA-HEADER-LAST-INCOMING-HOP extra headers within single packet.
+where SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] equal to 0, bit[1] being GUARANTEED-DELIVERY flag, bit [2] being BACKWARD-GUARANTEED-DELIVERY, bit [3] being EXTRA-HEADERS-PRESENT, bit[4] being reserved (MUST be zero), and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set and is described above; Target-Address is described above, and PAYLOAD is a payload to be passed to the upper-layer protocol.
 
 If Target-Address is Root (i.e. =0), it MUST NOT contain VIA fields within; in addition, if Target-Address is Root (i.e. =0), the packet MUST NOT have BACKWARD-GUARANTEED-DELIVERY flag set.
 
-If IS-PROBE flag is set, then PAYLOAD is treated differently. When destination receives Samp-Unicast-Data-Packet with IS-PROBE flag set, destination doesn't pass PAYLOAD to upper-layer protocol. Instead, destination parses PAYLOAD as follows: **\| PROBE-TYPE \| PROBE-EXTRA-HEADERS \| PROBE-PAYLOAD \|** where PROBE-TYPE is 1-byte bitfield substrate, with bits [0..2] being either PROBE_UNICAST or PROBE_TO_SANTA, bit[3] being PROBE-EXTRA-HEADERS-PRESENT; OPTIONAL-PROBE-EXTRA-HEADERS are similar to OPTIONAL-EXTRA-HEADERS, and PROBE-PAYLOAD takes the rest of the PAYLOAD; if PROBE-TYPE==PROBE_UNICAST, then destination Device sends Samp-Unicast-Data-Packet back to Root, with PAYLOAD copied from PROBE-PAYLOAD, and extra headers formed from PROBE-EXTRA-HEADERS, "as if" this packet is sent in reply to IS-PROBE packet by upper layer, but adding IS-PROBE flag (as a part of GENERIC-EXTRA-FLAGS extra header). If PROBE-TYPE==PROBE_TO_SANTA, destination Device sends a Samp-To-Santa-Data-Or-Error-Packet, with PAYLOAD copied from PROBE-PAYLOAD, "as if" the packet is sent in reply to IS-PROBE packet by upper layer, but adding IS-PROBE flag (as a part of GENERIC-EXTRA-FLAGS extra header).
+If IS-PROBE flag is set, then PAYLOAD is treated differently. When destination receives Samp-Unicast-Data-Packet with IS-PROBE flag set, destination doesn't pass PAYLOAD to upper-layer protocol. Instead, destination parses PAYLOAD as follows: **\| PROBE-TYPE \| OPTIONAL-PROBE-EXTRA-HEADERS \| PROBE-PAYLOAD \|** where PROBE-TYPE is 1-byte bitfield substrate, with bits [0..2] being either PROBE_UNICAST or PROBE_TO_SANTA, bit[3] being PROBE-EXTRA-HEADERS-PRESENT; OPTIONAL-PROBE-EXTRA-HEADERS are similar to OPTIONAL-EXTRA-HEADERS, and PROBE-PAYLOAD takes the rest of the PAYLOAD; if PROBE-TYPE==PROBE_UNICAST, then destination Device sends Samp-Unicast-Data-Packet back to Root, with PAYLOAD copied from PROBE-PAYLOAD, and extra headers formed from PROBE-EXTRA-HEADERS, "as if" this packet is sent in reply to IS-PROBE packet by upper layer, but adding IS-PROBE flag (as a part of GENERIC-EXTRA-FLAGS extra header). If PROBE-TYPE==PROBE_TO_SANTA, destination Device sends a Samp-To-Santa-Data-Or-Error-Packet, with PAYLOAD copied from PROBE-PAYLOAD, "as if" the packet is sent in reply to IS-PROBE packet by upper layer, but adding IS-PROBE flag (as a part of GENERIC-EXTRA-FLAGS extra header).
 
 Samp-Unicast-Data-Packet is processed as specified in Uni-Cast Processing section above; if GUARANTEED-DELIVERY flag is set, packet is sent in 'Guaranteed Uni-Cast' mode. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
 
@@ -266,7 +276,7 @@ When target Device receives the packet, and sends reply back, it MUST set GUARAN
 
 Samp-From-Santa-Data-Packet: **\| SAMP-FROM-SANTA-DATA-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| REQUEST-ID \| DELAY-UNIT \| MULTIPLE-RETRANSMITTING-ADDRESSES \| BROADCAST-BUS-TYPE-LIST \| Target-Address \| TARGET-DELAY \| PAYLOAD \|**
 
-where SAMP-FROM-SANTA-DATA-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_FROM_SANTA_DATA_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits[5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is similar to that of in Samp-Unicast-Data-Packet (though only GENERIC-\* extra headers MUST NOT be present), LAST-HOP is an Encoded-Unsigned-Int<max=2> representing node id of the last sender, REQUEST-ID is an Encoded-Unsigned-Int<max=4> field, DELAY-UNIT is an Encoded-Signed-Int<max=2> field, which specifies (in TODO way) units for subsequent DELAY fields, MULTIPLE-RETRANSMITTING-ADDRESSES is a Multiple-Target-Addresses-With-Extra-Data field described above (with Extra-Data being Encoded-Unsigned-Int<max=2> DELAY field taking into account DELAY-UNIT as described below), BROADCAST-BUS-TYPE-LIST is a zero-terminated list of `BUS-TYPE+1` values (enum values for BUS-TYPE TBD), Target-Address is described above, TARGET-REPLY-DELAY has the same type as DELAY fields, and represents delay for the target Device (also taking into account DELAY-UNIT). PAYLOAD is a payload to be passed to the upper-layer protocol.
+where SAMP-FROM-SANTA-DATA-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_FROM_SANTA_DATA_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits[5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above, LAST-HOP is an Encoded-Unsigned-Int<max=2> representing node id of the last sender, REQUEST-ID is an Encoded-Unsigned-Int<max=4> field, DELAY-UNIT is an Encoded-Signed-Int<max=2> field, which specifies (in TODO way) units for subsequent DELAY fields, MULTIPLE-RETRANSMITTING-ADDRESSES is a Multiple-Target-Addresses-With-Extra-Data field described above (with Extra-Data being Encoded-Unsigned-Int<max=2> DELAY field taking into account DELAY-UNIT as described below), BROADCAST-BUS-TYPE-LIST is a zero-terminated list of `BUS-TYPE+1` values (enum values for BUS-TYPE TBD), Target-Address is described above, TARGET-REPLY-DELAY has the same type as DELAY fields, and represents delay for the target Device (also taking into account DELAY-UNIT). PAYLOAD is a payload to be passed to the upper-layer protocol.
 
 To calculate delay for specific DELAY and DELAY-UNIT, the following formula is used (the formula as written is assumed to be in floating-point; other equivalent implementations are possible depending in particular on timer resolution for specific Device): `delay = 1 millisecond * DELAY * (2^DELAY_UNIT)`; that is, DELAY-UNIT=0 and DELAY=1 means 1 milliseconds, DELAY-UNIT=1 and DELAY=1 means 2 milliseconds, and DELAY-UNIT =-2 and DELAY=1 means 0.25 milliseconds.
 
@@ -295,7 +305,7 @@ If IS-PROBE flag is set, then PAYLOAD is treated differently. When destination r
 
 Samp-To-Santa-Data-Or-Error-Packet: **\| SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-NO-TTL \| OPTIONAL-EXTRA-HEADERS \| PAYLOAD \|**
 
-where SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-NO-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_TO_SANTA_DATA_OR_ERROR_PACKET, bit [4] being IS_ERROR (indicating that PAYLOAD is in fact Routing-Error), bit[5] being EXTRA-HEADERS-PRESENT, and bits [6..] reserved (MUST be zero); OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is similar to that of in Samp-Unicast-Data-Packet (though only GENERIC-\* and TOSANTA-\* extra headers MUST NOT be present),note that Samp-To-Santa-Data-Or-Error-Packet doesn't contain TTL (as it is never retransmitted 'as is').
+where SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-NO-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_TO_SANTA_DATA_OR_ERROR_PACKET, bit [4] being IS_ERROR (indicating that PAYLOAD is in fact Routing-Error), bit[5] being EXTRA-HEADERS-PRESENT, and bits [6..] reserved (MUST be zero); OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above,note that Samp-To-Santa-Data-Or-Error-Packet doesn't contain TTL (as it is never retransmitted 'as is').
 
 Samp-To-Santa-Data-Or-Error-Packet is a packet intended from Device (either Retransmitting or non-Retransmitting) to Root. It is broadcasted by Device in several cases: 
 
@@ -319,9 +329,9 @@ where SAMP-ROUTING-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfie
 
 On receiving Samp-Routing-Error-Packet, it is processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Guaranteed Uni-Cast' mode.
 
-Samp-Route-Update-Packet: **\| SAMP-ROUTE-UPDATE-PACKET-FLAGS-AND-TTL \| Target-Address \| OPTIONAL-ORIGINAL-RT-CHECKSUM \| MODIFICATIONS-LIST \| RESULTING-RT-CHECKSUM \|**
+Samp-Route-Update-Packet: **\| SAMP-ROUTE-UPDATE-PACKET-FLAGS-AND-TTL \| Target-Address \| OPTIONAL-ORIGINAL-RT-CHECKSUM \| OPTIONAL-MAX-TTL \| OPTIONAL-FORWARD-TO-SANTA-DELAY-UNIT \| OPTIONAL-FORWARD-TO-SANTA-DELAY \| MODIFICATIONS-LIST \| RESULTING-RT-CHECKSUM \|**
 
-where SAMP-ROUTE-UPDATE-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_ROUTE_UPDATE_PACKET, bit [4] being DISCARD-FIRST (indicating that before processing MODIFICATIONS-LIST, the whole Routing Table must be discarded), and bits[5..] being TTL; Target-Address is the Target-Address field; OPTIONAL-ORIGINAL-RT-CHECKSUM is present only if DISCARD-FIRST flag is not set; OPTIONAL-ORIGINAL-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table checksum before the change is applied; if OPTIONAL-ORIGINAL-RT-CHECKSUM doesn't match to that of the Routing Table - it is TODO Routing-Error; MODIFICATIONS-LIST described below; RESULTING-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table Checksum after the change has been applied (if RESULTING-RT-CHECKSUM doesn't match - it is TODO Routing-Error). 
+where SAMP-ROUTE-UPDATE-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_ROUTE_UPDATE_PACKET, bit [4] being DISCARD-FIRST (indicating that before processing MODIFICATIONS-LIST, the whole Routing Table must be discarded), and bits[5..] being TTL; Target-Address is the Target-Address field; OPTIONAL-ORIGINAL-RT-CHECKSUM is present only if DISCARD-FIRST flag is not set; OPTIONAL-ORIGINAL-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table checksum before the change is applied; if OPTIONAL-ORIGINAL-RT-CHECKSUM doesn't match to that of the Routing Table - it is TODO Routing-Error; OPTIONAL-MAX-TTL is present only if UPDATE-MAX-TTL flag is present, and is a 1-byte field, OPTIONAL-FORWARD-TO-SANTA-DELAY-UNIT is present only if UPDATE-FORWARD-TO-SANTA-DELAY flag is present, and is an Encoded-Signed-Int<max=2> field, OPTIONAL-FORWARD-TO-SANTA-DELAY is present only if UPDATE-FORWARD-TO-SANTA-DELAY flag is present, and is an Encoded-Unsigned-Int<max=2> field; MODIFICATIONS-LIST described below; RESULTING-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table Checksum after the change has been applied (if RESULTING-RT-CHECKSUM doesn't match - it is TODO Routing-Error). 
 
 MODIFICATIONS-LIST consists of entries, where each entry looks as follows: **\| TARGET-ID-PLUS-1 \| OPTIONAL-BUS-ID-PLUS-1 \| OPTIONAL-NEXT-HOP-ACK-AND-INTRA-BUS-ID \|**
 
@@ -370,7 +380,7 @@ From SAMP point of view, all upper-layer-protocol packets can have one of three 
 then it is first sent as a Samp-From-Santa-Data-Packet or Samp-To-Santa-Data-Packet (depending on source being Root or Device). 
 
 TODO: piggy-back (for example, Route-Update on Unicast-Data for non-Retransmitting Device; is it ONLY Route-Update which can piggy-back?)
-TODO: update MAX-TTL, TOSANTA-DELAY-UNIT, and TOSANTA-DELAY for Retransmitting Devices
+TODO: special handling (to avoid induced congestion) for errors-on-broadcasts (including DELAY-exceeded)
 TODO: optional explicit loop begin (alongside VIA?)
 TODO: header (or full packet?) checksums! (or is it SADLP-\*'s responsibility?)
 
