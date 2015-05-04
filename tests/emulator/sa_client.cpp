@@ -39,7 +39,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 
 #define BUF_SIZE 512
-uint8_t data_buff[BUF_SIZE];
+//uint8_t data_buff[BUF_SIZE];
 //uint8_t msgLastSent[BUF_SIZE];
 uint8_t pid[ SASP_NONCE_SIZE ];
 uint8_t nonce[ SASP_NONCE_SIZE ];
@@ -69,9 +69,9 @@ int main_loop()
 	// in this preliminary implementation all memory segments are kept separately
 	// All memory objects are listed below
 	// TODO: revise memory management
-	uint8_t miscBuff[BUF_SIZE];
+/*	uint8_t miscBuff[BUF_SIZE];
 	uint8_t* stack = miscBuff; // first two bytes are used for sizeInOut
-	uint16_t stackSize = BUF_SIZE / 4 - 2;
+	uint16_t stackSize = BUF_SIZE / 4 - 2;*/
 	uint8_t timer_val = 0;
 	uint16_t wake_time;
 	// TODO: revise time/timer management
@@ -91,7 +91,8 @@ int main_loop()
 	uint16_t wake_time_continue_processing;
 
 	// do necessary initialization
-	sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+	SAGDP_DATA sagdp_data;
+	sagdp_init( &sagdp_data );
 	SASP_DATA sasp_data;
 	SASP_initAtLifeStart( &sasp_data );
 
@@ -198,8 +199,8 @@ printf( "Processing continued...\n" );
 			{
 				printf( "no reply received; the last message (if any) will be resent by timer\n" );
 				// TODO: to think: why do we use here handlerSAGDP_receiveRequestResendLSP() and not handlerSAGDP_timer()
-//				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
-				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
+//				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data, msgLastSent );
+				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 				if ( ret_code == SAGDP_RET_TO_LOWER_NONE )
 				{
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -210,8 +211,8 @@ printf( "Processing continued...\n" );
 				{
 					ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
 					assert( ret_code == SASP_RET_NONCE );
-//					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
-					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
+//					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data, msgLastSent );
+					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 					assert( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_TO_LOWER_NONE );
 				}
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -326,7 +327,7 @@ printf( "Processing continued...\n" );
 /*			case SASP_RET_TO_HIGHER_REPEATED:
 			{
 				printf( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
-				ret_code = handlerSAGDP_receiveRepeatedUP( &timer_val, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
+				ret_code = handlerSAGDP_receiveRepeatedUP( &timer_val, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data, msgLastSent );
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 				goto saspsend;
 				break;
@@ -334,8 +335,8 @@ printf( "Processing continued...\n" );
 			case SASP_RET_TO_HIGHER_LAST_SEND_FAILED:
 			{
 				printf( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
-//				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
-				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
+//				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data, msgLastSent );
+				ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 				if ( ret_code == SAGDP_RET_TO_LOWER_NONE )
 				{
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -345,8 +346,8 @@ printf( "Processing continued...\n" );
 				{
 					ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
 					assert( ret_code == SASP_RET_NONCE );
-//					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
-					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
+//					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data, msgLastSent );
+					ret_code = handlerSAGDP_receiveRequestResendLSP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 					assert( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_TO_LOWER_NONE );
 				}
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -363,14 +364,14 @@ printf( "Processing continued...\n" );
 		}
 
 		// 3. pass to SAGDP a new packet
-//		ret_code = handlerSAGDP_receiveUP( &timer_val, NULL, pid, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
-		ret_code = handlerSAGDP_receiveUP( &timer_val, NULL, pid, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
+//		ret_code = handlerSAGDP_receiveUP( &timer_val, NULL, pid, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data, msgLastSent );
+		ret_code = handlerSAGDP_receiveUP( &timer_val, NULL, pid, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 		if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
 			ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
 			assert( ret_code == SASP_RET_NONCE );
-//			ret_code = handlerSAGDP_receiveUP( &timer_val, nonce, pid, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP, msgLastSent );
-			ret_code = handlerSAGDP_receiveUP( &timer_val, nonce, pid, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
+//			ret_code = handlerSAGDP_receiveUP( &timer_val, nonce, pid, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data, msgLastSent );
+			ret_code = handlerSAGDP_receiveUP( &timer_val, nonce, pid, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 			assert( ret_code != SAGDP_RET_NEED_NONCE );
 		}
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -400,10 +401,10 @@ printf( "Processing continued...\n" );
 			}
 			case SAGDP_RET_TO_HIGHER_ERROR:
 			{
-				sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+				sagdp_init( &sagdp_data );
 				// TODO: reinit the rest of stack (where applicable)
 #if MODEL_IN_EFFECT == 1
-				ret_code = master_error( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4, stack, stackSize*/ );
+				ret_code = master_error( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4*/ );
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 #elif MODEL_IN_EFFECT == 2
 #else
@@ -429,10 +430,10 @@ printf( "Processing continued...\n" );
 
 processcmd:
 		// 4. Process received command (yoctovm)
-		ret_code = master_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4, stack, stackSize*/ );
+		ret_code = master_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4*/ );
 /*		if ( ret_code == YOCTOVM_RESET_STACK )
 		{
-			sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+			sagdp_init( &sagdp_data );
 			// TODO: reinit the rest of stack (where applicable)
 			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
 		}*/
@@ -452,8 +453,8 @@ entry:
 				bool restart_chain = tester_get_rand_val() % 8 == 0;
 				if ( restart_chain )
 				{
-					sagdp_init( data_buff + DADA_OFFSET_SAGDP );
-					ret_code = master_start( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4, stack, stackSize*/ );
+					sagdp_init( &sagdp_data );
+					ret_code = master_start( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4*/ );
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 					assert( ret_code == YOCTOVM_PASS_LOWER );
 				}
@@ -468,7 +469,7 @@ entry:
 				break;
 			}
 			case YOCTOVM_FAILED:
-				sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+				sagdp_init( &sagdp_data );
 				// NOTE: no 'break' is here as the rest is the same as for YOCTOVM_OK
 			case YOCTOVM_OK:
 			{
@@ -480,7 +481,7 @@ entry:
 				if ( start_now )
 				{
 					PRINTF( "   ===  YOCTOVM_OK, forced chain restart  ===\n" );
-					ret_code = master_start( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4, stack, stackSize*/ );
+					ret_code = master_start( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4*/ );
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 					assert( ret_code == YOCTOVM_PASS_LOWER );
 					// one more trick: wait for some time to ensure that slave will start its own chain, and then send "our own" chain start
@@ -521,7 +522,7 @@ processcmd:
 		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL, &control_prog_state ); //master_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP );
 /*		if ( ret_code == YOCTOVM_RESET_STACK )
 		{
-			sagdp_init( data_buff + DADA_OFFSET_SAGDP );
+			sagdp_init( &sagdp_data );
 			// TODO: reinit the rest of stack (where applicable)
 			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
 		}*/
@@ -554,12 +555,12 @@ entry:
 #endif
 			
 		// 5. SAGDP
-		ret_code = handlerSAGDP_receiveHLP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
+		ret_code = handlerSAGDP_receiveHLP( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 		if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
 			ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
 			assert( ret_code == SASP_RET_NONCE );
-			ret_code = handlerSAGDP_receiveHLP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, stack, stackSize, data_buff + DADA_OFFSET_SAGDP );
+			ret_code = handlerSAGDP_receiveHLP( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 			assert( ret_code != SAGDP_RET_NEED_NONCE );
 		}
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );

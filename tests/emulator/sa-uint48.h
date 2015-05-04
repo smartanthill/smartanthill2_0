@@ -79,6 +79,12 @@ int8_t sa_uint48_compare( const sa_uint48_t t1, const sa_uint48_t t2 )
 }
 
 inline
+bool is_uint48_zero( const sa_uint48_t t )
+{
+	return t[0] == 0 && t[1] == 0 && t[2] == 0 && t[3] == 0 && t[4] == 0 && t[5] == 0;
+}
+
+inline
 uint8_t sa_uint48_get_byte( const sa_uint48_t t, uint8_t byte_num ) // returns a byte at position byte_num (in the range 0-5) so that 0 corresponds to the least significant byte
 {
 	assert( byte_num <= 5 );
