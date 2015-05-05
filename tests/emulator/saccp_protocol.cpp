@@ -130,6 +130,10 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, vo
 //						saccp_control_program_process_incoming( mem_h, &po1, frame_sz, control_prog_state );
 						default_test_control_program_accept_reply( control_prog_state, first_byte & SAGDP_P_STATUS_MASK, &po1, frame_sz );
 					}
+					else
+					{
+						assert( NULL == "error: not implemented" );
+					}
 				}
 				while ( zepto_parsing_remaining_bytes( &po ) );
 			}
@@ -178,7 +182,7 @@ void handler_zepto_test_plugin( MEMORY_HANDLE mem_h )
 	zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
 }
 
-void handler_zepto_vm( MEMORY_HANDLE mem_h )
+void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 {
 	parser_obj po, po1;
 	zepto_parser_init( &po, mem_h );
@@ -199,7 +203,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h )
 //				int16_t body_part = zepto_parse_encoded_int16( &po );
 				// TODO: code below is HIGHLY temporary stub and should be replaced by the commented line above (with proper implementation of the respective function ASAP
 				// (for the sake of quick progress of mainstream development currently we assume that the value of body_part is within single +/- decimal digit)
-				uint16_t body_part = zepto_parse_uint8( &po );
+				uint16_t body_part = zepto_parse_encoded_uint16( &po );
 				assert( body_part < 128 );
 				body_part -= 64;
 
@@ -207,14 +211,15 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h )
 
 				//+++ TODO: rethink memory management
 				zepto_parser_init( &po1, &po );
-				zepto_parse_skip_block( &po, zepto_parsing_remaining_bytes( &po ) );
+//				zepto_parse_skip_block( &po, zepto_parsing_remaining_bytes( &po ) );
+				zepto_parse_skip_block( &po, data_sz );
 				zepto_copy_part_of_request_to_response_of_another_handle( mem_h, &po1, &po, MEMORY_HANDLE_DEFAULT_PLUGIN );
 				zepto_response_to_request( MEMORY_HANDLE_DEFAULT_PLUGIN );
 
 //				handler_zepto_test_plugin( MEMORY_HANDLE_DEFAULT_PLUGIN );
 				parser_obj po3;
 				zepto_parser_init( &po3, MEMORY_HANDLE_DEFAULT_PLUGIN );
-				default_test_plugin_handler( &pl_conf, &pl_state, &po3, MEMORY_HANDLE_DEFAULT_PLUGIN/*, WaitingFor* waiting_for*/ );
+				default_test_plugin_handler( &pl_conf, &pl_state, &po3, MEMORY_HANDLE_DEFAULT_PLUGIN/*, WaitingFor* waiting_for*/, first_byte );
 				// now we have raw data from plugin; form a frame
 				// TODO: here is a place to form optional headers, if any
 				uint16_t ret_data_sz = zepto_writer_get_response_size( MEMORY_HANDLE_DEFAULT_PLUGIN );
@@ -290,7 +295,8 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h )
 		uint16_t ret_data_full_sz = zepto_writer_get_response_size( mem_h );
 		uint16_t reply_hdr;
 		// TODO: it's a place to set TRUNCATED flag for the whole reply, if necessary
-		reply_hdr = ret_data_full_sz << 4;
+		// TODO: use bit field processing instead
+		reply_hdr = SACCP_REPLY_OK | (ret_data_full_sz << 4);
 		zepto_parser_encode_and_prepend_uint16( mem_h, reply_hdr );
 		zepto_write_prepend_byte( mem_h, reply_packet_in_chain_flags );
 	}
@@ -394,7 +400,7 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 			zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
 			zepto_response_to_request( mem_h );
 
-			handler_zepto_vm( mem_h ); // TODO: it can be implemented as an additional layer
+			handler_zepto_vm( mem_h, first_byte ); // TODO: it can be implemented as an additional layer
 			return SACCP_RET_PASS_LOWER;
 			break;
 		}

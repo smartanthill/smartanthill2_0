@@ -69,7 +69,7 @@ uint8_t default_test_plugin_handler_continue( const void* plugin_config, void* p
 }
 
 
-uint8_t default_test_plugin_handler( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply/*, WaitingFor* waiting_for*/ ) 
+uint8_t default_test_plugin_handler( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply/*, WaitingFor* waiting_for*/, uint8_t first_byte ) 
 {
 	const DefaultTestingPluginConfig* pc = (DefaultTestingPluginConfig*) plugin_config;
 	DefaultTestingPluginState* ps = (DefaultTestingPluginState*)plugin_state;
@@ -77,7 +77,8 @@ uint8_t default_test_plugin_handler( const void* plugin_config, void* plugin_sta
 	if ( ps->state == 0 )
 	{
 		uint16_t msg_size = zepto_parsing_remaining_bytes( command ); // all these bytes + (potentially) {padding_size + padding} will be written
-		ps->first_byte = zepto_parse_uint8( command );
+//		ps->first_byte = zepto_parse_uint8( command );
+		ps->first_byte = first_byte;
 		if ( ( ps->first_byte & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) == SAGDP_P_STATUS_ERROR_MSG )
 		{
 			PRINTF( "slave_process(): ERROR MESSAGE RECEIVED IN YOCTO\n" );

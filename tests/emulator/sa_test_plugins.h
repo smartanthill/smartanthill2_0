@@ -50,7 +50,7 @@ struct DefaultTestingPluginState
 };
 
 uint8_t default_test_plugin_handler_init( const void* plugin_config, void* plugin_state );
-uint8_t default_test_plugin_handler( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply/*, WaitingFor* waiting_for*/ );
+uint8_t default_test_plugin_handler( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply/*, WaitingFor* waiting_for*/, uint8_t first_byte );
 
 
 #endif // __SA_TEST_PLUGINS_H__

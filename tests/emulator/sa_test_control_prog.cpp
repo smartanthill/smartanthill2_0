@@ -104,7 +104,7 @@ uint8_t default_test_control_program_start_new( void* control_prog_state, MEMORY
 		// need to add explicit exit command to specify packet status-in-chain of the reply
 		zepto_write_uint8( reply, ZEPTOVM_OP_EXIT );
 		zepto_write_uint8( reply, (uint8_t)SAGDP_P_STATUS_INTERMEDIATE ); // TODO: if padding is required, add necessary data here
-		reply_sz = zepto_writer_get_response_size( reply );
+//		reply_sz = zepto_writer_get_response_size( reply );
 	}
 	else
 	{
@@ -185,7 +185,8 @@ uint8_t default_test_control_program_accept_reply( void* control_prog_state, uin
 	INCREMENT_COUNTER( 4, "master_continue(), packet received" );
 
 //	uint16_t msg_size = zepto_parsing_remaining_bytes( received ); // all these bytes + (potentially) {padding_size + padding} will be written
-	ps->first_byte = packet_status;
+//	ps->first_byte = packet_status;
+	ps->first_byte = zepto_parse_uint8( received );
 //	ps->first_byte = zepto_parse_uint8( received );
 	if ( ( ps->first_byte & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) == SAGDP_P_STATUS_ERROR_MSG )
 	{
