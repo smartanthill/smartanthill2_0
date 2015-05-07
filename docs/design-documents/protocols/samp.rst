@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.10
+:Version:   v0.0.11
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -59,6 +59,8 @@ SAMP underlying protocol (normally SADLP-\*), MUST support the following operati
 * bus uni-cast with ACK
 
 NB: in many cases, these operations may be simulated using very few operations as primitives; for example, PHY-level broadcast can be used to create SADLP-\*-level multi-cast by adding, for example, NEXT-HOP-NODE-ID.
+
+All SmartAnthill Devices SHOULD, and all SmartAnthill Retransmitting MUST implement some kind of collision avoidance (at least CSMA/CA, a.k.a. "listen before talk with random delay").
 
 SmartAnthill Retransmitting Devices
 -----------------------------------
@@ -101,10 +103,19 @@ Recovery from route changes/failures is vital for any mesh protocol. SAMP does i
 * on retransmit #N, SAMP switches GUARANTEED-DELIVERY flag on
 * when GUARANTEED-DELIVERY flag is set, SAMP uses "bus unicast with ACK" underlying-protocol mode
 * if "bus unicast with ACK" fails for M times (with exponentially increasing timeouts), link failure is assumed
-* link failure is reported to the Root, so it can initiate route discovery to the node on the other side of the failed link (using Samp-From-Santa-Data-Packet)
+* link failure (as described above) is reported to the Root, so it can initiate route discovery to the node on the other side of the failed link (using Samp-From-Santa-Data-Packet)
 
   + if link failure is detected from the side of the link which is close to Root, link failure reporting is done by sending Routing-Error (which always come in GUARANTEED-DELIVERY mode) back to Root
   + if link failure is detected from the side of the link which is far from Root, link failure reporting is done by broadcasting Samp-To-Santa-Data-Or-Error-Packet, which is then converted into Samp-Forward-To-Santa-Data-Or-Error-Packet (which is always sent in GUARANTEED-DELIVERY mode) by all Retransmitting Devices which have received it.
+
+Time-Based Collision Avoidance and Collision Domains
+----------------------------------------------------
+
+To reduce number of collisions during broadcasts (which is important even when CSMA/CA is present, because CSMA/CA provides only probabilistic success), SAMP supports explicit time-based collision avoidance. In particular:
+
+* when performing a 'network flood' (using Samp-From-Santa-Data-Packet), Root MAY specify explicit time delays for each node. 
+* Root MAY specify FORWARD-TO-SANTA-DELAY-\* parameters; whenever a Samp-To-Santa-Data-Or-Error-Packet (these are essentially sent as "anybody who can hear this, forward it to Root"), is received by Retransmitting Node, each of receiving Retransmitting Nodes waits according to FORWARD-TO-SANTA-DELAY before retransmitting.
+* In addition, each SAMP packet, MAY have a 'Collision-Domain' restrictions (i.e. "from t0-from-now to t1-from-now, don't transmit on Collision-Domain #CD); these restrictions specify . **Retransmission nodes SHOULD monitor Collision-Domain headers and work accordingly, even if the packet is not addressed to this Retransmission Node**.
 
 
 Target-Address, Multiple-Target-Addresses, and Multiple-Target-Addresses-With-Extra-Data
@@ -250,6 +261,12 @@ Most of SAMP packets have OPTIONAL-EXTRA-HEADERS field. It has a generic structu
   + bit[6]. If the packet type is Samp-Route-Update-Packet, the bit is an UPDATE-FORWARD-TO-SANTA-DELAY flag. For other packet types - RESERVED (MUST be zero)
   + bits [7..] - RESERVED (MUST be zeros)
 
+* **\| GENERIC-EXTRA-HEADER-COLLISION-DOMAIN \| COLLISION-DOMAIN-ID-AND-FLAG \| COLLISION-DOMAIN-T0 \| COLLISION-DOMAIN-T1 \| ... \|**
+
+  where GENERIC-EXTRA-HEADER-COLLISION-DOMAIN is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-HEADER list, bits[1..2] equal to 2-bit constant GENERIC_EXTRA_HEADER_COLLISION_DOMAIN, and bits [3..] equal to DELAY-UNIT; COLLISION-DOMAIN-ID-AND-FLAG is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=0 indicating the end of collision-domain list, bits[1..] being COLLISION-DOMAIN-ID; COLLISION-DOMAIN-T0 and COLLISION-DOMAIN-T1 are Encoded-Unsigned-Int<max=2> fields specifying respectively beginning and end of the window ("from now") when COLLISION-DOMAIN-ID SHOULD NOT be disturbed.  There can be multiple GENERIC-EXTRA-HEADER-COLLISION-DOMAIN headers in the same packet.
+
+  GENERIC-EXTRA-HEADER-COLLISION-DOMAIN is a special kind of header; on receiving it, each node SHOULD take information within into account, and SHOULD NOT transfer over corresponding COLLISION-DOMAIN-ID within specified time window. In addition, whenever Retransmitting Device retransmits such a packet, it MUST calculate `NEW-COLLISION-DOMAIN-T0 = MAX(0,OLD-COLLISION-DOMAIN-T0 - NODE-DELAY)` and `NEW-COLLISION-DOMAIN-T1 = MAX(0,OLD-COLLISION-DOMAIN-T1 - NODE-DELAY + NODE-DELAY-ERROR)` and use `NEW-\*` values in the retransmitted packet; when doing it, if both NEW-COLLISION-DOMAIN-T0 and NEW-COLLISION-DOMAIN-T1 become =0, this header MUST be excluded.
+
 * **\| UNICAST-EXTRA-HEADER-LOOP-ACK \| LOOP-ACK-ID \|**
 
   where UNICAST-EXTRA-HEADER-LOOP-ACK is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-DATA list, bits[1..2] equal to a 2-bit constant UNICAST_EXTRA_HEADER_LOOP_ACK, and bits[3..] representing NODE-ID of the address where to send the LOOP-ACK, and LOOP-ACK-ID is an Encoded-Unsigned-Int<max=2> field representing ID of the LOOP-ACK to be returned. This extra header MUST NOT be present for packets other than Samp-Unicast-Packet.
@@ -282,23 +299,27 @@ When target Device receives the packet, and sends reply back, it MUST set GUARAN
 
 Samp-From-Santa-Data-Packet: **\| SAMP-FROM-SANTA-DATA-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| REQUEST-ID \| DELAY-UNIT \| MULTIPLE-RETRANSMITTING-ADDRESSES \| BROADCAST-BUS-TYPE-LIST \| Target-Address \| TARGET-DELAY \| OPTIONAL-PAYLOAD-SIZE \| PAYLOAD \|**
 
-where SAMP-FROM-SANTA-DATA-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_FROM_SANTA_DATA_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits[5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above, LAST-HOP is an Encoded-Unsigned-Int<max=2> representing node id of the last sender, REQUEST-ID is an Encoded-Unsigned-Int<max=4> field, DELAY-UNIT is an Encoded-Signed-Int<max=2> field, which specifies (in TODO way) units for subsequent DELAY fields, MULTIPLE-RETRANSMITTING-ADDRESSES is a Multiple-Target-Addresses-With-Extra-Data field described above (with Extra-Data being Encoded-Unsigned-Int<max=2> DELAY field taking into account DELAY-UNIT as described below), BROADCAST-BUS-TYPE-LIST is a zero-terminated list of `BUS-TYPE+1` values (enum values for BUS-TYPE TBD), Target-Address is described above, TARGET-REPLY-DELAY has the same type as DELAY fields, and represents delay for the target Device (also taking into account DELAY-UNIT); OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; PAYLOAD is a payload to be passed to the upper-layer protocol.
+where SAMP-FROM-SANTA-DATA-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_FROM_SANTA_DATA_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits[5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above, LAST-HOP is an Encoded-Unsigned-Int<max=2> representing node id of the last sender, REQUEST-ID is an Encoded-Unsigned-Int<max=4> field, DELAY-UNIT is an Encoded-Signed-Int<max=2> field, which specifies units for subsequent DELAY fields (as described below), MULTIPLE-RETRANSMITTING-ADDRESSES is a Multiple-Target-Addresses-With-Extra-Data field described above (with Extra-Data being either empty if DELAY-UNIT field=0, or otherwise Encoded-Unsigned-Int<max=2> DELAY field taking into account DELAY-UNIT as described below), BROADCAST-BUS-TYPE-LIST is a zero-terminated list of `BUS-TYPE+1` values (enum values for BUS-TYPE TBD), Target-Address is described above, TARGET-REPLY-DELAY has the same type as DELAY fields (and is absent if DELAY-UNIT=0), and represents delay for the target Device (also taking into account DELAY-UNIT); OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; PAYLOAD is a payload to be passed to the upper-layer protocol.
 
-To calculate delay for specific DELAY and DELAY-UNIT, the following formula is used (the formula as written is assumed to be in floating-point; other equivalent implementations are possible depending in particular on timer resolution for specific Device): `delay = 1 millisecond * DELAY * (2^DELAY_UNIT)`; that is, DELAY-UNIT=0 and DELAY=1 means 1 milliseconds, DELAY-UNIT=1 and DELAY=1 means 2 milliseconds, and DELAY-UNIT =-2 and DELAY=1 means 0.25 milliseconds.
+To calculate delay for specific DELAY and DELAY-UNIT, the following formula is used (the formula as written is assumed to be in floating-point; other equivalent implementations are possible depending in particular on timer resolution for specific Device): `delay = 1 millisecond * DELAY * (2^( DELAY_UNIT >0 ? DELAY_UNIT-1 : DELAY_UNIT ))`; that is, DELAY_UNIT=0 is a special case and indicates that there are no DELAY or TARGET-REPLY-DELAY fields at all, DELAY-UNIT=1 and DELAY=1 means 1 millisecond, DELAY-UNIT=2 and DELAY=1 means 2 milliseconds, and DELAY-UNIT =-2 and DELAY=1 means 0.25 milliseconds.
 
 Samp-From-Santa-Data-Packet is a packet sent by Root, which is intended to find destination which is 'somewhere around', but exact location is unknown. When Root needs to pass data to a Node for which it has no valid route, Root sends SAMP-FROM-SANTA-DATA-PACKET (or multiple packets), to each of Retransmitting Devices, in hope to find target Device and to pass the packet. 
 
-Samp-From-Santa-Data-Packet is processed as specified in Multi-Cast Processing section above, up to the point where all the buses for all the next hops are found. Starting from that point, Retransmitting Device processes Samp-From-Santa-Data-Packet proceeds as follows: 
+Samp-From-Santa-Data-Packet is processed as specified in Multi-Cast Processing section above, up to the point where all the buses for all the next hops are found; note that if Multi-Cast processing generates a Routing-Error, it is not transmitted immediately (see below). Starting from that point, Retransmitting Device processes Samp-From-Santa-Data-Packet proceeds as follows: 
 
 * replaces LAST-HOP field with it's own node id
 * creates a list broadcast-bus-list of it's own buses which match BROADCAST-BUS-TYPE-LIST
 * for each bus which is on a next-hop-bus list but not on the broadcast-bus-list - continue processing as specified in Multi-Cast Processing section above
 
-  + right before sending each modified packet - further modify all DELAY fields within MULTIPLE-RETRANSMITTING-ADDRESSES by subtracting time which passes between beginning receiving the packet and beginning transmitting the packet. **TODO: <0 ?**
+  + transmission MUST NOT be made until time specified in DELAY field for current node, passes. If the time in DELAY field (taking into account NODE-DELAY parameter) has already passed - node MUST introduce a random delay uniformly distributed from 0 to NODE-RANDOM-DELAY parameter.
+  + right before sending each modified packet - further modify all DELAY fields within MULTIPLE-RETRANSMITTING-ADDRESSES by subtracting NODE-DELAY parameter (which represents time which passes between beginning receiving the packet and beginning transmitting the packet). If resulting value is <0, it is made equal to 0.
 
 * for each bus which is on the broadcast-bus-list - broadcast modified packet over this bus
 
-  + right before broadcasting each modified packet - further modify all DELAY (including TARGET-REPLY-DELAY) fields within MULTIPLE-RETRANSMITTING-ADDRESSES by subtracting time which passes between beginning receiving the incoming packet and beginning transmitting the outgoing packet. **TODO: <0 ?**
+  + transmission MUST NOT be made until time specified in DELAY field for current node, passes. If the time in DELAY field (taking into account NODE-DELAY parameter) has already passed - node MUST introduce a random delay uniformly distributed from 0 to NODE-RANDOM-DELAY parameter.
+  + right before broadcasting each modified packet - further modify all DELAY (including TARGET-REPLY-DELAY) fields within MULTIPLE-RETRANSMITTING-ADDRESSES by subtracting NODE-DELAY parameter. If resulting value is <0, it is made equal to 0.
+
+If Retransmitting Device generates Routing-Error, then it MUST be delayed until time of TARGET-REPLY-DELAY + FORWARD-TO-SANTA-DELAY (taking into account corresponding units). If this time has already passed - Routing-Error is transferred with a random delay (from 0 to NODE-RANDOM-DELAY) from now.
 
 On target Device, Samp-From-Santa-Data-Packet waits until reply payload is ready (which is almost immediately if IS-PROBE is set, including 'discovery' packets, see below), then it is processed as follows:
 
@@ -382,10 +403,10 @@ As described above, type of Samp packet is always defined by bits [0..3] of the 
 Packet Urgency
 --------------
 
-From SAMP point of view, all upper-layer-protocol packets can have one of three urgency levels. If the packet has urgency URGENCY_LAZY, it is first sent as a Samp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent with GUARANTEED-DELIVERY). If the packet has urgency URGENCY_URGENT, it is first sent as a Samp-Unicast-Data-Packet with GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent as a Samp-\*-Santa-\* packet). If the packet has urgency URGENCY_TRIPLE_GALOP, 
+From SAMP point of view, all upper-layer-protocol packets can have one of three urgency levels. If the packet has urgency URGENCY_LAZY, it is first sent as a Samp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent with GUARANTEED-DELIVERY). If the packet has urgency URGENCY_QUITE_URGENT, it is first sent as a Samp-Unicast-Data-Packet with GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent as a Samp-\*-Santa-\* packet). If the packet has urgency URGENCY_TRIPLE_GALOP, 
 then it is first sent as a Samp-From-Santa-Data-Packet or Samp-To-Santa-Data-Packet (depending on source being Root or Device). 
 
-TODO: special handling (to avoid induced congestion) for errors-on-broadcasts (including DELAY-exceeded)
+TODO: separate RoutingTable routes and links; add NODE-DELAY, NODE-DELAY-ERROR, and NODE-RANDOM-DELAY into links (and specify that they're per-link when they're used); move FORWARD-TO-SANTA-\* to links too (and specify that it is per-link wherever it is used)
 TODO: optional explicit loop begin (alongside VIA?)
 TODO: header (or full packet?) checksums! (or is it SADLP-\*'s responsibility?)
 
