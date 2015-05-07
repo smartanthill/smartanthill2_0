@@ -39,9 +39,6 @@ Copyright (C) 2015 OLogN Technologies AG
 #include <stdio.h> 
 
 
-#define BUF_SIZE 512
-//uint8_t data_buff[BUF_SIZE];
-//uint8_t msgLastSent[BUF_SIZE];
 uint8_t pid[ SASP_NONCE_SIZE ];
 uint8_t nonce[ SASP_NONCE_SIZE ];
 
@@ -75,9 +72,6 @@ int main_loop()
 	// in this preliminary implementation all memory segments are kept separately
 	// All memory objects are listed below
 	// TODO: revise memory management
-/*	uint8_t miscBuff[BUF_SIZE];
-	uint8_t* stack = miscBuff; // first two bytes are used for sizeInOut
-	int stackSize = BUF_SIZE / 4 - 2;*/
 	uint8_t timer_val = 0;
 	uint16_t wake_time = 0;
 	// TODO: revise time/timer management
@@ -88,11 +82,11 @@ int main_loop()
 	uint8_t ret_code;
 
 	// test setup values
-	bool wait_for_incoming_chain_with_timer;
-	uint16_t wake_time_to_start_new_chain;
+	bool wait_for_incoming_chain_with_timer = 0;
+	uint16_t wake_time_to_start_new_chain = 0;
 
 	uint8_t wait_to_continue_processing = 0;
-	uint16_t wake_time_continue_processing;
+	uint16_t wake_time_continue_processing = 0;
 
 	// do necessary initialization
 	SASP_initAtLifeStart( &sasp_data ); // TODO: replace by more extensive restore-from-backup-etc
@@ -102,7 +96,7 @@ int main_loop()
 
 
 	printf("\nAwaiting client connection... \n" );
-	if (!communicationInitializeAsServer())
+	if (!communication_initialize())
 		return -1;
 
 	printf("Client connected.\n");
@@ -199,7 +193,7 @@ printf( "Processing continued...\n" );
 		if ( ret_code != COMMLAYER_RET_OK )
 		{
 			printf("\n\nWAITING FOR ESTABLISHING COMMUNICATION WITH SERVER...\n\n");
-			if (!communicationInitializeAsClient()) // regardles of errors... quick and dirty solution so far
+			if (!communication_initialize()) // regardles of errors... quick and dirty solution so far
 				return -1;
 			goto getmsg;
 		}

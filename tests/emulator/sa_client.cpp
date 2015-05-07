@@ -38,9 +38,6 @@ Copyright (C) 2015 OLogN Technologies AG
 #include <stdio.h> 
 
 
-#define BUF_SIZE 512
-//uint8_t data_buff[BUF_SIZE];
-//uint8_t msgLastSent[BUF_SIZE];
 uint8_t pid[ SASP_NONCE_SIZE ];
 uint8_t nonce[ SASP_NONCE_SIZE ];
 
@@ -69,9 +66,6 @@ int main_loop()
 	// in this preliminary implementation all memory segments are kept separately
 	// All memory objects are listed below
 	// TODO: revise memory management
-/*	uint8_t miscBuff[BUF_SIZE];
-	uint8_t* stack = miscBuff; // first two bytes are used for sizeInOut
-	uint16_t stackSize = BUF_SIZE / 4 - 2;*/
 	uint8_t timer_val = 0;
 	uint16_t wake_time;
 	// TODO: revise time/timer management
@@ -85,7 +79,7 @@ int main_loop()
 
 	// test setup values
 	bool wait_for_incoming_chain_with_timer = false;
-	uint16_t wake_time_to_start_new_chain;
+	uint16_t wake_time_to_start_new_chain = 0;
 
 	uint8_t wait_to_continue_processing = 0;
 	uint16_t wake_time_continue_processing;
@@ -97,7 +91,7 @@ int main_loop()
 	SASP_initAtLifeStart( &sasp_data );
 
 	// Try to open a named pipe; wait for it, if necessary. 
-	if ( !communicationInitializeAsClient() )
+	if ( !communication_initialize() )
 		return -1;
 
 
@@ -271,7 +265,7 @@ printf( "Processing continued...\n" );
 		if ( ret_code != COMMLAYER_RET_OK )
 		{
 			printf("\n\nWAITING FOR ESTABLISHING COMMUNICATION WITH SERVER...\n\n");
-			if (!communicationInitializeAsClient()) // regardles of errors... quick and dirty solution so far
+			if (!communication_initialize()) // regardles of errors... quick and dirty solution so far
 				return -1;
 			goto getmsg;
 		}
@@ -399,6 +393,7 @@ printf( "Processing continued...\n" );
 				// regular processing will be done below, but we need to jump over 
 				break;
 			}
+#if 0
 			case SAGDP_RET_TO_HIGHER_ERROR:
 			{
 				sagdp_init( &sagdp_data );
@@ -413,6 +408,7 @@ printf( "Processing continued...\n" );
 				goto entry;
 				break;
 			}
+#endif // 0
 			case SAGDP_RET_TO_LOWER_REPEATED:
 			{
 				goto saspsend;
@@ -685,7 +681,7 @@ saoudp_send:
 
 	}
 
-	communicationTerminate();
+	communication_terminate();
 
 	return 0;
 }

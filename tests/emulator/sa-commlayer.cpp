@@ -128,7 +128,16 @@ bool communicationInitializeAsClient()
 	return true;
 }
 
-void communicationTerminate()
+bool communication_initialize()
+{
+#ifdef USED_AS_MASTER
+	return communicationInitializeAsClient();
+#else // USED_AS_MASTER
+	return communicationInitializeAsServer();
+#endif // USED_AS_MASTER
+}
+
+void communication_terminate()
 {
 	CloseHandle(hPipe);
 	hPipe = INVALID_HANDLE_VALUE;
@@ -441,7 +450,7 @@ uint8_t buffer_out[ BUFSIZE ];
 
 
 
-bool communicationInitialize()
+bool communication_preinitialize()
 {
 #ifdef _MSC_VER
 	// do Windows magic
@@ -453,8 +462,14 @@ bool communicationInitialize()
 		printf("WSAStartup failed with error: %d\n", iResult);
 		return false;
 	}
+	return true;
+#else
+	return true;
 #endif
+}
 
+bool _communication_initialize()
+{
 	//Zero out socket address
 	memset(&sa_self, 0, sizeof sa_self);
 	memset(&sa_other, 0, sizeof sa_other);
@@ -481,7 +496,12 @@ bool communicationInitialize()
 
 	if (-1 == bind(sock, (struct sockaddr *)&sa_self, sizeof(sa_self)))
 	{
-		printf( "error bind failed\n" );
+#ifdef _MSC_VER
+		int error = WSAGetLastError();
+#else
+		int error = errno;
+#endif
+		printf( "bind sock failed; error %d\n", error );
 		CLOSE_SOCKET(sock);
 		return false;
 	}
@@ -495,17 +515,7 @@ bool communicationInitialize()
 	return true;
 }
 
-bool communicationInitializeAsServer()
-{
-	return communicationInitialize();
-}
-
-bool communicationInitializeAsClient()
-{
-	return communicationInitialize();
-}
-
-void communicationTerminate()
+void _communication_terminate()
 {
 	CLOSE_SOCKET(sock);
 }
@@ -564,103 +574,237 @@ uint8_t tryGetMessage( MEMORY_HANDLE mem_h )
 }
 
 
+#ifdef USED_AS_MASTER
 
- 
-int xxx(void)
+const char* inet_addr_as_string_with_cl = "127.0.0.1";
+int sock_with_cl;
+struct sockaddr_in sa_self_with_cl, sa_other_with_cl;
+
+#ifdef USED_AS_MASTER_COMMSTACK
+uint16_t self_port_num_with_cl = 7665;
+uint16_t other_port_num_with_cl = 7655;
+#else // USED_AS_MASTER_COMMSTACK
+uint16_t self_port_num_with_cl = 7655;
+uint16_t other_port_num_with_cl = 7665;
+#endif // USED_AS_MASTER_COMMSTACK
+
+uint8_t buffer_in_with_cl[ BUFSIZE ];
+uint8_t buffer_out_with_cl[ BUFSIZE ];
+
+bool communication_with_comm_layer_initialize()
 {
-	printf("STARTING SERVER...\n");
-	printf("==================\n\n");
-
-	// do Windows magic
-	WSADATA wsaData;
-	int iResult;
-	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-	if (iResult != 0) {
-		printf("WSAStartup failed with error: %d\n", iResult);
-		return 1;
-	}
-
-	// declarations
-	int bytes_sent;
-	int recsize;
-	char buffer_out[1024];
-	char buffer_in[1024];
-
-	int sock;
-	struct sockaddr_in sa_self, sa_other;
-
-	// data initializing
-
 	//Zero out socket address
-	memset(&sa_self, 0, sizeof sa_self);
-	memset(&sa_other, 0, sizeof sa_other);
+	memset(&sa_self_with_cl, 0, sizeof sa_self_with_cl);
+	memset(&sa_other_with_cl, 0, sizeof sa_other_with_cl);
 
 	//create an internet, datagram, socket using UDP
-	sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (-1 == sock) /* if socket failed to initialize, exit */
+	sock_with_cl = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (-1 == sock_with_cl) /* if socket failed to initialize, exit */
 	{
 		printf("Error Creating Socket\n");
-		exit(EXIT_FAILURE);
+		return false;
 	}
 
 	//The address is ipv4
-	sa_other.sin_family = AF_INET;
-	sa_self.sin_family = AF_INET;
+	sa_other_with_cl.sin_family = AF_INET;
+	sa_self_with_cl.sin_family = AF_INET;
 
 	//ip_v4 adresses is a uint32_t, convert a string representation of the octets to the appropriate value
-	sa_self.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sa_other.sin_addr.s_addr = inet_addr("127.0.0.1");
+	sa_self_with_cl.sin_addr.s_addr = inet_addr( inet_addr_as_string_with_cl );
+	sa_other_with_cl.sin_addr.s_addr = inet_addr( inet_addr_as_string_with_cl );
 
 	//sockets are unsigned shorts, htons(x) ensures x is in network byte order, set the port to 7654
-	sa_self.sin_port = htons(7667);
-	sa_other.sin_port = htons(7654);
+	sa_self_with_cl.sin_port = htons( self_port_num_with_cl );
+	sa_other_with_cl.sin_port = htons( other_port_num_with_cl );
 
-	if (-1 == bind(sock, (struct sockaddr *)&sa_self, sizeof(sa_self)))
+	if (-1 == bind(sock_with_cl, (struct sockaddr *)&sa_self_with_cl, sizeof(sa_self_with_cl)))
 	{
-		perror("error bind failed");
-		closesocket(sock);
-		exit(EXIT_FAILURE);
+#ifdef _MSC_VER
+		int error = WSAGetLastError();
+#else
+		int error = errno;
+#endif
+		printf( "bind sock_with_cl failed; error %d\n", error );
+		CLOSE_SOCKET(sock_with_cl);
+		return false;
 	}
 
-	socklen_t fromlen = sizeof(sa_other);
-
-#ifdef _WIN32
+#ifdef _MSC_VER
     unsigned long ul = 1;
-    ioctlsocket(sock, FIONBIO, &ul);
+    ioctlsocket(sock_with_cl, FIONBIO, &ul);
 #else
-    fcntl(sock,F_SETFL,O_NONBLOCK);
+    fcntl(sock_with_cl,F_SETFL,O_NONBLOCK);
+#endif
+	return true;
+}
+
+void communication_with_comm_layer_terminate()
+{
+	CLOSE_SOCKET(sock_with_cl);
+}
+
+bool communication_initialize()
+{
+	return communication_preinitialize() 
+#ifdef USED_AS_MASTER_COMMSTACK
+		&& _communication_initialize() 
+#endif
+		&& communication_with_comm_layer_initialize();
+}
+
+void communication_terminate()
+{
+	_communication_terminate();
+	communication_with_comm_layer_terminate();
+}
+
+uint8_t try_get_message_within_master( MEMORY_HANDLE mem_h )
+{
+	socklen_t fromlen = sizeof(sa_other_with_cl);
+	int recsize = recvfrom(sock_with_cl, (char *)buffer_in_with_cl, sizeof(buffer_in_with_cl), 0, (struct sockaddr *)&sa_other_with_cl, &fromlen);
+	if (recsize < 0) 
+	{
+#ifdef _MSC_VER
+		int error = WSAGetLastError();
+		if ( error == WSAEWOULDBLOCK )
+#else
+		int error = errno;
+		if ( error == EAGAIN || error == EWOULDBLOCK )
+#endif
+		{
+			return COMMLAYER_RET_PENDING;
+		}
+		else
+		{
+			printf( "unexpected error %d received while getting message\n", error );
+			return COMMLAYER_RET_FAILED;
+		}
+	}
+	else
+	{
+		zepto_write_block( mem_h, buffer_in_with_cl, recsize );
+		return COMMLAYER_RET_OK;
+	}
+
+}
+
+uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout )
+{
+	printf( "wait_for_communication_event()\n" );
+    fd_set rfds;
+    struct timeval tv;
+    int retval;
+
+    /* Watch stdin (fd 0) to see when it has input. */
+    FD_ZERO(&rfds);
+    FD_SET(sock_with_cl, &rfds);
+#ifdef USED_AS_MASTER_COMMSTACK
+    FD_SET(sock, &rfds);
 #endif
 
-	for ( int i=0;;i++)
+    /* Wait */
+    tv.tv_sec = 0;
+    tv.tv_usec = 1000000;
+
+    retval = select(2, &rfds, NULL, NULL, &tv);
+    /* Don't rely on the value of tv now! */
+
+    if (retval == -1)
 	{
-		printf("recv test....\n");
-		recsize = recvfrom(sock, (char *)buffer_in, sizeof(buffer_in), 0, (struct sockaddr *)&sa_other, &fromlen);
-		if (recsize < 0) 
+#ifdef _MSC_VER
+		int error = WSAGetLastError();
+//		if ( error == WSAEWOULDBLOCK )
+		printf( "error %d\n", error );
+#else
+        perror("select()");
+//		int error = errno;
+//		if ( error == EAGAIN || error == EWOULDBLOCK )
+#endif
+		assert(0);
+		return COMMLAYER_RET_FAILED;
+	}
+    else if (retval)
+	{
+		assert( retval == rfds.fd_count );
+//		assert(0);
+		if ( rfds.fd_array[0] == sock )
 		{
-//			fprintf(stderr, "%s\n", strerror(errno));
-//			exit(EXIT_FAILURE);
-			Sleep(100);
-			continue;
+			uint8_t ret_code = tryGetMessage( mem_h );
+			if ( ret_code == COMMLAYER_RET_FAILED )
+				return ret_code;
+			assert( ret_code == COMMLAYER_RET_OK );
+			return COMMLAYER_RET_FROM_DEV;
 		}
-		printf("recsize: %d\n ", recsize);
-		Sleep(1);
-		printf("datagram: %.*s\n", (int)recsize, buffer_in);
-//		printf( "received from port: %d\n", sa_from.sin_port );
-
-		// echo back
-
-		//sendto(int socket, char data, int dataLength, flags, destinationAddress, int destinationStructureLength)
-//		int sz_to_send = strlen(buffer);
-		buffer_in[recsize] = 0;
-		sprintf( buffer_out, "[%d]%s", i, buffer_in );
-		bytes_sent = sendto(sock, buffer_out, strlen(buffer_out)+1, 0, (struct sockaddr*)&sa_other, sizeof sa_other);
-		if (bytes_sent < 0) {
-			printf("Error sending packet: %s\n", strerror(errno));
-			exit(EXIT_FAILURE);
+		else 
+		{
+			assert( rfds.fd_array[0] == sock_with_cl );
+			uint8_t ret_code = try_get_message_within_master( mem_h );
+			if ( ret_code == COMMLAYER_RET_FAILED )
+				return ret_code;
+			assert( ret_code == COMMLAYER_RET_OK );
+			return COMMLAYER_RET_FROM_CENTRAL_UNIT;
 		}
+	}
+    else
+	{
+        return COMMLAYER_RET_TIMEOUT;
 	}
 }
 
+uint8_t send_within_master( MEMORY_HANDLE mem_h )
+{
+	printf( "send_within_master() called...\n" );
+	parser_obj po;
+	zepto_parser_init( &po, mem_h );
+	uint16_t sz = zepto_parsing_remaining_bytes( &po );
+	assert( sz <= BUFSIZE );
+	zepto_parse_read_block( &po, buffer_out_with_cl, sz );
+
+	
+	int bytes_sent = sendto(sock_with_cl, (char*)buffer_out_with_cl, sz, 0, (struct sockaddr*)&sa_other_with_cl, sizeof sa_other_with_cl);
+	if (bytes_sent < 0) 
+	{
+#ifdef _MSC_VER
+		int error = WSAGetLastError();
+		printf( "Error %d sending packet\n", error );
+#else
+		printf("Error sending packet: %s\n", strerror(errno));
+#endif
+		return COMMLAYER_RET_FAILED;
+	}
+	return COMMLAYER_RET_OK;
+}
+
+
+#ifdef USED_AS_MASTER_COMMSTACK
+
+uint8_t send_to_central_unit( MEMORY_HANDLE mem_h )
+{
+	return send_within_master( mem_h );
+}
+
+#else // USED_AS_MASTER_COMMSTACK
+
+uint8_t send_to_commm_stack( MEMORY_HANDLE mem_h )
+{
+	return send_within_master( mem_h );
+}
+
+#endif // USED_AS_MASTER_COMMSTACK
+
+#else // USED_AS_MASTER
+
+bool communication_initialize()
+{
+	return communication_preinitialize() && _communication_initialize();
+}
+
+void communication_terminate()
+{
+	_communication_terminate();
+}
+
+#endif // USED_AS_MASTER
 
 
 #elif

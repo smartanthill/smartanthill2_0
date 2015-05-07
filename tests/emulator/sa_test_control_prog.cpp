@@ -268,6 +268,8 @@ uint8_t default_test_control_program_accept_reply( void* control_prog_state, uin
 		*wait_to_process_time = tester_get_rand_val() % 5;
 		return CONTROL_PROG_WAIT_TO_CONTINUE;
 	}*/
+#else
+//	return default_test_control_program_accept_reply_continue( control_prog_state, reply );
 #endif
 }
 
