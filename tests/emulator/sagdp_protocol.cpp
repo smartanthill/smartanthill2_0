@@ -41,7 +41,7 @@ void cappedExponentiateLTO( uint8_t* lto )
 
 void cancelLTO( uint8_t* lto )
 {
-	*lto = 0;
+	*lto = 0xFF;
 }
 
 bool is_pid_in_range( const sa_uint48_t pid, const sa_uint48_t first_pid, const sa_uint48_t last_pid )
@@ -70,7 +70,7 @@ void sagdp_init( SAGDP_DATA* sagdp_data )
 	sa_uint48_set_zero( sagdp_data->prev_first_last_sent_packet_id );
 }
 
-uint8_t handlerSAGDP_timer( uint8_t* timeout, sasp_nonce_type nonce, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
+uint8_t handler_sagdp_timer( uint8_t* timeout, sasp_nonce_type nonce, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
 {
 	uint8_t state = sagdp_data->state;
 	if ( state == SAGDP_STATE_WAIT_REMOTE )
@@ -90,11 +90,11 @@ uint8_t handlerSAGDP_timer( uint8_t* timeout, sasp_nonce_type nonce, REQUEST_REP
 	}
 }
 
-uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
+uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
 {
 	PRINTF( "handlerSAGDP_receiveNewUP():           pid: %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 
-	INCREMENT_COUNTER( 21, "handlerSAGDP_receiveUP()" );
+	INCREMENT_COUNTER( 21, "handler_sagdp_receive_up()" );
 
 	// init parser object
 	parser_obj po;
@@ -103,14 +103,14 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 	uint8_t state = sagdp_data->state;
 	uint8_t packet_status = zepto_parse_uint8( &po );
 	packet_status &= SAGDP_P_STATUS_FULL_MASK; // TODO: use bit-field processing instead
-	PRINTF( "handlerSAGDP_receiveUP(): state: %d, packet_status: %d\n", state, packet_status );
+	PRINTF( "handler_sagdp_receive_up(): state: %d, packet_status: %d\n", state, packet_status );
 
 	if ( state == SAGDP_STATE_IDLE )
 	{
 #ifdef USED_AS_MASTER
 		if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_ERROR_MSG )
 		{
-			INCREMENT_COUNTER( 22, "handlerSAGDP_receiveUP(), idle, error message" );
+			INCREMENT_COUNTER( 22, "handler_sagdp_receive_up(), idle, error message" );
 
 			cancelLTO( &(sagdp_data->last_timeout) );
 			*timeout = sagdp_data->last_timeout;
@@ -152,15 +152,15 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			if ( isold )
 			{ 
 				// TODO: check against previous range
-				INCREMENT_COUNTER( 23, "handlerSAGDP_receiveUP(), idle, is-old" );
+				INCREMENT_COUNTER( 23, "handler_sagdp_receive_up(), idle, is-old" );
 				PRINTF( "SAGDP OK: state = %d, packet_status = %d; isold\n", state, packet_status );
 				if ( ( packet_status & SAGDP_P_STATUS_MASK ) ==  SAGDP_P_STATUS_INTERMEDIATE )
 				{
 					if ( nonce == NULL )
 						return SAGDP_RET_NEED_NONCE;
-					INCREMENT_COUNTER( 24, "handlerSAGDP_receiveUP(), idle, is-old intermediate" );
+					INCREMENT_COUNTER( 24, "handler_sagdp_receive_up(), idle, is-old intermediate" );
 
-					PRINTF( "handlerSAGDP_receiveUP(): nonce: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
+					PRINTF( "handler_sagdp_receive_up(): nonce: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
 
 					// apply nonce
 					sa_uint48_init_by( sagdp_data->next_last_sent_packet_id, nonce );
@@ -172,7 +172,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 				}
 				else
 				{
-					INCREMENT_COUNTER( 25, "handlerSAGDP_receiveUP(), idle, is-old terminating" );
+					INCREMENT_COUNTER( 25, "handler_sagdp_receive_up(), idle, is-old terminating" );
 					assert( ( packet_status & SAGDP_P_STATUS_MASK ) ==  SAGDP_P_STATUS_TERMINATING );
 					return SAGDP_RET_OK; // ignored
 				}
@@ -180,11 +180,11 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			bool isreply = is_pid_in_range( enc_reply_to, sagdp_data->first_last_sent_packet_id, sagdp_data->next_last_sent_packet_id );
 			if ( !isreply ) // above the range; silently ignore
 			{
-				INCREMENT_COUNTER( 26, "handlerSAGDP_receiveUP(), idle, too old, ignored" );
+				INCREMENT_COUNTER( 26, "handler_sagdp_receive_up(), idle, too old, ignored" );
 				PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d, !isreply\n", state, packet_status );
 				return SAGDP_RET_OK;
 			}
-			INCREMENT_COUNTER( 27, "handlerSAGDP_receiveUP(), idle, other" );
+			INCREMENT_COUNTER( 27, "handler_sagdp_receive_up(), idle, other" );
 			// for non-terminating, save packet ID
 			if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_INTERMEDIATE )
 			{
@@ -201,7 +201,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 		{
 			if ( nonce == NULL )
 				return SAGDP_RET_NEED_NONCE;
-			INCREMENT_COUNTER( 22, "handlerSAGDP_receiveUP(), idle, error message" );
+			INCREMENT_COUNTER( 22, "handler_sagdp_receive_up(), idle, error message" );
 			// send an error message to a communication partner and reinitialize
 			zepto_write_uint8( mem_h, SAGDP_P_STATUS_ERROR_MSG );
 			// TODO: add other relevant data, if any, and update sizeInOut
@@ -228,16 +228,16 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			bool isold = (!is_pid_zero(sagdp_data->prev_first_last_sent_packet_id)) && sa_uint48_compare( enc_reply_to, sagdp_data->first_last_sent_packet_id ) < 0  && sa_uint48_compare( enc_reply_to, sagdp_data->prev_first_last_sent_packet_id ) >= 0;
 			if ( isold )
 			{
-				INCREMENT_COUNTER( 23, "handlerSAGDP_receiveUP(), idle, is-old" );
+				INCREMENT_COUNTER( 23, "handler_sagdp_receive_up(), idle, is-old" );
 				PRINTF( "SAGDP OK: state = %d, packet_status = %d; isold\n", state, packet_status );
 				if ( ( packet_status & SAGDP_P_STATUS_MASK ) ==  SAGDP_P_STATUS_INTERMEDIATE )
 				{
 					// re-send LSP
 					if ( nonce == NULL )
 						return SAGDP_RET_NEED_NONCE;
-					INCREMENT_COUNTER( 24, "handlerSAGDP_receiveUP(), idle, is-old intermediate" );
+					INCREMENT_COUNTER( 24, "handler_sagdp_receive_up(), idle, is-old intermediate" );
 
-					PRINTF( "handlerSAGDP_receiveUP(): nonce: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
+					PRINTF( "handler_sagdp_receive_up(): nonce: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
 
 					// apply nonce
 					sa_uint48_init_by( sagdp_data->next_last_sent_packet_id, nonce );
@@ -249,7 +249,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 				{
 					if ( nonce == NULL )
 						return SAGDP_RET_NEED_NONCE;
-					INCREMENT_COUNTER( 25, "handlerSAGDP_receiveUP(), idle, is-old terminating" );
+					INCREMENT_COUNTER( 25, "handler_sagdp_receive_up(), idle, is-old terminating" );
 					assert( ( packet_status & SAGDP_P_STATUS_MASK ) ==  SAGDP_P_STATUS_TERMINATING );
 					// send an error message to a communication partner and reinitialize
 					zepto_write_uint8( mem_h, SAGDP_P_STATUS_ERROR_MSG );
@@ -262,7 +262,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			bool isreply = is_pid_in_range( enc_reply_to, sagdp_data->first_last_sent_packet_id, sagdp_data->next_last_sent_packet_id );
 			if ( !isreply )
 			{
-				INCREMENT_COUNTER( 26, "handlerSAGDP_receiveUP(), idle, too old, sys corrupted" );
+				INCREMENT_COUNTER( 26, "handler_sagdp_receive_up(), idle, too old, sys corrupted" );
 				// send an error message to a communication partner and reinitialize
 				zepto_write_uint8( mem_h, SAGDP_P_STATUS_ERROR_MSG );
 				// TODO: add other relevant data, if any, and update sizeInOut
@@ -275,7 +275,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			{
 				if ( nonce == NULL )
 					return SAGDP_RET_NEED_NONCE;
-				INCREMENT_COUNTER( 27, "handlerSAGDP_receiveUP(), idle, intermediate, sys corrupted" );
+				INCREMENT_COUNTER( 27, "handler_sagdp_receive_up(), idle, intermediate, sys corrupted" );
 				// send an error message to a communication partner and reinitialize
 				zepto_write_uint8( mem_h, SAGDP_P_STATUS_ERROR_MSG );
 				// TODO: add other relevant data, if any, and update sizeInOut
@@ -285,7 +285,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			}
 			else
 			{
-				INCREMENT_COUNTER( 28, "handlerSAGDP_receiveUP(), idle, terminating, ignored" );
+				INCREMENT_COUNTER( 28, "handler_sagdp_receive_up(), idle, terminating, ignored" );
 				assert( ( packet_status & SAGDP_P_STATUS_MASK ) ==  SAGDP_P_STATUS_TERMINATING );
 				return SAGDP_RET_OK; // ignored
 			}
@@ -293,7 +293,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 #endif
 		else // allowed combination: packet_status == SAGDP_P_STATUS_FIRST in SAGDP_STATE_IDLE
 		{
-			INCREMENT_COUNTER( 29, "handlerSAGDP_receiveUP(), idle, first" );
+			INCREMENT_COUNTER( 29, "handler_sagdp_receive_up(), idle, first" );
 			assert( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_FIRST && state == SAGDP_STATE_IDLE );
 			// note: this "first" packet can be start of a new chain, or a re-sent of the beginning of the previous chain (if that previous chain had a length of 2)
 			sasp_nonce_type this_chain_id;
@@ -307,9 +307,9 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			{
 				if ( nonce == NULL )
 					return SAGDP_RET_NEED_NONCE;
-				INCREMENT_COUNTER( 30, "handlerSAGDP_receiveUP(), idle, first, resent" );
+				INCREMENT_COUNTER( 30, "handler_sagdp_receive_up(), idle, first, resent" );
 
-				PRINTF( "handlerSAGDP_receiveUP(): nonce: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
+				PRINTF( "handler_sagdp_receive_up(): nonce: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
 
 				// apply nonce
 				sa_uint48_init_by( sagdp_data->next_last_sent_packet_id, nonce );
@@ -321,7 +321,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			}
 			else
 			{
-				INCREMENT_COUNTER( 31, "handlerSAGDP_receiveUP(), idle, first, new" );
+				INCREMENT_COUNTER( 31, "handler_sagdp_receive_up(), idle, first, new" );
 				cancelLTO( &(sagdp_data->last_timeout) );
 				*timeout = sagdp_data->last_timeout;
 				sa_uint48_init_by( sagdp_data->last_received_packet_id, pid );
@@ -345,7 +345,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 #ifdef USED_AS_MASTER
 		if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_ERROR_MSG )
 		{
-			INCREMENT_COUNTER( 40, "handlerSAGDP_receiveUP(), wait-remote, error" );
+			INCREMENT_COUNTER( 40, "handler_sagdp_receive_up(), wait-remote, error" );
 			cancelLTO( &(sagdp_data->last_timeout) );
 			*timeout = sagdp_data->last_timeout;
 			//+++ TODO: revise commented out logic below
@@ -372,7 +372,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_FIRST )
 		{
-			INCREMENT_COUNTER( 41, "handlerSAGDP_receiveUP(), wait-remote, first" );
+			INCREMENT_COUNTER( 41, "handler_sagdp_receive_up(), wait-remote, first" );
 			// note: this "first" packet can be start of a new chain, or a re-sent of the beginning of the previous chain (if that previous chain had a length of 2)
 			sa_uint48_t this_chain_id;
 //			zepto_parser_decode_uint( &po, this_chain_id, SAGDP_LSENT_PID_SIZE );
@@ -384,8 +384,8 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 				if ( nonce == NULL )
 					return SAGDP_RET_NEED_NONCE;
 
-				INCREMENT_COUNTER( 42, "handlerSAGDP_receiveUP(), wait-remote, first, resent" );
-				PRINTF( "handlerSAGDP_receiveUP(): nonce: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
+				INCREMENT_COUNTER( 42, "handler_sagdp_receive_up(), wait-remote, first, resent" );
+				PRINTF( "handler_sagdp_receive_up(): nonce: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
 
 				// apply nonce
 				sa_uint48_init_by( sagdp_data->next_last_sent_packet_id, nonce );
@@ -397,7 +397,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			}
 			else
 			{
-				INCREMENT_COUNTER( 43, "handlerSAGDP_receiveUP(), wait-remote, first, new (ignored)" );
+				INCREMENT_COUNTER( 43, "handler_sagdp_receive_up(), wait-remote, first, new (ignored)" );
 				PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
 				return SAGDP_RET_OK; // just ignore
 			}
@@ -424,9 +424,9 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 					PRINTF( "SAGDP: state = %d, packet_status = %d; isold\n", state, packet_status );
 					if ( nonce == NULL )
 						return SAGDP_RET_NEED_NONCE;
-					INCREMENT_COUNTER( 44, "handlerSAGDP_receiveUP(), wait-remote, is-old, resend requested" );
+					INCREMENT_COUNTER( 44, "handler_sagdp_receive_up(), wait-remote, is-old, resend requested" );
 
-					PRINTF( "handlerSAGDP_receiveUP(): nonce: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
+					PRINTF( "handler_sagdp_receive_up(): nonce: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
 
 					// apply nonce
 					sa_uint48_init_by( sagdp_data->next_last_sent_packet_id, nonce );
@@ -450,7 +450,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 				}
 				else
 				{
-					INCREMENT_COUNTER( 45, "handlerSAGDP_receiveUP(), wait-remote, is-old, resend NOT requested" );
+					INCREMENT_COUNTER( 45, "handler_sagdp_receive_up(), wait-remote, is-old, resend NOT requested" );
 					PRINTF( "SAGDP OK: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
 					return SAGDP_RET_OK;
 				}
@@ -458,16 +458,16 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			bool isreply = is_pid_in_range( enc_reply_to, sagdp_data->first_last_sent_packet_id, sagdp_data->next_last_sent_packet_id );
 			if ( !isreply )
 			{
-				INCREMENT_COUNTER( 46, "handlerSAGDP_receiveUP(), wait-remote, !is-reply, ignored" );
+				INCREMENT_COUNTER( 46, "handler_sagdp_receive_up(), wait-remote, !is-reply, ignored" );
 				PRINTF( "SAGDP OK: CORRRUPTED: state = %d, packet_status = %d, !isreply\n", state, packet_status );
 				return SAGDP_RET_OK; // silently ignore
 			}
-			INCREMENT_COUNTER( 47, "handlerSAGDP_receiveUP(), wait-remote, other" );
+			INCREMENT_COUNTER( 47, "handler_sagdp_receive_up(), wait-remote, other" );
 			// for non-terminating, save packet ID
 			if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_INTERMEDIATE )
 			{
-				INCREMENT_COUNTER( 48, "handlerSAGDP_receiveUP(), wait-remote, other, intermediate" );
-				PRINTF( "handlerSAGDP_receiveHLP(): PID of packet (LRECEIVED): %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
+				INCREMENT_COUNTER( 48, "handler_sagdp_receive_up(), wait-remote, other, intermediate" );
+				PRINTF( "handler_sagdp_receive_hlp(): PID of packet (LRECEIVED): %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 				sa_uint48_init_by( sagdp_data->last_received_packet_id, pid );
 			}
 			// form a packet for higher level
@@ -489,7 +489,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			// send an error message to a communication partner and reinitialize
 			if ( nonce == NULL )
 				return SAGDP_RET_NEED_NONCE;
-			INCREMENT_COUNTER( 40, "handlerSAGDP_receiveUP(), wait-remote, error" );
+			INCREMENT_COUNTER( 40, "handler_sagdp_receive_up(), wait-remote, error" );
 			zepto_write_uint8( mem_h, SAGDP_P_STATUS_ERROR_MSG );
 			// TODO: add other relevant data, if any, and update sizeInOut
 			sagdp_data->state = SAGDP_STATE_NOT_INITIALIZED;
@@ -502,7 +502,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_FIRST )
 		{
-			INCREMENT_COUNTER( 41, "handlerSAGDP_receiveUP(), wait-remote, first" );
+			INCREMENT_COUNTER( 41, "handler_sagdp_receive_up(), wait-remote, first" );
 			// main question: is it a re-sent or a start of an actually new chain 
 			sasp_nonce_type enc_reply_to;
 			zepto_parser_decode_encoded_uint_as_sa_uint48( &po, enc_reply_to );
@@ -511,9 +511,9 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			{
 				if ( nonce == NULL )
 					return SAGDP_RET_NEED_NONCE;
-				INCREMENT_COUNTER( 42, "handlerSAGDP_receiveUP(), wait-remote, first, resent" );
+				INCREMENT_COUNTER( 42, "handler_sagdp_receive_up(), wait-remote, first, resent" );
 
-				PRINTF( "handlerSAGDP_receiveUP(): nonce: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
+				PRINTF( "handler_sagdp_receive_up(): nonce: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
 
 				// apply nonce
 				sa_uint48_init_by( sagdp_data->next_last_sent_packet_id, nonce );
@@ -523,7 +523,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			}
 			else
 			{
-				INCREMENT_COUNTER( 43, "handlerSAGDP_receiveUP(), wait-remote, first, new (applied)" );
+				INCREMENT_COUNTER( 43, "handler_sagdp_receive_up(), wait-remote, first, new (applied)" );
 				sagdp_data->state = SAGDP_STATE_NOT_INITIALIZED;
 				PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
 				return SAGDP_RET_START_OVER_FIRST_RECEIVED;
@@ -552,9 +552,9 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 					PRINTF( "SAGDP: state = %d, packet_status = %d; isold\n", state, packet_status );
 					if ( nonce == NULL )
 						return SAGDP_RET_NEED_NONCE;
-					INCREMENT_COUNTER( 44, "handlerSAGDP_receiveUP(), wait-remote, is-old, resend requested" );
+					INCREMENT_COUNTER( 44, "handler_sagdp_receive_up(), wait-remote, is-old, resend requested" );
 
-					PRINTF( "handlerSAGDP_receiveUP(): nonce: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
+					PRINTF( "handler_sagdp_receive_up(): nonce: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
 
 					// apply nonce
 					sa_uint48_init_by( sagdp_data->next_last_sent_packet_id, nonce );
@@ -575,7 +575,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 				}
 				else
 				{
-					INCREMENT_COUNTER( 45, "handlerSAGDP_receiveUP(), wait-remote, is-old, resend NOT requested" );
+					INCREMENT_COUNTER( 45, "handler_sagdp_receive_up(), wait-remote, is-old, resend NOT requested" );
 					PRINTF( "SAGDP OK: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
 					return SAGDP_RET_OK;
 				}
@@ -586,19 +586,19 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 				// send an error message to a communication partner and reinitialize
 				if ( nonce == NULL )
 					return SAGDP_RET_NEED_NONCE;
-				INCREMENT_COUNTER( 46, "handlerSAGDP_receiveUP(), wait-remote, !is-reply, ignored" );
+				INCREMENT_COUNTER( 46, "handler_sagdp_receive_up(), wait-remote, !is-reply, ignored" );
 				zepto_write_uint8( mem_h, SAGDP_P_STATUS_ERROR_MSG );
 				// TODO: add other relevant data, if any, and update sizeInOut
 				sagdp_data->state = SAGDP_STATE_NOT_INITIALIZED;
 				PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d, !isreply\n", state, packet_status );
 				return SAGDP_RET_SYS_CORRUPTED;
 			}
-			INCREMENT_COUNTER( 47, "handlerSAGDP_receiveUP(), wait-remote, other" );
+			INCREMENT_COUNTER( 47, "handler_sagdp_receive_up(), wait-remote, other" );
 			// for non-terminating, save packet ID
 			if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_INTERMEDIATE )
 			{
-				INCREMENT_COUNTER( 48, "handlerSAGDP_receiveUP(), wait-remote, other, intermediate" );
-				PRINTF( "handlerSAGDP_receiveHLP(): PID of packet (LRECEIVED): %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
+				INCREMENT_COUNTER( 48, "handler_sagdp_receive_up(), wait-remote, other, intermediate" );
+				PRINTF( "handler_sagdp_receive_hlp(): PID of packet (LRECEIVED): %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 //				memcpy( data + DATA_SAGDP_LRECEIVED_PID_OFFSET, pid, SAGDP_LRECEIVED_PID_SIZE );
 				sa_uint48_init_by( sagdp_data->last_received_packet_id, pid );
 			}
@@ -623,7 +623,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 #ifdef USED_AS_MASTER
 		if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_ERROR_MSG )
 		{
-			INCREMENT_COUNTER( 40, "handlerSAGDP_receiveUP(), wait-remote, error" );
+			INCREMENT_COUNTER( 40, "handler_sagdp_receive_up(), wait-remote, error" );
 			cancelLTO( &(sagdp_data->last_timeout) );
 			*timeout = sagdp_data->last_timeout;
 			//+++ TODO: revise commented out logic below
@@ -650,7 +650,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_FIRST ) // TODO: same plus request ACK
 		{
-			INCREMENT_COUNTER( 41, "handlerSAGDP_receiveUP(), wait-remote, first" );
+			INCREMENT_COUNTER( 41, "handler_sagdp_receive_up(), wait-remote, first" );
 			// note: this "first" packet can be start of a new chain, or a re-sent of the beginning of the previous chain (if that previous chain had a length of 2)
 			sa_uint48_t this_chain_id;
 //			zepto_parser_decode_uint( &po, this_chain_id, SAGDP_LSENT_PID_SIZE );
@@ -673,7 +673,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			}
 			else
 			{
-				INCREMENT_COUNTER( 43, "handlerSAGDP_receiveUP(), wait-remote, first, new (ignored)" );
+				INCREMENT_COUNTER( 43, "handler_sagdp_receive_up(), wait-remote, first, new (ignored)" );
 				PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
 				return SAGDP_RET_OK; // just ignore
 			}
@@ -706,7 +706,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			}
 			else // ignore
 			{
-				INCREMENT_COUNTER( 46, "handlerSAGDP_receiveUP(), wait-remote, !is-reply, ignored" );
+				INCREMENT_COUNTER( 46, "handler_sagdp_receive_up(), wait-remote, !is-reply, ignored" );
 				PRINTF( "SAGDP OK: CORRRUPTED: state = %d, packet_status = %d, !isreply\n", state, packet_status );
 				return SAGDP_RET_OK; // silently ignore
 			}
@@ -717,7 +717,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			// send an error message to a communication partner and reinitialize
 			if ( nonce == NULL )
 				return SAGDP_RET_NEED_NONCE;
-			INCREMENT_COUNTER( 40, "handlerSAGDP_receiveUP(), wait-remote, error" );
+			INCREMENT_COUNTER( 40, "handler_sagdp_receive_up(), wait-remote, error" );
 			zepto_write_uint8( mem_h, SAGDP_P_STATUS_ERROR_MSG );
 			// TODO: add other relevant data, if any, and update sizeInOut
 			sagdp_data->state = SAGDP_STATE_NOT_INITIALIZED;
@@ -730,7 +730,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_FIRST ) // TODO: same plus request ACK
 		{
-			INCREMENT_COUNTER( 41, "handlerSAGDP_receiveUP(), wait-remote, first" );
+			INCREMENT_COUNTER( 41, "handler_sagdp_receive_up(), wait-remote, first" );
 			// main question: is it a re-sent or a start of an actually new chain 
 			sasp_nonce_type enc_reply_to;
 			zepto_parser_decode_encoded_uint_as_sa_uint48( &po, enc_reply_to );
@@ -751,7 +751,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 			}
 			else
 			{
-				INCREMENT_COUNTER( 43, "handlerSAGDP_receiveUP(), wait-remote, first, new (applied)" );
+				INCREMENT_COUNTER( 43, "handler_sagdp_receive_up(), wait-remote, first, new (applied)" );
 				sagdp_data->state = SAGDP_STATE_NOT_INITIALIZED;
 				PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
 				return SAGDP_RET_START_OVER_FIRST_RECEIVED;
@@ -790,7 +790,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 				// send an error message to a communication partner and reinitialize
 				if ( nonce == NULL )
 					return SAGDP_RET_NEED_NONCE;
-				INCREMENT_COUNTER( 40, "handlerSAGDP_receiveUP(), wait-remote, error" );
+				INCREMENT_COUNTER( 40, "handler_sagdp_receive_up(), wait-remote, error" );
 				zepto_write_uint8( mem_h, SAGDP_P_STATUS_ERROR_MSG );
 				// TODO: add other relevant data, if any, and update sizeInOut
 				sagdp_data->state = SAGDP_STATE_NOT_INITIALIZED;
@@ -803,7 +803,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 	
 	else // invalid states
 	{
-		INCREMENT_COUNTER( 50, "handlerSAGDP_receiveUP(), invalid state" );
+		INCREMENT_COUNTER( 50, "handler_sagdp_receive_up(), invalid state" );
 #if !defined USED_AS_MASTER
 		if ( nonce == NULL )
 			return SAGDP_RET_NEED_NONCE;
@@ -817,7 +817,7 @@ uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t
 	}
 }
 
-uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
+uint8_t handler_sagdp_receive_request_resend_lsp( uint8_t* timeout, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
 {
 	// SAGDP can legitimately receive a repeated packet in wait-remote state (the other side sounds like "we have not received anything from you; please resend, only then we will probably send you something new")
 	// LSP must be resent
@@ -826,7 +826,7 @@ uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, sasp_nonce_type 
 	zepto_parser_init( &po_lsm, MEMORY_HANDLE_SAGDP_LSM );
 	if ( zepto_parsing_remaining_bytes( &po_lsm ) == 0 )
 	{
-		INCREMENT_COUNTER( 63, "handlerSAGDP_receiveRequestResendLSP(), no lsm" );
+		INCREMENT_COUNTER( 63, "handler_sagdp_receive_request_resend_lsp(), no lsm" );
 		return SAGDP_RET_TO_LOWER_NONE;
 	}
 
@@ -835,7 +835,7 @@ uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, sasp_nonce_type 
 	{
 		if ( nonce == NULL )
 			return SAGDP_RET_NEED_NONCE;
-		INCREMENT_COUNTER( 60, "handlerSAGDP_receiveRequestResendLSP(), wait-remote" );
+		INCREMENT_COUNTER( 60, "handler_sagdp_receive_request_resend_lsp(), wait-remote" );
 
 		PRINTF( "handlerSAGDP_receivePID(): PID: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
 
@@ -852,7 +852,7 @@ uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, sasp_nonce_type 
 	{
 		if ( nonce == NULL )
 			return SAGDP_RET_NEED_NONCE;
-		INCREMENT_COUNTER( 61, "handlerSAGDP_receiveRequestResendLSP(), idle" );
+		INCREMENT_COUNTER( 61, "handler_sagdp_receive_request_resend_lsp(), idle" );
 
 		PRINTF( "handlerSAGDP_receivePID(): PID: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
 
@@ -867,7 +867,7 @@ uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, sasp_nonce_type 
 	}
 	else // invalid states
 	{
-		INCREMENT_COUNTER( 62, "handlerSAGDP_receiveRequestResendLSP(), invalid state" );
+		INCREMENT_COUNTER( 62, "handler_sagdp_receive_request_resend_lsp(), invalid state" );
 		// send an error message to a communication partner and reinitialize
 		zepto_write_uint8( mem_h, SAGDP_P_STATUS_ERROR_MSG );
 		// TODO: add other relevant data, if any, and update sizeInOut
@@ -876,7 +876,7 @@ uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, sasp_nonce_type 
 	}
 }
 
-uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
+uint8_t handler_sagdp_receive_hlp( uint8_t* timeout, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
 {
 	// It is a responsibility of a higher level to report the status of a packet. 
 	//
@@ -885,11 +885,11 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, sasp_nonce_type nonce, MEMORY
 	parser_obj po;
 	zepto_parser_init( &po, mem_h );
 
-	INCREMENT_COUNTER( 70, "handlerSAGDP_receiveHLP()" );
+	INCREMENT_COUNTER( 70, "handler_sagdp_receive_hlp()" );
 
 	uint8_t state = sagdp_data->state;
 	uint8_t packet_status = zepto_parse_uint8( &po );
-	PRINTF( "handlerSAGDP_receiveHLP(): state = %d, packet_status = %d\n", state, packet_status );
+	PRINTF( "handler_sagdp_receive_hlp(): state = %d, packet_status = %d\n", state, packet_status );
 
 	if ( state == SAGDP_STATE_IDLE )
 	{
@@ -906,7 +906,7 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, sasp_nonce_type nonce, MEMORY
 			// TODO: add other relevant data, if any, and update sizeInOut
 			sagdp_data->state = SAGDP_STATE_NOT_INITIALIZED;
 #endif // USED_AS_MASTER
-			INCREMENT_COUNTER( 71, "handlerSAGDP_receiveHLP(), idle, state/packet mismatch" );
+			INCREMENT_COUNTER( 71, "handler_sagdp_receive_hlp(), idle, state/packet mismatch" );
 			return SAGDP_RET_SYS_CORRUPTED;
 		}
 		assert( ( packet_status & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) == SAGDP_P_STATUS_FIRST ); // in idle state we can expect only "first" packet
@@ -945,7 +945,7 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, sasp_nonce_type nonce, MEMORY
 		*timeout = sagdp_data->last_timeout;
 
 		sagdp_data->state = SAGDP_STATE_WAIT_REMOTE;
-		INCREMENT_COUNTER( 72, "handlerSAGDP_receiveHLP(), idle, PACKET=FIRST" );
+		INCREMENT_COUNTER( 72, "handler_sagdp_receive_hlp(), idle, PACKET=FIRST" );
 		return SAGDP_RET_TO_LOWER_NEW;
 	}
 	else if ( state == SAGDP_STATE_WAIT_LOCAL )
@@ -962,7 +962,7 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, sasp_nonce_type nonce, MEMORY
 			// TODO: add other relevant data, if any
 			sagdp_data->state = SAGDP_STATE_NOT_INITIALIZED;
 #endif
-			INCREMENT_COUNTER( 73, "handlerSAGDP_receiveHLP(), wait-remote, state/packet mismatch" );
+			INCREMENT_COUNTER( 73, "handler_sagdp_receive_hlp(), wait-remote, state/packet mismatch" );
 			return SAGDP_RET_SYS_CORRUPTED;
 		}
 
@@ -999,8 +999,8 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, sasp_nonce_type nonce, MEMORY
 		*timeout = sagdp_data->last_timeout;
 
 		sagdp_data->state = packet_status == SAGDP_P_STATUS_TERMINATING ? SAGDP_STATE_IDLE : SAGDP_STATE_WAIT_REMOTE;
-		INCREMENT_COUNTER( 74, "handlerSAGDP_receiveHLP(), wait-remote, intermediate/terminating" );
-		INCREMENT_COUNTER_IF( 75, "handlerSAGDP_receiveHLP(), wait-remote, terminating", (packet_status >> 1) );
+		INCREMENT_COUNTER( 74, "handler_sagdp_receive_hlp(), wait-remote, intermediate/terminating" );
+		INCREMENT_COUNTER_IF( 75, "handler_sagdp_receive_hlp(), wait-remote, terminating", (packet_status >> 1) );
 		return SAGDP_RET_TO_LOWER_NEW;
 	}
 	else // invalid states
@@ -1016,7 +1016,7 @@ uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, sasp_nonce_type nonce, MEMORY
 		// TODO: add other relevant data, if any, and update sizeInOut
 #endif
 		sagdp_data->state = SAGDP_STATE_NOT_INITIALIZED;
-		INCREMENT_COUNTER( 76, "handlerSAGDP_receiveHLP(), invalid state" );
+		INCREMENT_COUNTER( 76, "handler_sagdp_receive_hlp(), invalid state" );
 		return SAGDP_RET_SYS_CORRUPTED;
 	}
 }

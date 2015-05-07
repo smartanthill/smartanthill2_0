@@ -703,8 +703,8 @@ uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout )
 #endif
 
     /* Wait */
-    tv.tv_sec = 0;
-    tv.tv_usec = 1000000;
+    tv.tv_sec = timeout / 1000;
+    tv.tv_usec = ((long)timeout % 1000) * 1000;
 
     retval = select(2, &rfds, NULL, NULL, &tv);
     /* Don't rely on the value of tv now! */

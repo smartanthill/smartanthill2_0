@@ -71,9 +71,9 @@ struct SAGDP_DATA
 
 // handlers
 void sagdp_init( SAGDP_DATA* sagdp_data );
-uint8_t handlerSAGDP_timer( uint8_t* timeout, sasp_nonce_type nonce, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
-uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, sasp_nonce_type nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
-uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
-uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
+uint8_t handler_sagdp_timer( uint8_t* timeout, sasp_nonce_type nonce, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
+uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
+uint8_t handler_sagdp_receive_request_resend_lsp( uint8_t* timeout, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
+uint8_t handler_sagdp_receive_hlp( uint8_t* timeout, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
 
 #endif // __SAGDP_PROTOCOL_H__
