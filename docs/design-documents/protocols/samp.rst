@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.12
+:Version:   v0.0.12a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -124,12 +124,13 @@ Recovery from route changes/failures is vital for any mesh protocol. SAMP does i
 Time-Based Collision Avoidance and Collision Domains
 ----------------------------------------------------
 
-To reduce number of collisions during broadcasts (which is important even when CSMA/CA is present, because CSMA/CA provides only probabilistic success), SAMP supports explicit time-based collision avoidance. In particular:
+To reduce number of induced collisions during broadcasts, a.k.a. "reply storm" (NB: avoiding "reply storms" is important even when CSMA/CA is present, because CSMA/CA provides only probabilistic success), SAMP supports explicit time-based collision avoidance. In particular:
 
 * when performing a 'network flood' (using Samp-From-Santa-Data-Packet), Root MAY specify explicit time delays for each node. 
 * Root MAY specify FORWARD-TO-SANTA-DELAY-\* parameters; whenever a Samp-To-Santa-Data-Or-Error-Packet (these are essentially sent as "anybody who can hear this, forward it to Root"), is received by Retransmitting Node, each of receiving Retransmitting Nodes waits according to FORWARD-TO-SANTA-DELAY before retransmitting.
 * In addition, each SAMP packet, MAY have a 'Collision-Domain' restrictions (i.e. "from t0-from-now to t1-from-now, don't transmit on Collision-Domain #CD); these restrictions specify . **Retransmission nodes SHOULD monitor Collision-Domain headers and work accordingly, even if the packet is not addressed to this Retransmission Node**.
 
+If explicit time-based collision avoidance is not used, Devices MUST use random delays (based on NODE-MAX-RANDOM-DELAY-UNIT and NODE-MAX-RANDOM-DELAY) where specified below.
 
 Target-Address, Multiple-Target-Addresses, and Multiple-Target-Addresses-With-Extra-Data
 ----------------------------------------------------------------------------------------
