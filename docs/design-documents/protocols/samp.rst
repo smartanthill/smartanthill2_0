@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.12b
+:Version:   v0.0.13
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -56,11 +56,22 @@ SAMP underlying protocol (normally SADLP-\*), MUST support the following operati
 * bus broadcast (addressed to all the Devices on the bus)
 * bus multi-cast (addressed to a list of the Devices on the bus)
 * bus uni-cast
-* bus uni-cast with ACK
 
 NB: in many cases, these operations may be simulated using very few operations as primitives; for example, PHY-level broadcast can be used to create SADLP-\*-level multi-cast by adding, for example, NEXT-HOP-NODE-ID.
 
 All SmartAnthill Devices SHOULD, and all SmartAnthill Retransmitting MUST implement some kind of collision avoidance (at least CSMA/CA, a.k.a. "listen before talk with random delay").
+
+Underlying Protocol Checksums
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When passing a packet to it's underlying protocol, SAMP MUST pass information which part of SAMP packet is SAMP header. Underlying protocol SHOULD provide separate checksums (and maybe separate error correction mechanisms) for SAMP-header and the-rest-of-SAMP-packet. In general, after applying error-correction: for SAMP-header 16-bit checksum of reasonable quality (such as CRC-16 or some kind of crypto-checksum truncated to 16 bits) is sufficient; for the-rest-of-SAMP-packet (or for the whole packet) an additional checksum MAY be applied (to ensure fast between-hop retransmit in case of error, opposed to waiting for SASP end-to-end checksum to be verified). In addition, underlying protocol MAY use "stronger" error correction for header than for the-rest-of-SAMP-packet.
+
+Underlying Protocol MUST report partially correct packets (those with SAMP-header checksum correct but the-rest-of-SAMP-packet incorrect); SAMP SHOULD use such headers in "promiscuous mode" operations, and in some other cases labeled as "partially correct packet".
+
+Promiscuous Mode Operations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Wherever possible (in particular, for all kinds of wireless communications unless explicitly prohibited by underlying standard), SmartAnthill Retransmitting Devices SHOULD listen the network in promiscuous mode; this doesn't affect security, but provides valuable header information and speeds up message delivery and recovery in certain practical cases.
 
 SmartAnthill Retransmitting Devices
 -----------------------------------
@@ -72,11 +83,11 @@ Highly mobile Devices SHOULD NOT be Retransmitting Devices. Building a reliable 
 Routing Tables
 --------------
 
-Each Retransmitting Device, after pairing, MUST keep a Routing Table. Routing Table consists of two lists: (a) Links list, with each entry being (LINK-ID,BUS-ID,INTRA-BUS-ID,NEXT-HOP-ACK,LINK-DELAY-UNIT,LINK-DELAY,LINK-DELAY-ERROR) tuple, and (b) Routes list, with each entry being (TARGET-ID,LINK-ID). LINK-ID is an intra-Routing-Table id, used to map routes into links.
+Each Retransmitting Device, after pairing, MUST keep a Routing Table. Routing Table consists of two lists: (a) Links list, with each entry being (LINK-ID,BUS-ID,INTRA-BUS-ID,NEXT-HOP-ACKS,LINK-DELAY-UNIT,LINK-DELAY,LINK-DELAY-ERROR) tuple, and (b) Routes list, with each entry being (TARGET-ID,LINK-ID). LINK-ID is an intra-Routing-Table id, used to map routes into links.
 
-Each entry in Routes list has semantics of "where to route packet addressed to TARGET-ID". In Links list, INTRA-BUS-ID=NULL means that link is an incoming link. 
+Each entry in Routes list has semantics of "where to route packet addressed to TARGET-ID". In Links list, INTRA-BUS-ID=NULL means that the entry is for an incoming link. Incoming link entries are relatiely rare, and are used to specify LINK-DELAYs.
 
-NEXT-HOP-ACK is a flag which is set if the nearest hop (over (BUS-ID,INTRA-BUS-ID)) is known to be able not only to receive packets, but to send ACKs back via "bus uni-cast with ACK" SADLP-\* operation; in general, NEXT-HOP-ACK cannot be calculated based only on bus type, and may change for the same link during system operation; SAMP is built to try using links with NEXT-HOP-ACK as much as possible, but MAY use links without NEXT-HOP-ACK if there are no alternatives.
+NEXT-HOP-ACKS is a flag which is set if the nearest hop (over (BUS-ID,INTRA-BUS-ID)) is known to be able not only to receive packets, but to send ACKs back via "bus uni-cast with ACK" SADLP-\* operation; in general, NEXT-HOP-ACKS cannot be calculated based only on bus type, and may change for the same link during system operation; SAMP is built to try using links with NEXT-HOP-ACKS as much as possible, but MAY use links without NEXT-HOP-ACKS if there are no alternatives.
 
 TODO: size reporting to Root (as # of unspecified 'storage units', plus sizes of Links entry and Routes entry expressed in the same 'storage units'). 
 
@@ -124,16 +135,16 @@ Recovery from route changes/failures is vital for any mesh protocol. SAMP does i
 Storm Avoidance
 ---------------
 
-To reduce number of induced collisions during broadcasts, a.k.a. "reply storm" (NB: avoiding "reply storms" is important even when CSMA/CA is present, because CSMA/CA provides only probabilistic success), SAMP supports two mechanisms: explicit time-based collision avoidance, and random-delay-based storm avoidance. 
+To reduce number of induced collisions during broadcasts, a.k.a. "request storm" and "reply storm" (NB: avoiding "storms" is important even when CSMA/CA is present, because CSMA/CA provides only probabilistic success), SAMP supports two mechanisms: explicit time-based collision avoidance, and random-delay-based storm avoidance. 
 
 Explicit Time-Based Storm Avoidance and Collision Domains
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 SAMP explicit time-based collision avoidance works as follows:
 
-* when performing a 'network flood' (using Samp-From-Santa-Data-Packet), Root MAY specify explicit time delays for each node. 
-* Root MAY specify FORWARD-TO-SANTA-DELAY-\* parameters; whenever a Samp-To-Santa-Data-Or-Error-Packet (these are essentially sent as "anybody who can hear this, forward it to Root"), is received by Retransmitting Node, each of receiving Retransmitting Nodes waits according to FORWARD-TO-SANTA-DELAY before retransmitting.
-* In addition, each SAMP packet, MAY have a 'Collision-Domain' restrictions (i.e. "from t0-from-now to t1-from-now, don't transmit on Collision-Domain #CD); these restrictions specify . **Retransmission nodes SHOULD monitor Collision-Domain headers and work accordingly, even if the packet is not addressed to this Retransmission Node**.
+* to avoid "request storm": when performing a 'network flood' (using Samp-From-Santa-Data-Packet), Root MAY specify explicit time delays for each node. 
+* to avoid "reply storm": Root MAY specify FORWARD-TO-SANTA-DELAY-\* parameters; whenever a Samp-To-Santa-Data-Or-Error-Packet (these are essentially sent as "anybody who can hear this, forward it to Root"), is received by Retransmitting Node, each of receiving Retransmitting Nodes waits according to FORWARD-TO-SANTA-DELAY before retransmitting.
+* In addition (to avoid "storms" in general), each SAMP packet, MAY have a 'Collision-Domain' restrictions (i.e. "from t0-from-now to t1-from-now, don't transmit on Collision-Domain #CD); these restrictions specify . **Retransmitting Devices SHOULD monitor Collision-Domain headers in promiscuous mode and work accordingly, even if the packet is not addressed to this Retransmitting Device**.
 
 Random-delay-based Storm Avoidance
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -197,13 +208,13 @@ Processing by Retransmitting Devices
 
 If packet is to be delivered to the next hop in 'Guaranteed' mode by Retransmitting Device, it is processed in the following manner:
 
-If the packet already has LOOP-ACK extra header (see below), and next hop has NEXT-HOP-ACK flag set in the Routing Table, then Retransmitting Device:
+If the packet already has LOOP-ACK extra header (see below), and next hop has NEXT-HOP-ACKS flag set in the Routing Table, then Retransmitting Device:
 
 * sends Samp-Loop-Ack-Packet (see below) back to the requestor specified in LOOP-ACK extra header 
 * removes LOOP-ACK extra header
 * continues processing as specified below
 
-If the next hop has NEXT-HOP-ACK flag set in the Routing Table, the packet is sent using underlying protocol's "bus uni-cast with ACK". If this operation returns 'failure' (i.e. ACK wasn't received), SAMP retries it 5 (TODO) times (with exponentially increasing timeouts - TODO) - it is treated as 'Routing-Error'. In particular:
+If the next hop has NEXT-HOP-ACKS flag set in the Routing Table, the packet is sent using underlying protocol's "bus uni-cast with ACK". If this operation returns 'failure' (i.e. ACK wasn't received), SAMP retries it 5 (TODO) times (with exponentially increasing timeouts - TODO) - it is treated as 'Routing-Error'. In particular:
 
 * if the packet has Root as Target-Address: 
 
@@ -215,7 +226,7 @@ If the next hop has NEXT-HOP-ACK flag set in the Routing Table, the packet is se
   + packet Samp-Routing-Error containing TBD Routing-Error is sent (towards Root)
   + the packet which wasn't delivered, doesn't need to be preserved (TODO: identify packet which has been lost within Routing-Error)
 
-If the packet doesn't have LOOP-ACK extra header, next hop doesn't have NEXT-HOP-ACK flag set in the Routing Table, then Retransmitting Device:
+If the packet doesn't have LOOP-ACK extra header, next hop doesn't have NEXT-HOP-ACKS flag set in the Routing Table, then Retransmitting Device:
 
 * adds LOOP-ACK extra header (which is described below) to the packet (if it is not already present)
 * sends modified packet using "bus unicast" operation
@@ -225,7 +236,7 @@ If the packet doesn't have LOOP-ACK extra header, next hop doesn't have NEXT-HOP
   
     - if such attempts don't succeed for 5 (TODO) times (with exponentially increasing timeouts - TODO) - it is treated as 'Routing-Error' (the same way as described above, depending on packet having Root as a Target-Address).
 
-If the packet already has LOOP-ACK extra header, and next hop doesn't have NEXT-HOP-ACK flag set in the Routing Table, then Retransmitting Device:
+If the packet already has LOOP-ACK extra header, and next hop doesn't have NEXT-HOP-ACKS flag set in the Routing Table, then Retransmitting Device:
 
 * keeps LOOP-ACK extra header
 * sends packet using "bus unicast" operation
@@ -267,6 +278,14 @@ Whenever a Multi-Cast packet (the one with Multiple-Target-Addresses field) is p
 
     - if the bus supports multi-casting - send the modified packet using multi-cast bus addressing over the bus. NB: bus broadcasts (without INTRA-BUS-ID) MUST NOT be used for this purpose to avoid unnecessary multiplying number of packets.
     - otherwise, send the modified packet using uni-cast bus addressing to each of the hops
+
+Promiscuous Mode Processing
+---------------------------
+
+Retransmitting Devices SHOULD, wherever possible, to listen to all the packets in "promiscuous mode". It allows for the following processing:
+
+* if Retransmitting Device hears a packet addressed (at underlying protocol level) to another ("next-hop") Retransmitting Device (which is not Root), and it has a RETRANSMIT-ON-NO-RETRANSMIT flag in Routing Table for the route entry for that Retransmitting Device, and after a TODO timeout it doesn't hear a retransmit (neither full nor "partially correct") by next retransmitting the same packet (TODO define "the same packet"), it MUST try to send a TODO packet to the next-hop Retransmitting Device (in "guaranteed mode") - receiving Device MUST forward the packet to the destination, and send (or attach as a Combined-Packet if the target is Root) a TODO Routing-Error to the Root. If this attempt by our Retransmitting Device doesn't succeed - our Retransmitting Device MUST send a TODO Routing-Error packet (containing the packet as a payload) to the Root.
+
 
 OPTIONAL-EXTRA-HEADERS
 -----------------------
@@ -310,7 +329,7 @@ SAMP Packets
 
 Samp-Unicast-Data-Packet: **\| SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| Target-Address \| OPTIONAL-PAYLOAD-SIZE \| PAYLOAD \|**
 
-where SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] equal to 0, bit[1] being GUARANTEED-DELIVERY flag, bit [2] being BACKWARD-GUARANTEED-DELIVERY, bit [3] being EXTRA-HEADERS-PRESENT, bit[4] being MORE-PACKETS-FOLLOW, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set and is described above; Target-Address is described above, OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field, and PAYLOAD is a payload to be passed to the upper-layer protocol.
+where SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] equal to 0, bit[1] being GUARANTEED-DELIVERY flag, bit [2] being BACKWARD-GUARANTEED-DELIVERY, bit [3] being EXTRA-HEADERS-PRESENT, bit[4] being MORE-PACKETS-FOLLOW, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set and is described above; Target-Address is described above, OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field, and PAYLOAD is a payload to be passed to the upper-layer protocol.
 
 If Target-Address is Root (i.e. =0), it MUST NOT contain VIA fields within; in addition, if Target-Address is Root (i.e. =0), the packet MUST NOT have BACKWARD-GUARANTEED-DELIVERY flag set.
 
@@ -319,6 +338,8 @@ If IS-PROBE flag is set, then PAYLOAD is treated differently. When destination r
 Samp-Unicast-Data-Packet is processed as specified in Uni-Cast Processing section above; if GUARANTEED-DELIVERY flag is set, packet is sent in 'Guaranteed Uni-Cast' mode. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
 
 When target Device receives the packet, and sends reply back, it MUST set GUARANTEED-DELIVERY flag in reply to BACKWARD-GUARANTEED-DELIVERY flag in original packet; this logic applies to all the packets, including 'first' packets in SAGDP "packet chain" (as they're still sent in reply to some SAMP packet coming from the Root).
+
+If Retransmitting Device receives a "partially correct" Samp-Unicast-Data-Packet, addressed to itself, and it has NACK-PREV-HOP flag set for the source link within Routing Table, it MUST send a Samp-Nack-Packet back to the source of packet.
 
 Samp-From-Santa-Data-Packet: **\| SAMP-FROM-SANTA-DATA-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| REQUEST-ID \| OPTIONAL-DELAY-UNIT \| MULTIPLE-RETRANSMITTING-ADDRESSES \| BROADCAST-BUS-TYPE-LIST \| Target-Address \| OPTIONAL-TARGET-REPLY-DELAY \| OPTIONAL-PAYLOAD-SIZE \| PAYLOAD \|**
 
@@ -383,9 +404,9 @@ where SAMP-ROUTE-UPDATE-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> b
 
 MODIFICATIONS-LIST consists of entries, where each entry is one of the following: 
 
-* **\| ADD-OR-MODIFY-LINK-ENTRY-AND-LINK-ID \| BUS-ID \| NEXT-HOP-ACK-AND-INTRA-BUS-ID \| OPTIONAL-LINK-DELAY-UNIT \| OPTIONAL-LINK-DELAY \| OPTIONAL-LINK-DELAY-ERROR \|**
+* **\| ADD-OR-MODIFY-LINK-ENTRY-AND-LINK-ID \| BUS-ID \| NEXT-HOP-ACKS-AND-INTRA-BUS-ID-PLUS-1 \| OPTIONAL-LINK-DELAY-UNIT \| OPTIONAL-LINK-DELAY \| OPTIONAL-LINK-DELAY-ERROR \|**
 
-  where ADD-OR-MODIFY-LINK-ENTRY-AND-LINK-ID is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] marks the end of MODIFICATIONS-LIST, bits[1..2] equal to a 2-bit constant ADD_OR_MODIFY_LINK_ENTRY, bit[3] being LINK-DELAY-PRESENT flag, and bits[4..] equal to LINK-ID; BUS-ID is an Encoded-Unsigned-Int<max=2> field, NEXT-HOP-ACK-AND-INTRA-BUS-ID is an Encoded-Unsigned-Int<max=4> bitfield substrate, with bit[0] being a NEXT-HOP-ACK flag for the Routing Table Entry, and bits[1..] representing INTRA-BUS-ID; OPTIONAL-LINK-DELAY-UNIT, OPTIONAL-LINK-DELAY, and OPTIONAL-LINK-DELAY-ERROR are present only if LINK-DELAY-PRESENT flag is set, and are Encoded-Unsigned-Int<max=2> fields. NB: by default, link delays are not set by Root, and are set based on device's internal per-bus settings.
+  where ADD-OR-MODIFY-LINK-ENTRY-AND-LINK-ID is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] marks the end of MODIFICATIONS-LIST, bits[1..2] equal to a 2-bit constant ADD_OR_MODIFY_LINK_ENTRY, bit[3] being LINK-DELAY-PRESENT flag, and bits[4..] equal to LINK-ID; BUS-ID is an Encoded-Unsigned-Int<max=2> field, NEXT-HOP-ACKS-AND-INTRA-BUS-ID is an Encoded-Unsigned-Int<max=4> bitfield substrate, with bit[0] being a NEXT-HOP-ACKS flag for the Routing Table Entry, and bits[1..] representing INTRA-BUS-ID-PLUS-1 (INTRA-BUS-ID-PLUS-1 == 0 means that INTRA-BUS-ID==NULL, and therefore that the link entry is an incoming link entry; otherwise, `INTRA-BUS-ID = INTRA-BUS-ID-PLUS-1 - 1`); OPTIONAL-LINK-DELAY-UNIT, OPTIONAL-LINK-DELAY, and OPTIONAL-LINK-DELAY-ERROR are present only if LINK-DELAY-PRESENT flag is set, and are Encoded-Unsigned-Int<max=2> fields. NB: by default, link delays are not set by Root, and are set based on device's internal per-bus settings.
 
 * **\| DELETE-LINK-ENTRY-AND-LINK-ID \|**
 
@@ -405,7 +426,7 @@ Samp-Loop-Ack-Packet: **\| SAMP-LOOP-ACK-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| Ta
 
 where SAMP-LOOP-ACK-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_LOOP_ACK_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set, Target-Address is described above, and LOOP-ACK-ID is copied from LOOP-ACK extra header of Samp-Unicast-Data-Packet. 
 
-Samp-Loop-Ack-Packet is generated either by destination, or by the node which has found that the next hop already has NEXT-HOP-ACK flag (see details in 'Guaranteed Uni-Cast' section above); generating node always specifies itself as a target. 
+Samp-Loop-Ack-Packet is generated either by destination, or by the node which has found that the next hop already has NEXT-HOP-ACKS flag (see details in 'Guaranteed Uni-Cast' section above); generating node always specifies itself as a target. 
 
 Samp-Loop-Ack-Packet is processed as specified in 'Uni-cast processing' section above; Samp-Loop-Ack packet is never sent using 'Guaranteed uni-cast' delivery. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
 
@@ -441,7 +462,11 @@ Packet Urgency
 From SAMP point of view, all upper-layer-protocol packets can have one of three urgency levels. If the packet has urgency URGENCY_LAZY, it is first sent as a Samp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent with GUARANTEED-DELIVERY). If the packet has urgency URGENCY_QUITE_URGENT, it is first sent as a Samp-Unicast-Data-Packet with GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent as a Samp-\*-Santa-\* packet). If the packet has urgency URGENCY_TRIPLE_GALOP, 
 then it is first sent as a Samp-From-Santa-Data-Packet or Samp-To-Santa-Data-Packet (depending on source being Root or Device). 
 
+TODO: Samp-Ack/Nack (and replace "send with ack" over underlying protocol), Samp-Retransmit (to next-hop Retransmitting Device on RETRANSMIT-ON-NO-RETRANSMIT)
+TODO: define handling for all "partially correct" packets
+TODO: what exactly is "header" for the purposes of "partially correct" packets? Is "sub-header" worth the trouble?
+TODO: NACK-PREV-HOP into Routing Table Links; RETRANSMIT-ON-NO-RETRANSMIT into RT Routes
 TODO: ?move FORWARD-TO-SANTA-\* to links (target ones) too (and specify that it is per-link wherever it is used)
+TODO: procedure for calibration of LINK-DELAYs?
 TODO: optional explicit loop begin (alongside VIA?)
-TODO: header (or full packet?) checksums! (or is it SADLP-\*'s responsibility?)
 
