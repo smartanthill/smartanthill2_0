@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.1
+:Version:   v0.1.1
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -110,10 +110,11 @@ In PRE-PAIRING and PAIRING-ENTROPY-NEEDED states, no programs are allowed to be 
 
 From security perspective, SmartAnthill OtA pairing works as follows:
 
-* BOTH parties generate 256-bit keys (see TODO for details on secure key generation), As an additional step for this particular key generation, if first 128 bits are all-zeros, key MUST be regenerated (this is a precaution against attacks on misimplementations).
-* parties perform anonymous Diffie-Hellman key exchange for generated 256-bit keys, obtaining a 256-bit shared key
-* from this point on, on both sides SASP starts to use first 128-bits of 256-bit shared key, as SASP AES key
-* parties use last 128 bits of the 256-bit shared key ("MITM check key") to perform MITM protection check depending on the OtA pairing flavour. During this exchange, Device is kept in PAIRING-MITM-CHECK Device OtA pairing state. 
+* BOTH parties generate DH randoms (`a` and `b` - 1024- or 2048-bit ones). 
+* parties perform anonymous Diffie-Hellman key exchange, obtaining a 1024- or 2048-bit shared secret Z.
+* parties derive 128-bit key K and 128-bit verification value X out of Z.
+* from this point on, on both sides SASP starts to use key K, as SASP AES key
+* parties use verification value X (which is essentially a MITM check key) to perform MITM protection check depending on the OtA pairing flavour. During this exchange, Device is kept in PAIRING-MITM-CHECK Device OtA pairing state. 
 * if MITM protection check indicates that everything is fine - Device OtA pairing state is changed to PAIRING-COMPLETED, and normal work can be started.
 
 Unique Devices and Hardware-Entropy-Based Devices
@@ -154,50 +155,104 @@ If only one of approaches is to be implemented, unique Device approach is genera
 SmartAnthill OtA Pairing Protocol
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Pairing-Request: **\| OTA-PROTOCOL-VERSION-NUMBER \| DH-REQUEST \| ENTROPY \| CLIENT-OTA-AND-SASP-CAPABILITIES \|**
+All the messages within one pairing procedure form a single "packet chain". That is, "packet chain" for a normal OtA Pairing exchange works as follows:
 
-where OTA-PROTOCOL-VERSION-NUMBER is an Encoded-Unsigned-Int<max=2> field, DH-REQUEST is a 128-bit field, representing `g^a mod p` from DH key exchange (using SmartAnthill Endianness), ENTROPY is a 32-byte field with crypto-safe random data, and CLIENT-CAPABILITIES is TBD. ENTROPY is used for key generation as specified in :ref:`sarng` document; note that :ref:`sarng` requires 16 bytes of entropy per 128 bits of key, so to get 256 bits of key required for OtA Pairing, 32 bytes of ENTROPY is needed; first 16 bytes of ENTROPY are to be used to generate first 128 bits of key, and last 16 bytes of ENTROPY are to be used to generate last 256 bits of key. 
+**Pairing-Pre-Request - Pairing-Pre-Response - Pairing-DH-Data-Request - Pairing-DH-Data-Response - ... - Pairing-DH-Data-Request - Pairing-DH-Data-Response**
 
-Pairing-Request is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SACCP-OTA-PAIRING-REQUEST message being 0x0.
+When both sides receive the last of Pairing-DH-DATA-\* packets (the ones which provide the whole DH data, with size defined according to KEY-EXCHANGE-TYPE field in Pairing-DH-Data-Request), they proceed with calculation of SASP key.
 
-Pairing-Response: **\| DH-REPLY \| ACCEPTED-OTA-FLAVOUR \| DEVICE-SASP-CAPABILITIES \|**
+TODO: errors!
 
-where DH-REPLY is a 128-bit field, representing `g^b mod p` (using SmartAnthill Endianness), ACCEPTED-OTA-FLAVOUR is a 1-byte field containing an ID of accepted OtA flavour (TBD), and DEVICE-SASP-CAPABILITIES TBD.
+OtA Pairing Protocol Packets
+''''''''''''''''''''''''''''
 
-Pairing-Response is sent as a payload for a SACCP SACCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for SACCP-OTA-PAIRING-RESPONSE being 0x0.
+Pairing-Pre-Request: **\| OTA-PROTOCOL-VERSION-NUMBER-MAJOR \| OTA-PROTOCOL-VERSION-NUMBER-MINOR \| CLIENT-RANDOM \| CLIENT-OTA-AND-SASP-CAPABILITIES \|**
 
-Instead of Pairing-Response, Device MAY (and in certain situations - MUST, see below) send an Pairing-Entropy-Needed-Response message (as a payload for a SACCP SACCP-OTA-PAIRING-ENTROPY-NEEDED-RESPONSE message):
+where where OTA-PROTOCOL-VERSION-NUMBER-\* are Encoded-Unsigned-Int<max=2> fields, and CLIENT-OTA-AND-SASP-CAPABILITIES TBD. 
 
-Pairing-Entropy-Needed-Response: **\|** (empty body)
+Pairing-Pre-Request is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SACCP-OTA-PAIRING-REQUEST message being 0x0.
 
-Pairing-Entropy-Needed-Response is sent as a payload for a SACCP SACCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for SACCP-OTA-PAIRING-RESPONSE being 0x1.
+Pairing-Pre-Response: **\| ENTROPY-NEEDED-SIZE \| OPTIONAL-DEVICE-RANDOM \| OPTIONAL-DEVICE-OTA-AND-SASP-CAPABILITIES \|**
 
-In response to Pairing-Entropy-Needed-Response, Client MUST reply with a Pairing-Entropy-Provided-Request.
+where ENTROPY-NEEDED-SIZE is an Encoded-Unsigned-Int<max=2> field, OPTIONAL-DEVICE-RANDOM is an optional 32-byte field present only if ENTROPY-NEEDED-SIZE=0, and OPTIONAL-DEVICE-OTA-AND-SASP-CAPABILITIES is present only if this Pairing-Pre-Response packet is the first such packet in current "pairing" exchange (format TBD),
+
+Pairing-Pre-Response is sent as a payload for a SACCP SACCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for SACCP-OTA-PAIRING-RESPONSE message being 0x0.
+
+NB: to comply with key generation requirements as specified in :ref:`sarng` document, Device MUST request at least amount of entropy which is equal to the `b` parameter size for DH key exchange; however, Device MAY request more entropy (up to 256 extra bytes per pairing attempt, which requests MAY be split into packets as small as 1-byte) - for example, to initialize it's own Fortuna generator. 
+
+If ENTROPY-NEEDED-SIZE is not zero, Client MUST reply with a Pairing-Entropy-Provided-Request.
 
 Pairing-Entropy-Provided-Request: **\| ENTROPY \|**
 
-where ENTROPY is a 16-byte field with cryptographically safe random data. 
+where ENTROPY is an arbitrary-length field with cryptographically safe random data. 
 
 Pairing-Entropy-Provided-Request is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SACCP-OTA-PAIRING-REQUEST message being 0x1.
 
-When Device is satisfied with the amount of entropy it has, it should return a Pairing-Response to complete pairing. All the messages within one pairing procedure form a single "packet chain". That is, "packet chaing" may look as follows: Pairing-Request - Pairing-Entropy-Needed-Response - Pairing-Entropy-Provided-Request - [optionally more pairs of Entropy-Needed-Response and Entropy-Provided-Request] - Pairing-Response.
+In response to Pairing-Entropy-Provided-Request, Device MUST send another Pairing-Pre-Response packet, specifying ENTROPY-NEEDED-SIZE if it still has not enough entropy. 
 
-TODO: error message?
+Pairing-DH-Data-Request: **\| OPTIONAL-KEY-EXCHANGE-TYPE \| DH-REQUEST-PART \|**
 
-OtA Pairing Diffie-Hellman Paramaters
-'''''''''''''''''''''''''''''''''''''
+where OPTIONAL-KEY-EXCHANGE-TYPE is sent only for the very first Pairing-DH-Data-Request within the "pairing", and is Encoded-Unsigned-Int<max=2> field with values defined below, and DH-REQUEST-PART is a field taking the rest of the packet, and representing first remaining (SmartAnthill-Endianness-wise) bytes of `A = g^a mod p` from DH key exchange (using SmartAnthill Endianness).
 
-TODO
+Supported OPTIONAL-KEY-EXCHANGE-TYPEs:
+
+* value 0:
+
+  + Key Exchange: DH with 1024-bit MODP group with 160-bit Prime Order Subgroup as defined in RFC 5114. This OPTIONAL-KEY-EXCHANGE-TYPE MUST NOT be used for Security SmartAnthill Devices. *NB: MODP groups from RFC 5114 are preferred to earlier-defined ones (for example, those from RFC 3526), as they explicitly comply with NIST-suggested restrictions, in particular, restrictions on q.*
+  + Key Generation: MAC-based
+
+* value 1:
+
+  + Key Exchange: DH with 2048-bit MODP group with 256-bit Prime Order Subgroup as defined in RFC 5114.
+  + Key Generation: MAC-based
+
+* value 2:
+
+  + Key Exchange: DH with 1024-bit MODP group with 160-bit Prime Order Subgroup as defined in RFC 5114. This OPTIONAL-KEY-EXCHANGE-TYPE MUST NOT be used for Security SmartAnthill Devices. *NB: MODP groups from RFC 5114 are preferred to earlier-defined ones (for example, those from RFC 3526), as they explicitly comply with NIST-suggested restrictions, in particular, restrictions on q.*
+  + Key Generation: SHA2-based
+
+* value 3:
+
+  + Key Exchange: DH with 2048-bit MODP group with 256-bit Prime Order Subgroup as defined in RFC 5114.
+  + Key Generation: SHA2-based
+
+* others: MAY be added as necessary
+
+Pairing-DH-Data-Request is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SACCP-OTA-PAIRING-REQUEST message being 0x2.
+
+Pairing-DH-Data-Response: **\| DH-RESPONSE-PART \|**
+
+where DH-RESPONSE-PART is a field taking the whole packet; length of DH-RESPONSE-PART MUST be exactly the same as DH-REQUEST-PART in the incoming Pairing-DH-Data-Request message. DH-RESPONSE-PART represents first remaining (SmartAnthill-Endianness-wise) bytes of `B = g^b mod p` from DH key exchange (using SmartAnthill Endianness).
+
+Pairing-DH-Data-Response is sent as a payload for a SACCP SACCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for SACCP-OTA-PAIRING-RESPONSE message being 0x2.
+
+DH Random Generation
+''''''''''''''''''''
+
+For both Client side and Device side, DH random numbers (`a` and `b` respectively) MUST be generated as described in `Key Generation` section in :ref:`sarng` document.
+
+SASP Key Generation
+'''''''''''''''''''
+
+When both sides have all the information they need (that is, Client has full `B = g^b mod p` and Device has full `A = g^a mod p`), they need to calculate shared secret Z (`Z = A^b mod p` for Device, and `Z = B^a mod p` for Client), and generate SASP Key K (128 bit), as well as verification value X (also 128 bit), from Z.
+
+SASP Key K and verification value X are calculated as follows:
+
+* for MAC-based generation: `K = GCM-MAC-AES(data=first-half-of-CLIENT-RANDOM||first-half-of-DEVICE-RANDOM||first-half-of-Z,key=repeated-0xa)`, `X = GCM-MAC-AES(data=second-half-of-CLIENT-RANDOM||second-half-of-DEVICE-RANDOM||second-half-of-Z,key=repeated-0x5)`
+* for SHA2-based generation: `K = SHA256(data=first-half-of-CLIENT-RANDOM||first-half-of-DEVICE-RANDOM||first-half-of-Z)`, `X = SHA256(second-half-of-CLIENT-RANDOM||second-half-of-DEVICE-RANDOM||second-half-of-Z)`
+* where 'first-half-of-Z' and 'second-half-of-Z' are treated in SmartAnthill-Endianness sense
+
+In general, SHA2-based key generation is preferred, however, MAC-based key generation MAY be used to reduce the code footprint (as GCM-MAC-AES is needed for SASP anyway). Security Devices MUST use SHA2-based key generation.
 
 Specifics of OtA Pairing for Hardware-Entropy-Only-Based Devices
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-Hardware-Entropy-Only-Based Devices MUST additionally implement the following procedure within OtA protocol: 
+Hardware-Entropy-Only-Based Devices SHOULD additionally implement the following procedure within OtA protocol: 
 
-* During each Pairing, Device MUST return Pairing-Entropy-Needed-Response to the Client, at least 128 times; that is, "packet chain" which performs pairing, MUST look as follows: Pairing-Request - Pairing-Entropy-Needed-Response - Pairing-Entropy-Provided-Request - [at least 127 more pairs of Entropy-Needed-Response and Entropy-Provided-Request] - Pairing-Response
+* During each Pairing, Device SHOULD request at least 128 bytes of extra entropy (in addition to the entropy directly required for the key generation). 
 
-  + Between each Pairing-Entropy-Needed-Response and Pairing-Entropy-Provided-Request, Device MUST measure time interval with the best possible resolution. If possible, time interval SHOULD measured with down-to-single-clock-cycle precision; for example, unless other means of measuring time with single-clock-cycle precision are present, it is RECOMMENDED to implement waiting for packet (only for this very specific case) in a tight loop without any wait, counting iterations, with occasional checks if the data has arrived.
-  + when receiving each of Pairing-Entropy-Provided-Request's, Device MUST feed both ENTROPY within request, and time interval measured, to the Fortuna PRNG (the same instance of Fortuna which is described in :ref:`sarng`). Form of such feeding is not essential, as long as all the bits both from ENTROPY field and from time interval measured, are fed to Fortuna.
+  + Between each Pairing-Pre-Response and Pairing-Entropy-Provided-Request, Device SHOULD measure time interval with the best possible resolution. If possible, time interval SHOULD measured with down-to-single-clock-cycle precision; for example, unless other means of measuring time with single-clock-cycle precision are present, it is RECOMMENDED to implement waiting for packet (only for this very specific case) in a tight loop without any wait, counting iterations, with occasional checks if the data has arrived.
+  + when receiving each of Pairing-Entropy-Provided-Request's, Device SHOULD feed both ENTROPY within request, and time interval measured, to the Fortuna PRNG (the same instance of Fortuna which is described in :ref:`sarng`). Form of such feeding is not essential, as long as all the bits both from ENTROPY field and from time interval measured, are fed to Fortuna.
 
 OtA Pairing MITM-Check Program
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -219,7 +274,7 @@ SmartAnthill OtA Single-LED Pairing is pairing mechanism, which is semi-automate
 MITM-Check for Single-LED Pairing is performed as follows:
 
 * User is asked to bring Device close to the webcam which is located on SmartAnthill Central Controller
-* Client sends a MITM-Check program which requests LED to blink, using `Blinking-Function(random-nonce-sent-by-Client)=AES(key=MITM-check-key,data=random-nonce-sent-by-Client)` as a blinking pattern. TODO: Built-in Plugin to produce AES(...) reply.
+* Client sends a MITM-Check program which requests LED to blink, using `Blinking-Function(random-nonce-sent-by-Client)=AES(key=verification-value-X,data=random-nonce-sent-by-Client)` as a blinking pattern. TODO: Built-in Plugin to produce AES(...) reply.
 * Accordingly, Device starts blinking the LED
 * Client, using webcam, recognizes blinking pattern and makes sure that it matches expectations.
 * If expectations don't match, program may be repeated with a *different* random-nonce-sent-by-Client
@@ -232,7 +287,7 @@ MITM-Check for Single-LED Pairing being User-OPTIONAL
 
 All SmartAnthill Devices using Single-LED Pairing, MUST implement proper MITM Check procedures as described above. However, devices which are not designated as Security Devices, MAY set *both* LOW-SECURITY *and* PAIRING-USER-OPTIONAL flags in their Device Capabilities (TODO). If Client "pairs" with a Device which has *both* such flags set, it MAY ask user if he wants to perform "pairing". If at least one of the flags above is not set, Client MUST NOT allow to use Device (i.e. MUST NOT issue a program which resets MITM-CHECK-IN-PROGRESS Device flag, and MUST NOT send any non-pairing programs to the Device) until  "pairing" is actually performed. 
 
-To re-iterate: being User-OPTIONAL means that while Device implementors still MUST implement MITM, in certain circumstances end-user MAY be allowed to skip MITM protection.
+To re-iterate: being User-OPTIONAL means that while Device implementors still MUST implement MITM; however, under certain circumstances end-user MAY be allowed to skip MITM protection.
 
 SINGLE-LED-PAIRING Built-In Plugin
 ##################################

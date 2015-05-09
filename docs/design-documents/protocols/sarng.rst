@@ -27,7 +27,7 @@
 SmartAnthill SmartAnthill Random Number Generation and Key Generation
 =====================================================================
 
-:Version:   v0.1.1
+:Version:   v0.1.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -66,7 +66,7 @@ If Device doesn't have a pre-initialized Poor-Man's PRNG, it is known as Hardwar
   + regardless of hardware RNG failures, to obtain one byte of output bit stream, RNG MUST take one byte from Fortuna output, and XOR it with one byte of Poor-Man's PRNG output 
   + as long as hardware RNG doesn't fail (i.e. blocks do pass on-line testing as described above), Poor-Man's PRNG SHOULD be re-initialized approx. once per one hour of work (exact times MAY vary depending on typical Device patterns), by XOR-ing it's counter with next 128 bits of Fortuna output
 
-In addition, such Devices MUST perform additional Entropy-Needed requests during pairing procedure, as described in :ref:`sapairing` document.
+In addition, such Devices SHOULD request extra entropy during pairing procedure, as described in :ref:`sapairing` document.
 
 Devices with both pre-initialized Poor-Man's PRNG and hardware-based entropy source
 -----------------------------------------------------------------------------------
@@ -80,21 +80,23 @@ If Device has both pre-initialized Poor-Man's PRNG and hardware-based entropy so
 * RNG MUST skip at least first TODO bits of the Fortuna output bit stream, after each Device reset/reboot
 * to obtain one byte of output bit stream, RNG MUST take one byte from Fortuna output, and XOR it with one byte of Poor-Man's PRNG output
 
-SmartAnthill Client and Devices with Crypto-Safe RNG
-----------------------------------------------------
+SmartAnthill Client (and Devices with Crypto-Safe RNG)
+------------------------------------------------------
 
-Even if the system where the SmartAnthill stack is running, has a supposedly crypto-safe RNG (such as built-in crypto-safe /dev/urandom), SmartAnthill implementations still SHOULD employ Poor-Man's PRNG (as described above) in addition to system-provided crypto-safe PRNG. In such cases, each byte of SmartAnthill RNG (which is provided to the rest of SmartAnthill) SHOULD be a XOR of 1 byte of system-provided crypto-safe PRNG, and 1 byte of Poor-Man's PRNG. 
-
-The same procedure SHOULD also be used for generating random data which is used for SmartAnthill key generation. 
+Even if the system where the SmartAnthill stack is running, has a supposedly crypto-safe RNG (such as built-in crypto-safe /dev/urandom), SmartAnthill implementations still MUST employ Poor-Man's PRNG (as described above) in addition to system-provided crypto-safe PRNG. In such cases, each byte of SmartAnthill RNG (which is provided to the rest of SmartAnthill) SHOULD be a XOR of 1 byte of system-provided crypto-safe PRNG, and 1 byte of Poor-Man's PRNG. 
 
 *Rationale. This approach allows to reduce the impact of catastrophic failures of the system-provided crypto-safe PRNG (for example, it would mitigate effects of the Debian RNG disaster very significantly).*
 
-TODO: define key generation for Poor-Man's PRNG in this case
+To initialize Poor-Man's RNG on Client side, SmartAnthill implementation MUST NOT use the same crypto-safe RNG which output will be used for XOR-ing with Poor-Man's RNG (as specified above); instead, Poor-Man's RNG on Client side MUST be initialized independently; valid examples of such independent initialization include XOR-ing of at least two sources, such as an independent Fortuna RNG with user input (timing of typing or mouse movements), or online generators such as 'raw bytes' from random.org or from smartanthill.org (TODO); IMPORTANT: all exchanges with online generators MUST be over https, and with server certificate validation.
+
+The same procedure SHOULD also be used for generating random data which is used for SmartAnthill key generation.
 
 Key Generation
 --------------
 
-For Devices which support OtA Pairing (see :ref:`sapairing` document for details), keys need to be generated. For such Devices the following requirements MUST be met:
+This sections describes rules for generating keys (and other key material, such as DH random numbers).
+
+For Devices which support OtA Pairing (see :ref:`sapairing` document for details), key material needs to be generated. For such Devices the following requirements MUST be met:
 
 * if Device doesn't have hardware-based entropy source:
 
@@ -130,10 +132,22 @@ For Devices which support OtA Pairing (see :ref:`sapairing` document for details
     - take 16 random bytes received from the Client side (see description of Pairing-Request in :ref:`sapairing` for details), as ENTROPY
     - calculate `output=Fortuna.Random16bytes() XOR AES(key=KEY4KEYS,AES(key=POORMAN4KEYS.Random16bytes(),data=ENTROPY))`
 
+* if Device (or Client) has a crypto-safe RNG:
+
+  + Device MUST implement at least two pre-initialized Poor-Man's PRNGs: one of them (named 'POORMAN4KEYS') MUST NOT be used for any purposes except for key generation as described below. Another one (named 'NONKEYPOORMAN') is used to produce 'non-key Random Stream'.
+
+    - Initialization of both Poor-Man's PRNGs (as well as initialization of KEY4KEYS and POORMAN4KEYS, see below) MUST be done independently, as specified in "SmartAnthill Client (and Devices with Crypto-Safe RNG)" section above.
+
+  + in addition, Device MUST have an additional pre-initialized key (KEY4KEYS), which MUST NOT be used except for key generation as described below
+  + to generate 128 bits of key, the following procedure applies:
+
+    - take 16 random bytes received from the Client side (see description of Pairing-Request in :ref:`sapairing` for details), as ENTROPY
+    - calculate `output=CryptoSafeRNG.Random16bytes() XOR AES(key=KEY4KEYS,AES(key=POORMAN4KEYS.Random16bytes(),data=ENTROPY))`
+
 Non-Key Random Stream
 ---------------------
 
-SmartAnthill RNG provides a 'non-key Random Stream' for various purposes such as padding etc. Generation of 128 bits of non-key Random Stream is similar to key generation described above, with the following differences:
+SmartAnthill RNG provides a 'non-key Random Stream' for various purposes such as padding, ENTROPY data for the pairing (sic!), etc. Generation of 128 bits of non-key Random Stream is similar to key generation described above, with the following differences:
 
 * instead of POORMAN4KEYS Poor-Man's PRNG, for 'non-key Random Stream' NONKEYPOORMAN is used
 * a 16-byte pre-defined block of data (for example, one may use macro containing something like `memset(ptr,0,16);*(uint16*)ptr=__LINE__;memcpy((char*)ptr+2,8,__TIME__);` to initialize such a block) is used instead of ENTROPY
