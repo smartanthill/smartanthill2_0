@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.1.3
+:Version:   v0.1.3a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -189,6 +189,8 @@ Supported OPTIONAL-KEY-EXCHANGE-TYPEs:
   + Key Derivation: SHA256-based
 
 * others: MAY be added as necessary
+
+TODO: double-check presence of any typical patterns in Z, and decide on split (first-half/second-half or even-bits/odd-bits)
 
 Pairing-DH-Data-Request is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SACCP-OTA-PAIRING-REQUEST message being 0x2.
 
