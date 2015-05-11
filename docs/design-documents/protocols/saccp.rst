@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.2.13
+:Version:   v0.2.14
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -93,7 +93,7 @@ To ensure correct operation of an underlying protocol, there are certain rules (
 SACCP Checksum
 --------------
 
-To re-use the same code which is used for SASP anyway, SACCP uses OMAC-AES128 (as used for EAX), with a fixed key consisting of byte 0xA5 repeated 16 times, as "SACCP Checksum". Further, SACCP Checksum MAY be truncated to required number of bytes (starting from the beginning of 16-byte OMAC tag) as necessary.
+To re-use the same code which is used for SASP anyway, SACCP uses GCM (as used for GCM-AES, exact details TBD), using a fixed key consisting of byte 0xA5 repeated 16 times, as "SACCP Checksum". Further, SACCP Checksum MAY be truncated to required number of bytes (starting from the beginning of 16-byte GCM tag) as necessary.
 
 SACCP Packets
 -------------
