@@ -27,7 +27,7 @@
 SmartAnthill SmartAnthill Random Number Generation and Key Generation
 =====================================================================
 
-:Version:   v0.1.2
+:Version:   v0.1.3
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -49,36 +49,76 @@ Resource-constrained SmartAnthill Devices which don't have their own crypto-safe
 
 Such Devices are known as Unique Devices.
 
-Devices with hardware-based entropy source
-------------------------------------------
+non-Secure Devices without pre-initialized Poor-Man's PRNG
+----------------------------------------------------------
 
-If Device doesn't have a pre-initialized Poor-Man's PRNG, it is known as Hardware-Entropy-Only-Based Device. For such Hardware-Entropy-Only-Based Devices the following applies:
+For non-Secure Devices without pre-initialized Poor-Man's PRNG, the following approach is allowed.
 
-* Device MUST still implement Poor-Man's PRNG, it is just not pre-initialized
+* Device MUST implement Fortuna PRNG, with multiple entropy sources to feed to Fortuna as described below
+
+  + when "feeding entropy to Fortuna", exact bit representation doesn't matter, as long as all the data bits are fed to TBD function of Fortuna
+  + TODO: potential simplifications (while staying strict Fortuna under restricted circumstances)
+  + TODO: persistent Fortuna state
+
+* Device MUST have at least one MCU ADC channel which is either connected to an entropy source (such as Zener diode, details TBD), or just being not connected at all. This ADC is named "noise ADC"
+
+  + it is acceptable to disconnect ADC channel only temporarily (for example, using an analogue switch); in this case, ADC channel MUST be disconnected for the whole duration of RNG initialization (i.e. it is not acceptable to disconnect it only for one measurement and to connect it back right afterwards).
+
+* During each "pairing" (IMPORTANT: it applies to any "pairing", not just first "pairing"):
+
+  + When pairing procedure starts, Device MUST initialize two internal variables (Network-VonNeumann-Count and ADC-VonNeumann-Count) as zeros
+  + Device MUST implement "Entropy Gathering" procedure as defined in :ref:`sapairing` document
+
+  + On receiving each packet with entropy, Device MUST:
+
+    - feed received ENTROPY to the Fortuna
+    - feed entropy which is based on pseudo-time since the request has been sent, with at least 1mks precision; for this purpose, exact time isn't important, what is important is that two different times with 1mks difference produce two different results
+
+      * in particular, time MAY be pseudo-measured using "tight loops" (increment-pseudo-time-check-packet-arrival-repeat-until-packet-arrives), provided that 1mks requirement is satisfied
+      * if pseudo-measured time is different from last pseudo-measured time, increment Network-VonNeumann-Count
+
+  + in addition, if bare-metal implementation is used, and packet arrives via an interrupt, Device SHOULD add "program-counter-before-interrupt has been called" (which is usually readily available as `[SP-some_constant]`) to Fortuna
+  + in addition, all interrupts SHOULD be handled in similar manner
+  + Device MUST continue "Entropy Gathering" procedure at least until Network-VonNeumann-Count reaches 255.
+  + in addition, Device MUST perform measurements of "noise ADC" and feed the results to the Fortuna RNG
+
+    - on every such measurement, if measurement result doesn't match previous measurement from "noise ADC", ADC-VonNeumann-Count is incremented
+    - these measurements MAY be performed in parallel with "Entropy Gathering" network exchange, or separately
+
+  + in addition, Device SHOULD perform measurements of all the other ADCs in the system and feed the results to Fortuna RNG
+  + Device MUST continue measurements of "noise ADC" at least until ADC-VonNeumann-Count reaches 255.
+  + after both ADC-VonNeumann-Count and Network-VonNeumann-Count reach 255, Device MAY decide to complete RNG additional seeding
+  + to complete RNG additional seeding, Device MUST skip at least TODO bits of RNG output
+
+* Until RNG additional seeding is completed, it's output MUST NOT be used in any manner
+* after RNG additional seeding is completed, Devices still SHOULD feed all the available entropy (as described above) to the Fortuna RNG
+
+Fortuna State and re-pairing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When Device is to be re-paired (i.e. Device pairing state is changed to PRE-PAIRING, see :ref:`sapairing` document for details), Fortuna RNG stage (both persistent and in-memory) MUST NOT be affected. Only re-programming of the Device MAY rewrite Fortuna persistent state while ignoring the old state.
+
+Secure Devices without pre-initialized Poor-Man's RNG
+-----------------------------------------------------
+
+While it is NOT RECOMMENDED, Secure SmartAnthill Devices MAY be implemented without pre-initialized Poor-Man's RNG. In this case:
+
 * Device MUST have a hardware entropy source, which provides a hardware-generated bit stream
-* Device MUST implement on-line testing of hardware-generated bit stream (monobit test, poker test, runs test, and long runs test, as they were specified in FIPS140-2 after Change Notice 1 and before Change Notice 2; testing should be performed on each 20000-bit block before this block is fed to Fortuna; if the test fails - another block MAY be taken; if the test fails on 3 blocks in a row - it is considered a hardware RNG failure), with a catastrophic Device failure if the test fails before at least required Poor-Man's RNGs are initialized
+* Device MUST implement on-line testing of hardware-generated bit stream (monobit test, poker test, runs test, and long runs test, as they were specified in FIPS140-2 after Change Notice 1 and before Change Notice 2; testing should be performed on each 20000-bit block before this block is fed to Fortuna; if the test fails - another block MAY be taken)
 * on-line testing MUST be performed on a bit stream before any cryptographic primitives are applied (but SHOULD be performed after von Neumann bias removal)
-* Device MUST implement Fortuna RNG (as specified in TODO; note that Fortuna is very resource-intensive for an MCU). 
+* Device MUST implement Fortuna RNG (as specified above). 
 * hardware-generated bit stream MUST be fed to a Fortuna PRNG (after 20000-bit blocks pass on-line testing)
 * RNG MUST skip at least first TODO bits of the Fortuna output bit stream (before starting using Fortuna output), after each Device reset/reboot
-* on Device start, after skipping required amount of Fortuna output as specified above, and after performing all the additional Entropy-Needed - Entropy-Provided exchanges as specified in :ref:`sapairing` document, Device SHOULD initialize Poor-Man's PRNG with Fortuna's output. As soon as Poor-Man's PRNGs are initialized:
 
-  + regardless of hardware RNG failures, to obtain one byte of output bit stream, RNG MUST take one byte from Fortuna output, and XOR it with one byte of Poor-Man's PRNG output 
-  + as long as hardware RNG doesn't fail (i.e. blocks do pass on-line testing as described above), Poor-Man's PRNG SHOULD be re-initialized approx. once per one hour of work (exact times MAY vary depending on typical Device patterns), by XOR-ing it's counter with next 128 bits of Fortuna output
+Devices with both pre-initialized Poor-Man's RNG and Fortuna RNG
+----------------------------------------------------------------
 
-In addition, such Devices SHOULD request extra entropy during pairing procedure, as described in :ref:`sapairing` document.
+Where possible, Devices SHOULD implement both pre-initialized Poor-Man's PRNG and harware-fed Fortuna RNG (the latter as described in "non-Secure Devices without pre-initialized Poor-Man's PRNG" section). In such cases, to obtain one byte of output bit stream, RNG MUST take one byte from Fortuna output, and XOR it with one byte of Poor-Man's PRNG output 
 
-Devices with both pre-initialized Poor-Man's PRNG and hardware-based entropy source
------------------------------------------------------------------------------------
+Secure Devices
+--------------
 
-If Device has both pre-initialized Poor-Man's PRNG and hardware-based entropy source (which is RECOMMENDED whenever feasible):
-
-* such Devices are known as Unique-Hardware-Entropy-Based Devices
-* implementing on-line testing is not necessary
-* Device MUST implement Fortuna RNG
-* hardware-generated bit stream MUST be fed to a Fortuna PRNG
-* RNG MUST skip at least first TODO bits of the Fortuna output bit stream, after each Device reset/reboot
-* to obtain one byte of output bit stream, RNG MUST take one byte from Fortuna output, and XOR it with one byte of Poor-Man's PRNG output
+SmartAnthill Secure Devices SHOULD use both pre-initialized Poor-Man's RNG and hardware-fed Fortuna RNG (the latter - as described in "non-Secure Devices without pre-initialized Poor-Man's PRNG" section, or - RECOMMENDED - as described in "Secure Devices without pre-initialized Poor-Man's RNG" section). 
 
 SmartAnthill Client (and Devices with Crypto-Safe RNG)
 ------------------------------------------------------
