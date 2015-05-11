@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.1.2a
+:Version:   v0.1.3
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -156,7 +156,7 @@ Pairing-Pre-Request is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST m
 
 Pairing-Pre-Response: **\| ENTROPY-NEEDED-SIZE \| OPTIONAL-DEVICE-RANDOM \| OPTIONAL-DEVICE-OTA-AND-SASP-CAPABILITIES \|**
 
-where ENTROPY-NEEDED-SIZE is an Encoded-Unsigned-Int<max=2> field, OPTIONAL-DEVICE-RANDOM is an optional 32-byte field present only if ENTROPY-NEEDED-SIZE=0, and OPTIONAL-DEVICE-OTA-AND-SASP-CAPABILITIES is present only if this Pairing-Pre-Response packet is the first such packet in current "pairing" exchange (format TBD),
+where ENTROPY-NEEDED-SIZE is an Encoded-Unsigned-Int<max=2> field, OPTIONAL-DEVICE-RANDOM is an optional 32-byte field present only if ENTROPY-NEEDED-SIZE=0, and OPTIONAL-DEVICE-OTA-AND-SASP-CAPABILITIES is present only if this Pairing-Pre-Response packet is the first such packet in current "pairing" exchange (format TBD).
 
 Pairing-Pre-Response is sent as a payload for a SACCP SACCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for SACCP-OTA-PAIRING-RESPONSE message being 0x0.
 
@@ -244,7 +244,7 @@ When both sides have all the information they need (that is, Client has full `B 
 
 SASP Key K and verification value X are calculated as follows:
 
-* for SHA256-based derivation: `K = SHA256(data=first-half-of-Z||Info||first-half-of-CLIENT-RANDOM||first-half-of-DEVICE-RANDOM)`, `X = SHA256(second-half-of-Z||Info||second-half-of-CLIENT-RANDOM||second-half-of-DEVICE-RANDOM)`, where Info='"SASP"||KEY-EXCHANGE-TYPE||ROOT-NODE-ID||PROJECTED-NODE-ID' (where ROOT-NODE-ID is always 0)
+* for SHA256-based derivation: `K = SHA256(data=first-half-of-Z||Info||first-half-of-CLIENT-RANDOM||first-half-of-DEVICE-RANDOM)`, `X = SHA256(second-half-of-Z||Info||second-half-of-CLIENT-RANDOM||second-half-of-DEVICE-RANDOM)`, where Info='"SASP"||KEY-EXCHANGE-TYPE||'K'-or-'X'||ROOT-NODE-ID||PROJECTED-NODE-ID' (where ROOT-NODE-ID is always 0, and 'K'-or-'X' is equal to 'K' ASCII byte if calculating 'K', and to 'X' ASCII byte if calculating 'X').
 * other methods MAY be added in the future
 * where 'first-half-of-Z' and 'second-half-of-Z' are treated in SmartAnthill-Endianness sense
 
