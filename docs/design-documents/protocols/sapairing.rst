@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.1.2
+:Version:   v0.1.2a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -102,7 +102,7 @@ From OtA Pairing perspective, SmartAnthill Device can be in one of the following
 * PAIRING-MITM-CHECK
 * PAIRING-COMPLETED
 
-IMPORTANT: Change from any of the states into PRE-PAIRING state MUST be implemented ONLY via physical manipulations of end-user with SmartAnthill Device (and MUST NOT be allowed remotely). Examples of valid user interfaces to perform such a change include on-Device button or buttons (for example, if two buttons are simultaneously kept pressed for over N seconds) and on-Device PCB jumper. When changing Device state to PRE-PAIRING state, state of Device RNG (i.e. data used for random numbre generation) MUST NOT be affected.
+IMPORTANT: Change from any of the states into PRE-PAIRING state MUST be implemented ONLY via physical manipulations of end-user with SmartAnthill Device (and MUST NOT be allowed remotely). Examples of valid user interfaces to perform such a change include on-Device button or buttons (for example, if two buttons are simultaneously kept pressed for over N seconds) and on-Device PCB jumper. When changing Device state to PRE-PAIRING state, state of Device RNG (i.e. data used for random number generation) MUST NOT be affected.
 
 In PRE-PAIRING and PAIRING-ENTROPY-NEEDED states, SASP MUST use 'zero' AES-128 key (with AES key consisting of all zeros). 
 
