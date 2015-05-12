@@ -84,7 +84,7 @@ wait_for_comm_event:
 			case COMMLAYER_RET_TIMEOUT:
 			{
 				// regular processing will be done below in the next block
-				printf( "no reply from comm stack received; the last message (if any) will be resent by timer\n" );
+				printf( "just waiting...\n" );
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 				goto wait_for_comm_event;
 				break;
@@ -130,6 +130,7 @@ process_reply:
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 
 	send_command:
+		printf( "=============================================Msg is about to be sent; rq_size: %d, rsp_size: %d\n", ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 		send_to_commm_stack( MEMORY_HANDLE_MAIN_LOOP );
 	}
 

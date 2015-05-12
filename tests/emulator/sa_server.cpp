@@ -16,8 +16,8 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 
-#define MODEL_IN_EFFECT 1
-//#define MODEL_IN_EFFECT 2
+//#define MODEL_IN_EFFECT 1
+#define MODEL_IN_EFFECT 2
 
 
 #include "sa-common.h"

@@ -61,12 +61,12 @@ uint8_t handler_sacpp_continue_chain( MEMORY_HANDLE mem_h, void* control_prog_st
 	uint8_t hdr = SACCP_NEW_PROGRAM; //TODO: we may want to add extra headers
 	zepto_write_prepend_byte( mem_h, hdr );
 	zepto_write_prepend_byte( mem_h, SAGDP_P_STATUS_FIRST );*/
-	default_test_control_program_start_new( control_prog_state, mem_h );
+	default_test_control_program_accept_reply_continue( control_prog_state, mem_h );
 	return SACCP_RET_PASS_LOWER;
 }
 
 uint8_t saccp_control_program_process_incoming( MEMORY_HANDLE mem_h, parser_obj* po, uint16_t sz, void* control_prog_state )
-{
+{assert(0);
 	// TODO: process
 /*	uint8_t buff[100];
 	memset( buff, '?', 99 );

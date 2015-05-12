@@ -89,6 +89,7 @@ int main_loop()
 wait_for_comm_event:
 		ret_code = wait_for_communication_event( MEMORY_HANDLE_MAIN_LOOP, timer_val*100 ); // TODO: recalculation
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+		printf( "=============================================Msg wait event; ret = %d, rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
 		switch ( ret_code )
 		{
@@ -314,6 +315,7 @@ saoudp_in:
 			
 		// 5. SAGDP
 client_received:
+		printf( "@client_received: rq_size: %d, rsp_size: %d\n", ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 		sa_get_time( &(tact.tv) ); tact.action = 0;
 		ret_code = handler_sagdp_receive_hlp( &tact, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 		if ( ret_code == SAGDP_RET_NEED_NONCE )

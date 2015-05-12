@@ -164,11 +164,15 @@ uint8_t default_test_control_program_accept_reply_continue( void* control_prog_s
 	}
 	else
 	{
-		assert( ps->chain_ini_size == 2 );
+//		assert( ps->chain_ini_size == 2 );
+		// need to add explicit exit command to specify packet status-in-chain of the reply
+		zepto_write_uint8( reply, ZEPTOVM_OP_EXIT );
+		zepto_write_uint8( reply, (uint8_t)SAGDP_P_STATUS_TERMINATING ); // TODO: if padding is required, add necessary data here
+		reply_sz = zepto_writer_get_response_size( reply );
 	}
 	uint8_t hdr = SACCP_NEW_PROGRAM; //TODO: we may want to add extra headers
 	zepto_write_prepend_byte( reply, hdr );
-	zepto_write_prepend_byte( reply, SAGDP_P_STATUS_FIRST );
+	zepto_write_prepend_byte( reply, SAGDP_P_STATUS_INTERMEDIATE );
 
 
 	// return status
