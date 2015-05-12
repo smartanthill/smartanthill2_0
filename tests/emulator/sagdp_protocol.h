@@ -23,6 +23,7 @@ Copyright (C) 2015 OLogN Technologies AG
 //#include "sa-eeprom.h"
 #include "zepto-mem-mngmt.h"
 #include "sa-data-types.h"
+#include "sa-hal-time-provider.h"
 
 
 // RET codes
@@ -43,6 +44,10 @@ Copyright (C) 2015 OLogN Technologies AG
 #define SAGDP_STATE_WAIT_REMOTE 2
 #define SAGDP_STATE_WAIT_LOCAL 3
 
+// time-related events
+#define SAGDP_EV_NONE 0
+#define SAGDP_EV_RESEND_LSP 1
+
 
 // packet statuses within the chain
 #define SAGDP_P_STATUS_INTERMEDIATE 0
@@ -61,19 +66,22 @@ struct SAGDP_DATA
 {
 	uint8_t state;
 	uint8_t last_timeout;
+	uint8_t resent_ordinal;
 	sasp_nonce_type last_received_chain_id;
 	sasp_nonce_type last_received_packet_id;
 	sasp_nonce_type first_last_sent_packet_id;
 	sasp_nonce_type next_last_sent_packet_id;
 	sasp_nonce_type prev_first_last_sent_packet_id;
+	sa_time_val next_event_time;
+	uint8_t event_type; // one of time-related events
 };
 
 
 // handlers
 void sagdp_init( SAGDP_DATA* sagdp_data );
-uint8_t handler_sagdp_timer( uint8_t* timeout, sasp_nonce_type nonce, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
-uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
-uint8_t handler_sagdp_receive_request_resend_lsp( uint8_t* timeout, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
-uint8_t handler_sagdp_receive_hlp( uint8_t* timeout, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
+uint8_t handler_sagdp_timer( timeout_action* tact, sasp_nonce_type nonce, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
+uint8_t handler_sagdp_receive_up( timeout_action* tact, sasp_nonce_type nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
+uint8_t handler_sagdp_receive_request_resend_lsp( timeout_action* tact, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
+uint8_t handler_sagdp_receive_hlp( timeout_action* tact, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
 
 #endif // __SAGDP_PROTOCOL_H__

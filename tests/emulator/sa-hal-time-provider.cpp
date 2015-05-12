@@ -15,20 +15,20 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#if !defined __SA_DATA_TYPES_H__
-#define __SA_DATA_TYPES_H__
-
-#include "sa-uint48.h"
 #include "sa-hal-time-provider.h"
 
 
-typedef sa_uint48_t sasp_nonce_type;
+#ifdef _MSC_VER
 
-struct timeout_action // NOTE: might be a temporary solution
+#include <Windows.h>
+
+void sa_get_time( sa_time_val* t )
 {
-	sa_time_val tv;
-	uint8_t action;
-};
+	unsigned int sys_t = GetTickCount();
+	t->high_t = sys_t >> 16;
+	t->low_t = (unsigned short)sys_t;
+}
 
-
-#endif // __SA_DATA_TYPES_H__
+#else 
+#error  NOT IMPLEMENTED
+#endif

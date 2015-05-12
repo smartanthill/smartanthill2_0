@@ -21,6 +21,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "sa-common.h"
 #include "sa-commlayer.h"
+#include "sa-hal-time-provider.h"
 #include "sa-timer.h"
 #include "saoudp_protocol.h"
 #include "sasp_protocol.h"
@@ -58,6 +59,9 @@ int main_loop()
 	// TODO: actual key loading, etc
 	uint8_t sasp_key[16];
 	memcpy( sasp_key, "16-byte fake key", 16 );
+
+	timeout_action tact;
+	tact.action = 0;
 
 	uint8_t timer_val = 0xFF;
 	uint16_t wake_time;
@@ -103,10 +107,11 @@ wait_for_comm_event:
 			case COMMLAYER_RET_TIMEOUT:
 			{
 				// regular processing will be done below in the next block
-				printf( "no reply from device received; the last message (if any) will be resent by timer\n" );
+/*				printf( "no reply from device received; the last message (if any) will be resent by timer\n" );
 				// TODO: to think: why do we use here handler_sagdp_receive_request_resend_lsp() and not handlerSAGDP_timer()
-				ret_code = handler_sagdp_receive_request_resend_lsp( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
-				if ( ret_code == SAGDP_RET_TO_LOWER_NONE )
+				sa_get_time( &(tact.tv) ); tact.action = 0;
+				ret_code = handler_sagdp_timer( &tact, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+				if ( ret_code == SAGDP_RET_OK )
 				{
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 					continue;
@@ -116,13 +121,42 @@ wait_for_comm_event:
 				{
 					ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
 					assert( ret_code == SASP_RET_NONCE );
-					ret_code = handler_sagdp_receive_request_resend_lsp( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
-					assert( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_TO_LOWER_NONE );
+					sa_get_time( &(tact.tv) ); tact.action = 0;
+					ret_code = handler_sagdp_timer( &tact, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+					assert( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_OK );
 				}
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 
 				goto wait_for_comm_event;
-				break;
+				break;*/
+				if ( sagdp_data.event_type ) //TODO: temporary solution
+				{
+					printf( "no reply received; the last message (if any) will be resent by timer\n" );
+					sa_get_time( &(tact.tv) ); tact.action = 0;
+					ret_code = handler_sagdp_timer( &tact, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+					if ( ret_code == SAGDP_RET_OK )
+					{
+						zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+						goto wait_for_comm_event;
+					}
+					else if ( ret_code == SAGDP_RET_NEED_NONCE )
+					{
+						ret_code = handler_sasp_get_packet_id( nonce, SASP_NONCE_SIZE, &sasp_data );
+						assert( ret_code == SASP_RET_NONCE );
+						sa_get_time( &(tact.tv) ); tact.action = 0;
+						ret_code = handler_sagdp_timer( &tact, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+//			printf( "ret_code = %d\n", ret_code );
+						assert( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_OK );
+						zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+						goto saspsend;
+						break;
+					}
+					else
+					{
+						printf( "ret_code = %d\n", ret_code );
+						assert( 0 );
+					}
+				}
 			}
 			default:
 			{
@@ -186,7 +220,8 @@ saoudp_in:
 			case SASP_RET_TO_HIGHER_LAST_SEND_FAILED:
 			{
 				printf( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
-				ret_code = handler_sagdp_receive_request_resend_lsp( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+				sa_get_time( &(tact.tv) ); tact.action = 0;
+				ret_code = handler_sagdp_receive_request_resend_lsp( &tact, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 				if ( ret_code == SAGDP_RET_TO_LOWER_NONE )
 				{
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -196,7 +231,8 @@ saoudp_in:
 				{
 					ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
 					assert( ret_code == SASP_RET_NONCE );
-					ret_code = handler_sagdp_receive_request_resend_lsp( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+					sa_get_time( &(tact.tv) ); tact.action = 0;
+					ret_code = handler_sagdp_receive_request_resend_lsp( &tact, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 					assert( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_TO_LOWER_NONE );
 				}
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -213,12 +249,14 @@ saoudp_in:
 		}
 
 		// 3. pass to SAGDP a new packet
-		ret_code = handler_sagdp_receive_up( &timer_val, NULL, pid, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+		sa_get_time( &(tact.tv) ); tact.action = 0;
+		ret_code = handler_sagdp_receive_up( &tact, NULL, pid, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 		if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
 			ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
 			assert( ret_code == SASP_RET_NONCE );
-			ret_code = handler_sagdp_receive_up( &timer_val, nonce, pid, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+			sa_get_time( &(tact.tv) ); tact.action = 0;
+			ret_code = handler_sagdp_receive_up( &tact, nonce, pid, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 			assert( ret_code != SAGDP_RET_NEED_NONCE );
 		}
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -276,12 +314,14 @@ saoudp_in:
 			
 		// 5. SAGDP
 client_received:
-		ret_code = handler_sagdp_receive_hlp( &timer_val, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+		sa_get_time( &(tact.tv) ); tact.action = 0;
+		ret_code = handler_sagdp_receive_hlp( &tact, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 		if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
 			ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
 			assert( ret_code == SASP_RET_NONCE );
-			ret_code = handler_sagdp_receive_hlp( &timer_val, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+			sa_get_time( &(tact.tv) ); tact.action = 0;
+			ret_code = handler_sagdp_receive_hlp( &tact, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 			assert( ret_code != SAGDP_RET_NEED_NONCE );
 		}
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );

@@ -540,6 +540,7 @@ uint8_t sendMessage( MEMORY_HANDLE mem_h )
 #endif
 		return COMMLAYER_RET_FAILED;
 	}
+	printf( "[%d] message sent; mem_h = %d, size = %d\n", GetTickCount(), mem_h, sz );
 	return COMMLAYER_RET_OK;
 }
 
@@ -574,7 +575,7 @@ uint8_t tryGetMessage( MEMORY_HANDLE mem_h )
 }
 
 
-#ifdef USED_AS_MASTER
+#if (defined USED_AS_MASTER) && ( (defined USED_AS_MASTER_COMMSTACK) || (defined USED_AS_MASTER_CORE) )
 
 const char* inet_addr_as_string_with_cl = "127.0.0.1";
 int sock_with_cl;
@@ -583,9 +584,11 @@ struct sockaddr_in sa_self_with_cl, sa_other_with_cl;
 #ifdef USED_AS_MASTER_COMMSTACK
 uint16_t self_port_num_with_cl = 7665;
 uint16_t other_port_num_with_cl = 7655;
-#else // USED_AS_MASTER_COMMSTACK
+#elif defined USED_AS_MASTER_CORE
 uint16_t self_port_num_with_cl = 7655;
 uint16_t other_port_num_with_cl = 7665;
+#else
+#error Unexpected configuration
 #endif // USED_AS_MASTER_COMMSTACK
 
 uint8_t buffer_in_with_cl[ BUFSIZE ];
@@ -645,11 +648,17 @@ void communication_with_comm_layer_terminate()
 
 bool communication_initialize()
 {
-	return communication_preinitialize() 
-#ifdef USED_AS_MASTER_COMMSTACK
-		&& _communication_initialize() 
+#ifdef USED_AS_MASTER
+#ifdef USED_AS_MASTER_CORE
+	return communication_preinitialize() && communication_with_comm_layer_initialize();
+#elif defined USED_AS_MASTER_COMMSTACK
+	return communication_preinitialize() && communication_with_comm_layer_initialize() && _communication_initialize();
+#else // 2 in 1
+	return communication_preinitialize() && _communication_initialize();
 #endif
-		&& communication_with_comm_layer_initialize();
+#else // USED_AS_MASTER
+	return communication_preinitialize() && _communication_initialize();
+#endif // USED_AS_MASTER
 }
 
 void communication_terminate()
@@ -772,6 +781,7 @@ uint8_t send_within_master( MEMORY_HANDLE mem_h )
 #endif
 		return COMMLAYER_RET_FAILED;
 	}
+	printf( "[%d] message sent within master; mem_h = %d, size = %d\n", GetTickCount(), mem_h, sz );
 	return COMMLAYER_RET_OK;
 }
 

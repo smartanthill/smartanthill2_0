@@ -19,10 +19,10 @@ Copyright (C) 2015 OLogN Technologies AG
 
 // SAGDP timer constants
 // TODO: revise when values are finalized in the documentation
-#define SAGDP_LTO_START 3 // treated as seconds; in general, by necessity, can be interpreted in times of basic time units 
-#define SAGDP_LTO_EXP_TOP 3 // new_lto = lto * SAGDP_LTO_EXP_TOP / SAGDP_LTO_EXP_BOTTOM
-#define SAGDP_LTO_EXP_BOTTOM 2
+///#define SAGDP_LTO_TO_SEC( x ) x // just 1 unit == 1 sec
+#define SAGDP_LTO_START 3 // 3 sec so far
 #define SAGDP_LTO_MAX 189
+#define SAGDP_LTO_POW_MAX 11
 
 
 void setIniLTO( uint8_t* lto )
@@ -34,8 +34,8 @@ void cappedExponentiateLTO( uint8_t* lto )
 {
 	if ( *lto >= SAGDP_LTO_MAX ) return;
 	uint16_t _lto = *lto;
-	_lto *= SAGDP_LTO_EXP_TOP;
-	_lto /= SAGDP_LTO_EXP_BOTTOM;
+	_lto *= 3;
+	_lto /= 2;
 	*lto = (uint8_t)_lto;
 }
 
@@ -62,35 +62,110 @@ bool is_pid_zero( const sa_uint48_t pid )
 void sagdp_init( SAGDP_DATA* sagdp_data )
 {
 	sagdp_data->state = SAGDP_STATE_IDLE;
-	sagdp_data->last_timeout = 0;
+	cancelLTO( &(sagdp_data->last_timeout) );
 	sa_uint48_set_zero( sagdp_data->last_received_chain_id );
 	sa_uint48_set_zero( sagdp_data->last_received_packet_id );
 	sa_uint48_set_zero( sagdp_data->first_last_sent_packet_id );
 	sa_uint48_set_zero( sagdp_data->next_last_sent_packet_id );
 	sa_uint48_set_zero( sagdp_data->prev_first_last_sent_packet_id );
+	sagdp_data->resent_ordinal = 0;
+	sagdp_data->event_type = SAGDP_EV_NONE; // in this case we do not care about next_event_time
 }
 
-uint8_t handler_sagdp_timer( uint8_t* timeout, sasp_nonce_type nonce, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
+// PROCESSING TIMEOUT-BASED SEQUENCES
+
+#define SAGDP_LTO_INCREMENT_BY_CAPPED_EXP_SEC( tval, sec_pow ) \
+	{\
+		cappedExponentiateLTO( &(sagdp_data->last_timeout) ); \
+		if (sec_pow > SAGDP_LTO_POW_MAX) sec_pow = SAGDP_LTO_POW_MAX; \
+		sa_time_val tmp_t; SA_TIME_LOAD_TICKS_FOR_1_SEC( tmp_t ); \
+		SA_TIME_MUL_TICKS_BY_2( tmp_t ) \
+		for ( uint8_t i=0; i<=sec_pow; i++) SA_TIME_MUL_TICKS_BY_1_AND_A_HALF( tmp_t ) \
+		SA_TIME_INCREMENT_BY_TICKS( tval, tmp_t ) \
+	}
+
+
+#define SAGDP_INIT_RESENT_SEQUENCE \
+	sagdp_data->resent_ordinal = 1; \
+	sagdp_data->event_type = SAGDP_EV_RESEND_LSP; \
+	setIniLTO( &(sagdp_data->last_timeout) ); \
+	SAGDP_LTO_INCREMENT_BY_CAPPED_EXP_SEC( tact->tv, sagdp_data->resent_ordinal ) \
+	sa_hal_time_val_copy_from( &(sagdp_data->next_event_time), &(tact->tv) );
+
+
+#define SAGDP_CANCEL_RESENT_SEQUENCE \
+	sagdp_data->resent_ordinal = 0; \
+	sagdp_data->event_type = SAGDP_EV_NONE; \
+	cancelLTO( &(sagdp_data->last_timeout) );
+
+
+#define SAGDP_REGISTER_SUBSEQUENT_RESENT \
+	(sagdp_data->resent_ordinal) ++; \
+	sa_hal_time_val_copy_from(&(tact->tv),  &(sagdp_data->next_event_time) );
+
+
+#define SAGDP_REGISTER_SUBSEQUENT_RESENT_AND_RESET_TIMEOUT \
+	(sagdp_data->resent_ordinal) ++; \
+	assert( sagdp_data->last_timeout != 0 ); \
+	SAGDP_LTO_INCREMENT_BY_CAPPED_EXP_SEC( tact->tv, sagdp_data->resent_ordinal ) \
+	sa_hal_time_val_copy_from( &(sagdp_data->next_event_time), &(tact->tv) );
+
+
+#define SAGDP_SHOULD_RESENT \
+	( sagdp_data->event_type == SAGDP_EV_RESEND_LSP && sa_hal_time_val_is_less( &(sagdp_data->next_event_time), &(tact->tv) ) )
+
+
+#define SAGDP_ASSERT_NO_SEQUENCE \
+	assert( sagdp_data->event_type == SAGDP_EV_NONE );
+
+
+#define SAGDP_ASSERT_SEQUENCE_IN_PROGRESS \
+	assert( sagdp_data->resent_ordinal != 0 && sagdp_data->event_type == SAGDP_EV_RESEND_LSP );
+
+
+
+uint8_t handler_sagdp_timer( timeout_action* tact, sasp_nonce_type nonce, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
 {
 	uint8_t state = sagdp_data->state;
 	if ( state == SAGDP_STATE_WAIT_REMOTE )
 	{
 		INCREMENT_COUNTER( 20, "handlerSAGDP_timer(), packet resent" );
-		assert( nonce != NULL );
-		sa_uint48_init_by( sagdp_data->next_last_sent_packet_id, nonce );
-		cappedExponentiateLTO( &(sagdp_data->last_timeout) );
-		*timeout = sagdp_data->last_timeout;
-		zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
-		sagdp_data->state = SAGDP_STATE_WAIT_REMOTE;
-		return SAGDP_RET_TO_LOWER_REPEATED;
+
+		if ( SAGDP_SHOULD_RESENT )
+		{
+/*			zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
+			assert( sagdp_data->state == SAGDP_STATE_WAIT_REMOTE );
+			return SAGDP_RET_TO_LOWER_REPEATED;*/
+			parser_obj po_lsm;
+			zepto_parser_init( &po_lsm, MEMORY_HANDLE_SAGDP_LSM );
+			assert ( zepto_parsing_remaining_bytes( &po_lsm ) != 0 );
+
+			if ( nonce == NULL )
+				return SAGDP_RET_NEED_NONCE;
+			INCREMENT_COUNTER( 60, "handler_sagdp_timer(), wait-remote" );
+
+			SAGDP_REGISTER_SUBSEQUENT_RESENT_AND_RESET_TIMEOUT
+
+			PRINTF( "handler_sagdp_timer(): PID: %x%x%x%x%x%x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
+
+			// apply nonce
+			sa_uint48_init_by( sagdp_data->next_last_sent_packet_id, nonce );
+
+			zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
+			assert( sagdp_data->state = SAGDP_STATE_WAIT_REMOTE );
+			return SAGDP_RET_TO_LOWER_REPEATED;
+		}
+		else
+			return SAGDP_RET_OK;
 	}
 	else // other states: ignore
 	{
+		SAGDP_ASSERT_NO_SEQUENCE;
 		return SAGDP_RET_OK;
 	}
 }
 
-uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
+uint8_t handler_sagdp_receive_up( timeout_action* tact, sasp_nonce_type nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
 {
 	PRINTF( "handlerSAGDP_receiveNewUP():           pid: %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 
@@ -107,13 +182,15 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 
 	if ( state == SAGDP_STATE_IDLE )
 	{
+		SAGDP_ASSERT_NO_SEQUENCE;
+
 #ifdef USED_AS_MASTER
 		if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_ERROR_MSG )
 		{
 			INCREMENT_COUNTER( 22, "handler_sagdp_receive_up(), idle, error message" );
 
-			cancelLTO( &(sagdp_data->last_timeout) );
-			*timeout = sagdp_data->last_timeout;
+//			cancelLTO( &(sagdp_data->last_timeout) );
+//			*timeout = sagdp_data->last_timeout;
 
 			//+++ TODO: revise commented out logic below
 /*			if ( zepto_parse_skip_block( &po, SAGDP_LRECEIVED_PID_SIZE ) )
@@ -211,6 +288,7 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_IS_ACK )
 		{
+			SAGDP_CANCEL_RESENT_SEQUENCE
 			assert(0);
 		}
 		if ( ( packet_status & SAGDP_P_STATUS_MASK ) != SAGDP_P_STATUS_FIRST )
@@ -243,6 +321,7 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 					sa_uint48_init_by( sagdp_data->next_last_sent_packet_id, nonce );
 
 					zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
+					SAGDP_REGISTER_SUBSEQUENT_RESENT
 					return SAGDP_RET_TO_LOWER_REPEATED;
 				}
 				else
@@ -287,6 +366,7 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 			{
 				INCREMENT_COUNTER( 28, "handler_sagdp_receive_up(), idle, terminating, ignored" );
 				assert( ( packet_status & SAGDP_P_STATUS_MASK ) ==  SAGDP_P_STATUS_TERMINATING );
+				SAGDP_CANCEL_RESENT_SEQUENCE
 				return SAGDP_RET_OK; // ignored
 			}
 		}
@@ -316,6 +396,7 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 
 				// re-send LSP
 				zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
+				//SAGDP_REGISTER_SUBSEQUENT_RESENT
 				// SAGDP status remains the same
 				return SAGDP_RET_TO_LOWER_REPEATED;
 			}
@@ -323,7 +404,7 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 			{
 				INCREMENT_COUNTER( 31, "handler_sagdp_receive_up(), idle, first, new" );
 				cancelLTO( &(sagdp_data->last_timeout) );
-				*timeout = sagdp_data->last_timeout;
+//				*timeout = sagdp_data->last_timeout;
 				sa_uint48_init_by( sagdp_data->last_received_packet_id, pid );
 				sa_uint48_init_by( sagdp_data->last_received_chain_id, this_chain_id );
 
@@ -342,12 +423,15 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 
 	else if ( state == SAGDP_STATE_WAIT_REMOTE )
 	{
+		SAGDP_ASSERT_SEQUENCE_IN_PROGRESS;
+
 #ifdef USED_AS_MASTER
 		if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_ERROR_MSG )
 		{
 			INCREMENT_COUNTER( 40, "handler_sagdp_receive_up(), wait-remote, error" );
-			cancelLTO( &(sagdp_data->last_timeout) );
-			*timeout = sagdp_data->last_timeout;
+/*			cancelLTO( &(sagdp_data->last_timeout) );
+			*timeout = sagdp_data->last_timeout;*/
+			SAGDP_CANCEL_RESENT_SEQUENCE;
 			//+++ TODO: revise commented out logic below
 /*			if ( zepto_parse_skip_block( &po, SAGDP_LRECEIVED_PID_SIZE ) )
 			{
@@ -368,6 +452,7 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_IS_ACK )
 		{
+			SAGDP_CANCEL_RESENT_SEQUENCE;
 			assert(0);
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_FIRST )
@@ -393,6 +478,10 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 				// re-send LSP
 				zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
 				// SAGDP status remains the same
+
+				SAGDP_REGISTER_SUBSEQUENT_RESENT
+				// TODO: think about going back to minimal timeout
+
 				return SAGDP_RET_TO_LOWER_REPEATED;
 			}
 			else
@@ -431,8 +520,11 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 					// apply nonce
 					sa_uint48_init_by( sagdp_data->next_last_sent_packet_id, nonce );
 
-					cappedExponentiateLTO( &(sagdp_data->last_timeout) );
-					*timeout = sagdp_data->last_timeout;
+//					cappedExponentiateLTO( &(sagdp_data->last_timeout) );
+//					*timeout = sagdp_data->last_timeout;
+
+					SAGDP_REGISTER_SUBSEQUENT_RESENT
+					// TODO: think about going back to minimal timeout
 
 
 					parser_obj po_lsm, po_lsm1;
@@ -478,8 +570,9 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 			zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
 			zepto_write_prepend_byte( mem_h, packet_status & SAGDP_P_STATUS_MASK );
 
-			cancelLTO( &(sagdp_data->last_timeout) );
-			*timeout = sagdp_data->last_timeout;
+//			cancelLTO( &(sagdp_data->last_timeout) );
+//			*timeout = sagdp_data->last_timeout;
+			SAGDP_CANCEL_RESENT_SEQUENCE;
 			sagdp_data->state = ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_INTERMEDIATE ? SAGDP_STATE_WAIT_LOCAL : SAGDP_STATE_IDLE;
 			return SAGDP_RET_TO_HIGHER;
 		}
@@ -498,6 +591,7 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_IS_ACK )
 		{
+			SAGDP_CANCEL_RESENT_SEQUENCE
 			assert(0);
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_FIRST )
@@ -519,6 +613,10 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 				sa_uint48_init_by( sagdp_data->next_last_sent_packet_id, nonce );
 
 				zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
+
+				SAGDP_REGISTER_SUBSEQUENT_RESENT
+				// TODO: think about going back to minimal timeout
+
 				return SAGDP_RET_TO_LOWER_REPEATED;
 			}
 			else
@@ -526,6 +624,7 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 				INCREMENT_COUNTER( 43, "handler_sagdp_receive_up(), wait-remote, first, new (applied)" );
 				sagdp_data->state = SAGDP_STATE_NOT_INITIALIZED;
 				PRINTF( "SAGDP: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
+				SAGDP_CANCEL_RESENT_SEQUENCE
 				return SAGDP_RET_START_OVER_FIRST_RECEIVED;
 			}
 		}
@@ -560,7 +659,7 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 					sa_uint48_init_by( sagdp_data->next_last_sent_packet_id, nonce );
 
 					cappedExponentiateLTO( &(sagdp_data->last_timeout) );
-					*timeout = sagdp_data->last_timeout;
+//					*timeout = sagdp_data->last_timeout;
 					parser_obj po_lsm, po_lsm1;
 					zepto_parser_init( &po_lsm, MEMORY_HANDLE_SAGDP_LSM );
 					zepto_parser_init( &po_lsm1, MEMORY_HANDLE_SAGDP_LSM );
@@ -570,13 +669,17 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 					zepto_copy_part_of_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, &po_lsm, &po_lsm1, mem_h );
 					zepto_write_prepend_byte( mem_h, first_byte_of_lsm );
 
+					SAGDP_REGISTER_SUBSEQUENT_RESENT
+					// TODO: think about going back to minimal timeout
+
 					sagdp_data->state = SAGDP_STATE_WAIT_REMOTE; // note that PID can be changed!
 					return SAGDP_RET_TO_LOWER_REPEATED;
 				}
 				else
 				{
 					INCREMENT_COUNTER( 45, "handler_sagdp_receive_up(), wait-remote, is-old, resend NOT requested" );
-					PRINTF( "SAGDP OK: CORRRUPTED: state = %d, packet_status = %d\n", state, packet_status );
+					PRINTF( "SAGDP OK (no resend): state = %d, packet_status = %d\n", state, packet_status );
+//					SAGDP_CANCEL_RESENT_SEQUENCE
 					return SAGDP_RET_OK;
 				}
 			}
@@ -610,8 +713,9 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 			zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
 			zepto_write_prepend_byte( mem_h, packet_status & SAGDP_P_STATUS_MASK );
 
-			cancelLTO( &(sagdp_data->last_timeout) );
-			*timeout = sagdp_data->last_timeout;
+//			cancelLTO( &(sagdp_data->last_timeout) );
+			SAGDP_CANCEL_RESENT_SEQUENCE
+//			*timeout = sagdp_data->last_timeout;
 			sagdp_data->state = ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_INTERMEDIATE ? SAGDP_STATE_WAIT_LOCAL : SAGDP_STATE_IDLE;
 			return SAGDP_RET_TO_HIGHER;
 		}
@@ -620,12 +724,14 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 
 	else if ( state == SAGDP_STATE_WAIT_LOCAL )
 	{
+		SAGDP_ASSERT_NO_SEQUENCE;
+
 #ifdef USED_AS_MASTER
 		if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_ERROR_MSG )
 		{
 			INCREMENT_COUNTER( 40, "handler_sagdp_receive_up(), wait-remote, error" );
-			cancelLTO( &(sagdp_data->last_timeout) );
-			*timeout = sagdp_data->last_timeout;
+//			cancelLTO( &(sagdp_data->last_timeout) );
+//			*timeout = sagdp_data->last_timeout;
 			//+++ TODO: revise commented out logic below
 /*			if ( zepto_parse_skip_block( &po, SAGDP_LRECEIVED_PID_SIZE ) )
 			{
@@ -726,6 +832,7 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_IS_ACK )
 		{
+			SAGDP_CANCEL_RESENT_SEQUENCE
 			assert(0);
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_FIRST ) // TODO: same plus request ACK
@@ -817,7 +924,7 @@ uint8_t handler_sagdp_receive_up( uint8_t* timeout, sasp_nonce_type nonce, uint8
 	}
 }
 
-uint8_t handler_sagdp_receive_request_resend_lsp( uint8_t* timeout, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
+uint8_t handler_sagdp_receive_request_resend_lsp( timeout_action* tact, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
 {
 	// SAGDP can legitimately receive a repeated packet in wait-remote state (the other side sounds like "we have not received anything from you; please resend, only then we will probably send you something new")
 	// LSP must be resent
@@ -826,6 +933,8 @@ uint8_t handler_sagdp_receive_request_resend_lsp( uint8_t* timeout, sasp_nonce_t
 	zepto_parser_init( &po_lsm, MEMORY_HANDLE_SAGDP_LSM );
 	if ( zepto_parsing_remaining_bytes( &po_lsm ) == 0 )
 	{
+		assert( sagdp_data->resent_ordinal == 0 );
+		assert( sagdp_data->event_type == SAGDP_EV_NONE );
 		INCREMENT_COUNTER( 63, "handler_sagdp_receive_request_resend_lsp(), no lsm" );
 		return SAGDP_RET_TO_LOWER_NONE;
 	}
@@ -842,14 +951,22 @@ uint8_t handler_sagdp_receive_request_resend_lsp( uint8_t* timeout, sasp_nonce_t
 		// apply nonce
 		sa_uint48_init_by( sagdp_data->next_last_sent_packet_id, nonce );
 
-		cappedExponentiateLTO( &(sagdp_data->last_timeout) );
-		*timeout = sagdp_data->last_timeout;
+//		cappedExponentiateLTO( &(sagdp_data->last_timeout) );
+		SAGDP_CANCEL_RESENT_SEQUENCE
+/*		SAGDP_LTO_INCREMENT_BY_CAPPED_EXP_SEC( *tval, sagdp_data->resent_ordinal );
+		(sagdp_data->resent_ordinal)++;*/
+		SAGDP_INIT_RESENT_SEQUENCE
+//		sa_hal_time_val_copy_from( &(sagdp_data->next_event_time), tval );
+
+//		*timeout = sagdp_data->last_timeout;
 		zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
 		sagdp_data->state = SAGDP_STATE_WAIT_REMOTE; // note that PID can be changed!
 		return SAGDP_RET_TO_LOWER_REPEATED;
 	}
 	if ( state == SAGDP_STATE_IDLE )
 	{
+		SAGDP_ASSERT_NO_SEQUENCE;
+
 		if ( nonce == NULL )
 			return SAGDP_RET_NEED_NONCE;
 		INCREMENT_COUNTER( 61, "handler_sagdp_receive_request_resend_lsp(), idle" );
@@ -859,8 +976,13 @@ uint8_t handler_sagdp_receive_request_resend_lsp( uint8_t* timeout, sasp_nonce_t
 		// apply nonce
 		sa_uint48_init_by( sagdp_data->next_last_sent_packet_id, nonce );
 
-		cappedExponentiateLTO( &(sagdp_data->last_timeout) );
-		*timeout = sagdp_data->last_timeout;
+//		cappedExponentiateLTO( &(sagdp_data->last_timeout) );
+//		SAGDP_CANCEL_RESENT_SEQUENCE
+/*		SAGDP_LTO_INCREMENT_BY_CAPPED_EXP_SEC( *tval, sagdp_data->resent_ordinal );
+		(sagdp_data->resent_ordinal)++;*/
+//		SAGDP_INIT_RESENT_SEQUENCE
+
+//		*timeout = sagdp_data->last_timeout;
 		zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE_SAGDP_LSM, mem_h );
 		sagdp_data->state = SAGDP_STATE_IDLE; // note that PID can be changed!
 		return SAGDP_RET_TO_LOWER_REPEATED;
@@ -876,7 +998,7 @@ uint8_t handler_sagdp_receive_request_resend_lsp( uint8_t* timeout, sasp_nonce_t
 	}
 }
 
-uint8_t handler_sagdp_receive_hlp( uint8_t* timeout, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
+uint8_t handler_sagdp_receive_hlp( timeout_action* tact, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
 {
 	// It is a responsibility of a higher level to report the status of a packet. 
 	//
@@ -893,6 +1015,8 @@ uint8_t handler_sagdp_receive_hlp( uint8_t* timeout, sasp_nonce_type nonce, MEMO
 
 	if ( state == SAGDP_STATE_IDLE )
 	{
+		SAGDP_ASSERT_NO_SEQUENCE;
+
 		if ( ( packet_status & SAGDP_P_STATUS_FIRST ) == 0 || ( packet_status & SAGDP_P_STATUS_TERMINATING ) )
 		{
 #ifdef USED_AS_MASTER
@@ -941,8 +1065,22 @@ uint8_t handler_sagdp_receive_hlp( uint8_t* timeout, sasp_nonce_type nonce, MEMO
 		zepto_response_to_request( MEMORY_HANDLE_SAGDP_LSM );
 
 		// request set timer
-		setIniLTO( &(sagdp_data->last_timeout) );
-		*timeout = sagdp_data->last_timeout;
+//		setIniLTO( &(sagdp_data->last_timeout) );
+//		*timeout = sagdp_data->last_timeout;
+		SAGDP_INIT_RESENT_SEQUENCE
+/*	sagdp_data->resent_ordinal = 1;
+	sagdp_data->event_type = SAGDP_EV_RESEND_LSP; 
+	setIniLTO( &(sagdp_data->last_timeout) ); 
+//	SAGDP_LTO_INCREMENT_BY_CAPPED_EXP_SEC( tact->tv, sagdp_data->resent_ordinal ) 
+	{
+		cappedExponentiateLTO( &(sagdp_data->last_timeout) ); 
+		if (sagdp_data->resent_ordinal > SAGDP_LTO_POW_MAX) sagdp_data->resent_ordinal = SAGDP_LTO_POW_MAX; //[!!!]
+		sa_time_val tmp_t; SA_TIME_LOAD_TICKS_FOR_1_SEC( tmp_t ); 
+		SA_TIME_MUL_TICKS_BY_2( tmp_t ) 
+		for ( uint8_t i=0; i<=sagdp_data->resent_ordinal; i++) SA_TIME_MUL_TICKS_BY_1_AND_A_HALF( tmp_t ) 
+		SA_TIME_INCREMENT_BY_TICKS( tact->tv, tmp_t ) 
+	}
+	sa_hal_time_val_copy_from( &(sagdp_data->next_event_time), &(tact->tv) );*/
 
 		sagdp_data->state = SAGDP_STATE_WAIT_REMOTE;
 		INCREMENT_COUNTER( 72, "handler_sagdp_receive_hlp(), idle, PACKET=FIRST" );
@@ -950,6 +1088,8 @@ uint8_t handler_sagdp_receive_hlp( uint8_t* timeout, sasp_nonce_type nonce, MEMO
 	}
 	else if ( state == SAGDP_STATE_WAIT_LOCAL )
 	{
+		SAGDP_ASSERT_NO_SEQUENCE;
+
 		if ( packet_status & SAGDP_P_STATUS_FIRST )
 		{
 #ifdef USED_AS_MASTER
@@ -995,8 +1135,19 @@ uint8_t handler_sagdp_receive_hlp( uint8_t* timeout, sasp_nonce_type nonce, MEMO
 		zepto_response_to_request( MEMORY_HANDLE_SAGDP_LSM );
 
 		// request set timer
-		setIniLTO( &(sagdp_data->last_timeout) );
-		*timeout = sagdp_data->last_timeout;
+		if ( packet_status & SAGDP_P_STATUS_TERMINATING )
+		{
+			// just do nothing
+//			setIniLTO( &(sagdp_data->last_timeout) );
+//			*timeout = sagdp_data->last_timeout;
+			SAGDP_ASSERT_NO_SEQUENCE;
+		}
+		else
+		{
+//			cancelLTO( &(sagdp_data->last_timeout) );
+//			*timeout = sagdp_data->last_timeout;
+			SAGDP_INIT_RESENT_SEQUENCE;
+		}
 
 		sagdp_data->state = packet_status == SAGDP_P_STATUS_TERMINATING ? SAGDP_STATE_IDLE : SAGDP_STATE_WAIT_REMOTE;
 		INCREMENT_COUNTER( 74, "handler_sagdp_receive_hlp(), wait-remote, intermediate/terminating" );

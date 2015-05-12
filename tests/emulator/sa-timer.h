@@ -15,6 +15,9 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
+// OLD approach
+// TODO: calls below should be avoided, and this file should be excluded from the project
+
 #if !defined __SA_TIMER_H__
 #define __SA_TIMER_H__
 
