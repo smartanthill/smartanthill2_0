@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.1.3a
+:Version:   v0.1.3b
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -98,15 +98,14 @@ SmartAnthill OtA pairing provides security (including MITM protection) with mini
 From OtA Pairing perspective, SmartAnthill Device can be in one of the following OtA pairing states: 
 
 * PRE-PAIRING
-* PAIRING-ENTROPY-NEEDED (optional, see below)
 * PAIRING-MITM-CHECK
 * PAIRING-COMPLETED
 
 IMPORTANT: Change from any of the states into PRE-PAIRING state MUST be implemented ONLY via physical manipulations of end-user with SmartAnthill Device (and MUST NOT be allowed remotely). Examples of valid user interfaces to perform such a change include on-Device button or buttons (for example, if two buttons are simultaneously kept pressed for over N seconds) and on-Device PCB jumper. When changing Device state to PRE-PAIRING state, state of Device RNG (i.e. data used for random number generation) MUST NOT be affected.
 
-In PRE-PAIRING and PAIRING-ENTROPY-NEEDED states, SASP MUST use 'zero' AES-128 key (with AES key consisting of all zeros). 
+In PRE-PAIRING state, SASP MUST use 'zero' AES-128 key (with AES key consisting of all zeros). 
 
-In PRE-PAIRING and PAIRING-ENTROPY-NEEDED states, no programs are allowed to be sent to SACCP; only TODO SACCP packets are allowed. In PAIRING-MITM-CHECK state, SACCP programs are allowed; however, in this state, SACCP restricts EXEC command of Zepto VM to the only Built-In bodypart (id=BUILTIN_BODYPART_PAIRING). 
+In PRE-PAIRING state, no programs are allowed to be sent to SACCP; only TODO SACCP packets are allowed. In PAIRING-MITM-CHECK state, SACCP programs are allowed; however, in this state, SACCP restricts EXEC command of Zepto VM to the only Built-In bodypart (id=BUILTIN_BODYPART_PAIRING). 
 
 From security perspective, SmartAnthill OtA pairing works as follows:
 
