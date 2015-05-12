@@ -27,7 +27,7 @@
 SmartAnthill SmartAnthill Random Number Generation and Key Generation
 =====================================================================
 
-:Version:   v0.1.5
+:Version:   v0.1.5a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -64,6 +64,10 @@ Fortuna Implementation in SmartAnthill
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 There are two approaches to implement Fortuna in SmartAntill: 'Radical' and 'Conservative'. 'Radical' is not strictly compliant with Fortuna description from [Fortuna], but we feel it should perform significantly better for our special circumstances. 'Conservative' is fully compliant to description in [Fortuna], with really minor tweaks (within the spirit of Fortuna) to reduce resource requirements. Currently, and until it is shown otherwise, both implementations are acceptable for SmartAnthill.
+
+In any case, pool size for SmartAnthill Fortuna implementations is 128*3 bytes; effectively it means that we're making a  guesstimate that each event (encoded as 3 bytes per ADDRANDOMEVENT() description) carries one bit of entropy.
+
+Currently, Fortuna implementation is estimated to require 32 (state of first SHA256 in SHAd256)+32 (state of second SHA256 in SHAd256)+64 (512-bit chunk buffer) = 128 bytes per pool, plus 32 bytes regardless of pools (generator state).
 
 'Radical' SmartAnthill Fortuna
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -166,7 +170,7 @@ To qualify as a 'Device with hardware RNG', Device MUST comply with all the foll
   + until such an initialization is completed, Device MUST NOT be operational
   + bit stream blocks with online test failed, still SHOULD be fed to Fortuna PRNG
   + RNG MUST skip at least first TODO bits of the Fortuna output bit stream (before starting to output Fortuna output as RNG output)
-
+  
 * Device MUST continue feeding output from hardware entropy source to Fortuna PRNG, without applying the online tests, at a rate at least 1 bit per second (as long as Device is running during at least some portion of the 1 second and not in a hardware sleep mode)
 * Device SHOULD feed additional available entropy (timings, ADC etc. as described above) to Fortuna PRNG
 
@@ -185,7 +189,7 @@ Secure SmartAnthill Devices MAY use one of the following RNGs (as long as all re
 
 * uniquely-pre-initialized Poor-Man's PRNGs
 * hardware-assisted Fortuna
-* hardware-assisted Fortuna with uniquely-pre-initialized seed file (RECOMMENDED)
+* hardware-assisted Fortuna with uniquely-pre-initialized seed file
 * hardware RNG
 * hardware RNG with Fortuna having uniquely-pre-initialized seed file (RECOMMENDED)
 
