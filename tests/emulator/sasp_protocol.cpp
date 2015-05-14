@@ -46,10 +46,10 @@ void SASP_restoreFromBackup( SASP_DATA* sasp_data )
 }
 
 inline
-void sasp_make_nonce_for_encryption( const sa_uint48_t packet_id, uint8_t master_slave_bit, uint8_t nonce[16] )
+void sasp_make_nonce_for_encryption( const sasp_nonce_type packet_id, uint8_t master_slave_bit, uint8_t nonce[16] )
 {
 	memset( nonce, 0, 16 );
-	for ( int8_t i=0; i<sizeof(packet_id); i++ )
+	for ( int8_t i=0; i<sizeof(sasp_nonce_type); i++ )
 	{
 		nonce[i] = sa_uint48_get_byte( packet_id, i );
 	}
@@ -94,7 +94,7 @@ void SASP_EncryptAndAddAuthenticationData( REQUEST_REPLY_HANDLE mem_h, const uin
 			eax_128_process_nonterminating_block_encr( key, ctr, block, block, msg_cbc_val );
 			zepto_write_block( mem_h, block, SASP_ENC_BLOCK_SIZE );
 		}
-		uint8_t remaining_sz = zepto_parsing_remaining_bytes( &po );
+		uint16_t remaining_sz = zepto_parsing_remaining_bytes( &po );
 		read_ok = zepto_parse_read_block( &po, block, remaining_sz );
 		assert( read_ok );
 		eax_128_process_terminating_block_encr( key, ctr, block, remaining_sz, block, msg_cbc_val );

@@ -820,13 +820,14 @@ zepto_mem_man_check_sanity();
 
 void zepto_parser_init( parser_obj* po, REQUEST_REPLY_HANDLE mem_h )
 {
+	assert( mem_h != MEMORY_HANDLE_INVALID );
 	po->mem_handle = mem_h;
 	po->offset = 0;
 }
 
 void zepto_parser_init( parser_obj* po, const parser_obj* po_base )
 {
-	assert( po->mem_handle != MEMORY_HANDLE_INVALID );
+	assert( po_base->mem_handle != MEMORY_HANDLE_INVALID );
 	po->mem_handle = po_base->mem_handle;
 	po->offset = po_base->offset;
 }
@@ -1254,7 +1255,8 @@ void zepto_parser_decode_uint( parser_obj* po, uint8_t* bytes_out, uint8_t targe
 	assert( buff != NULL );
 	uint8_t* end = buff;
 	zepto_parser_decode_uint( &end, bytes_out, target_size );
-	po->offset += end - buff;
+	assert( end - buff >= 0 && end - buff < 0x10000 ); // at least within 16 bits
+	po->offset += (uint16_t)(end - buff);
 }
 
 uint16_t zepto_parse_encoded_uint16( parser_obj* po )
@@ -1303,7 +1305,8 @@ void zepto_parser_encode_and_append_uint( MEMORY_HANDLE mem_h, const uint8_t* nu
 		}
 	}
 
-	uint8_t sz = out_buff_end - out_buff;
+	assert( out_buff_end - out_buff >= 0 && out_buff_end - out_buff < 0x100 ); // at least within 8 bits
+	uint8_t sz = (uint8_t)(out_buff_end - out_buff);
 	printf( "zepto_parser_encode_and_append_uint(..., ..., %d) resulted in %d bytes\n", num_sz_max, sz );
 	uint8_t* buff = memory_object_append( mem_h, sz );
 	memcpy( buff, out_buff, sz );
@@ -1349,7 +1352,8 @@ void zepto_parser_encode_and_prepend_uint( MEMORY_HANDLE mem_h, const uint8_t* n
 		}
 	}
 
-	uint8_t sz = out_buff_end - out_buff;
+	assert( out_buff_end - out_buff >= 0 && out_buff_end - out_buff < 0x100 ); // at least within 8 bits
+	uint8_t sz = (uint8_t)(out_buff_end - out_buff);
 //	PRINTF( "zepto_parser_encode_and_prepend_uint(..., ..., %d) resulted in %d bytes\n", num_sz_max, sz );
 	memory_object_prepend( mem_h, out_buff, sz );
 }
