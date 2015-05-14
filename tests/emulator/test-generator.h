@@ -43,7 +43,8 @@ bool tester_holdPacketOnRequest( REQUEST_REPLY_HANDLE mem_h );
 /*void requestSyncExec();
 void allowSyncExec();
 void waitToProceed();*/
-void justWait( uint16_t durationSec );
+void justWaitSec( uint16_t durationSec );
+void justWaitMSec( uint16_t durationMSec );
 
 
 #endif // __TEST_GENERATOR_H__

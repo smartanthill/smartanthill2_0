@@ -123,7 +123,7 @@ uint8_t sa_uint48_get_byte( const sa_uint48_t t, uint8_t byte_num ) // returns a
 	return t[ 5 - byte_num ];
 }
 
-#elif
+#else
 #error SA_USED_ENDIANNES has unexpected value
 #endif
 

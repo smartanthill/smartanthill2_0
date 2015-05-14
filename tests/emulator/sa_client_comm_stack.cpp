@@ -93,6 +93,12 @@ wait_for_comm_event:
 
 		switch ( ret_code )
 		{
+			case COMMLAYER_RET_FAILED:
+			{
+				// regular processing will be done below in the next block
+				return 0;
+				break;
+			}
 			case COMMLAYER_RET_FROM_CENTRAL_UNIT:
 			{
 				// regular processing will be done below in the next block
@@ -158,6 +164,8 @@ wait_for_comm_event:
 						assert( 0 );
 					}
 				}
+				goto wait_for_comm_event;
+				break;
 			}
 			default:
 			{

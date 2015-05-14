@@ -1243,7 +1243,7 @@ void zepto_parser_decode_uint( uint8_t** packed_num_bytes, uint8_t* bytes_out, u
 #elif (SA_USED_ENDIANNES == SA_BIG_ENDIAN)
 // TODO: implement
 #error not implemented; just do it
-#elif
+#else
 #error SA_USED_ENDIANNES has unexpected value
 #endif
 
@@ -1365,7 +1365,7 @@ void zepto_parser_encode_and_prepend_uint16( MEMORY_HANDLE mem_h, uint16_t num )
 #elif (SA_USED_ENDIANNES == SA_BIG_ENDIAN)
 // TODO: implement
 #error not yet implemented; just do it
-#elif
+#else
 #error SA_USED_ENDIANNES has unexpected value
 #endif
 

@@ -28,10 +28,10 @@ void waitForTimeQuantum()
 {
 	Sleep(TIME_FACTOR);
 }
-
+/*
 unsigned short getTime()
 {
 	return (unsigned short)( GetTickCount() / TIME_FACTOR );
 }
-
+*/
 #endif

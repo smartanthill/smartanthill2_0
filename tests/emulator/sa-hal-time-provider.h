@@ -32,6 +32,10 @@ typedef struct _sa_time_struct sa_time_val;
 void sa_get_time( sa_time_val* t );
 
 
+unsigned short getTime(); // TODO: get rid of it ASAP
+
+
+
 // operations (to be added upon necessity)
 
 inline void sa_hal_time_val_copy_from( sa_time_val* t1, const sa_time_val* t2 )

@@ -29,6 +29,37 @@ void sa_get_time( sa_time_val* t )
 	t->low_t = (unsigned short)sys_t;
 }
 
-#else 
-#error  NOT IMPLEMENTED
+unsigned short getTime()
+{
+	return (unsigned short)( GetTickCount() / 200 );
+}
+
+#else
+ 
+#include <unistd.h>
+#include <time.h>
+
+uint32_t getTick() {
+    struct timespec ts;
+    unsigned theTick = 0U;
+    clock_gettime( CLOCK_MONOTONIC, &ts );
+    theTick  = ts.tv_nsec / 1000000;
+    theTick += ts.tv_sec * 1000;
+    return theTick;
+}
+
+
+void sa_get_time( sa_time_val* t )
+{
+	unsigned int sys_t = getTick();
+	t->high_t = sys_t >> 16;
+	t->low_t = (unsigned short)sys_t;
+}
+
+// TODO: get rid of it
+unsigned short getTime()
+{
+	return (unsigned short)( getTick() / 200 );
+}
+
 #endif

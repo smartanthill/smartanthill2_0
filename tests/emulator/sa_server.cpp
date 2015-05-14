@@ -136,7 +136,8 @@ printf( "Processing continued...\n" );
 		INCREMENT_COUNTER_IF( 91, "MAIN LOOP, packet received [1]", ret_code == COMMLAYER_RET_OK );
 		while ( ret_code == COMMLAYER_RET_PENDING )
 		{
-			waitForTimeQuantum();
+			//waitForTimeQuantum();
+			justWaitMSec( 200 );
 #if MODEL_IN_EFFECT == 1
 			if ( wait_to_continue_processing && getTime() >= wake_time_continue_processing )
 			{

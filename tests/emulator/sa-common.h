@@ -32,10 +32,14 @@ Copyright (C) 2015 OLogN Technologies AG
 //#define SA_USED_ENDIANNES SA_BIG_ENDIAN
 
 // data types
+/*
 #define uint8_t unsigned char
 #define int8_t char
 #define uint16_t unsigned short
 #define int16_t short
+*/
+#include "stdint.h"
+
 /*
 inline void memset( void* dest, uint8_t val, uint8_t cnt )
 {
