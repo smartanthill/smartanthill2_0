@@ -20,14 +20,14 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "sa-common.h"
 
-struct _sa_time_struct
+typedef struct _sa_time_struct
 {
 	uint16_t low_t;
 	uint16_t high_t;
-};
+} sa_time_struct;
 // NOTE: the struct above is not to be used directly
 // use typedef below instead
-typedef struct _sa_time_struct sa_time_val;
+typedef sa_time_struct sa_time_val;
 
 void sa_get_time( sa_time_val* t );
 
@@ -38,13 +38,13 @@ unsigned short getTime(); // TODO: get rid of it ASAP
 
 // operations (to be added upon necessity)
 
-inline void sa_hal_time_val_copy_from( sa_time_val* t1, const sa_time_val* t2 )
+INLINE void sa_hal_time_val_copy_from( sa_time_val* t1, const sa_time_val* t2 )
 {
 	t1->high_t = t2->high_t;
 	t1->low_t = t2->low_t;
 }
 
-inline bool sa_hal_time_val_is_less( sa_time_val* t1, sa_time_val* t2 )
+INLINE bool sa_hal_time_val_is_less( sa_time_val* t1, sa_time_val* t2 )
 {
 	if ( t1->high_t < t2->high_t ) return true;
 	if ( t1->high_t > t2->high_t ) return false;

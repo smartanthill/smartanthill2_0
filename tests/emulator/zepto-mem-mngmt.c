@@ -17,12 +17,12 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "zepto-mem-mngmt.h"
 
-struct request_reply_mem_obj
+typedef struct _request_reply_mem_obj
 { 
 	uint8_t* ptr;
 	uint16_t rq_size;
 	uint16_t rsp_size;
-};
+} request_reply_mem_obj;
 
 #define BASE_MEM_BLOCK_SIZE	0x2000
 uint8_t BASE_MEM_BLOCK[ BASE_MEM_BLOCK_SIZE ];
@@ -825,7 +825,7 @@ void zepto_parser_init( parser_obj* po, REQUEST_REPLY_HANDLE mem_h )
 	po->offset = 0;
 }
 
-void zepto_parser_init( parser_obj* po, const parser_obj* po_base )
+void zepto_parser_init_by_parser( parser_obj* po, const parser_obj* po_base )
 {
 	assert( po_base->mem_handle != MEMORY_HANDLE_INVALID );
 	po->mem_handle = po_base->mem_handle;
@@ -1196,7 +1196,7 @@ void zepto_parser_encode_uint( const uint8_t* num_bytes, uint8_t num_sz_max, uin
 	*/
 }
 
-void zepto_parser_decode_uint( uint8_t** packed_num_bytes, uint8_t* bytes_out, uint8_t target_size )
+void zepto_parser_decode_uint_core( uint8_t** packed_num_bytes, uint8_t* bytes_out, uint8_t target_size )
 {
 	assert( target_size != 0 );
 	assert( target_size <= 8 ); // TODO: implement and test for larger sizes
@@ -1254,7 +1254,7 @@ void zepto_parser_decode_uint( parser_obj* po, uint8_t* bytes_out, uint8_t targe
 	uint8_t* buff = memory_object_get_request_ptr( po->mem_handle ) + po->offset;
 	assert( buff != NULL );
 	uint8_t* end = buff;
-	zepto_parser_decode_uint( &end, bytes_out, target_size );
+	zepto_parser_decode_uint_core( &end, bytes_out, target_size );
 	assert( end - buff >= 0 && end - buff < 0x10000 ); // at least within 16 bits
 	po->offset += (uint16_t)(end - buff);
 }

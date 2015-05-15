@@ -23,31 +23,31 @@ Copyright (C) 2015 OLogN Technologies AG
 
 typedef uint8_t sa_uint48_t[6];
 
-inline
+INLINE
 void sa_uint48_set_zero( sa_uint48_t t )
 {
 	memset( t, 0, 6 );
 }
 
-inline
+INLINE
 void sa_uint48_init_by( sa_uint48_t t, const sa_uint48_t t_src )
 {
 	memcpy( t, t_src, 6 );
 }
 
-inline
+INLINE
 void zepto_parser_encode_and_append_sa_uint48( MEMORY_HANDLE mem_h, const sa_uint48_t t )
 {
 	zepto_parser_encode_and_append_uint( mem_h, t, 6 );
 }
 
-inline
+INLINE
 void zepto_parser_encode_and_prepend_sa_uint48( MEMORY_HANDLE mem_h, const sa_uint48_t t )
 {
 	zepto_parser_encode_and_prepend_uint( mem_h, t, 6 );
 }
 
-inline
+INLINE
 void zepto_parser_decode_encoded_uint_as_sa_uint48( parser_obj* po, sa_uint48_t t )
 {
 	zepto_parser_decode_uint( po, t, 6 );
@@ -55,7 +55,7 @@ void zepto_parser_decode_encoded_uint_as_sa_uint48( parser_obj* po, sa_uint48_t 
 
 #if (SA_USED_ENDIANNES == SA_LITTLE_ENDIAN)
 
-inline
+INLINE
 void sa_uint48_increment(  sa_uint48_t t )
 {
 	int8_t i;
@@ -66,25 +66,25 @@ void sa_uint48_increment(  sa_uint48_t t )
 	}
 }
 
-inline
+INLINE
 int8_t sa_uint48_compare( const sa_uint48_t t1, const sa_uint48_t t2 )
 {
 	int8_t i;
 	for ( i=5; i>=0; i-- )
 	{
-		if ( t1[i] > t2[i] ) return int8_t(1);
-		if ( t1[i] < t2[i] ) return int8_t(-1);
+		if ( t1[i] > t2[i] ) return (int8_t)(1);
+		if ( t1[i] < t2[i] ) return (int8_t)(-1);
 	}
 	return 0;
 }
 
-inline
+INLINE
 bool is_uint48_zero( const sa_uint48_t t )
 {
 	return t[0] == 0 && t[1] == 0 && t[2] == 0 && t[3] == 0 && t[4] == 0 && t[5] == 0;
 }
 
-inline
+INLINE
 uint8_t sa_uint48_get_byte( const sa_uint48_t t, uint8_t byte_num ) // returns a byte at position byte_num (in the range 0-5) so that 0 corresponds to the least significant byte
 {
 	assert( byte_num <= 5 );
@@ -93,7 +93,7 @@ uint8_t sa_uint48_get_byte( const sa_uint48_t t, uint8_t byte_num ) // returns a
 
 #elif (SA_USED_ENDIANNES == SA_BIG_ENDIAN)
 
-inline
+INLINE
 void sa_uint48_increment(  sa_uint48_t t )
 {
 	int8_t i;
@@ -104,7 +104,7 @@ void sa_uint48_increment(  sa_uint48_t t )
 	}
 }
 
-inline
+INLINE
 int8_t sa_uint48_compare( const sa_uint48_t t1, const sa_uint48_t t2 )
 {
 	int8_t i;
@@ -116,7 +116,7 @@ int8_t sa_uint48_compare( const sa_uint48_t t1, const sa_uint48_t t2 )
 	return 0;
 }
 
-inline
+INLINE
 uint8_t sa_uint48_get_byte( const sa_uint48_t t, uint8_t byte_num ) // returns a byte at position byte_num (in the range 0-5) so that 0 corresponds to the least significant byte
 {
 	assert( byte_num <= 5 );

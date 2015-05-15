@@ -62,7 +62,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 
 // sagdp data structure
-struct SAGDP_DATA
+typedef struct _SAGDP_DATA
 {
 	uint8_t state;
 	uint8_t last_timeout;
@@ -74,7 +74,7 @@ struct SAGDP_DATA
 	sasp_nonce_type prev_first_last_sent_packet_id;
 	sa_time_val next_event_time;
 	uint8_t event_type; // one of time-related events
-};
+} SAGDP_DATA;
 
 
 // handlers

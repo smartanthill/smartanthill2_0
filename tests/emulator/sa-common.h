@@ -32,22 +32,31 @@ Copyright (C) 2015 OLogN Technologies AG
 //#define SA_USED_ENDIANNES SA_BIG_ENDIAN
 
 // data types
-/*
+
 #define uint8_t unsigned char
 #define int8_t char
 #define uint16_t unsigned short
 #define int16_t short
-*/
-#include "stdint.h"
+#define bool char
+#define true 1
+#define false 0
+
+#ifdef _MSC_VER
+#define INLINE __inline
+#else
+#define INLINE inline
+#endif
+
+/*#include "stdint.h"*/
 
 /*
-inline void memset( void* dest, uint8_t val, uint8_t cnt )
+INLINE void memset( void* dest, uint8_t val, uint8_t cnt )
 {
 	for ( uint8_t i=0; i<cnt; i++ )
 		((uint8_t*)dest)[i] = val;
 }
 
-inline void memcpy( void* dest, const void* src, uint8_t cnt )
+INLINE void memcpy( void* dest, const void* src, uint8_t cnt )
 {
 	for ( uint8_t i=0; i<cnt; i++ )
 		((uint8_t*)dest)[i] = ((uint8_t*)src)[i];

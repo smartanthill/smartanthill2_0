@@ -45,7 +45,7 @@ void SASP_restoreFromBackup( SASP_DATA* sasp_data )
 	eeprom_read_fixed_size( DATA_SASP_NONCE_LS_ID, sasp_data->nonce_ls, size);
 }
 
-inline
+INLINE
 void sasp_make_nonce_for_encryption( const sasp_nonce_type packet_id, uint8_t master_slave_bit, uint8_t nonce[16] )
 {
 	memset( nonce, 0, 16 );
@@ -56,7 +56,7 @@ void sasp_make_nonce_for_encryption( const sasp_nonce_type packet_id, uint8_t ma
 	nonce[15] = master_slave_bit;
 }
 
-inline
+INLINE
 void SASP_EncryptAndAddAuthenticationData( REQUEST_REPLY_HANDLE mem_h, const uint8_t* key, const sa_uint48_t packet_id )
 {
 	// msgSize covers the size of message_byte_sequence

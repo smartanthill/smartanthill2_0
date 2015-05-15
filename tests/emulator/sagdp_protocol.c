@@ -76,9 +76,10 @@ void sagdp_init( SAGDP_DATA* sagdp_data )
 
 #define SAGDP_LTO_INCREMENT_BY_CAPPED_EXP_SEC( tval, sec_pow ) \
 	{\
+		sa_time_val tmp_t; \
 		cappedExponentiateLTO( &(sagdp_data->last_timeout) ); \
 		if (sec_pow > SAGDP_LTO_POW_MAX) sec_pow = SAGDP_LTO_POW_MAX; \
-		sa_time_val tmp_t; SA_TIME_LOAD_TICKS_FOR_1_SEC( tmp_t ); \
+		SA_TIME_LOAD_TICKS_FOR_1_SEC( tmp_t ); \
 		SA_TIME_MUL_TICKS_BY_2( tmp_t ) \
 		for ( uint8_t i=0; i<=sec_pow; i++) SA_TIME_MUL_TICKS_BY_1_AND_A_HALF( tmp_t ) \
 		SA_TIME_INCREMENT_BY_TICKS( tval, tmp_t ) \
@@ -409,7 +410,7 @@ uint8_t handler_sagdp_receive_up( timeout_action* tact, sasp_nonce_type nonce, u
 				sa_uint48_init_by( sagdp_data->last_received_chain_id, this_chain_id );
 
 				parser_obj po1;
-				zepto_parser_init( &po1, &po );
+				zepto_parser_init_by_parser( &po1, &po );
 				uint16_t body_size = zepto_parsing_remaining_bytes( &po );
 				zepto_parse_skip_block( &po1, body_size );
 				zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
@@ -707,7 +708,7 @@ uint8_t handler_sagdp_receive_up( timeout_action* tact, sasp_nonce_type nonce, u
 			}
 			// form a packet for higher level
 			parser_obj po1;
-			zepto_parser_init( &po1, &po );
+			zepto_parser_init_by_parser( &po1, &po );
 			uint16_t body_size = zepto_parsing_remaining_bytes( &po );
 			zepto_parse_skip_block( &po1, body_size );
 			zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
@@ -1053,7 +1054,7 @@ uint8_t handler_sagdp_receive_hlp( timeout_action* tact, sasp_nonce_type nonce, 
 		// form a UP packet
 		assert( ( packet_status & ( ~( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) ) == 0 ); // TODO: can we rely on sanity of the caller?
 		parser_obj po1;
-		zepto_parser_init( &po1, &po );
+		zepto_parser_init_by_parser( &po1, &po );
 		uint16_t body_size = zepto_parsing_remaining_bytes( &po );
 		zepto_parse_skip_block( &po1, body_size );
 		zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
@@ -1123,7 +1124,7 @@ uint8_t handler_sagdp_receive_hlp( timeout_action* tact, sasp_nonce_type nonce, 
 		// form a UP packet
 		assert( ( packet_status & ( ~( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) ) == 0 ); // TODO: can we rely on sanity of the caller?
 		parser_obj po1;
-		zepto_parser_init( &po1, &po );
+		zepto_parser_init_by_parser( &po1, &po );
 		uint16_t body_size = zepto_parsing_remaining_bytes( &po );
 		zepto_parse_skip_block( &po1, body_size );
 		zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );

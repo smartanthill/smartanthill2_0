@@ -210,7 +210,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 				uint16_t data_sz = zepto_parse_encoded_uint16( &po );
 
 				//+++ TODO: rethink memory management
-				zepto_parser_init( &po1, &po );
+				zepto_parser_init_by_parser( &po1, &po );
 //				zepto_parse_skip_block( &po, zepto_parsing_remaining_bytes( &po ) );
 				zepto_parse_skip_block( &po, data_sz );
 				zepto_copy_part_of_request_to_response_of_another_handle( mem_h, &po1, &po, MEMORY_HANDLE_DEFAULT_PLUGIN );
@@ -302,7 +302,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 	}
 }
 
-inline
+INLINE
 void form_error_packet( MEMORY_HANDLE mem_h, uint8_t error_code, uint8_t incoming_packet_status, sasp_nonce_type chain_id )
 {
 	assert( ( error_code & 0xF8 ) == 0 );
@@ -395,7 +395,7 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 
 			// now a packet body remains; it will be forwarded to Execution-Layer-Program
 			parser_obj po1;
-			zepto_parser_init( &po1, &po );
+			zepto_parser_init_by_parser( &po1, &po );
 			zepto_parse_skip_block( &po1, zepto_parsing_remaining_bytes( &po ) );
 			zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
 			zepto_response_to_request( mem_h );

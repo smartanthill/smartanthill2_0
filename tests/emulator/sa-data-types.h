@@ -24,11 +24,11 @@ Copyright (C) 2015 OLogN Technologies AG
 
 typedef sa_uint48_t sasp_nonce_type;
 
-struct timeout_action // NOTE: might be a temporary solution
+typedef struct _timeout_action // NOTE: might be a temporary solution
 {
 	sa_time_val tv;
 	uint8_t action;
-};
+} timeout_action;
 
 
 #endif // __SA_DATA_TYPES_H__

@@ -36,11 +36,11 @@ Copyright (C) 2015 OLogN Technologies AG
 
 
 
-struct parser_obj
+typedef struct _parser_obj
 {
 	MEMORY_HANDLE mem_handle;
 	uint16_t offset;
-};
+} parser_obj;
 
 // UGLY HOOK FOR BY-PARTS (INITIAL PHASE OF) DEVELOPMENT
 uint16_t ugly_hook_get_request_size( REQUEST_REPLY_HANDLE mem_h );
@@ -54,7 +54,7 @@ void zepto_mem_man_init_memory_management();
 
 // parsing functions
 void zepto_parser_init( parser_obj* po, REQUEST_REPLY_HANDLE mem_h );
-void zepto_parser_init( parser_obj* po, const parser_obj* po_base );
+void zepto_parser_init_by_parser( parser_obj* po, const parser_obj* po_base );
 uint8_t zepto_parse_uint8( parser_obj* po );
 bool zepto_parse_read_block( parser_obj* po, uint8_t* block, uint16_t size );
 bool zepto_parse_skip_block( parser_obj* po, uint16_t size );

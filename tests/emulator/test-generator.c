@@ -30,14 +30,14 @@ uint8_t packetOnHold[ PACKET_MAX_SIZE ];
 bool isPacketOnHold = false;
 bool holdRequested = false;
 
-void tester_registerIncomingPacket( const uint8_t* packet, uint16_t size );
-void tester_registerOutgoingPacket( const uint8_t* packet, uint16_t size );
-bool tester_shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size );
-bool tester_shouldInsertOutgoingPacket( uint8_t* packet, uint16_t* size );
+void tester_registerIncomingPacketCore( const uint8_t* packet, uint16_t size );
+void tester_registerOutgoingPacketCore( const uint8_t* packet, uint16_t size );
+bool tester_shouldInsertIncomingPacketCore( uint8_t* packet, uint16_t* size );
+bool tester_shouldInsertOutgoingPacketCore( uint8_t* packet, uint16_t* size );
 
-bool tester_holdOutgoingPacket( const uint8_t* packet, const uint16_t* size );
-bool tester_releaseOutgoingPacket( uint8_t* packet, uint16_t* size );
-bool tester_holdPacketOnRequest( const uint8_t* packet, const uint16_t* size );
+bool tester_holdOutgoingPacketCore( const uint8_t* packet, const uint16_t* size );
+bool tester_releaseOutgoingPacketCore( uint8_t* packet, uint16_t* size );
+bool tester_holdPacketOnRequestCore( const uint8_t* packet, const uint16_t* size );
 
 
 
@@ -51,7 +51,7 @@ void tester_registerIncomingPacket( REQUEST_REPLY_HANDLE mem_h )
 	packet_size = zepto_parsing_remaining_bytes( &po );
 	assert( packet_size <= PACKET_MAX_SIZE );
 	zepto_parse_read_block( &po, buff, packet_size );
-	tester_registerIncomingPacket( buff, packet_size );
+	tester_registerIncomingPacketCore( buff, packet_size );
 }
 
 void tester_registerOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
@@ -64,7 +64,7 @@ void tester_registerOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
 	packet_size = zepto_parsing_remaining_bytes( &po );
 	assert( packet_size <= PACKET_MAX_SIZE );
 	zepto_parse_read_block( &po, buff, packet_size );
-	tester_registerOutgoingPacket( buff, packet_size );
+	tester_registerOutgoingPacketCore( buff, packet_size );
 }
 
 bool tester_shouldInsertIncomingPacket( REQUEST_REPLY_HANDLE mem_h )
@@ -72,7 +72,7 @@ bool tester_shouldInsertIncomingPacket( REQUEST_REPLY_HANDLE mem_h )
 //	return false;
 	uint8_t buff[ PACKET_MAX_SIZE ];
 	uint16_t packet_size;
-	bool ret = tester_shouldInsertIncomingPacket( buff, &packet_size );
+	bool ret = tester_shouldInsertIncomingPacketCore( buff, &packet_size );
 	if ( !ret ) return false;
 	assert( ugly_hook_get_response_size( mem_h ) == 0 );
 	zepto_write_block( mem_h, buff, packet_size );
@@ -84,7 +84,7 @@ bool tester_shouldInsertOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
 //	return false;
 	uint8_t buff[ PACKET_MAX_SIZE ];
 	uint16_t packet_size;
-	bool ret = tester_shouldInsertOutgoingPacket( buff, &packet_size );
+	bool ret = tester_shouldInsertOutgoingPacketCore( buff, &packet_size );
 	if ( !ret ) return false;
 	assert( ugly_hook_get_response_size( mem_h ) == 0 );
 	zepto_write_block( mem_h, buff, packet_size );
@@ -104,7 +104,7 @@ bool tester_holdOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
 	packet_size = zepto_parsing_remaining_bytes( &po );
 	assert( packet_size <= PACKET_MAX_SIZE );
 	zepto_parse_read_block( &po, buff, packet_size );
-	bool ret = tester_holdOutgoingPacket( buff, &packet_size );
+	bool ret = tester_holdOutgoingPacketCore( buff, &packet_size );
 	if ( ret )
 		zepto_response_to_request( mem_h );
 	return ret;
@@ -115,7 +115,7 @@ bool tester_releaseOutgoingPacket( REQUEST_REPLY_HANDLE mem_h )
 //	return false;
 	uint8_t buff[ PACKET_MAX_SIZE ];
 	uint16_t packet_size;
-	bool ret = tester_releaseOutgoingPacket( buff, &packet_size );
+	bool ret = tester_releaseOutgoingPacketCore( buff, &packet_size );
 	if ( !ret ) return false;
 	assert( ugly_hook_get_response_size( mem_h ) == 0 );
 	zepto_write_block( mem_h, buff, packet_size );
@@ -133,8 +133,8 @@ bool tester_holdPacketOnRequest( REQUEST_REPLY_HANDLE mem_h )
 	packet_size = zepto_parsing_remaining_bytes( &po );
 	assert( packet_size <= PACKET_MAX_SIZE );
 	zepto_parse_read_block( &po, buff, packet_size );
-//	return tester_holdOutgoingPacket( buff, &packet_size );
-	bool ret = tester_holdPacketOnRequest( buff, &packet_size );
+//	return tester_holdOutgoingPacketCore( buff, &packet_size );
+	bool ret = tester_holdPacketOnRequestCore( buff, &packet_size );
 	if ( ret )
 		zepto_response_to_request( mem_h );
 	return ret;
@@ -149,7 +149,7 @@ bool tester_holdPacketOnRequest( REQUEST_REPLY_HANDLE mem_h )
 
 
 
-bool tester_holdOutgoingPacket( const uint8_t* packet, const uint16_t* size )
+bool tester_holdOutgoingPacketCore( const uint8_t* packet, const uint16_t* size )
 {
 	if ( isPacketOnHold )
 		return false;
@@ -165,7 +165,7 @@ bool tester_isOutgoingPacketOnHold()
 	return isPacketOnHold;
 }
 
-bool tester_releaseOutgoingPacket( uint8_t* packet, uint16_t* size )
+bool tester_releaseOutgoingPacketCore( uint8_t* packet, uint16_t* size )
 {
 	if ( !isPacketOnHold )
 		return false;
@@ -181,13 +181,13 @@ void tester_requestHoldingPacket()
 	holdRequested = true;
 }
 
-bool tester_holdPacketOnRequest( const uint8_t* packet, const uint16_t* size )
+bool tester_holdPacketOnRequestCore( const uint8_t* packet, const uint16_t* size )
 {
 	if ( !holdRequested )
 		return false;
 	holdRequested = false;
 	assert( !isPacketOnHold );
-	return tester_holdOutgoingPacket( packet, size );
+	return tester_holdOutgoingPacketCore( packet, size );
 }
 
 
@@ -198,7 +198,7 @@ uint16_t tester_get_rand_val()
 	return (uint16_t)( rand() );
 }
 
-void tester_registerIncomingPacket( const uint8_t* packet, uint16_t size )
+void tester_registerIncomingPacketCore( const uint8_t* packet, uint16_t size )
 {
 	assert( size <= PACKET_MAX_SIZE );
 	for ( int8_t i=MAX_IPACKETS_TO_STORE-1; i; i-- )
@@ -207,7 +207,7 @@ void tester_registerIncomingPacket( const uint8_t* packet, uint16_t size )
 	memcpy( incomingPackets + 2, packet, size );
 }
 
-void tester_registerOutgoingPacket( const uint8_t* packet, uint16_t size )
+void tester_registerOutgoingPacketCore( const uint8_t* packet, uint16_t size )
 {
 	assert( size <= PACKET_MAX_SIZE );
 	for ( int8_t i=MAX_IPACKETS_TO_STORE-1; i; i-- )
@@ -232,7 +232,7 @@ bool tester_shouldDropOutgoingPacket()
 
 
 
-bool tester_shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size )
+bool tester_shouldInsertIncomingPacketCore( uint8_t* packet, uint16_t* size )
 {
 	if ( tester_get_rand_val() % 8 != 0 ) // rate selection
 		return false;
@@ -244,7 +244,7 @@ bool tester_shouldInsertIncomingPacket( uint8_t* packet, uint16_t* size )
 	return *size != 0;
 }
 
-bool tester_shouldInsertOutgoingPacket( uint8_t* packet, uint16_t* size )
+bool tester_shouldInsertOutgoingPacketCore( uint8_t* packet, uint16_t* size )
 {
 	if ( tester_get_rand_val() % 8 != 0 ) // rate selection
 		return false;

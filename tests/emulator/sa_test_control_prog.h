@@ -28,7 +28,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define CONTROL_PROG_PASS_LOWER 2
 #define CONTROL_PROG_PASS_LOWER_THEN_IDLE 3
 
-struct DefaultTestingControlProgramState 
+typedef struct _DefaultTestingControlProgramState 
 {
 	uint8_t state; //'0' means 'be ready to process incoming command', '1' means 'prepare reply'
 	uint16_t last_sent_id;
@@ -39,7 +39,7 @@ struct DefaultTestingControlProgramState
 	uint16_t chain_ini_size;
 	uint16_t reply_to_id;
 	uint16_t self_id;
-};
+} DefaultTestingControlProgramState;
 
 uint8_t default_test_control_program_init( void* control_prog_state );
 uint8_t default_test_control_program_accept_reply( void* control_prog_state, uint8_t packet_status, parser_obj* received, uint16_t sz );
