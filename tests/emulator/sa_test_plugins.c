@@ -49,7 +49,8 @@ uint8_t default_test_plugin_handler_continue( const void* plugin_config, void* p
 
 	char tail[256];
 	uint16_t varln = 6 - ps->self_id % 7; // 0:6
-	for ( uint8_t i=0;i<varln; i++ )
+	uint8_t i;
+	for ( i=0;i<varln; i++ )
 		tail[ i] = '-';
 	tail[ varln ] = '>';
 	tail[ varln + 1 ] = 0;

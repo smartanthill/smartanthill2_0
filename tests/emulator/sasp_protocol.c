@@ -49,7 +49,8 @@ INLINE
 void sasp_make_nonce_for_encryption( const sasp_nonce_type packet_id, uint8_t master_slave_bit, uint8_t nonce[16] )
 {
 	memset( nonce, 0, 16 );
-	for ( int8_t i=0; i<sizeof(sasp_nonce_type); i++ )
+	int8_t i;
+	for ( i=0; i<sizeof(sasp_nonce_type); i++ )
 	{
 		nonce[i] = sa_uint48_get_byte( packet_id, i );
 	}
@@ -169,7 +170,8 @@ bool SASP_IntraPacketAuthenticateAndDecrypt( const uint8_t* key, REQUEST_REPLY_H
 		return false; // if any bytes, then the whole block
 
 	// now we have a decrypted data as output, and a tag "calculated"; check the tag
-	for ( uint8_t i=0; i<SASP_TAG_SIZE; i++ )
+	uint8_t i;
+	for ( i=0; i<SASP_TAG_SIZE; i++ )
 		if ( tag_calculted[i] != block[i] ) return false;
 
 	return true;
@@ -246,7 +248,8 @@ void DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( MEMORY_HANDLE mem_h, con
 	assert( ipaad );
 	assert( decr_sz == inisz );
 	assert( memcmp( nonce, dbg_nonce, 6 ) == 0 );
-	for ( int k=0; k<decr_sz; k++ )
+	uint8_t k;
+	for ( k=0; k<decr_sz; k++ )
 		assert( inimsg[k] == checkedMsg[k] );
 }
 

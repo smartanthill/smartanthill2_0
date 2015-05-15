@@ -21,7 +21,8 @@ Copyright (C) 2015 OLogN Technologies AG
 void eax_128_galois_times_2( uint8_t * buff )
 {
 	bool xor_required = *buff &0x80; // MSB
-	for ( uint8_t i=0; i<15; i++ )
+	uint8_t i;
+	for ( i=0; i<15; i++ )
 	{
 		buff[i] <<= 1;
 		buff[i] |= buff[i+1]>>7;
@@ -80,7 +81,8 @@ void eax_128_init_cbc( uint8_t* state )
 void eax_128_update_cbc( const uint8_t* key, const uint8_t* block, uint8_t* cbc )
 {
 	uint8_t temp_blk[16];
-	for ( uint8_t i=0; i<16; i++ )
+	uint8_t i;
+	for ( i=0; i<16; i++ )
 		temp_blk[i] = cbc[i] ^ block[i];
 	sa_aes_128_encrypt_block( key, temp_blk, cbc);
 }
@@ -185,7 +187,8 @@ void eax_128_calc_tag( /*const uint8_t* key,*/ uint8_t* header_prim, uint8_t* ms
 /*	sa_aes_print_block_16("nonce_prim:     ", tag_out);
 	sa_aes_print_block_16("header_prim:    ", header_prim);
 	sa_aes_print_block_16("t_blk_out_omac: ", msg_cbc_val);*/
-	for ( uint8_t i=0; i<tag_out_sz; i++ )
+	uint8_t i;
+	for ( i=0; i<tag_out_sz; i++ )
 		tag_out[i] ^= header_prim[i] ^ msg_cbc_val[i];
 }
 

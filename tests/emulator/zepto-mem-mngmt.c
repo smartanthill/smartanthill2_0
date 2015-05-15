@@ -187,7 +187,8 @@ void zepto_mem_man_check_sanity()
 
 void zepto_mem_man_init_memory_management()
 {
-	for ( uint8_t i=0; i<MEMORY_HANDLE_MAX; i++ )
+	uint8_t i;
+	for ( i=0; i<MEMORY_HANDLE_MAX; i++ )
 	{
 		memset( &(memory_objects[i]), 0, sizeof( request_reply_mem_obj ) );
 	}
@@ -1172,7 +1173,8 @@ void zepto_parser_encode_uint( const uint8_t* num_bytes, uint8_t num_sz_max, uin
 	(*bytes_out)++;
 	interm >>= 7;
 
-	for ( uint8_t i=1; i<8; i++ )
+	uint8_t i;
+	for ( i=1; i<8; i++ )
 	{
 		if ( num_bytes < num_bytes_end ) 
 		{
@@ -1217,7 +1219,8 @@ void zepto_parser_decode_uint_core( uint8_t** packed_num_bytes, uint8_t* bytes_o
 	bytes_out++;
 	interm >>= 8;
 
-	for ( uint8_t i=1; i<8; i++ )
+	uint8_t i;
+	for ( i=1; i<8; i++ )
 	{
 		if ( (**packed_num_bytes & 0x80) == 0 )
 		{

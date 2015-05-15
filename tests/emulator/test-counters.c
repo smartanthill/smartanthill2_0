@@ -26,7 +26,8 @@ const char* CTRS_NAMES_D[MAX_COUNTERS_CNT];
 void printCounters()
 {
 	printf( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n" );
-	for ( int i=0; i<MAX_COUNTERS_CNT; i++ )
+	uint16_t i;
+	for ( i=0; i<MAX_COUNTERS_CNT; i++ )
 	{
 		if ( CTRS_NAMES[ i ] )
 			printf( "%d:\t[%d] %s\n", COUNTERS[ i ], i, CTRS_NAMES[ i ] );

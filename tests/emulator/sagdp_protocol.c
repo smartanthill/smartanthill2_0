@@ -81,7 +81,7 @@ void sagdp_init( SAGDP_DATA* sagdp_data )
 		if (sec_pow > SAGDP_LTO_POW_MAX) sec_pow = SAGDP_LTO_POW_MAX; \
 		SA_TIME_LOAD_TICKS_FOR_1_SEC( tmp_t ); \
 		SA_TIME_MUL_TICKS_BY_2( tmp_t ) \
-		for ( uint8_t i=0; i<=sec_pow; i++) SA_TIME_MUL_TICKS_BY_1_AND_A_HALF( tmp_t ) \
+		uint8_t i; for ( i=0; i<=sec_pow; i++) SA_TIME_MUL_TICKS_BY_1_AND_A_HALF( tmp_t ) \
 		SA_TIME_INCREMENT_BY_TICKS( tval, tmp_t ) \
 	}
 

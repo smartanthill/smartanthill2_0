@@ -55,13 +55,15 @@ Copyright (C) 2015 OLogN Technologies AG
 /*
 INLINE void memset( void* dest, uint8_t val, uint8_t cnt )
 {
-	for ( uint8_t i=0; i<cnt; i++ )
+	uint8_t i;
+	for ( i=0; i<cnt; i++ )
 		((uint8_t*)dest)[i] = val;
 }
 
 INLINE void memcpy( void* dest, const void* src, uint8_t cnt )
 {
-	for ( uint8_t i=0; i<cnt; i++ )
+	uint8_t i;
+	for ( i=0; i<cnt; i++ )
 		((uint8_t*)dest)[i] = ((uint8_t*)src)[i];
 }
 */

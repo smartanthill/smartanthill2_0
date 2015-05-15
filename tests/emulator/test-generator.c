@@ -201,7 +201,8 @@ uint16_t tester_get_rand_val()
 void tester_registerIncomingPacketCore( const uint8_t* packet, uint16_t size )
 {
 	assert( size <= PACKET_MAX_SIZE );
-	for ( int8_t i=MAX_IPACKETS_TO_STORE-1; i; i-- )
+	int8_t i;
+	for ( i=MAX_IPACKETS_TO_STORE-1; i; i-- )
 		memcpy( incomingPackets + i * PACKET_MAX_SIZE, incomingPackets + (i-1)*PACKET_MAX_SIZE, PACKET_MAX_SIZE );
 	*(uint16_t*)incomingPackets = size;
 	memcpy( incomingPackets + 2, packet, size );
@@ -210,7 +211,8 @@ void tester_registerIncomingPacketCore( const uint8_t* packet, uint16_t size )
 void tester_registerOutgoingPacketCore( const uint8_t* packet, uint16_t size )
 {
 	assert( size <= PACKET_MAX_SIZE );
-	for ( int8_t i=MAX_IPACKETS_TO_STORE-1; i; i-- )
+	int8_t i;
+	for ( i=MAX_IPACKETS_TO_STORE-1; i; i-- )
 		memcpy( outgoingPackets + i * PACKET_MAX_SIZE, outgoingPackets + (i-1)*PACKET_MAX_SIZE, PACKET_MAX_SIZE );
 	*(uint16_t*)outgoingPackets = size;
 	memcpy( outgoingPackets + 2, packet, size );

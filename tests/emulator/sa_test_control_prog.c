@@ -82,7 +82,8 @@ uint8_t default_test_control_program_start_new( void* control_prog_state, MEMORY
 
 	char tail[256];
 	uint16_t varln = 6 - ps->self_id % 7; // 0:6
-	for ( uint8_t i=0;i<varln; i++ )
+	uint8_t i;
+	for ( i=0;i<varln; i++ )
 		tail[ i] = '-';
 	tail[ varln ] = '>';
 	tail[ varln + 1 ] = 0;
@@ -136,7 +137,8 @@ uint8_t default_test_control_program_accept_reply_continue( void* control_prog_s
 
 	char tail[256];
 	uint16_t varln = 6 - ps->self_id % 7; // 0:6
-	for ( uint8_t i=0;i<varln; i++ )
+	uint8_t i;
+	for ( i=0;i<varln; i++ )
 		tail[ i] = '-';
 	tail[ varln ] = '>';
 	tail[ varln + 1 ] = 0;

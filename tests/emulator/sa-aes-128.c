@@ -45,7 +45,8 @@ void sa_aes_128_nextKeyExp(uint8_t* ksc, uint8_t* rcon)
     ksc[2] ^= rijndael_sbox[ksc[15]];
     ksc[3] ^= rijndael_sbox[ksc[12]]; // RotWord
 
-    for (uint8_t i = 4; i < 16; i += 4)
+	uint8_t i;
+    for ( i= 4; i < 16; i += 4)
     {
         ksc[i] ^= ksc[i-4];
         ksc[i+1] ^= ksc[i-3];
@@ -86,7 +87,8 @@ void sa_aes_128_shiftRows(uint8_t* block)
 void sa_aes_128_mixColumns(uint8_t* block)
 {
 	uint8_t a, b, c, d, e;
-    for (uint8_t i = 0; i < 16; i += 4)
+	uint8_t i;
+    for ( i = 0; i < 16; i += 4)
     {
         a = block[i];
         b = block[i + 1];
@@ -113,7 +115,8 @@ void sa_aes_128_encrypt_block( const uint8_t* key, const uint8_t* _block, uint8_
     for (i = 0; i < 16; (i)++) // add round key
         block[i] ^= ksc[i];
 
-	for ( uint8_t round=0; round<9; round++ )
+	uint8_t round;
+	for ( round=0; round<9; round++ )
 	{
 		for (i = 0; i < 16; (i)++) // subBytes
 			block[i] = rijndael_sbox[block[i]];
