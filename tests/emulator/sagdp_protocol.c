@@ -197,7 +197,7 @@ uint8_t handler_sagdp_receive_up( timeout_action* tact, sasp_nonce_type nonce, u
 /*			if ( zepto_parse_skip_block( &po, SAGDP_LRECEIVED_PID_SIZE ) )
 			{
 				parser_obj po1;
-				zepto_parser_init( &po1, &po );
+				zepto_parser_init_by_parser( &po1, &po );
 				uint16_t body_size = zepto_parsing_remaining_bytes( &po );
 				zepto_parse_skip_block( &po1, body_size );
 				zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
@@ -437,7 +437,7 @@ uint8_t handler_sagdp_receive_up( timeout_action* tact, sasp_nonce_type nonce, u
 /*			if ( zepto_parse_skip_block( &po, SAGDP_LRECEIVED_PID_SIZE ) )
 			{
 				parser_obj po1;
-				zepto_parser_init( &po1, &po );
+				zepto_parser_init_by_parser( &po1, &po );
 				uint16_t body_size = zepto_parsing_remaining_bytes( &po );
 				zepto_parse_skip_block( &po1, body_size );
 				zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
@@ -565,7 +565,7 @@ uint8_t handler_sagdp_receive_up( timeout_action* tact, sasp_nonce_type nonce, u
 			}
 			// form a packet for higher level
 			parser_obj po1;
-			zepto_parser_init( &po1, &po );
+			zepto_parser_init_by_parser( &po1, &po );
 			uint16_t body_size = zepto_parsing_remaining_bytes( &po );
 			zepto_parse_skip_block( &po1, body_size );
 			zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
@@ -737,7 +737,7 @@ uint8_t handler_sagdp_receive_up( timeout_action* tact, sasp_nonce_type nonce, u
 /*			if ( zepto_parse_skip_block( &po, SAGDP_LRECEIVED_PID_SIZE ) )
 			{
 				parser_obj po1;
-				zepto_parser_init( &po1, &po );
+				zepto_parser_init_by_parser( &po1, &po );
 				uint16_t body_size = zepto_parsing_remaining_bytes( &po );
 				zepto_parse_skip_block( &po1, body_size );
 				zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );

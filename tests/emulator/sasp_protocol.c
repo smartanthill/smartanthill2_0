@@ -188,7 +188,7 @@ bool SASP_is_for_sasp( REQUEST_REPLY_HANDLE mem_h )
 
 	zepto_parser_init( &po, mem_h );
 	parser_obj po1;
-	zepto_parser_init( &po1, &po );
+	zepto_parser_init_by_parser( &po1, &po );
 	zepto_parse_skip_block( &po1, zepto_parsing_remaining_bytes( &po ) );
 	zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
 

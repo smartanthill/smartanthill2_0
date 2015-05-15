@@ -30,7 +30,7 @@ uint8_t handler_saoudp_send( MEMORY_HANDLE mem_h )
 
 	PRINTF( "Entering handler_saoudp_receive(); msg. sz = %d\n", zepto_parsing_remaining_bytes( &po ) );
 
-	zepto_parser_init( &po1, &po );
+	zepto_parser_init_by_parser( &po1, &po );
 	zepto_parse_skip_block( &po1, zepto_parsing_remaining_bytes( &po ) );
 	zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
 
@@ -79,7 +79,7 @@ uint8_t handler_saoudp_receive( MEMORY_HANDLE mem_h )
 		}
 	}
 	while ( more_hdrs );
-	zepto_parser_init( &po1, &po );
+	zepto_parser_init_by_parser( &po1, &po );
 	zepto_parse_skip_block( &po1, zepto_parsing_remaining_bytes( &po ) );
 	zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
 	return SAOUDP_RET_OK;

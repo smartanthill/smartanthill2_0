@@ -125,7 +125,7 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, vo
 					if ( is_last == 1 )
 					{
 						parser_obj po1;
-						zepto_parser_init( &po1, &po );
+						zepto_parser_init_by_parser( &po1, &po );
 						zepto_parse_skip_block( &po, frame_sz );
 //						saccp_control_program_process_incoming( mem_h, &po1, frame_sz, control_prog_state );
 						default_test_control_program_accept_reply( control_prog_state, first_byte & SAGDP_P_STATUS_MASK, &po1, frame_sz );
