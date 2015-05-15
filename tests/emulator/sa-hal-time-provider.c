@@ -35,7 +35,7 @@ unsigned short getTime()
 }
 
 #else
- 
+
 #include <unistd.h>
 #include <time.h>
 

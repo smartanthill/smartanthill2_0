@@ -32,22 +32,25 @@ Copyright (C) 2015 OLogN Technologies AG
 //#define SA_USED_ENDIANNES SA_BIG_ENDIAN
 
 // data types
-
+#ifdef _MSC_VER
 #define uint8_t unsigned char
 #define int8_t char
 #define uint16_t unsigned short
 #define int16_t short
-#define bool char
+#else
+#include "stdint.h"
+#endif
+#define bool uint8_t
 #define true 1
 #define false 0
 
 #ifdef _MSC_VER
 #define INLINE __inline
 #else
-#define INLINE inline
+#define INLINE static inline
 #endif
 
-/*#include "stdint.h"*/
+
 
 /*
 INLINE void memset( void* dest, uint8_t val, uint8_t cnt )

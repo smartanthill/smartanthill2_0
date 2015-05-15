@@ -430,7 +430,10 @@ uint8_t tryGetMessage(uint16_t* msgSize, uint8_t * buff, int maxSize) // returns
 #include <unistd.h> // for close() for socket
 #include <fcntl.h>
 #include <arpa/inet.h>
-
+#include <sys/select.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
 #define CLOSE_SOCKET( x ) close( x )
 
 #endif // _MSC_VER

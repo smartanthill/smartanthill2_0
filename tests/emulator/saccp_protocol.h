@@ -35,7 +35,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #ifdef USED_AS_MASTER
 
 uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, void* control_prog_state );
-uint8_t saccp_control_program_process_incoming( parser_obj* po_start, parser_obj* po_end, void* control_prog_state );
+//uint8_t saccp_control_program_process_incoming( parser_obj* po_start, parser_obj* po_end, void* control_prog_state );
 //uint8_t saccp_control_program_prepare_new_program( MEMORY_HANDLE mem_h, void* control_prog_state );
 //uint8_t handler_sacpp_send_new_program( MEMORY_HANDLE mem_h, void* control_prog_state );
 uint8_t handler_sacpp_start_new_chain( MEMORY_HANDLE mem_h, void* control_prog_state );

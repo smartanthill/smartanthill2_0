@@ -64,7 +64,7 @@ uint8_t handler_sacpp_continue_chain( MEMORY_HANDLE mem_h, void* control_prog_st
 	default_test_control_program_accept_reply_continue( control_prog_state, mem_h );
 	return SACCP_RET_PASS_LOWER;
 }
-
+#if 0
 uint8_t saccp_control_program_process_incoming( MEMORY_HANDLE mem_h, parser_obj* po, uint16_t sz, void* control_prog_state )
 {assert(0);
 	// TODO: process
@@ -75,7 +75,7 @@ uint8_t saccp_control_program_process_incoming( MEMORY_HANDLE mem_h, parser_obj*
 	PRINTF( "reply received [%d bytes]: %s\n", sz, buff );*/
 	return 0;
 }
-
+#endif // 0
 uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, void* control_prog_state )
 {
 	parser_obj po;

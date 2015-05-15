@@ -314,7 +314,7 @@ void tester_freeTestSystem()
 
 void justWaitSec( uint16_t durationSec )
 {
-	timespec ts;
+	struct timespec ts;
 	ts.tv_sec = durationSec;
 	ts.tv_nsec = 0;
 	nanosleep( &ts, NULL );
@@ -322,7 +322,7 @@ void justWaitSec( uint16_t durationSec )
 
 void justWaitMSec( uint16_t durationMSec )
 {
-	timespec ts;
+	struct timespec ts;
 	ts.tv_sec = durationMSec / 1000;
 	ts.tv_nsec = ( durationMSec % 1000 ) * 1000000;
 	nanosleep( &ts, NULL );
