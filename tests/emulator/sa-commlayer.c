@@ -796,79 +796,6 @@ uint8_t try_get_message_within_master( MEMORY_HANDLE mem_h )
 	return ret;
 }
 
-uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout )
-{
-	printf( "wait_for_communication_event()\n" );
-    fd_set rfds;
-    struct timeval tv;
-    int retval;
-	int fd_cnt;
-
-    /* Watch stdin (fd 0) to see when it has input. */
-    FD_ZERO(&rfds);
-
-#ifdef USED_AS_MASTER
-#ifdef USED_AS_MASTER_COMMSTACK
-    FD_SET(sock, &rfds);
-	FD_SET(sock_with_cl, &rfds);
-	fd_cnt = sock > sock_with_cl ? sock + 1 : sock_with_cl + 1;
-#else
-    FD_SET(sock_with_cl, &rfds);
-	fd_cnt = sock_with_cl + 1;
-#endif
-#else
-    FD_SET(sock, &rfds);
-	fd_cnt = sock + 1;
-#endif
-
-    /* Wait */
-    tv.tv_sec = timeout / 1000;
-    tv.tv_usec = ((long)timeout % 1000) * 1000;
-
-    retval = select(fd_cnt, &rfds, NULL, NULL, &tv);
-    /* Don't rely on the value of tv now! */
-
-    if (retval == -1)
-	{
-#ifdef _MSC_VER
-		int error = WSAGetLastError();
-//		if ( error == WSAEWOULDBLOCK )
-		printf( "error %d\n", error );
-#else
-        perror("select()");
-//		int error = errno;
-//		if ( error == EAGAIN || error == EWOULDBLOCK )
-#endif
-		assert(0);
-		return COMMLAYER_RET_FAILED;
-	}
-    else if (retval)
-	{
-		if ( FD_ISSET(sock, &rfds) )
-		{
-			uint8_t ret_code = tryGetMessage( mem_h );
-			if ( ret_code == COMMLAYER_RET_FAILED )
-				return ret_code;
-			assert( ret_code == COMMLAYER_RET_OK );
-			return COMMLAYER_RET_FROM_DEV;
-		}
-		else 
-		{
-//			assert( rfds.fd_array[0] == sock_with_cl );
-			assert( FD_ISSET(sock_with_cl, &rfds) );
-			uint8_t ret_code = try_get_message_within_master( mem_h );
-			if ( ret_code == COMMLAYER_RET_FAILED )
-				return ret_code;
-			assert( ret_code == COMMLAYER_RET_OK );
-			return COMMLAYER_RET_FROM_CENTRAL_UNIT;
-		}
-	}
-    else
-	{
-        return COMMLAYER_RET_TIMEOUT;
-	}
-}
-
 uint8_t send_within_master( MEMORY_HANDLE mem_h )
 {
 	printf( "send_within_master() called...\n" );
@@ -930,6 +857,81 @@ void communication_terminate()
 }
 
 #endif // USED_AS_MASTER
+
+uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout )
+{
+	printf( "wait_for_communication_event()\n" );
+    fd_set rfds;
+    struct timeval tv;
+    int retval;
+	int fd_cnt;
+
+    /* Watch stdin (fd 0) to see when it has input. */
+    FD_ZERO(&rfds);
+
+#ifdef USED_AS_MASTER
+#ifdef USED_AS_MASTER_COMMSTACK
+    FD_SET(sock, &rfds);
+	FD_SET(sock_with_cl, &rfds);
+	fd_cnt = sock > sock_with_cl ? sock + 1 : sock_with_cl + 1;
+#else
+    FD_SET(sock_with_cl, &rfds);
+	fd_cnt = sock_with_cl + 1;
+#endif
+#else
+    FD_SET(sock, &rfds);
+	fd_cnt = sock + 1;
+#endif
+
+    /* Wait */
+    tv.tv_sec = timeout / 1000;
+    tv.tv_usec = ((long)timeout % 1000) * 1000;
+
+    retval = select(fd_cnt, &rfds, NULL, NULL, &tv);
+    /* Don't rely on the value of tv now! */
+
+    if (retval == -1)
+	{
+#ifdef _MSC_VER
+		int error = WSAGetLastError();
+//		if ( error == WSAEWOULDBLOCK )
+		printf( "error %d\n", error );
+#else
+        perror("select()");
+//		int error = errno;
+//		if ( error == EAGAIN || error == EWOULDBLOCK )
+#endif
+		assert(0);
+		return COMMLAYER_RET_FAILED;
+	}
+    else if (retval)
+	{
+		if ( FD_ISSET(sock, &rfds) )
+		{
+			uint8_t ret_code = tryGetMessage( mem_h );
+			if ( ret_code == COMMLAYER_RET_FAILED )
+				return ret_code;
+			assert( ret_code == COMMLAYER_RET_OK );
+			return COMMLAYER_RET_FROM_DEV;
+		}
+#ifdef USED_AS_MASTER
+		else 
+		{
+//			assert( rfds.fd_array[0] == sock_with_cl );
+			assert( FD_ISSET(sock_with_cl, &rfds) );
+			uint8_t ret_code = try_get_message_within_master( mem_h );
+			if ( ret_code == COMMLAYER_RET_FAILED )
+				return ret_code;
+			assert( ret_code == COMMLAYER_RET_OK );
+			return COMMLAYER_RET_FROM_CENTRAL_UNIT;
+		}
+#endif // USED_AS_MASTER
+	}
+    else
+	{
+        return COMMLAYER_RET_TIMEOUT;
+	}
+}
 
 
 #else

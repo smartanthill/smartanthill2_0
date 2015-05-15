@@ -294,15 +294,6 @@ void waitToProceed()
 	WaitForSingleObject( hSyncEvent, 10000 );	// should be "infinitely", but let's be practical
 }
 */
-void justWaitSec( uint16_t durationSec )
-{
-	Sleep( durationSec * 1000 );
-}
-
-void justWaitMSec( uint16_t durationMSec )
-{
-	Sleep( durationMSec );
-}
 
 #else
 #include <time.h>
@@ -312,22 +303,6 @@ void tester_initTestSystem()
 
 void tester_freeTestSystem()
 {
-}
-
-void justWaitSec( uint16_t durationSec )
-{
-	struct timespec ts;
-	ts.tv_sec = durationSec;
-	ts.tv_nsec = 0;
-	nanosleep( &ts, NULL );
-}
-
-void justWaitMSec( uint16_t durationMSec )
-{
-	struct timespec ts;
-	ts.tv_sec = durationMSec / 1000;
-	ts.tv_nsec = ( durationMSec % 1000 ) * 1000000;
-	nanosleep( &ts, NULL );
 }
 
 #endif

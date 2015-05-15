@@ -137,7 +137,69 @@ printf( "Processing continued...\n" );
 		while ( ret_code == COMMLAYER_RET_PENDING )
 		{
 			//waitForTimeQuantum();
-			justWaitMSec( 200 );
+//			justWaitMSec( 200 );
+
+wait_for_comm_event:
+			ret_code = wait_for_communication_event( MEMORY_HANDLE_MAIN_LOOP, 1000 ); // TODO: recalculation
+			zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+//			printf( "=============================================Msg wait event; ret = %d, rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
+
+			switch ( ret_code )
+			{
+				case COMMLAYER_RET_FAILED:
+				{
+					// regular processing will be done below in the next block
+					return 0;
+					break;
+				}
+				case COMMLAYER_RET_FROM_DEV:
+				{
+					// regular processing will be done below in the next block
+					goto sauudp_rec;
+					break;
+				}
+				case COMMLAYER_RET_TIMEOUT:
+				{
+					if ( sagdp_data.event_type ) //TODO: temporary solution
+					{
+						printf( "no reply received; the last message (if any) will be resent by timer\n" );
+						sa_get_time( &(tact.tv) ); tact.action = 0;
+						ret_code = handler_sagdp_timer( &tact, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+						if ( ret_code == SAGDP_RET_OK )
+						{
+							zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+							goto wait_for_comm_event;
+						}
+						else if ( ret_code == SAGDP_RET_NEED_NONCE )
+						{
+							ret_code = handler_sasp_get_packet_id( nonce, SASP_NONCE_SIZE, &sasp_data );
+							assert( ret_code == SASP_RET_NONCE );
+							sa_get_time( &(tact.tv) ); tact.action = 0;
+							ret_code = handler_sagdp_timer( &tact, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+							assert( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_OK );
+							zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+							goto saspsend;
+							break;
+						}
+						else
+						{
+							printf( "ret_code = %d\n", ret_code );
+							assert( 0 );
+						}
+					}
+					goto wait_for_comm_event;
+					break;
+				}
+				default:
+				{
+					// unexpected ret_code
+					printf( "Unexpected ret_code %d\n", ret_code );
+					assert( 0 );
+					break;
+				}
+			}
+
+
 #if MODEL_IN_EFFECT == 1
 			if ( wait_to_continue_processing && getTime() >= wake_time_continue_processing )
 			{
@@ -218,6 +280,7 @@ trygetmsg:
 
 
 		// 2.1. Pass to SAoUDP
+sauudp_rec:
 		ret_code = handler_saoudp_receive( MEMORY_HANDLE_MAIN_LOOP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 
