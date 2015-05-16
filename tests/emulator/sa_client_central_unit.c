@@ -21,7 +21,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 
 #include "sa-common.h"
-#include "sa-commlayer.h"
+#include "hal/sa-commlayer.h"
 #include "saccp_protocol.h"
 #include "sa_test_control_prog.h"
 #include "test-generator.h"

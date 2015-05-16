@@ -20,9 +20,8 @@ Copyright (C) 2015 OLogN Technologies AG
 
 
 #include "sa-common.h"
-#include "sa-commlayer.h"
-#include "sa-hal-time-provider.h"
-#include "sa-timer.h"
+#include "hal/sa-commlayer.h"
+#include "hal/sa-hal-time-provider.h"
 #include "saoudp_protocol.h"
 #include "sasp_protocol.h"
 #include "sagdp_protocol.h"

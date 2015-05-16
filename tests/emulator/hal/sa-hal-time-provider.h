@@ -18,7 +18,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __SA_HAL_TIME_PROVIDER_H__
 #define __SA_HAL_TIME_PROVIDER_H__
 
-#include "sa-common.h"
+#include "../sa-common.h"
 
 typedef struct _sa_time_struct
 {

@@ -18,6 +18,8 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __SA_EEPROM_H__
 #define __SA_EEPROM_H__
 
+#include "../sa-common.h"
+
 // data IDs (for communication with eeprom
 #define DATA_SASP_NONCE_LW_ID 0 // Nonce Lower Watermark
 #define DATA_SASP_NONCE_LS_ID 1 // Nonce to use For Sending

@@ -18,11 +18,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __ZEPTO_MEM_MNGMT_H__
 #define __ZEPTO_MEM_MNGMT_H__
 
-#include "sa-common.h"
-
-#define MEMORY_HANDLE uint8_t
-#define REQUEST_REPLY_HANDLE MEMORY_HANDLE
-#define MEMORY_HANDLE_INVALID 0xFF
+#include "zepto-mem-mngmt-base.h"
 
 // named memory handles
 #define MEMORY_HANDLE_MAIN_LOOP 0

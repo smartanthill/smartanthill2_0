@@ -15,51 +15,13 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#include "sa-hal-time-provider.h"
+#if !defined __ZEPTO_MEM_MNGMT_BASE_H__
+#define __ZEPTO_MEM_MNGMT_BASE_H__
 
+#include "sa-common.h"
 
-#ifdef _MSC_VER
+#define MEMORY_HANDLE uint8_t
+#define REQUEST_REPLY_HANDLE MEMORY_HANDLE
+#define MEMORY_HANDLE_INVALID 0xFF
 
-#include <Windows.h>
-
-void sa_get_time( sa_time_val* t )
-{
-	unsigned int sys_t = GetTickCount();
-	t->high_t = sys_t >> 16;
-	t->low_t = (unsigned short)sys_t;
-}
-
-unsigned short getTime()
-{
-	return (unsigned short)( GetTickCount() / 200 );
-}
-
-#else
-
-#include <unistd.h>
-#include <time.h>
-
-uint32_t getTick() {
-    struct timespec ts;
-    unsigned theTick = 0U;
-    clock_gettime( CLOCK_MONOTONIC, &ts );
-    theTick  = ts.tv_nsec / 1000000;
-    theTick += ts.tv_sec * 1000;
-    return theTick;
-}
-
-
-void sa_get_time( sa_time_val* t )
-{
-	unsigned int sys_t = getTick();
-	t->high_t = sys_t >> 16;
-	t->low_t = (unsigned short)sys_t;
-}
-
-// TODO: get rid of it
-unsigned short getTime()
-{
-	return (unsigned short)( getTick() / 200 );
-}
-
-#endif
+#endif // __ZEPTO_MEM_MNGMT_BASE_H__

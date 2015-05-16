@@ -22,9 +22,9 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "sa-common.h"
 #include "sa-uint48.h"
-#include "sa-hal-time-provider.h"
-#include "sa-commlayer.h"
-#include "sa-timer.h"
+#include "hal/sa-hal-time-provider.h"
+#include "hal/sa-commlayer.h"
+//#include "sa-timer.h"
 #include "saoudp_protocol.h"
 #include "sasp_protocol.h"
 #include "sagdp_protocol.h"
@@ -130,9 +130,10 @@ printf( "Processing continued...\n" );
 #endif
 
 		// 1. Get message from comm peer
-		ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP );
+/*		ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-		assert( ret_code != COMMLAYER_RET_OK || ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ) != 0 );
+		assert( ret_code != COMMLAYER_RET_OK || ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ) != 0 );*/
+		ret_code = COMMLAYER_RET_PENDING;
 		INCREMENT_COUNTER_IF( 91, "MAIN LOOP, packet received [1]", ret_code == COMMLAYER_RET_OK );
 		while ( ret_code == COMMLAYER_RET_PENDING )
 		{
@@ -229,7 +230,7 @@ printf( "Processing continued...\n" );
 				if ( ret_code == SAGDP_RET_OK )
 				{
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-					goto trygetmsg;
+					goto wait_for_comm_event;
 				}
 				else if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
@@ -262,11 +263,11 @@ printf( "Processing continued...\n" );
 				goto alt_entry;
 				break;
 			}
-trygetmsg:
+/*trygetmsg:
 			ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP );
 			zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 			INCREMENT_COUNTER_IF( 92, "MAIN LOOP, packet received [2]", ret_code == COMMLAYER_RET_OK );
-			assert( ret_code != COMMLAYER_RET_OK || ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ) != 0 );
+			assert( ret_code != COMMLAYER_RET_OK || ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ) != 0 );*/
 		}
 		if ( ret_code != COMMLAYER_RET_OK )
 		{

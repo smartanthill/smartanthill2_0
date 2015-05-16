@@ -15,13 +15,51 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-// OLD approach
-// TODO: calls below should be avoided, and this file should be excluded from the project
+#include "../sa-hal-time-provider.h"
 
-#if !defined __SA_TIMER_H__
-#define __SA_TIMER_H__
 
-void waitForTimeQuantum();
-unsigned short getTime();
+#ifdef _MSC_VER
 
-#endif // __SA_TIMER_H__
+#include <Windows.h>
+
+void sa_get_time( sa_time_val* t )
+{
+	unsigned int sys_t = GetTickCount();
+	t->high_t = sys_t >> 16;
+	t->low_t = (unsigned short)sys_t;
+}
+
+unsigned short getTime()
+{
+	return (unsigned short)( GetTickCount() / 200 );
+}
+
+#else
+
+#include <unistd.h>
+#include <time.h>
+
+uint32_t getTick() {
+    struct timespec ts;
+    unsigned theTick = 0U;
+    clock_gettime( CLOCK_MONOTONIC, &ts );
+    theTick  = ts.tv_nsec / 1000000;
+    theTick += ts.tv_sec * 1000;
+    return theTick;
+}
+
+
+void sa_get_time( sa_time_val* t )
+{
+	unsigned int sys_t = getTick();
+	t->high_t = sys_t >> 16;
+	t->low_t = (unsigned short)sys_t;
+}
+
+// TODO: get rid of it
+unsigned short getTime()
+{
+	return (unsigned short)( getTick() / 200 );
+}
+
+#endif

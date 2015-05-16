@@ -27,7 +27,6 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __YOCTOVM_PROTOCOL_H__
 
 #include "sa-common.h"
-#include "sa-eeprom.h"
 #include "zepto-mem-mngmt.h"
 
 // RET codes

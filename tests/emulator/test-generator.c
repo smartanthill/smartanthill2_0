@@ -16,7 +16,7 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 #include "sa-common.h"
-#include "sa-commlayer.h"
+#include "hal/sa-commlayer.h"
 #include "test-generator.h"
 #include <stdlib.h> // for get_rand_val()
 

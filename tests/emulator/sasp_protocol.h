@@ -20,7 +20,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "sa-common.h"
 #include "sa-data-types.h"
-#include "sa-eeprom.h"
+#include "hal/sa-eeprom.h"
 #include "zepto-mem-mngmt.h"
 
 // RET codes
