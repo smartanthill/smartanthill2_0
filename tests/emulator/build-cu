@@ -1,0 +1,1 @@
+gcc hal/win-lnx-common/sa-commlayer.c saccp_protocol.c sa_client_central_unit.c sa_test_control_prog.c test-counters.c test-generator.c zepto-mem-mngmt.c -D USED_AS_MASTER -D USED_AS_MASTER_CORE -o ../cu.bin
