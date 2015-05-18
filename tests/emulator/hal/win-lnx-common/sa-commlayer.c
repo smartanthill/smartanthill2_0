@@ -72,9 +72,6 @@ uint16_t self_port_num = 7654;
 uint16_t other_port_num = 7667;
 #endif
 
-//uint8_t buffer_in[ BUFSIZE ];
-//uint8_t buffer_out[ BUFSIZE ];/**/
-
 
 
 bool communication_preinitialize()
@@ -149,14 +146,6 @@ void _communication_terminate()
 
 uint8_t sendMessage( MEMORY_HANDLE mem_h )
 {
-/*	parser_obj po;
-	zepto_parser_init( &po, mem_h );
-	uint16_t sz = zepto_parsing_remaining_bytes( &po );
-	assert( sz <= BUFSIZE );
-	zepto_parse_read_block( &po, buffer_out, sz );
-	int bytes_sent = sendto(sock, (char*)buffer_out, sz, 0, (struct sockaddr*)&sa_other, sizeof sa_other);*/
-
-	
 	uint16_t sz = memory_object_get_request_size( mem_h );
 	assert( sz != 0 ); // note: any valid message would have to have at least some bytes for headers, etc, so it cannot be empty
 	uint8_t* buff = memory_object_get_request_ptr( mem_h );
@@ -239,9 +228,7 @@ uint16_t other_port_num_with_cl = 7665;
 #error Unexpected configuration
 #endif // USED_AS_MASTER_COMMSTACK
 
-//uint8_t buffer_in_with_cl[ BUFSIZE ];
 uint16_t buffer_in_with_cl_pos;
-//uint8_t buffer_out_with_cl[ BUFSIZE ]; /**/
 
 bool communication_with_comm_layer_initialize()
 {
@@ -250,7 +237,6 @@ bool communication_with_comm_layer_initialize()
 	memset(&sa_other_with_cl, 0, sizeof sa_other_with_cl);
 
 	//create an internet, datagram, socket using UDP
-//	sock_with_cl = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	sock_with_cl = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (-1 == sock_with_cl) /* if socket failed to initialize, exit */
 	{
@@ -352,48 +338,7 @@ void communication_terminate()
 	_communication_terminate();
 	communication_with_comm_layer_terminate();
 }
-/*
-uint8_t try_get_message_within_master_loop2( MEMORY_HANDLE mem_h )
-{
-	socklen_t fromlen = sizeof(sa_other_with_cl);
-	int recsize = recvfrom(sock_with_cl, (char *)(buffer_in_with_cl + buffer_in_with_cl_pos), sizeof(buffer_in_with_cl) - buffer_in_with_cl_pos, 0, (struct sockaddr *)&sa_other_with_cl, &fromlen);
-	if (recsize < 0) 
-	{
-#ifdef _MSC_VER
-		int error = WSAGetLastError();
-		if ( error == WSAEWOULDBLOCK )
-#else
-		int error = errno;
-		if ( error == EAGAIN || error == EWOULDBLOCK )
-#endif
-		{
-			return COMMLAYER_RET_PENDING;
-		}
-		else
-		{
-			printf( "unexpected error %d received while getting message\n", error );
-			return COMMLAYER_RET_FAILED;
-		}
-	}
-	else
-	{
-		buffer_in_with_cl_pos += recsize;
-		if ( buffer_in_with_cl_pos < 2 )
-		{
-			return COMMLAYER_RET_PENDING;
-		}
-		uint16_t sz = buffer_in_with_cl[1]; sz <<= 8; sz += buffer_in_with_cl[0];
-		if ( sz > buffer_in_with_cl_pos - 2 )
-		{
-			return COMMLAYER_RET_PENDING;
-		}
-		assert( sz == buffer_in_with_cl_pos - 2 ); // TODO: try to handle
-		zepto_write_block( mem_h, buffer_in_with_cl + 2, sz );
-		return COMMLAYER_RET_OK;
-	}
 
-}
-*/
 uint8_t try_get_packet_within_master_loop( uint8_t* buff, uint16_t sz )
 {
 	socklen_t fromlen = sizeof(sa_other_with_cl);
@@ -464,33 +409,6 @@ uint8_t try_get_packet_size_within_master_loop( uint8_t* buff )
 
 uint8_t try_get_message_within_master( MEMORY_HANDLE mem_h )
 {
-/*	socklen_t fromlen = sizeof(sa_other_with_cl);
-	int recsize = recvfrom(sock_with_cl, (char *)buffer_in_with_cl, sizeof(buffer_in_with_cl), 0, (struct sockaddr *)&sa_other_with_cl, &fromlen);
-	if (recsize < 0) 
-	{
-#ifdef _MSC_VER
-		int error = WSAGetLastError();
-		if ( error == WSAEWOULDBLOCK )
-#else
-		int error = errno;
-		if ( error == EAGAIN || error == EWOULDBLOCK )
-#endif
-		{
-			return COMMLAYER_RET_PENDING;
-		}
-		else
-		{
-			printf( "unexpected error %d received while getting message\n", error );
-			return COMMLAYER_RET_FAILED;
-		}
-	}
-	else
-	{
-		if ( recsize < 2 )
-		zepto_write_block( mem_h, buffer_in_with_cl, recsize );
-		return COMMLAYER_RET_OK;
-	}*/
-
 	// do cleanup
 	memory_object_response_to_request( mem_h );
 	memory_object_response_to_request( mem_h );
@@ -524,15 +442,6 @@ uint8_t try_get_message_within_master( MEMORY_HANDLE mem_h )
 uint8_t send_within_master( MEMORY_HANDLE mem_h )
 {
 	printf( "send_within_master() called...\n" );
-/*	parser_obj po;
-	zepto_parser_init( &po, mem_h );
-	uint16_t sz = zepto_parsing_remaining_bytes( &po );
-	assert( sz <= BUFSIZE );
-	buffer_out_with_cl[0] = (uint8_t)sz;
-	buffer_out_with_cl[1] = sz >> 8;
-	zepto_parse_read_block( &po, buffer_out_with_cl + 2, sz );
-	int bytes_sent = sendto(sock_with_cl, (char*)buffer_out_with_cl, sz+2, 0, (struct sockaddr*)&sa_other_with_cl, sizeof sa_other_with_cl);*/
-
 	
 	uint16_t sz = memory_object_get_request_size( mem_h );
 	memory_object_request_to_response( mem_h );
