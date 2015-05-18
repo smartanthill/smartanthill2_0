@@ -21,384 +21,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #define BUFSIZE 512
 
-
-#define COMM_MEAN_PIPE 1
-#define COMM_MEAN_SOCKET 2
-
-//#define COMM_MEAN_TYPE COMM_MEAN_PIPE
-#define COMM_MEAN_TYPE COMM_MEAN_SOCKET
-
-
-#if COMM_MEAN_TYPE == COMM_MEAN_PIPE
-
-#ifdef _MSC_VER
-
-#include <Windows.h>
-
-HANDLE hPipe;
-char* g_pipeName = "\\\\.\\pipe\\mynamedpipe";
-
-OVERLAPPED readOverl;
-
-bool communicationInitializeAsServer()
-{
-	hPipe = CreateNamedPipeA(
-		g_pipeName,             // pipe name 
-		PIPE_ACCESS_DUPLEX,       // read/write access 
-//		PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,       // read/write access 
-		PIPE_TYPE_BYTE | PIPE_READMODE_BYTE |
-		PIPE_WAIT,                // blocking mode 
-		PIPE_UNLIMITED_INSTANCES, // max. instances  
-		BUFSIZE,                  // output buffer size 
-		BUFSIZE,                  // input buffer size 
-		0,                        // client time-out 
-		NULL);                    // default security attribute 
-
-	if (hPipe == INVALID_HANDLE_VALUE)
-	{
-		printf("CreateNamedPipe failed, GLE=%d.\n", GetLastError());
-		return false;
-	}
-
-	// Wait for the client to connect; if it succeeds, 
-	// the function returns a nonzero value. If the function
-	// returns zero, GetLastError returns ERROR_PIPE_CONNECTED. 
-
-	bool connected = ConnectNamedPipe(hPipe, NULL) ?
-	TRUE : (GetLastError() == ERROR_PIPE_CONNECTED);
-
-	if (!connected)
-		CloseHandle(hPipe);
-
-	return connected;
-}
-
-bool communicationInitializeAsClient()
-{
-	memset(&readOverl, 0, sizeof(readOverl));
-	readOverl.hEvent = CreateEvent(NULL, TRUE, TRUE, NULL);
-
-	bool waitingForCreation = false;
-	while (1)
-	{
-		hPipe = CreateFileA(
-			g_pipeName,   // pipe name 
-			GENERIC_READ |  // read and write access 
-			GENERIC_WRITE,
-			0,              // no sharing 
-			NULL,           // default security attributes
-			OPEN_EXISTING,  // opens existing pipe 
-//			0,              // default attributes 
-			FILE_FLAG_OVERLAPPED,              // default attributes 
-			NULL);          // no template file 
-
-		// Break if the pipe handle is valid. 
-
-		if (hPipe != INVALID_HANDLE_VALUE)
-			break;
-
-		if (GetLastError() == ERROR_FILE_NOT_FOUND)
-		{
-			waitingForCreation = true;
-			printf(".");
-			Sleep(1000);
-			continue;
-		}
-
-		// Exit if an error other than ERROR_PIPE_BUSY occurs. 
-
-		if (GetLastError() != ERROR_PIPE_BUSY)
-		{
-			printf("Could not open pipe. GLE=%d\n", GetLastError());
-			return false;
-		}
-
-		// All pipe instances are busy, so wait for 20 seconds. 
-
-		if (!WaitNamedPipeA(g_pipeName, 20000))
-		{
-			printf("Could not open pipe: 20 second wait timed out.");
-			return false;
-		}
-	}
-	if (waitingForCreation)
-		printf("\n\n");
-
-	return true;
-}
-
-bool communication_initialize()
-{
-#ifdef USED_AS_MASTER
-	return communicationInitializeAsClient();
-#else // USED_AS_MASTER
-	return communicationInitializeAsServer();
-#endif // USED_AS_MASTER
-}
-
-void communication_terminate()
-{
-	CloseHandle(hPipe);
-	hPipe = INVALID_HANDLE_VALUE;
-}
-
-uint8_t sendMessage( MEMORY_HANDLE mem_h )
-{
-	uint8_t buff[512];
-	uint16_t msgSize;
-	// init parser object
-	parser_obj po;
-	zepto_parser_init( &po, mem_h );
-	msgSize = zepto_parsing_remaining_bytes( &po );
-	assert( msgSize <= 512 );
-	zepto_parse_read_block( &po, buff, msgSize );
-	printf( "[%d] message sent; mem_h = %d, size = %d\n", GetTickCount(), mem_h, msgSize );
-	return sendMessage(&msgSize, buff);
-}
-
-uint8_t sendMessage(uint16_t* msgSize, const uint8_t * buff)
-{
-	BOOL   fSuccess = FALSE;
-	DWORD  cbWritten;
-	uint8_t sizePacked[2];
-	sizePacked[0] = *msgSize & 0xFF;
-	sizePacked[1] = (*msgSize >> 8) & 0xFF;
-
-	fSuccess = WriteFile(
-		hPipe,                  // pipe handle 
-		sizePacked,             // message 
-		2,              // message length 
-		&cbWritten,             // bytes written 
-		NULL);                  // not overlapped 
-
-	if (!fSuccess)
-	{
-		printf("WriteFile to pipe failed. GLE=%d\n", GetLastError());
-		return COMMLAYER_RET_FAILED;
-	}
-
-	fSuccess = WriteFile(
-		hPipe,                  // pipe handle 
-		buff,             // message 
-		*msgSize,              // message length 
-		&cbWritten,             // bytes written 
-		NULL);                  // not overlapped 
-
-	if (!fSuccess)
-	{
-		printf("WriteFile to pipe failed. GLE=%d\n", GetLastError());
-		return COMMLAYER_RET_FAILED;
-	}
-
-	return COMMLAYER_RET_OK;
-}
-
-uint8_t getMessage( MEMORY_HANDLE mem_h ) // returns when a packet received
-{
-	uint8_t buff[512];
-	uint16_t msgSize;
-	uint8_t ret = getMessage( &msgSize, buff, 512 );
-	zepto_write_block( mem_h, buff, msgSize );
-	return ret;
-}
-
-uint8_t getMessage(uint16_t* msgSize, uint8_t * buff, int maxSize) // returns when a packet received
-{
-	BOOL   fSuccess = FALSE;
-	DWORD  cbRead;
-	int byteCnt = 0;
-	*msgSize = -1;
-
-	do
-	{
-		do
-		{
-			// Read from the pipe. 
-
-			fSuccess = ReadFile(
-				hPipe,    // pipe handle 
-				buff + byteCnt,    // buffer to receive reply 
-				1,  // size to read 
-				&cbRead,  // number of bytes read 
-				NULL);    // not overlapped 
-
-			if (!fSuccess)
-				break;
-
-			byteCnt++;
-
-			if (byteCnt == 2)
-			{
-				*msgSize = buff[1];
-				*msgSize <<= 8;
-				*msgSize += buff[0];
-				break;
-			}
-		} while (1);
-
-		if (!fSuccess)
-			break;
-
-		byteCnt = 0;
-		do
-		{
-			// Read from the pipe. 
-			if (byteCnt >= *msgSize)
-			{
-				//			  printf( "\"%s\"\n", buff );
-				break;
-			}
-
-			fSuccess = ReadFile(
-				hPipe,    // pipe handle 
-				buff + byteCnt,    // buffer to receive reply 
-				1,  // size to read 
-				&cbRead,  // number of bytes read 
-				NULL);    // not overlapped 
-
-			if (!fSuccess)
-				break;
-
-			byteCnt++;
-
-		} while (1);
-		break;
-	} while (1);
-
-	return *msgSize == (uint16_t)(-1) ? COMMLAYER_RET_FAILED : COMMLAYER_RET_OK;
-}
-
-
-int asyncReadStatus = 0; // 0: nothing is started; 1: reading initiated; 2: size retrieved
-uint8_t async_buff[BUFSIZE];
-
-uint8_t initReading()
-{
-//	printf( "initReading() called...\n" );
-	BOOL   fSuccess = FALSE;
-	DWORD  cbRead;
-
-	asyncReadStatus = 0;
-
-	fSuccess = ReadFile(
-		hPipe,    // pipe handle 
-		async_buff,    // buffer to receive reply 
-		2,  // size to read 
-		&cbRead,  // number of bytes read 
-		&readOverl);    // overlapped 
-
-	if (!fSuccess || cbRead < 2)
-	{
-		if (GetLastError() == ERROR_IO_PENDING)
-		{
-			asyncReadStatus = 1;
-			return COMMLAYER_RET_PENDING;
-		}
-		else
-			return COMMLAYER_RET_FAILED;
-	}
-	else
-	{
-		asyncReadStatus = 2;
-		return COMMLAYER_RET_OK;
-	}
-}
-
-bool isPreReadingDone()
-{
-			Sleep(1);
-//	printf( "isPreReadingDone() called...\n" );
-	assert( asyncReadStatus == 1 );
-	DWORD retrieved = 0;
-	BOOL ret = GetOverlappedResult( hPipe, &readOverl, &retrieved, FALSE );
-	if ( ! ret )
-	{
-		DWORD error = GetLastError();
-		if ( error == ERROR_IO_INCOMPLETE )
-			return false;
-		printf( "Unexpected error %d\n", error );
-		assert(0);
-	}
-	assert( retrieved == 2 );
-	asyncReadStatus = 2;
-	return true;
-}
-
-uint8_t finalizeReading(uint16_t* msgSize, uint8_t * buff, int maxSize)
-{
-//	printf( "finalizeReading() called (size = %d)...\n", async_buff[0] );
-	BOOL   fSuccess = FALSE;
-	DWORD  cbRead;
-
-	*msgSize = async_buff[1];
-	*msgSize <<= 8;
-	*msgSize += async_buff[0];
-
-	fSuccess = ReadFile(
-		hPipe,    // pipe handle 
-		buff,    // buffer to receive reply 
-		*msgSize,  // size to read 
-		&cbRead,  // number of bytes read 
-		NULL);    // not overlapped 
-
-	asyncReadStatus = 0;
-	if ( fSuccess )
-	{
-		return COMMLAYER_RET_OK;
-	}
-	else
-	{
-		return COMMLAYER_RET_FAILED;
-	};
-
-}
-
-
-uint8_t tryGetMessage( MEMORY_HANDLE mem_h ) // returns immediately, but a packet reception is not guaranteed
-{
-	uint8_t buff[512];
-	uint16_t msgSize;
-	uint8_t ret = tryGetMessage( &msgSize, buff, 512 );
-	if ( ret == COMMLAYER_RET_OK )
-	{
-		printf( "[%d] message received; mem_h = %d, size = %d\n", GetTickCount(), mem_h, msgSize );
-		assert( ugly_hook_get_response_size( mem_h ) == 0 );
-		zepto_write_block( mem_h, buff, msgSize );
-	}
-	return ret;
-}
-
-
-uint8_t tryGetMessage(uint16_t* msgSize, uint8_t * buff, int maxSize) // returns immediately, but a packet reception is not guaranteed
-{
-	uint8_t ret_code;
-	if ( asyncReadStatus == 0 )
-	{
-		ret_code = initReading();
-		if ( ret_code == COMMLAYER_RET_FAILED )
-			return COMMLAYER_RET_FAILED;
-	}
-	assert( asyncReadStatus > 0 );
-	if ( asyncReadStatus == 1 )
-	{
-		if ( !isPreReadingDone() )
-			return COMMLAYER_RET_PENDING;
-	}
-	assert( asyncReadStatus > 1 );
-	if ( asyncReadStatus == 2 )
-	{
-		asyncReadStatus = 0;
-		return finalizeReading( msgSize, buff, maxSize);
-	}
-}
-
-#else // _MSC_VER
-#error not implemented
-#endif
-
-
-#elif COMM_MEAN_TYPE == COMM_MEAN_SOCKET
-
+#define MAX_PACKET_SIZE 128
 
 
 #include <stdio.h>
@@ -449,8 +72,8 @@ uint16_t self_port_num = 7654;
 uint16_t other_port_num = 7667;
 #endif
 
-uint8_t buffer_in[ BUFSIZE ];
-uint8_t buffer_out[ BUFSIZE ];
+//uint8_t buffer_in[ BUFSIZE ];
+//uint8_t buffer_out[ BUFSIZE ];/**/
 
 
 
@@ -526,14 +149,19 @@ void _communication_terminate()
 
 uint8_t sendMessage( MEMORY_HANDLE mem_h )
 {
-	parser_obj po;
+/*	parser_obj po;
 	zepto_parser_init( &po, mem_h );
 	uint16_t sz = zepto_parsing_remaining_bytes( &po );
 	assert( sz <= BUFSIZE );
 	zepto_parse_read_block( &po, buffer_out, sz );
+	int bytes_sent = sendto(sock, (char*)buffer_out, sz, 0, (struct sockaddr*)&sa_other, sizeof sa_other);*/
 
 	
-	int bytes_sent = sendto(sock, (char*)buffer_out, sz, 0, (struct sockaddr*)&sa_other, sizeof sa_other);
+	uint16_t sz = memory_object_get_request_size( mem_h );
+	assert( sz != 0 ); // note: any valid message would have to have at least some bytes for headers, etc, so it cannot be empty
+	uint8_t* buff = memory_object_get_request_ptr( mem_h );
+	assert( buff != NULL );
+	int bytes_sent = sendto(sock, (char*)buff, sz, 0, (struct sockaddr*)&sa_other, sizeof sa_other);
 	if (bytes_sent < 0) 
 	{
 #ifdef _MSC_VER
@@ -554,8 +182,16 @@ uint8_t sendMessage( MEMORY_HANDLE mem_h )
 
 uint8_t tryGetMessage( MEMORY_HANDLE mem_h )
 {
+	// It is assumed here that the system must be able to receive a packet up to MAX_PACKET_SIZE BYTES. Thus we first request this amount of memory, and then release unnecessary part
+
+	// do cleanup
+	memory_object_response_to_request( mem_h );
+	memory_object_response_to_request( mem_h );
+	uint8_t* buff = memory_object_append( mem_h, MAX_PACKET_SIZE );
+
 	socklen_t fromlen = sizeof(sa_other);
-	int recsize = recvfrom(sock, (char *)buffer_in, sizeof(buffer_in), 0, (struct sockaddr *)&sa_other, &fromlen);
+//	int recsize = recvfrom(sock, (char *)buffer_in, sizeof(buffer_in), 0, (struct sockaddr *)&sa_other, &fromlen);
+	uint16_t recsize = recvfrom(sock, (char *)buff, MAX_PACKET_SIZE, 0, (struct sockaddr *)&sa_other, &fromlen);
 	if (recsize < 0) 
 	{
 #ifdef _MSC_VER
@@ -576,8 +212,10 @@ uint8_t tryGetMessage( MEMORY_HANDLE mem_h )
 	}
 	else
 	{
-		assert( recsize );
-		zepto_write_block( mem_h, buffer_in, recsize );
+		assert( recsize && recsize <= MAX_PACKET_SIZE );
+//		zepto_write_block( mem_h, buffer_in, recsize );
+		memory_object_response_to_request( mem_h );
+		memory_object_cut_and_make_response( mem_h, 0, recsize );
 		return COMMLAYER_RET_OK;
 	}
 
@@ -601,9 +239,9 @@ uint16_t other_port_num_with_cl = 7665;
 #error Unexpected configuration
 #endif // USED_AS_MASTER_COMMSTACK
 
-uint8_t buffer_in_with_cl[ BUFSIZE ];
+//uint8_t buffer_in_with_cl[ BUFSIZE ];
 uint16_t buffer_in_with_cl_pos;
-uint8_t buffer_out_with_cl[ BUFSIZE ];
+//uint8_t buffer_out_with_cl[ BUFSIZE ]; /**/
 
 bool communication_with_comm_layer_initialize()
 {
@@ -714,8 +352,8 @@ void communication_terminate()
 	_communication_terminate();
 	communication_with_comm_layer_terminate();
 }
-
-uint8_t try_get_message_within_master_loop( MEMORY_HANDLE mem_h )
+/*
+uint8_t try_get_message_within_master_loop2( MEMORY_HANDLE mem_h )
 {
 	socklen_t fromlen = sizeof(sa_other_with_cl);
 	int recsize = recvfrom(sock_with_cl, (char *)(buffer_in_with_cl + buffer_in_with_cl_pos), sizeof(buffer_in_with_cl) - buffer_in_with_cl_pos, 0, (struct sockaddr *)&sa_other_with_cl, &fromlen);
@@ -755,6 +393,74 @@ uint8_t try_get_message_within_master_loop( MEMORY_HANDLE mem_h )
 	}
 
 }
+*/
+uint8_t try_get_packet_within_master_loop( uint8_t* buff, uint16_t sz )
+{
+	socklen_t fromlen = sizeof(sa_other_with_cl);
+	int recsize = recvfrom(sock_with_cl, (char *)(buff + buffer_in_with_cl_pos), sz - buffer_in_with_cl_pos, 0, (struct sockaddr *)&sa_other_with_cl, &fromlen);
+	if (recsize < 0) 
+	{
+#ifdef _MSC_VER
+		int error = WSAGetLastError();
+		if ( error == WSAEWOULDBLOCK )
+#else
+		int error = errno;
+		if ( error == EAGAIN || error == EWOULDBLOCK )
+#endif
+		{
+			return COMMLAYER_RET_PENDING;
+		}
+		else
+		{
+			printf( "unexpected error %d received while getting message\n", error );
+			return COMMLAYER_RET_FAILED;
+		}
+	}
+	else
+	{
+		buffer_in_with_cl_pos += recsize;
+		if ( buffer_in_with_cl_pos < sz )
+		{
+			return COMMLAYER_RET_PENDING;
+		}
+		return COMMLAYER_RET_OK;
+	}
+
+}
+
+uint8_t try_get_packet_size_within_master_loop( uint8_t* buff )
+{
+	socklen_t fromlen = sizeof(sa_other_with_cl);
+	int recsize = recvfrom(sock_with_cl, (char *)(buff + buffer_in_with_cl_pos), 2 - buffer_in_with_cl_pos, 0, (struct sockaddr *)&sa_other_with_cl, &fromlen);
+	if (recsize < 0) 
+	{
+#ifdef _MSC_VER
+		int error = WSAGetLastError();
+		if ( error == WSAEWOULDBLOCK )
+#else
+		int error = errno;
+		if ( error == EAGAIN || error == EWOULDBLOCK )
+#endif
+		{
+			return COMMLAYER_RET_PENDING;
+		}
+		else
+		{
+			printf( "unexpected error %d received while getting message\n", error );
+			return COMMLAYER_RET_FAILED;
+		}
+	}
+	else
+	{
+		buffer_in_with_cl_pos += recsize;
+		if ( buffer_in_with_cl_pos < 2 )
+		{
+			return COMMLAYER_RET_PENDING;
+		}
+		return COMMLAYER_RET_OK;
+	}
+
+}
 
 uint8_t try_get_message_within_master( MEMORY_HANDLE mem_h )
 {
@@ -785,29 +491,63 @@ uint8_t try_get_message_within_master( MEMORY_HANDLE mem_h )
 		return COMMLAYER_RET_OK;
 	}*/
 
+	// do cleanup
+	memory_object_response_to_request( mem_h );
+	memory_object_response_to_request( mem_h );
+	uint8_t* buff = memory_object_append( mem_h, MAX_PACKET_SIZE );
+
 	buffer_in_with_cl_pos = 0;
 	uint8_t ret;
+
 	do //TODO: add delays or some waiting
 	{
-		ret = try_get_message_within_master_loop( mem_h );
+		ret = try_get_packet_size_within_master_loop( buff );
 	}
 	while ( ret == COMMLAYER_RET_PENDING );
+	if ( ret != COMMLAYER_RET_OK )
+		return ret;
+	uint16_t sz = buff[1]; sz <<= 8; sz += buff[0];
+
+	buffer_in_with_cl_pos = 0;
+	do //TODO: add delays or some waiting
+	{
+		ret = try_get_packet_within_master_loop( buff, sz );
+	}
+	while ( ret == COMMLAYER_RET_PENDING );
+
+	memory_object_response_to_request( mem_h );
+	memory_object_cut_and_make_response( mem_h, 0, sz );
+
 	return ret;
 }
 
 uint8_t send_within_master( MEMORY_HANDLE mem_h )
 {
 	printf( "send_within_master() called...\n" );
-	parser_obj po;
+/*	parser_obj po;
 	zepto_parser_init( &po, mem_h );
 	uint16_t sz = zepto_parsing_remaining_bytes( &po );
 	assert( sz <= BUFSIZE );
 	buffer_out_with_cl[0] = (uint8_t)sz;
 	buffer_out_with_cl[1] = sz >> 8;
 	zepto_parse_read_block( &po, buffer_out_with_cl + 2, sz );
+	int bytes_sent = sendto(sock_with_cl, (char*)buffer_out_with_cl, sz+2, 0, (struct sockaddr*)&sa_other_with_cl, sizeof sa_other_with_cl);*/
 
 	
-	int bytes_sent = sendto(sock_with_cl, (char*)buffer_out_with_cl, sz+2, 0, (struct sockaddr*)&sa_other_with_cl, sizeof sa_other_with_cl);
+	uint16_t sz = memory_object_get_request_size( mem_h );
+	memory_object_request_to_response( mem_h );
+	assert( sz == memory_object_get_response_size( mem_h ) );
+	assert( sz != 0 ); // note: any valid message would have to have at least some bytes for headers, etc, so it cannot be empty
+	uint8_t* buff = memory_object_prepend( mem_h, 2 );
+	assert( buff != NULL );
+	buff[0] = (uint8_t)sz;
+	buff[1] = sz >> 8;
+	int bytes_sent = sendto(sock_with_cl, (char*)buff, sz+2, 0, (struct sockaddr*)&sa_other_with_cl, sizeof sa_other_with_cl);
+	// do full cleanup
+	memory_object_response_to_request( mem_h );
+	memory_object_response_to_request( mem_h );
+
+
 	if (bytes_sent < 0) 
 	{
 #ifdef _MSC_VER
@@ -932,7 +672,3 @@ uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout )
 	}
 }
 
-
-#else
-#error unknown COMM_MEAN_TYPE
-#endif

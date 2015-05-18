@@ -19,6 +19,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __SA_COMMLAYER_H__
 
 #include "../sa-common.h"
+#include "zepto-mem-mngmt-hal-spec.h"
 #include "../zepto-mem-mngmt.h"
 
 bool communication_initialize();
@@ -39,14 +40,15 @@ void communication_terminate();
 
 
 uint8_t sendMessage( MEMORY_HANDLE mem_h );
-//uint8_t tryGetMessage( MEMORY_HANDLE mem_h ); // returns immediately, but a packet reception is not guaranteed
 
 uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout );
 #ifdef USED_AS_MASTER
 #ifdef USED_AS_MASTER_COMMSTACK
 uint8_t send_to_central_unit( MEMORY_HANDLE mem_h );
-#else
+#elif defined USED_AS_MASTER_CORE
 uint8_t send_to_commm_stack( MEMORY_HANDLE mem_h );
+#else
+#error unknown configuration
 #endif
 #endif
 

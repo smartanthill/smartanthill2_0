@@ -574,7 +574,8 @@ zepto_mem_man_check_sanity();
 	}
 }
 
-void memory_object_prepend( REQUEST_REPLY_HANDLE mem_h, const uint8_t* buff, uint16_t size )
+//void memory_object_prepend( REQUEST_REPLY_HANDLE mem_h, const uint8_t* buff, uint16_t size )
+uint8_t* memory_object_prepend( REQUEST_REPLY_HANDLE mem_h, uint16_t size )
 {
 zepto_mem_man_check_sanity();
 	if ( memory_objects[ mem_h ].rq_size )
@@ -598,18 +599,20 @@ zepto_mem_man_check_sanity();
 zepto_mem_man_check_sanity();
 	if ( ret )
 	{
-		memcpy( memory_objects[ mem_h ].ptr, buff, size );
+//		memcpy( memory_objects[ mem_h ].ptr, buff, size );
 zepto_mem_man_check_sanity();
-		return;
+		return memory_objects[ mem_h ].ptr;
+//		return;
 	}
 
 	ret = zepto_mem_man_try_move_right_expand_left( mem_h, size );
 zepto_mem_man_check_sanity();
 	if ( ret )
 	{
-		memcpy( memory_objects[ mem_h ].ptr, buff, size );
+//		memcpy( memory_objects[ mem_h ].ptr, buff, size );
 zepto_mem_man_check_sanity();
-		return;
+		return memory_objects[ mem_h ].ptr;
+//		return;
 	}
 
 	REQUEST_REPLY_HANDLE last_at_right;
@@ -622,9 +625,10 @@ zepto_mem_man_check_sanity();
 		ret = zepto_mem_man_try_move_right_expand_left( mem_h, size );
 zepto_mem_man_check_sanity();
 		assert( ret );
-		memcpy( memory_objects[ mem_h ].ptr, buff, size );
+//		memcpy( memory_objects[ mem_h ].ptr, buff, size );
 zepto_mem_man_check_sanity();
-		return;
+		return memory_objects[ mem_h ].ptr;
+//		return;
 	}
 
 	REQUEST_REPLY_HANDLE last_at_left;
@@ -637,9 +641,10 @@ zepto_mem_man_check_sanity();
 		ret = zepto_mem_man_try_move_right_expand_left( mem_h, size );
 zepto_mem_man_check_sanity();
 		assert( ret ); // TODO: yet to be considered: forced truncation and further error handling
-		memcpy( memory_objects[ mem_h ].ptr, buff, size );
+//		memcpy( memory_objects[ mem_h ].ptr, buff, size );
 zepto_mem_man_check_sanity();
-		return;
+		return memory_objects[ mem_h ].ptr;
+//		return;
 	}
 }
 
@@ -683,6 +688,11 @@ zepto_mem_man_check_sanity();
 	memory_objects[ mem_h ].rsp_size = size;
 	// TODO: the above line may require further actions for "returning" memory
 zepto_mem_man_check_sanity();
+}
+
+void memory_object_request_to_response( REQUEST_REPLY_HANDLE mem_h )
+{
+	memory_object_cut_and_make_response( mem_h, 0, memory_objects[ mem_h ].rq_size );
 }
 
 void memory_object_response_to_request( REQUEST_REPLY_HANDLE mem_h )
@@ -975,13 +985,17 @@ void zepto_write_prepend_byte( MEMORY_HANDLE mem_h, uint8_t bt )
 {
 	assert( mem_h != MEMORY_HANDLE_INVALID );
 	uint8_t b = bt;
-	memory_object_prepend( mem_h, &b, 1 );
+//	memory_object_prepend( mem_h, &b, 1 );
+	memory_object_prepend( mem_h, 1 );
+	memcpy( memory_objects[ mem_h ].ptr, &b, 1 );
 }
 
 void zepto_write_prepend_block( MEMORY_HANDLE mem_h, const uint8_t* block, uint16_t size )
 {
 	assert( mem_h != MEMORY_HANDLE_INVALID );
-	memory_object_prepend( mem_h, block, size );
+//	memory_object_prepend( mem_h, block, size );
+	memory_object_prepend( mem_h, size );
+	memcpy( memory_objects[ mem_h ].ptr, block, size );
 }
 
 
@@ -1262,7 +1276,9 @@ void zepto_parser_encode_and_prepend_uint( MEMORY_HANDLE mem_h, const uint8_t* n
 	assert( out_buff_end - out_buff >= 0 && out_buff_end - out_buff < 0x100 ); // at least within 8 bits
 	uint8_t sz = (uint8_t)(out_buff_end - out_buff);
 //	PRINTF( "zepto_parser_encode_and_prepend_uint(..., ..., %d) resulted in %d bytes\n", num_sz_max, sz );
-	memory_object_prepend( mem_h, out_buff, sz );
+//	memory_object_prepend( mem_h, out_buff, sz );
+	memory_object_prepend( mem_h, sz );
+	memcpy( memory_objects[ mem_h ].ptr, out_buff, sz );
 }
 
 void zepto_parser_encode_and_prepend_uint16( MEMORY_HANDLE mem_h, uint16_t num )

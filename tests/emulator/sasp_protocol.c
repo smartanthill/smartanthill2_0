@@ -28,8 +28,8 @@ void SASP_initAtLifeStart( SASP_DATA* sasp_data )
 	sa_uint48_set_zero( sasp_data->nonce_ls );
 	sa_uint48_increment( sasp_data->nonce_ls );
 
-	eeprom_write( DATA_SASP_NONCE_LW_ID, sasp_data->nonce_lw, sizeof(sasp_data->nonce_lw) );
-	eeprom_write( DATA_SASP_NONCE_LS_ID, sasp_data->nonce_ls, sizeof(sasp_data->nonce_ls) );
+	eeprom_write( DATA_SASP_NONCE_LW_ID, sasp_data->nonce_lw, SASP_NONCE_TYPE_SIZE );
+	eeprom_write( DATA_SASP_NONCE_LS_ID, sasp_data->nonce_ls, SASP_NONCE_TYPE_SIZE );
 }
 
 void SASP_restoreFromBackup( SASP_DATA* sasp_data )
@@ -37,11 +37,11 @@ void SASP_restoreFromBackup( SASP_DATA* sasp_data )
 	uint8_t size;
 
 	size = eeprom_read_size( DATA_SASP_NONCE_LW_ID );
-	assert( size == sizeof(sasp_data->nonce_lw) );
+	assert( size == SASP_NONCE_TYPE_SIZE );
 	eeprom_read_fixed_size( DATA_SASP_NONCE_LW_ID, sasp_data->nonce_lw, size);
 
 	size = eeprom_read_size( DATA_SASP_NONCE_LS_ID );
-	assert( size == sizeof(sasp_data->nonce_ls) );
+	assert( size == SASP_NONCE_TYPE_SIZE );
 	eeprom_read_fixed_size( DATA_SASP_NONCE_LS_ID, sasp_data->nonce_ls, size);
 }
 
@@ -50,7 +50,7 @@ void sasp_make_nonce_for_encryption( const sasp_nonce_type packet_id, uint8_t ma
 {
 	memset( nonce, 0, 16 );
 	int8_t i;
-	for ( i=0; i<sizeof(sasp_nonce_type); i++ )
+	for ( i=0; i<SASP_NONCE_TYPE_SIZE; i++ )
 	{
 		nonce[i] = sa_uint48_get_byte( packet_id, i );
 	}

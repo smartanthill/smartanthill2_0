@@ -23,6 +23,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 
 typedef sa_uint48_t sasp_nonce_type;
+#define SASP_NONCE_TYPE_SIZE 6 // sizeof(sa_uint48_t)
 
 typedef struct _timeout_action // NOTE: might be a temporary solution
 {

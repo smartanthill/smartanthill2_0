@@ -1049,7 +1049,7 @@ uint8_t handler_sagdp_receive_hlp( timeout_action* tact, sasp_nonce_type nonce, 
 		// "chain id" is shared between devices and therefore, should be unique for both sides, that is, shoud have master/slave distinguishing bit
 		sa_uint48_init_by( sagdp_data->last_received_chain_id, nonce );
 		//+++ TODO: next line and related MUST be re-thought and re-designed!!!!
-		*(sagdp_data->last_received_chain_id + sizeof(sa_uint48_t) - 1) |= ( MASTER_SLAVE_BIT << 7 ); //!!!TODO: use bit field procesing instead; also: make sure this operation is safe
+		*(sagdp_data->last_received_chain_id + SASP_NONCE_TYPE_SIZE - 1) |= ( MASTER_SLAVE_BIT << 7 ); //!!!TODO: use bit field procesing instead; also: make sure this operation is safe
 
 		// form a UP packet
 		assert( ( packet_status & ( ~( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) ) == 0 ); // TODO: can we rely on sanity of the caller?
