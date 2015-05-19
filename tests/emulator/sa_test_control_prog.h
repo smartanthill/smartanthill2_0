@@ -15,6 +15,7 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
+#ifdef MASTER_ENABLE_ALT_TEST_MODE
 
 #if !defined __SA_TEST_CONTROL_PROG_H__
 #define __SA_TEST_CONTROL_PROG_H__
@@ -48,3 +49,5 @@ uint8_t default_test_control_program_start_new( void* control_prog_state, MEMORY
 
 
 #endif // __SA_TEST_CONTROL_PROG_H__
+
+#endif // MASTER_ENABLE_ALT_TEST_MODE

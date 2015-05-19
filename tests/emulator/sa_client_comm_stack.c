@@ -25,23 +25,13 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "saoudp_protocol.h"
 #include "sasp_protocol.h"
 #include "sagdp_protocol.h"
+#include "saccp_protocol.h"
 #include "test-generator.h"
 #include <stdio.h> 
 
 uint8_t pid[ SASP_NONCE_SIZE ];
 uint8_t nonce[ SASP_NONCE_SIZE ];
 
-/*
-uint8_t send_to_central_unit_error( MEMORY_HANDLE mem_h )
-{
-	return send_to_central_unit( mem_h );
-}
-
-uint8_t send_to_central_unit_reply( MEMORY_HANDLE mem_h )
-{
-	return send_to_central_unit( mem_h );
-}
-*/
 
 int main_loop()
 {
@@ -316,12 +306,49 @@ saoudp_in:
 			}
 		}
 
+#ifdef MASTER_ENABLE_ALT_TEST_MODE
 		ret_code = send_to_central_unit( MEMORY_HANDLE_MAIN_LOOP );
 		goto wait_for_comm_event;
-		//+++ TODO: what? goto select?
-			
-		// 5. SAGDP
+#else
+
+		// 4. pass to CACCP a new packet
+		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP/*, sasp_nonce_type chain_id*/ ); //master_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP );
+		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+		switch ( ret_code )
+		{
+			case SACCP_RET_PASS_TO_CENTRAL_UNIT:
+			{
+				ret_code = send_to_central_unit( MEMORY_HANDLE_MAIN_LOOP );
+				// TODO: check ret_code
+				goto wait_for_comm_event;
+				break;
+			}
+			case SACCP_RET_FAILED:
+			{
+				printf( "Failure in SACCP. handling is not implemented. Aborting\n" );
+				return 0;
+				break;
+			}
+			default:
+			{
+				// unexpected ret_code
+				printf( "Unexpected ret_code %d\n", ret_code );
+				assert( 0 );
+				break;
+			}
+		}
+#endif			
+
+
+
+
 client_received:
+		// 4. CACCP (prepare packet)
+		ret_code = handler_saccp_prepare_to_send( MEMORY_HANDLE_MAIN_LOOP );
+		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+		// TODO: analyze and process ret_code
+
+		// 5. SAGDP
 		printf( "@client_received: rq_size: %d, rsp_size: %d\n", ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 		sa_get_time( &(tact.tv) ); tact.action = 0;
 		ret_code = handler_sagdp_receive_hlp( &tact, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );

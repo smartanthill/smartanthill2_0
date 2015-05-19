@@ -25,6 +25,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "saccp_protocol.h"
 #include "sa_test_control_prog.h"
 #include "test-generator.h"
+#include "zepto-mem-mngmt.h"
 #include <stdio.h> 
 
 
@@ -40,11 +41,6 @@ int main_loop()
 
 	tester_initTestSystem();
 
-
-#if MODEL_IN_EFFECT == 2
-	DefaultTestingControlProgramState control_prog_state;
-	default_test_control_program_init( &control_prog_state );
-#endif
 
 	uint8_t ret_code;
 
@@ -62,8 +58,24 @@ int main_loop()
 
 
 
+#ifdef MASTER_ENABLE_ALT_TEST_MODE
+
+#if MODEL_IN_EFFECT == 2
+	DefaultTestingControlProgramState control_prog_state;
+	default_test_control_program_init( &control_prog_state );
+#endif
 	ret_code = default_test_control_program_start_new( &control_prog_state, MEMORY_HANDLE_MAIN_LOOP );
 	zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+#else
+	uint8_t buff_base[] = {0x2, 0x0, 0x8, 0x1, 0x1, 0x2, 0x0, 0x1, '-', '-', '>' }; 
+	uint8_t buff[128];
+	buff[0] = 1; // first in the chain
+	memcpy( buff+1, buff_base, sizeof(buff_base) );
+	zepto_write_block( MEMORY_HANDLE_MAIN_LOOP, buff, 1+sizeof(buff_base) );
+	zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+	// should appear on the other side: Packet received: [8 bytes]  [1][0x0001][0x0001][0x0002][0x0000][0x0001]-->
+	// should come back: 02 01 01 02 01 02 2d 2d 2d 2d 3e
+#endif
 	goto send_command;
 
 	// MAIN LOOP
@@ -104,6 +116,7 @@ wait_for_comm_event:
 		goto send_command;*/
 
 		// 4. Process received command (yoctovm)
+#ifdef MASTER_ENABLE_ALT_TEST_MODE
 process_reply:
 		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL, &control_prog_state ); //master_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -128,8 +141,23 @@ process_reply:
 			}
 		}
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+#else // MASTER_ENABLE_ALT_TEST_MODE
+		// so far just print received packet and exit
+		uint8_t buff[128];
+		uint16_t i;
+		parser_obj po;
+process_reply:
+		zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
+		uint16_t sz = zepto_parsing_remaining_bytes( &po );
+		zepto_parse_read_block( &po, buff, sz );
+		printf( "block received:\n" );
+		for ( i=0; i<sz; i++ )
+			printf( "%02x ", buff[i] );
+		printf( "\n\n" );
 
-	send_command:
+#endif // MASTER_ENABLE_ALT_TEST_MODE
+
+send_command:
 		printf( "=============================================Msg is about to be sent; rq_size: %d, rsp_size: %d\n", ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 		send_to_commm_stack( MEMORY_HANDLE_MAIN_LOOP );
 	}

@@ -14,7 +14,7 @@ Copyright (C) 2015 OLogN Technologies AG
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
-
+#ifdef MASTER_ENABLE_ALT_TEST_MODE
 
 #include "sa_test_control_prog.h"
 #include "sagdp_protocol.h" // for packet flags
@@ -280,4 +280,4 @@ uint8_t default_test_control_program_accept_reply( void* control_prog_state, uin
 }
 
 
-
+#endif // MASTER_ENABLE_ALT_TEST_MODE
