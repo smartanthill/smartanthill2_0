@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -38,6 +38,20 @@ unsigned short getTime()
 
 #include <unistd.h>
 #include <time.h>
+
+#ifdef __MACH__
+#include <sys/time.h>
+#define CLOCK_MONOTONIC 1
+
+int clock_gettime(int clk_id, struct timespec* t) {
+    struct timeval now;
+    int rv = gettimeofday(&now, NULL);
+    if (rv) return rv;
+    t->tv_sec  = now.tv_sec;
+    t->tv_nsec = now.tv_usec * 1000;
+    return 0;
+}
+#endif
 
 uint32_t getTick() {
     struct timespec ts;
