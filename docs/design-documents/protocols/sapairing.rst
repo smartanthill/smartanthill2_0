@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.1.3b
+:Version:   v0.1.4
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -245,9 +245,8 @@ When both sides have all the information they need (that is, Client has full `B 
 
 SASP Key K and verification value X are calculated as follows:
 
-* for SHA256-based derivation: `K = SHA256(data=first-half-of-Z||Info||first-half-of-CLIENT-RANDOM||first-half-of-DEVICE-RANDOM)`, `X = SHA256(second-half-of-Z||Info||second-half-of-CLIENT-RANDOM||second-half-of-DEVICE-RANDOM)`, where Info='"SASP"||KEY-EXCHANGE-TYPE||'K'-or-'X'||ROOT-NODE-ID||PROJECTED-NODE-ID' (where ROOT-NODE-ID is always 0, and 'K'-or-'X' is equal to 'K' ASCII byte if calculating 'K', and to 'X' ASCII byte if calculating 'X').
+* for SHA256-based derivation: `K = SHAd256(Z||Info||first-half-of-CLIENT-RANDOM||first-half-of-DEVICE-RANDOM)`, `X = SHAd256(Z||Info||second-half-of-CLIENT-RANDOM||second-half-of-DEVICE-RANDOM)`, where Info='"SASP"||KEY-EXCHANGE-TYPE||'K'-or-'X'||ROOT-NODE-ID||PROJECTED-NODE-ID' (where ROOT-NODE-ID is always 0, and 'K'-or-'X' is equal to 'K' ASCII byte if calculating 'K', and to 'X' ASCII byte if calculating 'X'). SHAd256(m) is SHA256(SHA256(m)), same as in [Fortuna]. *NB: this method differs from recommended by NIST, in that we're deriving both K and X from the same DH keys; as some function of X is exposed (via LED blinking), in theory it might leak some information about K; however, in practice we don't see any specific attack vectors (especially as obtaining key material from X requires reverting SHAd256, AND as blinking is not just X, but X-encrypted-with-a-random-key-which-is-transferred-over-encrypted-channel, so X itself is not easily accessible). We could use method of obtaining X which is similar to Simple Secure Pairing, but at the point we do not see it necessary.*
 * other methods MAY be added in the future
-* where 'first-half-of-Z' and 'second-half-of-Z' are treated in SmartAnthill-Endianness sense
 
 OtA Pairing MITM-Check Program
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -290,4 +289,9 @@ SINGLE-LED-PAIRING Built-In Plugin
 ##################################
 
 TODO
+
+References
+----------
+
+[Fortuna] Niels Ferguson, Bruce Schneier. "Practical Cryptography". Wiley Publishing, 2003. Sections 6.4 ('Fixing the Weaknesses')
 
