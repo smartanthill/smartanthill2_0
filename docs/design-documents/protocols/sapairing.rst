@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.1.4
+:Version:   v0.1.4a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -131,7 +131,9 @@ or
 
   + this applies to OtA Pairing Devices
   + one way of implementing cryptographic RNG is "Poor-Man's RNG" with a pre-initialized key (see :ref:`sarng` document for details)
-  + as described in :ref:`sarng`, initialization of a cryptographic RNG MAY require obtaining additional entropy; exact way of doing it is described in 'Entropy Gathering' procedure below
+  + another way of implementing cryptographic RNG is "Fortuna" as described is :ref:`sarng` document
+
+    - as described in :ref:`sarng`, initialization of "Fortuna" cryptographic RNG MAY require obtaining additional entropy; exact way of doing it is described in 'Entropy Gathering' procedure below
 
 SmartAnthill OtA Pairing Protocol
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
