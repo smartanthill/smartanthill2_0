@@ -64,17 +64,23 @@
 
     function trainIt() {
       var modalInstance = $modal.open({
-        templateUrl: 'views/device_trainit.html',
-        controller: 'DeviceTrainItCtrl',
+        templateUrl: 'views/device-trainit.html',
+        controller: 'DeviceTrainItController',
+        controllerAs: 'vm',
         backdrop: false,
         keyboard: false,
         resolve: {
           device: function() {
             return vm.device;
           },
-          operations: function() {
+          operationsList: function() {
             return vm.operations;
-          }
+          },
+          serialPortsList: ['dataService',
+            function(dataService) {
+              return dataService.serialports.query();
+            }
+          ]
         }
       });
 

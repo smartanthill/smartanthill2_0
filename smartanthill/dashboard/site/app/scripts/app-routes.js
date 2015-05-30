@@ -53,7 +53,7 @@
           ],
           operationsList: ['dataService',
             function(dataService) {
-              return dataService.getOperations().$promise;
+              return dataService.operations.query().$promise;
             }
           ]
         }
@@ -79,7 +79,7 @@
         resolve: {
           Settings: ['dataService',
             function(dataService) {
-              return dataService.settings.$promise;
+              return dataService.settings.get().$promise;
             }
           ],
           LoggerLevels: function getValidLoggerLevels() {

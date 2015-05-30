@@ -24,35 +24,35 @@
 
   function dataService($resource, siteConfig) {
     return {
-      boards: getBoards(),
-      devices: getDevicesResource(),
-      serialports: getSerialPorts(),
-      settings: getSettings(),
-      getOperations: getOperations
+      boards: boards(),
+      devices: devices(),
+      serialports: serialports(),
+      settings: settings(),
+      operations: operations()
     };
 
-    function getOperations() {
-      return $resource(siteConfig.apiURL + 'operations').query();
+    function operations() {
+      return $resource(siteConfig.apiURL + 'operations');
     }
 
-    function getBoards() {
+    function boards() {
       return $resource(siteConfig.apiURL + 'boards/:boardId', {
         boardId: '@id'
       });
     }
 
-    function getDevicesResource() {
+    function devices() {
       return $resource(siteConfig.apiURL + 'devices/:deviceId', {
         deviceId: '@id'
       });
     }
 
-    function getSerialPorts() {
+    function serialports() {
       return $resource(siteConfig.apiURL + 'serialports');
     }
 
-    function getSettings() {
-      return $resource(siteConfig.apiURL + 'settings').get();
+    function settings() {
+      return $resource(siteConfig.apiURL + 'settings');
     }
   }
 
