@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version:   v0.2.2
+:Version:   v0.3.0
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -61,34 +61,40 @@ Plugin Manifest is an XML file, with structure which looks as follows:
 
 .. code-block:: xml
 
-  <smartanthill.plugin name="Foo Plugin" version="1.0">
+  <smartanthill.plugin name="MyPlugin" title="My Plugin" version="1.0">
+
     <description>Short description of plugin's capabilities</description>
+
     <command>
-      <field name="abc" type="encoded-int<max=2>" />
+      <field name="abc" type="encoded-int[max=2]" />
     </command>
+
     <reply>
-      <field name="xyz" type="encoded-int<max=2>" min="0" max="255">
+      <field name="xyz" type="encoded-int[max=2]" min="0" max="255">
         <meaning type="float">
           <linear-conversion input-point0="0" output-point0="20.0"
                              input-point1="100" output-point1="40.0" />
         </meaning>
       </field>
     </reply>
-    <peripheral>
-      <spi>
-        <pin type="SCLK" name="SPI SCLK" />
-        <pin type="MOSI" name="SPI MOSI" />
-        <pin type="MISO" name="SPI MISO"  />
-        <pin type="SS" name="SPI SS" />
-      </spi>
-      <pin name="LED Pin" type="digital">
-    </peripheral>
+
+    <configuration>
+      <field type="pin[spi.sclk]" name="pin_spi_sclk" title="SPI SCLK Pin" />
+      <field type="pin[spi.mosi]" name="pin_spi_mosi" title="SPI MOSI Pin" />
+      <field type="pin[spi.miso]" name="pin_spi_miso" title="SPI MISO Pin" />
+      <field type="pin[spi.ss]"   name="pin_spi_ss"   title="SPI SS Pin" />
+      <field type="pin[digital]"  name="pin_led1" title="LED 1 Pin" />
+      <field type="pin[digital]"  name="pin_led2" title="LED 2 Pin" />
+      <field type="uint[2]" name="delay_blink_ms" default="150" title="Delay between blinks, ms" />
+      <field type="char[30]" name="welcome_to" default="Welcome to SmartAnthill" />
+    </configuration>
+
   </smartanthill.plugin>
 
 Currently supported <field> types are:
 
-  * ``encoded-int<max=n>`` (using Encoded-Signed-Int<max=> encoding as specified in :ref:`saprotostack` document).
-  * ``encoded-uint<max=n>`` (using Encoded-Unsigned-Int<max=> encoding as specified in :ref:`saprotostack` document).
+  * ``encoded-int[max=n]`` (using Encoded-Signed-Int[max=] encoding as specified in :ref:`saprotostack` document).
+  * ``encoded-uint[max=n]`` (using Encoded-Unsigned-Int[max=] encoding as specified in :ref:`saprotostack` document).
   * additional data types will be added as needed
 
 <meaning> tag
@@ -109,7 +115,7 @@ To enable much more intuitive first form, an appropriate fragment of Plugin Mani
 .. code-block:: xml
 
   ...
-    <field name="Temperature" type="encoded-int<max=1>">
+    <field name="Temperature" type="encoded-int[max=1]">
       <meaning type="float">
         <linear-conversion input-point0="0" output-point0="35.0"
                            input-point1="255" output-point1="40.0">
@@ -121,7 +127,7 @@ or as
 .. code-block:: xml
 
   ...
-    <field name="Temperature" type="encoded-int<max=1>" min="0" max="99">
+    <field name="Temperature" type="encoded-int[max=1]" min="0" max="99">
       <meaning type="float">
         <linear-conversion a="0.0196" b="35.">
       </meaning>
@@ -136,30 +142,40 @@ Each ``<meaning>`` tag MUST specify conversion. Currently supported conversions 
 ``<meaning>`` tags can be used both for ``<command>`` fields and for ``<reply>`` fields.
 
 
-<peripheral> tag
-^^^^^^^^^^^^^^^^
+<configuration> tag
+^^^^^^^^^^^^^^^^^^^
 
-``<peripheral>`` tag specifies list of required hardware interfaces, pins, etc.
+``<configuration>`` tag specifies the list of required peripheral, pin numbers,
+plugin settings, etc.
 This information will be used by :ref:`sacorearchdashser` for configuring
 SmartAnthill device.
 
-Allowed peripheral nodes:
+Allowed field types:
 
-* ``<i2c>`` `Inter-Integrated Circuit <http://en.wikipedia.org/wiki/I²C>`_
+Peripheral
+''''''''''
 
-    + ``<pin type="SDA">`` - Serial Data Line
-    + ``<pin type="SCL">`` - Serial Clock Line
+* ``<field type="pin[i2c.*]">`` `Inter-Integrated Circuit <http://en.wikipedia.org/wiki/I²C>`_
 
-* ``<spi>`` `Serial Peripheral Interface Bus <http://en.wikipedia.org/wiki/Serial_Peripheral_Interface_Bus>`_
+    + ``<field type="pin[i2c.sda]">`` - Serial Data Line (SDA)
+    + ``<field type="pin[i2c.scl]">`` - Serial Clock Line (SCL)
 
-    + ``<pin type="SCLK">`` - Serial Clock (output from master)
-    + ``<pin type="MOSI">`` - Master Output, Slave Input (output from master)
-    + ``<pin type="MISO">`` - Master Input, Slave Output (output from slave)
-    + ``<pin type="SS">`` - Slave Select (active low, output from master)
+* ``<field type="pin[spi.*]`` `Serial Peripheral Interface Bus <http://en.wikipedia.org/wiki/Serial_Peripheral_Interface_Bus>`_
 
-* ``<pin type="analog">``
-* ``<pin type="digital">``
-* ``<pin type="pwm">`` - `Pulse-width modulation <http://en.wikipedia.org/wiki/Pulse-width_modulation>`_
+    + ``<field type="pin[spi.sclk]">`` - Serial Clock (SCLK, output from master)
+    + ``<field type="pin[spi.mosi]">`` - Master Output, Slave Input (MOSI, output from master)
+    + ``<field type="pin[spi.miso]">`` - Master Input, Slave Output (MISO, output from slave)
+    + ``<field type="pin[spi.ss]">``   - Slave Select (SS, active low, output from master)
+
+* ``<field type="pin[analog]">``
+* ``<field type="pin[digital]">``
+* ``<field type="pin[pwm]">`` - `Pulse-width modulation <http://en.wikipedia.org/wiki/Pulse-width_modulation>`_
+
+Miscellaneous
+'''''''''''''
+* ``<field type="int[n]">`` , where ``int[1]`` is equal to ``byte`` type
+* ``<field type="uint[n]">``
+* ``<field type="char[n]">``
 
 SmartAnthill Plugin Handler as a State Machine
 ----------------------------------------------
@@ -241,7 +257,7 @@ As SmartAnthill plugins operate in a very restricted environments, SmartAnthill 
 Try-catch block:
 
 .. code-block:: c
-  
+
   if(ZEPTO_TRY()) {
     do_something();
   }
@@ -265,7 +281,7 @@ Intermediate processing (MUST be written after each and ever call to a function-
   function_able_to_throw_exception();
   ZEPTO_UNWIND(-1); //returns '-1' in case of exception unwinding
 
-ZEPTO_UNWIND MUST be issued after each function call (except for those function calls which are known not to throw any exceptions) for all valid SmartAnthill Plugins. 
+ZEPTO_UNWIND MUST be issued after each function call (except for those function calls which are known not to throw any exceptions) for all valid SmartAnthill Plugins.
 
 Exception Codes
 '''''''''''''''
@@ -276,7 +292,7 @@ Some Exception Codes are reserved for SmartAnthill. To avoid collisions, user ex
 ZEPTO_ASSERT
 ''''''''''''
 
-ZEPTO_ASSERT is a way to have trackable assertions in plugin code. ZEPTO_ASSERT(condition) effectively causes ZEPTO_THROW(1) if condition fails. ZEPTO_ASSERT() SHOULD be used instead of usual C assert() calls. 
+ZEPTO_ASSERT is a way to have trackable assertions in plugin code. ZEPTO_ASSERT(condition) effectively causes ZEPTO_THROW(1) if condition fails. ZEPTO_ASSERT() SHOULD be used instead of usual C assert() calls.
 
 zeptoerr
 ^^^^^^^^
@@ -289,7 +305,7 @@ zeptoerr is intended to be used as follows:
 
   ZEPTOERR(plugin_config->bodypart_id,"Error: %d",error);
 
-It compiles differently depending on compile-time settings, but generally should have an effect similar to `fprintf(stderr,"Error: %d\n", error);`. To facilitate automated stream decoding in certain modes, the following SHOULD be added to the Plugin Manifest: 
+It compiles differently depending on compile-time settings, but generally should have an effect similar to `fprintf(stderr,"Error: %d\n", error);`. To facilitate automated stream decoding in certain modes, the following SHOULD be added to the Plugin Manifest:
 
 .. code-block:: xml
 
@@ -298,11 +314,11 @@ It compiles differently depending on compile-time settings, but generally should
     <line>Error 2: %f</line> <!-- text within SHOULD be an EXACT match of the text in ZEPTOERR() call -->
   </zeptoerr>
 
-ZEPTOERR has very limited support for data types: only %d (and synomym %i), %x, and %f are supported. Formatting modifiers (such as "%02d") are currently not supported at all. 
+ZEPTOERR has very limited support for data types: only %d (and synomym %i), %x, and %f are supported. Formatting modifiers (such as "%02d") are currently not supported at all.
 
 Note that in some cases (for example, if SmartAnthill Device runs out of RAM), SmartAnthill Device MAY truncate zeptoerr pseudo-stream.
 
-For implementation details of zeptoerr, please refer to :ref:`sazeptoos` document. 
+For implementation details of zeptoerr, please refer to :ref:`sazeptoos` document.
 
 Data Types
 ^^^^^^^^^^
@@ -344,7 +360,7 @@ zepto_reply_append_*()
 
 **void zepto_reply_append_block(REQUEST_REPLY_HANDLE request_reply, void* data, size_t datasz);**
 
-zepto_reply_append_*() appends data to the end of reply buffer, which is specified by request_reply parameter. Any zepto_reply_append_*() call MAY cause re-allocation (which in turn MAY cause moving of any memory block); this is usually not a problem, provided that request_reply is used as a completely opaque handle. 
+zepto_reply_append_*() appends data to the end of reply buffer, which is specified by request_reply parameter. Any zepto_reply_append_*() call MAY cause re-allocation (which in turn MAY cause moving of any memory block); this is usually not a problem, provided that request_reply is used as a completely opaque handle.
 
 TODO: describe error conditions (such as lack of space in buffer) - longjmp?
 
