@@ -28,25 +28,47 @@ void SASP_initAtLifeStart( SASP_DATA* sasp_data )
 	sa_uint48_set_zero( sasp_data->nonce_ls );
 	sa_uint48_increment( sasp_data->nonce_ls );
 
-	eeprom_write( DATA_SASP_NONCE_LW_ID, sasp_data->nonce_lw, SASP_NONCE_TYPE_SIZE );
-	eeprom_write( DATA_SASP_NONCE_LS_ID, sasp_data->nonce_ls, SASP_NONCE_TYPE_SIZE );
+	eeprom_write( EEPROM_SLOT_DATA_SASP_NONCE_LW_ID, sasp_data->nonce_lw );
+	eeprom_write( EEPROM_SLOT_DATA_SASP_NONCE_LS_ID, sasp_data->nonce_ls );
 }
 
 void SASP_restoreFromBackup( SASP_DATA* sasp_data )
 {
 	uint8_t size;
 
-	size = eeprom_read_size( DATA_SASP_NONCE_LW_ID );
-	assert( size == SASP_NONCE_TYPE_SIZE );
-	eeprom_read_fixed_size( DATA_SASP_NONCE_LW_ID, sasp_data->nonce_lw, size);
+	eeprom_read( EEPROM_SLOT_DATA_SASP_NONCE_LW_ID, sasp_data->nonce_lw, size);
+	eeprom_read( EEPROM_SLOT_DATA_SASP_NONCE_LS_ID, sasp_data->nonce_ls, size);
+}
 
-	size = eeprom_read_size( DATA_SASP_NONCE_LS_ID );
-	assert( size == SASP_NONCE_TYPE_SIZE );
-	eeprom_read_fixed_size( DATA_SASP_NONCE_LS_ID, sasp_data->nonce_ls, size);
+void SASP_increment_nonce_last_sent( SASP_DATA* sasp_data )
+{
+	sa_uint48_increment( sasp_data->nonce_ls );
+	// TODO: make sure this is a reliable approach
+	if ( sa_uint48_get_byte( sasp_data->nonce_ls, 0 ) == 1 )
+	{
+		sasp_nonce_type future;
+		memcpy( future, sasp_data->nonce_ls, SASP_NONCE_TYPE_SIZE );
+		sa_uint48_roundup_to_the_nearest_multiple_of_0x100( future );
+		eeprom_write( EEPROM_SLOT_DATA_SASP_NONCE_LS_ID, future );
+	}
+}
+
+void SASP_update_nonce_low_watermark( SASP_DATA* sasp_data, const sasp_nonce_type new_val )
+{
+	sasp_nonce_type future;
+	sa_uint48_init_by( future, sasp_data->nonce_lw );
+	sa_uint48_init_by( sasp_data->nonce_lw, new_val ); // update Nonce Low Watermark
+	sa_uint48_roundup_to_the_nearest_multiple_of_0x100( future ); // now 'future' has a value supposedly saved in eeprom
+	if ( sa_uint48_compare( new_val, future ) >= 0 )
+	{
+		sa_uint48_init_by( future, sasp_data->nonce_lw );
+		sa_uint48_roundup_to_the_nearest_multiple_of_0x100( future ); // now 'future' has a value supposedly saved in eeprom
+		eeprom_write( EEPROM_SLOT_DATA_SASP_NONCE_LW_ID, future );
+	}
 }
 
 INLINE
-void sasp_make_nonce_for_encryption( const sasp_nonce_type packet_id, uint8_t master_slave_bit, uint8_t nonce[16] )
+void SASP_make_nonce_for_encryption( const sasp_nonce_type packet_id, uint8_t master_slave_bit, uint8_t nonce[16] )
 {
 	memset( nonce, 0, 16 );
 	int8_t i;
@@ -69,7 +91,7 @@ void SASP_EncryptAndAddAuthenticationData( REQUEST_REPLY_HANDLE mem_h, const uin
 	bool read_ok;
 
 	uint8_t nonce[16];
-	sasp_make_nonce_for_encryption( packet_id, MASTER_SLAVE_BIT, nonce );
+	SASP_make_nonce_for_encryption( packet_id, MASTER_SLAVE_BIT, nonce );
 
 	// intermediate buffers for EAX
 	uint8_t tag[SASP_TAG_SIZE];
@@ -135,7 +157,7 @@ bool SASP_IntraPacketAuthenticateAndDecrypt( const uint8_t* key, REQUEST_REPLY_H
 	zepto_parser_decode_encoded_uint_as_sa_uint48( &po, nonce_received );
 	sa_uint48_init_by( pid, nonce_received );
 	uint8_t nonce[ 16 ];
-	sasp_make_nonce_for_encryption( nonce_received, 1 - MASTER_SLAVE_BIT, nonce );
+	SASP_make_nonce_for_encryption( nonce_received, 1 - MASTER_SLAVE_BIT, nonce );
 
 	// read blocks one by one, authenticate, decrypt, write
 	bool read_ok;
@@ -312,7 +334,8 @@ uint8_t handler_sasp_receive( const uint8_t* key, uint8_t* pid, MEMORY_HANDLE me
 		{
 			INCREMENT_COUNTER( 14, "handler_sasp_receive(), nonce las updated" );
 			memcpy( nls, new_nls, SASP_NONCE_SIZE );
-			sa_uint48_increment( sasp_data->nonce_ls );
+//			sa_uint48_increment( sasp_data->nonce_ls );
+			SASP_increment_nonce_last_sent( sasp_data );
 			// TODO: shuold we do anything else?
 			return SASP_RET_TO_HIGHER_LAST_SEND_FAILED;
 		}
@@ -348,14 +371,21 @@ uint8_t handler_sasp_receive( const uint8_t* key, uint8_t* pid, MEMORY_HANDLE me
 	}
 
 	// 4. Finally, we have a brand new packet
-	sa_uint48_init_by( sasp_data->nonce_lw, pid ); // update Nonce Low Watermark
+//	sa_uint48_init_by( sasp_data->nonce_lw, pid ); // update Nonce Low Watermark
+	SASP_update_nonce_low_watermark( sasp_data, pid );
 	INCREMENT_COUNTER( 16, "handler_sasp_receive(), passed up" );
 	return SASP_RET_TO_HIGHER_NEW;
 }
 
 uint8_t handler_sasp_get_packet_id( sa_uint48_t buffOut, int buffOutSize, SASP_DATA* sasp_data )
 {
-	sa_uint48_increment( sasp_data->nonce_ls );
+	SASP_increment_nonce_last_sent( sasp_data );
 	sa_uint48_init_by( buffOut, sasp_data->nonce_ls );
 	return SASP_RET_NONCE;
+}
+
+uint8_t handler_sasp_save_state( SASP_DATA* sasp_data )
+{
+	eeprom_write( EEPROM_SLOT_DATA_SASP_NONCE_LW_ID, sasp_data->nonce_lw );
+	eeprom_write( EEPROM_SLOT_DATA_SASP_NONCE_LS_ID, sasp_data->nonce_ls );
 }

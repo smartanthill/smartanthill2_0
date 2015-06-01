@@ -20,7 +20,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "sa-common.h"
 #include "sa-data-types.h"
-#include "hal/sa-eeprom.h"
+#include "sa-eeprom.h"
 #include "zepto-mem-mngmt.h"
 
 // RET codes
@@ -59,6 +59,7 @@ void SASP_restoreFromBackup( SASP_DATA* sasp_data );
 uint8_t handler_sasp_receive( const uint8_t* key, uint8_t* packet_id, MEMORY_HANDLE mem_h, SASP_DATA* sasp_data );
 uint8_t handler_sasp_send( const uint8_t* key, const uint8_t* packet_id, MEMORY_HANDLE mem_h, SASP_DATA* sasp_data );
 uint8_t handler_sasp_get_packet_id( uint8_t* buffOut, int buffOutSize, SASP_DATA* sasp_data );
+uint8_t handler_sasp_save_state( SASP_DATA* sasp_data );
 
 
 #endif // __SASP_PROTOCOL_H__
