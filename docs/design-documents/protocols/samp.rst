@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.14
+:Version:   v0.0.15
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -57,7 +57,7 @@ SAMP underlying protocol (normally SADLP-\*), MUST support the following operati
 * bus multi-cast (addressed to a list of the Devices on the bus)
 * bus uni-cast
 
-NB: in many cases, these operations may be simulated using very few operations as primitives; for example, PHY-level broadcast can be used to create SADLP-\*-level multi-cast by adding, for example, NEXT-HOP-NODE-ID.
+NB: these operations MAY be implemented using only bus broadcast, without any additional intra-bus addressing information; all SAMP packets have sufficient information to ensure further processing of SAMP packets without underlying protocol addressing information. If some information within SAMP packet becomes redundant given underlying protocol's addressing information, underlying protocol MAY compress SAMP packet when transmitting it, by combining this information.
 
 All SmartAnthill Devices SHOULD, and all SmartAnthill Retransmitting Devices MUST implement some kind of collision avoidance (at least CSMA/CA, a.k.a. "listen before talk with random delay").
 
@@ -87,7 +87,7 @@ Each Retransmitting Device, after pairing, MUST keep a Routing Table. Routing Ta
 
 Each entry in Routes list has semantics of "where to route packet addressed to TARGET-ID". In Links list, INTRA-BUS-ID=NULL means that the entry is for an incoming link. Incoming link entries are relatiely rare, and are used to specify LINK-DELAYs.
 
-NEXT-HOP-ACKS is a flag which is set if the nearest hop (over (BUS-ID,INTRA-BUS-ID)) is known to be able not only to receive packets, but to send ACKs back via "bus uni-cast with ACK" SADLP-\* operation; in general, NEXT-HOP-ACKS cannot be calculated based only on bus type, and may change for the same link during system operation; SAMP is built to try using links with NEXT-HOP-ACKS as much as possible, but MAY use links without NEXT-HOP-ACKS if there are no alternatives.
+NEXT-HOP-ACKS is a flag which is set if the nearest hop (over (BUS-ID,INTRA-BUS-ID)) is known to be able not only to receive packets, but to send ACKs back; in general, NEXT-HOP-ACKS cannot be calculated based only on bus type, and may change for the same link during system operation; SAMP is built to try using links with NEXT-HOP-ACKS as much as possible, but MAY use links without NEXT-HOP-ACKS if there are no alternatives.
 
 TODO: size reporting to Root (as # of unspecified 'storage units', plus sizes of Links entry and Routes entry expressed in the same 'storage units'). 
 
@@ -125,8 +125,8 @@ Recovery from route changes/failures is vital for any mesh protocol. SAMP does i
 * by default, most of the transfers are not acknowledged at SAMP level (go as Samp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag)
 * however, upper-layer protocol (normally SAGDP) issues it's own retransmits and passed retransmit number to SAMP
 * on retransmit #N, SAMP switches GUARANTEED-DELIVERY flag on
-* when GUARANTEED-DELIVERY flag is set, SAMP uses "bus unicast with ACK" underlying-protocol mode
-* if "bus unicast with ACK" fails for M times (with exponentially increasing timeouts), link failure is assumed
+* when GUARANTEED-DELIVERY flag is set, SAMP uses 'Guaranteed Uni-Cast' mode described below
+* if 'Guaranteed Uni-Cast' fails for M times (as described below), link failure is assumed
 * link failure (as described above) is reported to the Root, so it can initiate route discovery to the node on the other side of the failed link (using Samp-From-Santa-Data-Packet)
 
   + if link failure is detected from the side of the link which is close to Root, link failure reporting is done by sending Routing-Error (which always come in GUARANTEED-DELIVERY mode) back to Root
@@ -214,7 +214,7 @@ If the packet already has LOOP-ACK extra header (see below), and next hop has NE
 * removes LOOP-ACK extra header
 * continues processing as specified below
 
-If the next hop has NEXT-HOP-ACKS flag set in the Routing Table, the packet is sent using underlying protocol's "bus uni-cast with ACK". If this operation returns 'failure' (i.e. ACK wasn't received), SAMP retries it 5 (TODO) times (with exponentially increasing timeouts - TODO) - it is treated as 'Routing-Error'. In particular:
+If the next hop has NEXT-HOP-ACKS flag set in the Routing Table, after sending the packet, timer is set and the packet is sent using "uni-cast" bus mechanism. If timer expires (or Node receives relevant Samp-Ack-Nack-Packet with IS-NACK flag set), SAMP retries it for 5 times (with exponentially increasing timeouts - TODO); if all 5 attempts fail - it is treated as 'Routing-Error'. In particular:
 
 * if the packet has Root as Target-Address: 
 
@@ -276,7 +276,7 @@ Whenever a Multi-Cast packet (the one with Multiple-Target-Addresses field) is p
 
   + if there is multiple next hops for this bus:
 
-    - if the bus supports multi-casting - send the modified packet using multi-cast bus addressing over the bus. NB: bus broadcasts (without INTRA-BUS-ID) MUST NOT be used for this purpose to avoid unnecessary multiplying number of packets.
+    - if the bus supports multi-casting - send the modified packet using multi-cast bus addressing over the bus.
     - otherwise, send the modified packet using uni-cast bus addressing to each of the hops
 
 Promiscuous Mode Processing
@@ -297,8 +297,8 @@ Most of SAMP packets have OPTIONAL-EXTRA-HEADERS field. It has a generic structu
   where GENERIC-EXTRA-HEADER-FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-HEADER list, bits[1..2] equal to 2-bit constant GENERIC_EXTRA_HEADER_FLAGS, and further bits interpreted depending on packet type:
 
   + bit[3]. If the packet type is any packet type except for Samp-Unicast-Data-Packet - the bit is MORE-PACKETS-FOLLOW flag. For Samp-Unicast-Data-Packet - RESERVED (MUST be zero)
-  + bit[4]. If the packet type is Samp-Unicast-Data-Packet, Samp-From-Santa-Data-Packet, or Samp-To-Santa-Data-Or-Error-Packet - the bit is IS-PROBE flag. If the packet type is Samp-To-Santa-Data-Or-Error-Packet or Samp-Forward-To-Santa-Data-Or-Error-Packet - the bit is IS_ERROR (indicating that PAYLOAD is in fact Routing-Error). For Samp-Route-Update-Packet - the bit is DISCARD-RT-FIRST (indicating that before processing MODIFICATIONS-LIST, the whole Routing Table must be discarded). For other packet types - RESERVED (MUST be zero)
-  + bit[5]. If the packet type is Samp-From-Santa-Data-Packet, the bit is an EXPLICIT-TIME-SCHEDULING flag. If the packet type is Samp-Route-Update-Packet, it is an UPDATE-MAX-TTL flag. For other packet types - RESERVED (MUST be zero)
+  + bit[4]. If the packet type is Samp-Unicast-Data-Packet, Samp-From-Santa-Data-Packet, or Samp-To-Santa-Data-Or-Error-Packet - the bit is IS-PROBE flag. If the packet type is Samp-To-Santa-Data-Or-Error-Packet or Samp-Forward-To-Santa-Data-Or-Error-Packet - the bit is IS_ERROR (indicating that PAYLOAD is in fact Routing-Error). For Samp-Route-Update-Packet - the bit is DISCARD-RT-FIRST (indicating that before processing MODIFICATIONS-LIST, the whole Routing Table must be discarded). For Samp-Ack-Nack-Packet - the bit is IS-LOOP-ACK flag. For other packet types - RESERVED (MUST be zero)
+  + bit[5]. If the packet type is Samp-From-Santa-Data-Packet, the bit is an EXPLICIT-TIME-SCHEDULING flag. If the packet type is Samp-Route-Update-Packet, it is an UPDATE-MAX-TTL flag. For Samp-Ack-Nack-Packet the bit is IS-NACK flag. For other packet types - RESERVED (MUST be zero)
   + bit[6]. If the packet type is Samp-Route-Update-Packet, the bit is an UPDATE-FORWARD-TO-SANTA-DELAY flag. If the packet type is Samp-From-Santa-Data-Packet - it is a TARGET-COLLECT-LAST-HOPS flag. For other packet types - RESERVED (MUST be zero)
   + bit[7]. If the packet type is Samp-Route-Update-Packet, the bit is an UPDATE-MAX-NODE-RANDOM-DELAY flag. For other packet types - RESERVED (MUST be zero)
   + bits [8..] - RESERVED (MUST be zeros)
@@ -311,7 +311,7 @@ Most of SAMP packets have OPTIONAL-EXTRA-HEADERS field. It has a generic structu
 
 * **\| UNICAST-EXTRA-HEADER-LOOP-ACK \| LOOP-ACK-ID \|**
 
-  where UNICAST-EXTRA-HEADER-LOOP-ACK is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-DATA list, bits[1..2] equal to a 2-bit constant UNICAST_EXTRA_HEADER_LOOP_ACK, and bits[3..] representing NODE-ID of the address where to send the LOOP-ACK, and LOOP-ACK-ID is an Encoded-Unsigned-Int<max=2> field representing ID of the LOOP-ACK to be returned. This extra header MUST NOT be present for packets other than Samp-Unicast-Packet.
+  where UNICAST-EXTRA-HEADER-LOOP-ACK is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-DATA list, bits[1..2] equal to a 2-bit constant UNICAST_EXTRA_HEADER_LOOP_ACK, and bits[3..] representing NODE-ID of the address where to send the LOOP-ACK, and LOOP-ACK-ID is an Encoded-Unsigned-Int<max=2> field representing ID of the LOOP-ACK to be returned. This extra header MUST NOT be present for packets other than Samp-Unicast-Data-Packet.
 
 * **\| TOSANTA-EXTRA-HEADER-LAST-INCOMING-HOP \|**
 
@@ -327,15 +327,15 @@ In general, SAMP passes SAMP Combined-Packets over underlying protocol. SAMP Com
 SAMP Packets
 ------------
 
-Samp-Unicast-Data-Packet: **\| SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| Target-Address \| OPTIONAL-PAYLOAD-SIZE \| PAYLOAD \|**
+Samp-Unicast-Data-Packet: **\| SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| Target-Address \| OPTIONAL-PAYLOAD-SIZE \| PAYLOAD \|**
 
-where SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] equal to 0, bit[1] being GUARANTEED-DELIVERY flag, bit [2] being BACKWARD-GUARANTEED-DELIVERY, bit [3] being EXTRA-HEADERS-PRESENT, bit[4] being MORE-PACKETS-FOLLOW, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set and is described above; Target-Address is described above, OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field, and PAYLOAD is a payload to be passed to the upper-layer protocol.
+where SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] equal to 0, bit[1] being GUARANTEED-DELIVERY flag, bit [2] being BACKWARD-GUARANTEED-DELIVERY, bit [3] being EXTRA-HEADERS-PRESENT, bit[4] being MORE-PACKETS-FOLLOW, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set and is described above; LAST-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of currently transmitting node, Target-Address is described above, OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field, and PAYLOAD is a payload to be passed to the upper-layer protocol.
 
 If Target-Address is Root (i.e. =0), it MUST NOT contain VIA fields within; in addition, if Target-Address is Root (i.e. =0), the packet MUST NOT have BACKWARD-GUARANTEED-DELIVERY flag set.
 
 If IS-PROBE flag is set, then PAYLOAD is treated differently. When destination receives Samp-Unicast-Data-Packet with IS-PROBE flag set, destination doesn't pass PAYLOAD to upper-layer protocol. Instead, destination parses PAYLOAD as follows: **\| PROBE-TYPE \| OPTIONAL-PROBE-EXTRA-HEADERS \| PROBE-PAYLOAD \|** where PROBE-TYPE is 1-byte bitfield substrate, with bits [0..2] being either PROBE_UNICAST or PROBE_TO_SANTA, bit[3] being PROBE-EXTRA-HEADERS-PRESENT, and bits [4..7] reserved (MUST be zeros); OPTIONAL-PROBE-EXTRA-HEADERS are similar to OPTIONAL-EXTRA-HEADERS, and PROBE-PAYLOAD takes the rest of the PAYLOAD; if PROBE-TYPE==PROBE_UNICAST, then destination Device sends Samp-Unicast-Data-Packet back to Root, with PAYLOAD copied from PROBE-PAYLOAD, and extra headers formed from PROBE-EXTRA-HEADERS, "as if" this packet is sent in reply to IS-PROBE packet by upper layer, but adding IS-PROBE flag (as a part of GENERIC-EXTRA-FLAGS extra header). If PROBE-TYPE==PROBE_TO_SANTA, destination Device sends a Samp-To-Santa-Data-Or-Error-Packet, with PAYLOAD copied from PROBE-PAYLOAD, "as if" the packet is sent in reply to IS-PROBE packet by upper layer, but adding IS-PROBE flag (as a part of GENERIC-EXTRA-FLAGS extra header).
 
-Samp-Unicast-Data-Packet is processed as specified in Uni-Cast Processing section above; if GUARANTEED-DELIVERY flag is set, packet is sent in 'Guaranteed Uni-Cast' mode. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
+Samp-Unicast-Data-Packet is processed as specified in Uni-Cast Processing section above; if GUARANTEED-DELIVERY flag is set, packet is sent in 'Guaranteed Uni-Cast' mode. In any case, LAST-HOP field is updated every time the packet is re-sent. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
 
 When target Device receives the packet, and sends reply back, it MUST set GUARANTEED-DELIVERY flag in reply to BACKWARD-GUARANTEED-DELIVERY flag in original packet; this logic applies to all the packets, including 'first' packets in SAGDP "packet chain" (as they're still sent in reply to some SAMP packet coming from the Root).
 
@@ -350,7 +350,7 @@ Samp-From-Santa-Data-Packet is a packet sent by Root, which is intended to find 
 Samp-From-Santa-Data-Packet is processed as specified in Multi-Cast Processing section above, up to the point where all the buses for all the next hops are found; note that if Multi-Cast processing generates a Routing-Error, it is not transmitted immediately (see below). Starting from that point, Retransmitting Device processes Samp-From-Santa-Data-Packet proceeds as follows: 
 
 * replaces LAST-HOP field with it's own node id
-* creates a list broadcast-bus-list of it's own buses which match BROADCAST-BUS-TYPE-LIST
+* creates a broadcast-bus-list of it's own buses which match BROADCAST-BUS-TYPE-LIST
 * for each bus which is on a next-hop-bus list but not on the broadcast-bus-list - continue processing as specified in Multi-Cast Processing section above
 
   + transmission MUST NOT be made until time specified in DELAY field for current node, passes. If the time in DELAY field (after subtracting `(INCOMING-LINK-DELAY+OUTGOING-LINK-DELAY)` using their respective DELAY-UNITs) has already passed - node MUST introduce a random delay uniformly distributed from 0 to NODE-MAX-RANDOM-DELAY parameter (using NODE-MAX-RANDOM-DELAY-UNIT for calculations).
@@ -422,14 +422,17 @@ MODIFICATIONS-LIST consists of entries, where each entry is one of the following
 
 Samp-Route-Update-Packets always go in one direction - from Root to Device; it's Target-Address MUST NOT be 0; it is processed as described in Uni-Cast processing section above, and is always sent in 'Guaranteed Uni-Cast' mode. Samp-Route-Update-Packet MAY be sent either to Retransmitting or to non-Retransmitting Device; however, if sending it to a non-Retransmitting Device, Root MUST be sure that non-Retransmitting Device has it's transmitter turned on (because upper-layer protocol state guarantees it).
 
-Samp-Loop-Ack-Packet: **\| SAMP-LOOP-ACK-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| Target-Address \| LOOP-ACK-ID \|**
+Samp-Ack-Nack-Packet: **\| SAMP-ACK-NACK-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| Target-Address \| ACK-CHESKSUM \|**
 
-where SAMP-LOOP-ACK-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_LOOP_ACK_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set, Target-Address is described above, and LOOP-ACK-ID is copied from LOOP-ACK extra header of Samp-Unicast-Data-Packet. 
+where SAMP-ACK-NACK-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_ACK_NACK_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set, LAST-HOP is an id of the transmitting node, Target-Address is described above, and ACK-CHECKSUM represents SACCP checksum (?) of the packet being acknowledged.
 
-Samp-Loop-Ack-Packet is generated either by destination, or by the node which has found that the next hop already has NEXT-HOP-ACKS flag (see details in 'Guaranteed Uni-Cast' section above); generating node always specifies itself as a target. 
+Samp-Ack-Nack-Packet with IS-LOOP-ACK flag is generated either by destination, or by the node which has found that the next hop already has NEXT-HOP-ACKS flag (see details in 'Guaranteed Uni-Cast' section above); generating node always specifies itself as a target. Samp-Ack-Nack-Packet with IS-LOOP-ACK flag MUST NOT have IS-NACK flag.
 
-Samp-Loop-Ack-Packet is processed as specified in 'Uni-cast processing' section above; Samp-Loop-Ack packet is never sent using 'Guaranteed uni-cast' delivery. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
+If Samp-Ack-Nack-Packet has IS-LOOP-ACK flag, it is processed as specified in 'Uni-cast processing' section above; Samp-Loop-Ack packet is never sent using 'Guaranteed uni-cast' delivery. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
 
+Samp-Ack-Nack-Packet without IS-LOOP-ACK flag and without IS-NACK flag, is generated as a response to an incoming Samp-Unicast-Data-Packet with GUARANTEED-DELIVERY flag (TODO: anything else?). It is not retransmitted, but taken as an acknowledgement that the packet has been received.
+
+Samp-Ack-Nack-Packet without IS-LOOP-ACK flag and with IS-NACK flag, is generated as a response to a "partially correct" packet (regardless of type and GUARANTEED-DELIVERY flag); it's ACK-CHECKSUM represents header checksum only. It is not retransmitted, but is taken as an indication to quick retransmit the last packet sent.
 
 Type of Samp packet
 ^^^^^^^^^^^^^^^^^^^
@@ -462,7 +465,7 @@ Packet Urgency
 From SAMP point of view, all upper-layer-protocol packets can have one of three urgency levels. If the packet has urgency URGENCY_LAZY, it is first sent as a Samp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent with GUARANTEED-DELIVERY). If the packet has urgency URGENCY_QUITE_URGENT, it is first sent as a Samp-Unicast-Data-Packet with GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent as a Samp-\*-Santa-\* packet). If the packet has urgency URGENCY_TRIPLE_GALOP, 
 then it is first sent as a Samp-From-Santa-Data-Packet or Samp-To-Santa-Data-Packet (depending on source being Root or Device). 
 
-TODO: Samp-Ack/Nack (and replace "send with ack" over underlying protocol), Samp-Retransmit (to next-hop Retransmitting Device on RETRANSMIT-ON-NO-RETRANSMIT)
+TODO: Samp-Retransmit (to next-hop Retransmitting Device on RETRANSMIT-ON-NO-RETRANSMIT)
 TODO: define handling for all "partially correct" packets
 TODO: what exactly is "header" for the purposes of "partially correct" packets? Is "sub-header" worth the trouble?
 TODO: NACK-PREV-HOP into Routing Table Links; RETRANSMIT-ON-NO-RETRANSMIT into RT Routes
