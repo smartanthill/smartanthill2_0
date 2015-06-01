@@ -27,7 +27,7 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.1
+:Version:   v0.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -60,7 +60,7 @@ For NO-CORRECTION packets, SADLP-RF-DATA has the following format:
 
 **\| UPPER-LAYER-HEADER-LENGTH \| UPPER-LAYER-HEADER \| UPPER-LAYER-HEADER-CHECKSUM \| UPPER-LAYER-PAYLOAD-LENGTH \| UPPER-LAYER-PAYLOAD \| UPPER-LAYER-HEADER-AND-PAYLOAD-CHECKSUM \|**
 
-where UPPER-LAYER-HEADER-LENGTH is an Encoded-Unsigned-Int<max=2> field specifying size of UPPER-LAYER-HEADER, UPPER-LAYER-HEADER-CHECKSUM is a 2-byte field containing SACCP checksum (TODO:?) of UPPER-LAYER-HEADER, UPPER-LAYER-PAYLOAD-LENGTH is an Encoded-Unsigned-Int<max=2> field specifying size of UPPER-LAYER-PAYLOAD, and UPPER-LAYER-HEADER-AND-PAYLOAD CHECKSUM is a 2-byte field containing SACCP checksum (TODO:?) of UPPER-LAYER-HEADER concatenated with UPPER-LAYER-PAYLOAD.
+where UPPER-LAYER-HEADER-LENGTH is an Encoded-Unsigned-Int<max=2> field specifying size of UPPER-LAYER-HEADER, UPPER-LAYER-HEADER-CHECKSUM is a 2-byte field containing SACHECKSUM-16 of UPPER-LAYER-HEADER, UPPER-LAYER-PAYLOAD-LENGTH is an Encoded-Unsigned-Int<max=2> field specifying size of UPPER-LAYER-PAYLOAD, and UPPER-LAYER-HEADER-AND-PAYLOAD CHECKSUM is a 2-byte field containing SACHECKSUM-16 of UPPER-LAYER-HEADER concatenated with UPPER-LAYER-PAYLOAD.
 
 HAMMING-32-CORRECTION
 ^^^^^^^^^^^^^^^^^^^^^
@@ -81,13 +81,13 @@ UPPER-LAYER-HEADER has the following format:
 
 **\| UPPER-LAYER-HEADER-LENGTH \| UPPER-LAYER-HEADER \| UPPER-LAYER-HEADER-CHECKSUM \|**
 
-where UPPER-LAYER-HEADER-LENGTH is an Encoded-Unsigned-Int<max=2> field specifying size of UPPER-LAYER-HEADER, UPPER-LAYER-HEADER-CHECKSUM is a 2-byte field containing SACCP checksum (TODO:?) of UPPER-LAYER-HEADER,
+where UPPER-LAYER-HEADER-LENGTH is an Encoded-Unsigned-Int<max=2> field specifying size of UPPER-LAYER-HEADER, and UPPER-LAYER-HEADER-CHECKSUM is a 2-byte field containing SACHECKSUM-16  of UPPER-LAYER-HEADER.
 
 UPPER-LAYER-PAYLOAD has the following format:
 
 **\| UPPER-LAYER-PAYLOAD-LENGTH \| UPPER-LAYER-PAYLOAD \| UPPER-LAYER-HEADER-AND-PAYLOAD-CHECKSUM \|**
 
-where UPPER-LAYER-PAYLOAD-LENGTH is an Encoded-Unsigned-Int<max=2> field specifying size of UPPER-LAYER-PAYLOAD, and UPPER-LAYER-HEADER-AND-PAYLOAD CHECKSUM is a 2-byte field containing SACCP checksum (TODO:?) of UPPER-LAYER-HEADER concatenated with UPPER-LAYER-PAYLOAD.
+where UPPER-LAYER-PAYLOAD-LENGTH is an Encoded-Unsigned-Int<max=2> field specifying size of UPPER-LAYER-PAYLOAD, and UPPER-LAYER-HEADER-AND-PAYLOAD CHECKSUM is a 2-byte field containing SAHECKSUM-16 of UPPER-LAYER-HEADER concatenated with UPPER-LAYER-PAYLOAD.
 
 HAMMING-32-2D-CORRECTION
 ^^^^^^^^^^^^^^^^^^^^^^^^

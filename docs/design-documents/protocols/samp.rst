@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.15
+:Version:   v0.0.16
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -367,7 +367,7 @@ On target Device, Samp-From-Santa-Data-Packet waits until reply payload is ready
 
 * if TARGET-DELAY (expressed in DELAY-UNITs) has not passed yet, Device waits until it passes
 
-  + if the incoming packet has TARGET-COLLECT-LAST-HOPS flag set (which is normally set for all the packets which have IS-PROBE flag), then target Device traces all the incoming packets addressed to it and having the same REQUEST-ID and makes a list extra-last-hops consisting of LAST-HOP headers from all of them
+  + if the incoming packet has TARGET-COLLECT-LAST-HOPS flag set (which is normally set for all the packets which have IS-PROBE flag), then target Device traces all the incoming packets addressed to it and having the same REQUEST-ID and makes a list of extra-last-hops consisting of LAST-HOP headers from all of them
   + when sending Samp-To-Santa-Data-Or-Error-Packet reply back, target Device adds LAST-INCOMING-HOP extra header for LAST-HOP within incoming packet, *plus* LAST-INCOMING-HOP headers for extra-last-hops (if such list exists, see above)
 
 If IS-PROBE flag is set, then PAYLOAD is treated differently. When destination receives Samp-From-Santa-Data-Packet with IS-PROBE flag set, destination doesn't pass PAYLOAD to upper-layer protocol. Instead, destination processes the packet in the same way as described for the processing of Samp-Unicast-Data-Packet with IS-PROBE flag set. A special case of Samp-From-Santa-Data-Packet with IS-PROBE set is when Target-Address is Root (=0). Such packets (a.k.a. 'discovery' packets) are ignored by Root, but are replied to only by Devices which are not paired yet (i.e. have no node id). All such 'discovery' packets with Target-Address=0 MUST have IS-PROBE flag set.
@@ -424,7 +424,7 @@ Samp-Route-Update-Packets always go in one direction - from Root to Device; it's
 
 Samp-Ack-Nack-Packet: **\| SAMP-ACK-NACK-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| Target-Address \| ACK-CHESKSUM \|**
 
-where SAMP-ACK-NACK-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_ACK_NACK_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set, LAST-HOP is an id of the transmitting node, Target-Address is described above, and ACK-CHECKSUM represents SACCP checksum (?) of the packet being acknowledged.
+where SAMP-ACK-NACK-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_ACK_NACK_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set, LAST-HOP is an id of the transmitting node, Target-Address is described above, and ACK-CHECKSUM represents SACHECKSUM-16 if the packet being acknowledged.
 
 Samp-Ack-Nack-Packet with IS-LOOP-ACK flag is generated either by destination, or by the node which has found that the next hop already has NEXT-HOP-ACKS flag (see details in 'Guaranteed Uni-Cast' section above); generating node always specifies itself as a target. Samp-Ack-Nack-Packet with IS-LOOP-ACK flag MUST NOT have IS-NACK flag.
 
@@ -454,7 +454,7 @@ As described above, type of Samp packet is always defined by bits [0..3] of the 
 +-------------------------------------+--------------------------------------------+--------------------------------------------+
 | 1                                   | SAMP_ROUTE_UPDATE_PACKET                   | Samp-Route-Update-Packet                   |
 +-------------------------------------+--------------------------------------------+--------------------------------------------+
-| 1                                   | SAMP_LOOP_ACK_PACKET                       | Samp-Loop-Ack-Packet                       |
+| 1                                   | SAMP_ACK_NACK_PACKET                       | Samp-Ack-Nack-Packet                       |
 +-------------------------------------+--------------------------------------------+--------------------------------------------+
 | 1                                   | 2 more values                              | RESERVED                                   |
 +-------------------------------------+--------------------------------------------+--------------------------------------------+

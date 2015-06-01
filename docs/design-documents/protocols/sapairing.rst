@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.1.4a
+:Version:   v0.1.4b
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -203,7 +203,7 @@ Pairing-DH-Data-Response is sent as a payload for a SACCP SACCP-OTA-PAIRING-RESP
 
 Pairing-Ok-Request: **\| OK-A-ENTROPY-CHECKSUM \|**
 
-where OK-A-ENTROPY-CHECKSUM is a 16-byte field containing result of GCM-tag(nonce=(varying-part=1,direction=from-client-to-device),authenticated-data=All-Sent-ENTROPY-Combined,key=derived-SASP-key), where nonce is constructed in the same way it is constructed in SASP.
+where OK-A-ENTROPY-CHECKSUM is a 16-byte field containing result of SASP-tag(nonce=(varying-part=1,direction=from-client-to-device),authenticated-data=All-Sent-ENTROPY-Combined,key=derived-SASP-key), where nonce is constructed in the same way it is constructed in SASP.
 
 Pairing-Ok-Request is sent by Client when the last Pairing-DH-Data-Response is received; it is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SACCP-OTA-PAIRING-RESPONSE message being 0x3.
 

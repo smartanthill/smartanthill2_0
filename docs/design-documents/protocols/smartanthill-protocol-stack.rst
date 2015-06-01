@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.10
+:Version:   v0.2.11
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -290,6 +290,11 @@ SmartAnthill Half-Float
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 Some SmartAnthill commands use 'Half-Float' data as described here: http://en.wikipedia.org/wiki/Half-precision_floating-point_format . SmartAnthill serializes such data as 2-byte substrate (encoded according to SmartAnthill Endianness), then considering Sign-Bit bitfield as bit [15], Exponent bitfield as bits [10..14], and Fraction bitfield as bits [0..9].
+
+SACHECKSUM-16
+^^^^^^^^^^^^^
+
+SACHECKSUM-16 is a Little-Endian (LSB-first) CRC-16 using polynomial x^16+x^12+x^5+1, as described in https://en.wikipedia.org/wiki/Computation_of_cyclic_redundancy_checks.
 
 Layering remarks
 ----------------
