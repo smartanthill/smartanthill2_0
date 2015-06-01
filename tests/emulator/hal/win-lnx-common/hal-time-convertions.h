@@ -15,22 +15,13 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#if !defined __SA_EEPROM_H__
-#define __SA_EEPROM_H__
+#if !defined __HAL_TIME_CONVERTIONS_H__
+#define __HAL_TIME_CONVERTIONS_H__
 
-#include "../sa-common.h"
-
-// data IDs (for communication with eeprom
-#define DATA_SASP_NONCE_LW_ID 0 // Nonce Lower Watermark
-#define DATA_SASP_NONCE_LS_ID 1 // Nonce to use For Sending
-// ...to be continued
-
-#define DATA_CONTINUE_LIFE_ID 0Xff // FAKE data used at simulator startup: if not present, a new life (whatever it means) is started
+// present implementation assumes that resolution of h/w timer is 1 ms
+// macros below must be reimplemented if this is not the case
+#define HAL_TIME_MILLISECONDS16_TO_TIMEVAL( mslow, timeval ) {(timeval).low_t = (mslow); (timeval).high_t = 0;}
+#define HAL_TIME_MILLISECONDS32_TO_TIMEVAL( mslow, mshigh, timeval ) {(timeval).low_t = (mslow); (timeval).high_t = mshigh;}
 
 
-// calls
-void eeprom_write( uint8_t id, uint8_t* data, uint8_t size);
-void eeprom_read_fixed_size( uint8_t id, uint8_t* data, uint8_t size);
-uint8_t eeprom_read_size( uint8_t id );
-
-#endif // __SA_EEPROM_H__
+#endif // __HAL_TIME_CONVERTIONS_H__

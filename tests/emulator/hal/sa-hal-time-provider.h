@@ -19,6 +19,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __SA_HAL_TIME_PROVIDER_H__
 
 #include "../sa-common.h"
+#include <hal-time-convertions.h>
 
 typedef struct _sa_time_struct
 {
@@ -29,10 +30,10 @@ typedef struct _sa_time_struct
 // use typedef below instead
 typedef sa_time_struct sa_time_val;
 
-void sa_get_time( sa_time_val* t );
+#define TIME_MILLISECONDS16_TO_TIMEVAL( mslow, timeval ) HAL_TIME_MILLISECONDS16_TO_TIMEVAL( mslow, timeval )
+#define TIME_MILLISECONDS32_TO_TIMEVAL( mslow, mshigh, timeval ) HAL_TIME_MILLISECONDS32_TO_TIMEVAL( mslow, mshigh, timeval )
 
-
-unsigned short getTime(); // TODO: get rid of it ASAP
+void sa_get_time( sa_time_val* t ); // PLATFORM-SPECIFIC IMPLEMENTATION
 
 
 

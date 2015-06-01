@@ -41,7 +41,8 @@ void communication_terminate();
 
 uint8_t sendMessage( MEMORY_HANDLE mem_h );
 
-uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout );
+//uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout );
+//uint8_t wait_for_communication_event( uint16_t timeout );
 #ifdef USED_AS_MASTER
 #ifdef USED_AS_MASTER_COMMSTACK
 uint8_t send_to_central_unit( MEMORY_HANDLE mem_h );

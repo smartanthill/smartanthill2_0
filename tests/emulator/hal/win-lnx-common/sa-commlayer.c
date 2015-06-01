@@ -16,6 +16,7 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 #include "../sa-commlayer.h"
+#include "../hal-waiting.h"
 #include <stdio.h> 
 
 
@@ -506,7 +507,8 @@ void communication_terminate()
 
 #endif // USED_AS_MASTER
 
-uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout )
+//uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout )
+uint8_t wait_for_communication_event( unsigned int timeout )
 {
 	printf( "wait_for_communication_event()\n" );
     fd_set rfds;
@@ -556,10 +558,10 @@ uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout )
 	{
 		if ( FD_ISSET(sock, &rfds) )
 		{
-			uint8_t ret_code = tryGetMessage( mem_h );
+/*			uint8_t ret_code = tryGetMessage( mem_h );
 			if ( ret_code == COMMLAYER_RET_FAILED )
 				return ret_code;
-			assert( ret_code == COMMLAYER_RET_OK );
+			assert( ret_code == COMMLAYER_RET_OK );*/
 			return COMMLAYER_RET_FROM_DEV;
 		}
 #ifdef USED_AS_MASTER
@@ -567,10 +569,10 @@ uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout )
 		{
 //			assert( rfds.fd_array[0] == sock_with_cl );
 			assert( FD_ISSET(sock_with_cl, &rfds) );
-			uint8_t ret_code = try_get_message_within_master( mem_h );
+/*			uint8_t ret_code = try_get_message_within_master( mem_h );
 			if ( ret_code == COMMLAYER_RET_FAILED )
 				return ret_code;
-			assert( ret_code == COMMLAYER_RET_OK );
+			assert( ret_code == COMMLAYER_RET_OK );*/
 			return COMMLAYER_RET_FROM_CENTRAL_UNIT;
 		}
 #endif // USED_AS_MASTER
@@ -578,6 +580,64 @@ uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout )
     else
 	{
         return COMMLAYER_RET_TIMEOUT;
+	}
+}
+
+uint8_t wait_for_timeout( unsigned int timeout)
+{
+    struct timeval tv;
+    int retval;
+    tv.tv_sec = timeout / 1000;
+    tv.tv_usec = ((long)timeout % 1000) * 1000;
+
+    retval = select(0, NULL, NULL, NULL, &tv);
+
+    if (retval == -1)
+	{
+#ifdef _MSC_VER
+		int error = WSAGetLastError();
+		printf( "error %d\n", error );
+#else
+        perror("select()");
+//		int error = errno;
+//		if ( error == EAGAIN || error == EWOULDBLOCK )
+#endif
+		assert(0);
+		return COMMLAYER_RET_FAILED;
+	}
+    else
+	{
+        return COMMLAYER_RET_TIMEOUT;
+	}
+}
+
+uint8_t hal_wait_for( waiting_for* wf )
+{
+	unsigned int timeout = wf->wait_time.high_t;
+	timeout <<= 16;
+	timeout += wf->wait_time.low_t;
+	uint8_t ret_code;
+	assert( wf->wait_legs == 0 ); // not implemented
+	assert( wf->wait_i2c == 0 ); // not implemented
+	if ( wf->wait_packet )
+	{
+		ret_code = wait_for_communication_event( timeout );
+		switch ( ret_code )
+		{
+			case COMMLAYER_RET_FROM_DEV: return WAIT_RESULTED_IN_PACKET; break;
+			case COMMLAYER_RET_TIMEOUT: return WAIT_RESULTED_IN_TIMEOUT; break;
+			case COMMLAYER_RET_FAILED: return WAIT_RESULTED_IN_FAILURE; break;
+			default: return WAIT_RESULTED_IN_FAILURE;
+		}
+	}
+	else
+	{
+		ret_code = wait_for_timeout( timeout );
+		switch ( ret_code )
+		{
+			case COMMLAYER_RET_TIMEOUT: return WAIT_RESULTED_IN_TIMEOUT; break;
+			default: return WAIT_RESULTED_IN_FAILURE;
+		}
 	}
 }
 
