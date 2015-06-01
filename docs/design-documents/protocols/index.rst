@@ -34,6 +34,7 @@ Protocols
     sasp
     saoip
     samp
+    sadlp-rf
     sascrambling
     sarng
     sapairing

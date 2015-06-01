@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.13
+:Version:   v0.0.14
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -59,7 +59,7 @@ SAMP underlying protocol (normally SADLP-\*), MUST support the following operati
 
 NB: in many cases, these operations may be simulated using very few operations as primitives; for example, PHY-level broadcast can be used to create SADLP-\*-level multi-cast by adding, for example, NEXT-HOP-NODE-ID.
 
-All SmartAnthill Devices SHOULD, and all SmartAnthill Retransmitting MUST implement some kind of collision avoidance (at least CSMA/CA, a.k.a. "listen before talk with random delay").
+All SmartAnthill Devices SHOULD, and all SmartAnthill Retransmitting Devices MUST implement some kind of collision avoidance (at least CSMA/CA, a.k.a. "listen before talk with random delay").
 
 Underlying Protocol Checksums
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
