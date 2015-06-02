@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version:   v0.3.0
+:Version: v0.3.1
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -79,14 +79,18 @@ Plugin Manifest is an XML file, with structure which looks as follows:
     </reply>
 
     <configuration>
-      <field type="pin[spi.sclk]" name="pin_spi_sclk" title="SPI SCLK Pin" />
-      <field type="pin[spi.mosi]" name="pin_spi_mosi" title="SPI MOSI Pin" />
-      <field type="pin[spi.miso]" name="pin_spi_miso" title="SPI MISO Pin" />
-      <field type="pin[spi.ss]"   name="pin_spi_ss"   title="SPI SS Pin" />
-      <field type="pin[digital]"  name="pin_led1" title="LED 1 Pin" />
-      <field type="pin[digital]"  name="pin_led2" title="LED 2 Pin" />
-      <field type="uint[2]" name="delay_blink_ms" default="150" title="Delay between blinks, ms" />
-      <field type="char[30]" name="welcome_to" default="Welcome to SmartAnthill" />
+      <peripheral>
+        <pin type="spi[sclk]" name="pin_spi_sclk" title="SPI SCLK Pin" />
+        <pin type="spi[mosi]" name="pin_spi_mosi" title="SPI MOSI Pin" />
+        <pin type="spi[miso]" name="pin_spi_miso" title="SPI MISO Pin" />
+        <pin type="spi[ss]"   name="pin_spi_ss"   title="SPI SS Pin" />
+        <pin type="digital"   name="pin_led1"     title="LED 1 Pin" />
+        <pin type="digital"   name="pin_led2"     title="LED 2 Pin" />
+      </peripheral>
+      <options>
+        <option type="uint[2]" name="delay_blink_ms" default="150" title="Delay between blinks, ms" />
+        <option type="char[30]" name="welcome_to" default="Welcome to SmartAnthill" />
+      </options>
     </configuration>
 
   </smartanthill.plugin>
@@ -146,7 +150,7 @@ Each ``<meaning>`` tag MUST specify conversion. Currently supported conversions 
 ^^^^^^^^^^^^^^^^^^^
 
 ``<configuration>`` tag specifies the list of required peripheral, pin numbers,
-plugin settings, etc.
+plugin options, etc.
 This information will be used by :ref:`sacorearchdashser` for configuring
 SmartAnthill device.
 
@@ -155,27 +159,28 @@ Allowed field types:
 Peripheral
 ''''''''''
 
-* ``<field type="pin[i2c.*]">`` `Inter-Integrated Circuit <http://en.wikipedia.org/wiki/I²C>`_
+* ``<pin type="i2c[*]">`` `Inter-Integrated Circuit <http://en.wikipedia.org/wiki/I²C>`_
 
-    + ``<field type="pin[i2c.sda]">`` - Serial Data Line (SDA)
-    + ``<field type="pin[i2c.scl]">`` - Serial Clock Line (SCL)
+    + ``<pin type="i2c[sda]">`` - Serial Data Line (SDA)
+    + ``<pin type="i2c[scl]">`` - Serial Clock Line (SCL)
 
-* ``<field type="pin[spi.*]`` `Serial Peripheral Interface Bus <http://en.wikipedia.org/wiki/Serial_Peripheral_Interface_Bus>`_
+* ``<pin type="spi[*]`` `Serial Peripheral Interface Bus <http://en.wikipedia.org/wiki/Serial_Peripheral_Interface_Bus>`_
 
-    + ``<field type="pin[spi.sclk]">`` - Serial Clock (SCLK, output from master)
-    + ``<field type="pin[spi.mosi]">`` - Master Output, Slave Input (MOSI, output from master)
-    + ``<field type="pin[spi.miso]">`` - Master Input, Slave Output (MISO, output from slave)
-    + ``<field type="pin[spi.ss]">``   - Slave Select (SS, active low, output from master)
+    + ``<pin type="spi[sclk]">`` - Serial Clock (SCLK, output from master)
+    + ``<pin type="spi[mosi]">`` - Master Output, Slave Input (MOSI, output from master)
+    + ``<pin type="spi[miso]">`` - Master Input, Slave Output (MISO, output from slave)
+    + ``<pin type="spi[ss]">``   - Slave Select (SS, active low, output from master)
 
-* ``<field type="pin[analog]">``
-* ``<field type="pin[digital]">``
-* ``<field type="pin[pwm]">`` - `Pulse-width modulation <http://en.wikipedia.org/wiki/Pulse-width_modulation>`_
+* ``<pin type="analog">``
+* ``<pin type="digital">``
+* ``<pin type="pwm">`` - `Pulse-width modulation <http://en.wikipedia.org/wiki/Pulse-width_modulation>`_
 
-Miscellaneous
-'''''''''''''
-* ``<field type="int[n]">`` , where ``int[1]`` is equal to ``byte`` type
-* ``<field type="uint[n]">``
-* ``<field type="char[n]">``
+Options
+'''''''
+
+* ``<option type="int[n]">`` , where ``int[1]`` is equal to ``byte`` type
+* ``<option type="uint[n]">``
+* ``<option type="char[n]">``
 
 SmartAnthill Plugin Handler as a State Machine
 ----------------------------------------------
