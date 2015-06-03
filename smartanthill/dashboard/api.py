@@ -118,8 +118,15 @@ def delete_device(request, devid):
     return None
 
 
+@router.add("/devices/<int:devid>/buildfw")
+def build_device_firmware(request, devid):
+    assert 0 < devid <= 255
+    device = get_service_named("device").get_device(devid)
+    return maybeDeferred(device.build_firmware)
+
+
 @router.add("/devices/<int:devid>/uploadfw", method="POST")
-def uploadfw_device(request, devid):
+def upload_device_firmware(request, devid):
     assert 0 < devid <= 255
 
     def _on_upload_result(result):

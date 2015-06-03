@@ -55,15 +55,19 @@ class PlatformIOBuilder(object):
 
     def run(self):
         newenvs = dict(
-            PLATFORMIO_SETTING_ENABLE_PROMPTS="false",
             PLATFORMIO_ENVS_DIR=self.pioenvs_dir,
             PLATFORMIO_SRCBUILD_FLAGS=self._get_srcbuild_flags()
         )
 
         d = utils.getProcessOutputAndValue(
-            "platformio", args=("run", "-e", self.env_name),
-            env=environ.update(newenvs),
-            path=sibpath(__file__, join("embedded", "firmware"))
+            "platformio", args=(
+                "--force",
+                "run",
+                "--environment", self.env_name,
+                "--project-dir", sibpath(__file__,
+                                         join("embedded", "firmware"))
+            ),
+            env=environ.update(newenvs)
         )
         d.addBoth(self._on_run_callback)
         return self._defer

@@ -23,12 +23,13 @@
     .controller('DeviceTrainItController', DeviceTrainItController);
 
   function DeviceTrainItController($q, $resource, $modalInstance,
-    siteConfig, dataService, device, operationsList, serialPortsList) {
+    dataService, device, operationsList, serialPortsList) {
 
     var vm = this;
 
     vm.serialports = serialPortsList;
     vm.device = device;
+
     vm.selectedSerialPort = {};
     vm.progressbar = {
       value: 0,
@@ -43,12 +44,12 @@
     // Deferred chain
     vm.deferCancalled = false;
     vm.deferred = $q.defer();
-    vm.deferred.promise.then(function(ccopts) {
+    vm.deferred.promise.then(function() {
       vm.btnDisabled.start = true;
       vm.progressbar.value = 20;
       vm.progressbar.info = 'Building...';
 
-      return $resource('http://localhost:8130/').save(ccopts).$promise;
+      return dataService.buildDeviceFirmware(device.id).$promise;
     }, function(failure) {
       return $q.reject(failure);
     })
@@ -65,9 +66,7 @@
 
         var data = result;
         data.uploadport = vm.selectedSerialPort.selected.port;
-        return $resource(siteConfig.apiURL + 'devices/:deviceId/uploadfw', {
-          deviceId: device.id
-        }).save(data).$promise;
+        return dataService.deviceUploadFirmware(device.id, data).$promise;
       },
       function(failure) {
         var errMsg = '';
@@ -125,31 +124,8 @@
       DEVICE_ID: device.id
     };
 
-    // process operations
-    angular.forEach(operationsList, function(item) {
-      if (device.operationIds.indexOf(item.id) === -1) {
-        return;
-      }
-      ccDefines[item.name] = item.id;
-    });
-
-    // process network data
-    var _routerURI = device.network.router;
-    switch (_routerURI.substring(0, _routerURI.indexOf(':'))) {
-      case 'serial':
-        ccDefines.ROUTER_SERIAL = null;
-        var match = new RegExp('baudrate=(\\d+)', 'i').exec(_routerURI);
-        ccDefines.ROUTER_SERIAL_BAUDRATE = parseInt(match ? match[1] : 9600);
-        break;
-    }
-
-    // console.log(ccDefines);
-
     vm.start = function() {
-      vm.deferred.resolve({
-        'pioenv': device.boardId,
-        'defines': ccDefines
-      });
+      vm.deferred.resolve();
     };
 
     vm.cancel = function() {

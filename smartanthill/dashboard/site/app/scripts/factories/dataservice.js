@@ -28,7 +28,9 @@
       devices: devices(),
       serialports: serialports(),
       settings: settings(),
-      operations: operations()
+      operations: operations(),
+      buildDeviceFirmware: buildDeviceFirmware,
+      deviceUploadFirmware: deviceUploadFirmware
     };
 
     function operations() {
@@ -53,6 +55,18 @@
 
     function settings() {
       return $resource(siteConfig.apiURL + 'settings');
+    }
+
+    function buildDeviceFirmware(deviceId) {
+      return $resource(siteConfig.apiURL + 'devices/:id/buildfw', {
+        id: deviceId
+      }).get();
+    }
+
+    function deviceUploadFirmware(deviceId, data) {
+      return $resource(siteConfig.apiURL + 'devices/:id/uploadfw', {
+        id: deviceId
+      }).save(data);
     }
   }
 

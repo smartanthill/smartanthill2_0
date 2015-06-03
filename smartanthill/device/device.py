@@ -63,6 +63,9 @@ class Device(object):
             return self.board.launch_operation(self.id_, type_, data)
         raise DeviceUnknownOperation(type_.name, self.id_)
 
+    def build_firmware(self):
+        pass
+
     def upload_firmware(self, firmware):
         tmp_dir = mkdtemp()
         platformioini_path = sibpath(
