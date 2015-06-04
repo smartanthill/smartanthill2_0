@@ -15,48 +15,25 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
+/*******************************************************************************
+THIS FILE IS MANUALLY OR AUTOMATICALLY GENERATED BASED ON DESIRED PLUGIN LIST
+*******************************************************************************/
 
-#include "sa-common.h"
 
-#ifdef ENABLE_COUNTER_SYSTEM
-size_t COUNTERS[MAX_COUNTERS_CNT];
-const char* CTRS_NAMES[MAX_COUNTERS_CNT];
-double COUNTERS_D[MAX_COUNTERS_CNT];
-const char* CTRS_NAMES_D[MAX_COUNTERS_CNT];
-void printCounters()
+#include "sa_bodypart_list.h"
+
+// include declarations of respective plugins
+#include "sa_test_plugins.h"
+
+DefaultTestingPluginConfig DefaultTestingPluginConfig_struct = 
 {
-	printf( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n" );
-	for ( int i=0; i<MAX_COUNTERS_CNT; i++ )
-	{
-		if ( CTRS_NAMES[ i ] )
-			printf( "%d:\t[%d] %s\n", COUNTERS[ i ], i, CTRS_NAMES[ i ] );
-		else
-			assert( COUNTERS[ i ] == 0 );
-		if ( CTRS_NAMES_D[ i ] )
-			printf( "%f:\t[%d] %s\n", COUNTERS_D[ i ], i, CTRS_NAMES_D[ i ] );
-	}
-	printf( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n" );
-}
-#endif // ENABLE_COUNTER_SYSTEM
-
-/*
-
-struct counter
-{
-	const char* name;
-	int value;
+	0,
 };
 
-counter Counters[] = 
+DefaultTestingPluginState DefaultTestingPluginState_struct;
+
+
+const bodypart_item bodyparts[ BODYPARTS_MAX ] =
 {
+	{ default_test_plugin_handler_init, default_test_plugin_handler, &DefaultTestingPluginConfig_struct, &DefaultTestingPluginState_struct },
 };
-
-
-void increment_counter( uint8_t ctr )
-{
-}
-
-void print_counters()
-{
-}
-*/

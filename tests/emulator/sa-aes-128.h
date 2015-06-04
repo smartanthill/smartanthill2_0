@@ -15,23 +15,12 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#include "sa-timer.h"
 
+#include "sa-common.h"
 
-#ifdef _MSC_VER
+#ifndef __SA_AES_128_H__
+#define __SA_AES_128_H__
 
-#include <Windows.h>
+void sa_aes_128_encrypt_block( const uint8_t* key, const uint8_t* _block, uint8_t* res );
 
-#define TIME_FACTOR 200 // resulting in 200 ms granularity
-
-void waitForTimeQuantum()
-{
-	Sleep(TIME_FACTOR);
-}
-
-unsigned short getTime()
-{
-	return (unsigned short)( GetTickCount() / TIME_FACTOR );
-}
-
-#endif
+#endif //__SA_AES_128_H__

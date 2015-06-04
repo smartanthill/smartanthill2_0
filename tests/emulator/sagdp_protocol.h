@@ -21,6 +21,10 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "sa-common.h"
 //#include "sa-eeprom.h"
+#include "zepto-mem-mngmt.h"
+#include "sa-data-types.h"
+#include "hal/sa-hal-time-provider.h"
+#include "hal/hal-waiting.h"
 
 
 // RET codes
@@ -30,7 +34,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define SAGDP_RET_TO_LOWER_REPEATED 3 // repeated packet
 #define SAGDP_RET_TO_LOWER_NONE 4 // repeated packet
 #define SAGDP_RET_TO_HIGHER 5
-#define SAGDP_RET_TO_HIGHER_ERROR 6
+//#define SAGDP_RET_TO_HIGHER_ERROR 6
 #define SAGDP_RET_START_OVER_FIRST_RECEIVED 7 // "first" packet is received while SAGDP is in "wait-remote" state
 #define SAGDP_RET_NEED_NONCE 8 // nonce is necessary before sending a packet
 
@@ -41,43 +45,44 @@ Copyright (C) 2015 OLogN Technologies AG
 #define SAGDP_STATE_WAIT_REMOTE 2
 #define SAGDP_STATE_WAIT_LOCAL 3
 
+// time-related events
+#define SAGDP_EV_NONE 0
+#define SAGDP_EV_RESEND_LSP 1
 
-// packet statuses
+
+// packet statuses within the chain
 #define SAGDP_P_STATUS_INTERMEDIATE 0
 #define SAGDP_P_STATUS_FIRST 1
 #define SAGDP_P_STATUS_TERMINATING 2
 #define SAGDP_P_STATUS_MASK ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING )
-#define SAGDP_P_STATUS_ERROR_MSG ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING )
 #define SAGDP_P_STATUS_NO_RESEND 4
-#define SAGDP_P_STATUS_FULL_MASK ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING | SAGDP_P_STATUS_NO_RESEND )
+#define SAGDP_P_STATUS_ACK 8
+#define SAGDP_P_STATUS_ERROR_MSG ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING )
+#define SAGDP_P_STATUS_IS_ACK ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING | SAGDP_P_STATUS_ACK )
+#define SAGDP_P_STATUS_FULL_MASK ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING | SAGDP_P_STATUS_NO_RESEND | SAGDP_P_STATUS_ACK )
 
 
-// sizes
-#define SAGDP_PACKETID_SIZE 6
-#define SAGDP_LRECEIVED_PID_SIZE SAGDP_PACKETID_SIZE // last received packet unique identifier
-#define SAGDP_LSENT_PID_SIZE SAGDP_PACKETID_SIZE // last sent packet ID
-#define SAGDP_LTO_SIZE 1 // length of the last timeout
+// sagdp data structure
+typedef struct _SAGDP_DATA
+{
+	uint8_t state;
+	uint8_t last_timeout;
+	uint8_t resent_ordinal;
+	sasp_nonce_type last_received_chain_id;
+	sasp_nonce_type last_received_packet_id;
+	sasp_nonce_type first_last_sent_packet_id;
+	sasp_nonce_type next_last_sent_packet_id;
+	sasp_nonce_type prev_first_last_sent_packet_id;
+	sa_time_val next_event_time;
+	uint8_t event_type; // one of time-related events
+} SAGDP_DATA;
 
-
-// data structure / offsets
-#define DATA_SAGDP_SIZE ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LSENT_PID_SIZE + SAGDP_LTO_SIZE + 2 )
-#define DATA_SAGDP_STATE_OFFSET 0 // SAGDP state
-#define DATA_SAGDP_LRECEIVED_CHAIN_ID_OFFSET 1 // last received packet unique identifier
-#define DATA_SAGDP_LRECEIVED_PID_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE ) // last received packet unique identifier
-#define DATA_SAGDP_FIRST_LSENT_PID_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE ) // last sent packet ID
-#define DATA_SAGDP_NEXT_LSENT_PID_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE ) // last sent packet ID
-#define DATA_SAGDP_PREV_FIRST_LSENT_PID_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE ) // last sent packet ID
-#define DATA_SAGDP_LTO_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LSENT_PID_SIZE ) // timer value
-#define DATA_SAGDP_LSM_SIZE_OFFSET ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LSENT_PID_SIZE + SAGDP_LTO_SIZE ) // last sent packet size, 2 bytes
-#define DATA_SAGDP_WAS_PREV ( 1 + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LRECEIVED_PID_SIZE + SAGDP_LSENT_PID_SIZE + SAGDP_LTO_SIZE + 1 ) // last sent packet size, 2 bytes
 
 // handlers
-void sagdp_init( uint8_t* data );
-uint8_t handlerSAGDP_timer( uint8_t* timeout, uint8_t* nonce, uint16_t* sizeInOut, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
-uint8_t handlerSAGDP_receiveUP( uint8_t* timeout, uint8_t* nonce, uint8_t* pid, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
-uint8_t handlerSAGDP_receiveRequestResendLSP( uint8_t* timeout, uint8_t* nonce, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
-uint8_t handlerSAGDP_receiveHLP( uint8_t* timeout, uint8_t* nonce, uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut, int buffOutSize, uint8_t* stack, int stackSize, uint8_t* data, uint8_t* lsm );
-//uint8_t handlerSAGDP_receivePID( uint8_t* PID, uint8_t* data );
-
+void sagdp_init( SAGDP_DATA* sagdp_data );
+uint8_t handler_sagdp_timer( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
+uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
+uint8_t handler_sagdp_receive_request_resend_lsp( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
+uint8_t handler_sagdp_receive_hlp( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
 
 #endif // __SAGDP_PROTOCOL_H__

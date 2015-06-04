@@ -15,24 +15,29 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#if !defined __SA_EEPROM_H__
-#define __SA_EEPROM_H__
+#if !defined __SA_HAL_WAITING_H__
+#define __SA_HAL_WAITING_H__
 
-#include "sa-common.h"
+#include "../sa-common.h"
+#include "sa-hal-time-provider.h"
 
-// data IDs (for communication with eeprom
-#define EEPROM_SLOT_DATA_SASP_NONCE_LW_ID 0 // Nonce Lower Watermark
-#define EEPROM_SLOT_DATA_SASP_NONCE_LS_ID 1 // Nonce to use For Sending
+typedef struct _waiting_for
+{
+	sa_time_val wait_time;
+	uint8_t wait_packet;
+	uint8_t wait_i2c;
+	uint8_t wait_legs;
+	uint16_t leg_mask; // [in]
+	uint16_t leg_values_waited; // [in]
+	uint16_t leg_value_received; // [out]
+} waiting_for;
 
-#define EEPROM_SLOT_MAX 2
-// ...to be continued
+#define WAIT_RESULTED_IN_FAILURE 0
+#define WAIT_RESULTED_IN_TIMEOUT 1
+#define WAIT_RESULTED_IN_PACKET 2
+#define WAIT_RESULTED_IN_I2C 3
+#define WAIT_RESULTED_IN_PINS 4	
 
-#define DATA_CONTINUE_LIFE_ID 0Xff // FAKE data used at simulator startup: if not present, a new life (whatever it means) is started
+uint8_t hal_wait_for( waiting_for* wf );
 
-
-// calls
-bool init_eeprom_access();
-void eeprom_write( uint8_t id, uint8_t* data);
-void eeprom_read( uint8_t id, uint8_t* data);
-
-#endif // __SA_EEPROM_H__
+#endif // __SA_HAL_WAITING_H__

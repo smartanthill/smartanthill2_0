@@ -15,24 +15,49 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#if !defined __SA_EEPROM_H__
-#define __SA_EEPROM_H__
 
 #include "sa-common.h"
 
-// data IDs (for communication with eeprom
-#define EEPROM_SLOT_DATA_SASP_NONCE_LW_ID 0 // Nonce Lower Watermark
-#define EEPROM_SLOT_DATA_SASP_NONCE_LS_ID 1 // Nonce to use For Sending
+#ifdef ENABLE_COUNTER_SYSTEM
+size_t COUNTERS[MAX_COUNTERS_CNT];
+const char* CTRS_NAMES[MAX_COUNTERS_CNT];
+double COUNTERS_D[MAX_COUNTERS_CNT];
+const char* CTRS_NAMES_D[MAX_COUNTERS_CNT];
+void printCounters()
+{
+	printf( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n" );
+	uint16_t i;
+	for ( i=0; i<MAX_COUNTERS_CNT; i++ )
+	{
+		if ( CTRS_NAMES[ i ] )
+			printf( "%d:\t[%d] %s\n", COUNTERS[ i ], i, CTRS_NAMES[ i ] );
+		else
+			assert( COUNTERS[ i ] == 0 );
+		if ( CTRS_NAMES_D[ i ] )
+			printf( "%f:\t[%d] %s\n", COUNTERS_D[ i ], i, CTRS_NAMES_D[ i ] );
+	}
+	printf( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n" );
+}
+#endif // ENABLE_COUNTER_SYSTEM
 
-#define EEPROM_SLOT_MAX 2
-// ...to be continued
+/*
 
-#define DATA_CONTINUE_LIFE_ID 0Xff // FAKE data used at simulator startup: if not present, a new life (whatever it means) is started
+struct counter
+{
+	const char* name;
+	int value;
+};
+
+counter Counters[] = 
+{
+};
 
 
-// calls
-bool init_eeprom_access();
-void eeprom_write( uint8_t id, uint8_t* data);
-void eeprom_read( uint8_t id, uint8_t* data);
+void increment_counter( uint8_t ctr )
+{
+}
 
-#endif // __SA_EEPROM_H__
+void print_counters()
+{
+}
+*/

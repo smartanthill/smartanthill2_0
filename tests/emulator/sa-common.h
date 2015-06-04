@@ -21,26 +21,62 @@ Copyright (C) 2015 OLogN Technologies AG
 
 // common includes
 #include <memory.h> // for memcpy(), memset(), memcmp(). Note: their implementation may or may not be more effective than just by-byte operation on a particular target platform
+#include <string.h> // for memmove()
 #include <assert.h>
 
+#define SA_DEBUG
+
+#define SA_LITTLE_ENDIAN 0
+#define SA_BIG_ENDIAN 1
+#define SA_USED_ENDIANNES SA_LITTLE_ENDIAN
+//#define SA_USED_ENDIANNES SA_BIG_ENDIAN
+
 // data types
+#ifdef _MSC_VER
 #define uint8_t unsigned char
 #define int8_t char
 #define uint16_t unsigned short
+#define int16_t short
+#else
+#include "stdint.h"
+#endif
+#define bool uint8_t
+#define true 1
+#define false 0
 
+#ifdef _MSC_VER
+#define NOINLINE      __declspec(noinline)
+#define INLINE __inline
+#define FORCE_INLINE	__forceinline
+#else
+#define INLINE static inline
+#define NOINLINE      __attribute__ ((noinline))
+#define	FORCE_INLINE static inline __attribute__((always_inline))
+#endif
+
+
+
+/*
+INLINE void memset( void* dest, uint8_t val, uint8_t cnt )
+{
+	uint8_t i;
+	for ( i=0; i<cnt; i++ )
+		((uint8_t*)dest)[i] = val;
+}
+
+INLINE void memcpy( void* dest, const void* src, uint8_t cnt )
+{
+	uint8_t i;
+	for ( i=0; i<cnt; i++ )
+		((uint8_t*)dest)[i] = ((uint8_t*)src)[i];
+}
+*/
 // Master/Slave distinguishing bit; USED_AS_MASTER is assumed to be a preprocessor definition if necessary
 #ifdef USED_AS_MASTER
 #define MASTER_SLAVE_BIT 1
 #else // USED_AS_MASTER
 #define MASTER_SLAVE_BIT 0
 #endif
-
-// offsets in data segment of particular handler data
-// note: internal structure is defined by a correspondent handler (see respective .h files for details)
-// TODO: think about more reliable mechanism
-#define DADA_OFFSET_SASP 0
-#define DADA_OFFSET_SAGDP ( DADA_OFFSET_SASP + 28 )
-#define DADA_OFFSET_NEXT ( DADA_OFFSET_SAGDP + 34 )
 
 // debug helpers
 

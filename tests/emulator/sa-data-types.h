@@ -15,24 +15,21 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#if !defined __SA_EEPROM_H__
-#define __SA_EEPROM_H__
+#if !defined __SA_DATA_TYPES_H__
+#define __SA_DATA_TYPES_H__
 
-#include "sa-common.h"
-
-// data IDs (for communication with eeprom
-#define EEPROM_SLOT_DATA_SASP_NONCE_LW_ID 0 // Nonce Lower Watermark
-#define EEPROM_SLOT_DATA_SASP_NONCE_LS_ID 1 // Nonce to use For Sending
-
-#define EEPROM_SLOT_MAX 2
-// ...to be continued
-
-#define DATA_CONTINUE_LIFE_ID 0Xff // FAKE data used at simulator startup: if not present, a new life (whatever it means) is started
+#include "sa-uint48.h"
+#include "hal/sa-hal-time-provider.h"
 
 
-// calls
-bool init_eeprom_access();
-void eeprom_write( uint8_t id, uint8_t* data);
-void eeprom_read( uint8_t id, uint8_t* data);
+typedef sa_uint48_t sasp_nonce_type;
+#define SASP_NONCE_TYPE_SIZE 6 // sizeof(sa_uint48_t)
 
-#endif // __SA_EEPROM_H__
+typedef struct _timeout_action // NOTE: might be a temporary solution
+{
+	sa_time_val tv;
+	uint8_t action;
+} timeout_action;
+
+
+#endif // __SA_DATA_TYPES_H__

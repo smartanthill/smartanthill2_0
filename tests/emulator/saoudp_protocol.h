@@ -15,21 +15,20 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#if !defined __SA_COMMLAYER_H__
-#define __SA_COMMLAYER_H__
+
+#if !defined __SAOUDP_PROTOCOL_H__
+#define __SAOUDP_PROTOCOL_H__
+
+#include "sa-common.h"
+#include "zepto-mem-mngmt.h"
 
 
-// RET codes
-#define COMMLAYER_RET_FAILED 0 // not authenticated, etc
-#define COMMLAYER_RET_OK 1 // new packet
-#define COMMLAYER_RET_PENDING 2
+// ret codes
+#define SAOUDP_RET_FAILED 0
+#define SAOUDP_RET_OK 1
+
+uint8_t handler_saoudp_send( MEMORY_HANDLE mem_h );
+uint8_t handler_saoudp_receive( MEMORY_HANDLE mem_h );
 
 
-bool communicationInitializeAsServer();
-bool communicationInitializeAsClient();
-void communicationTerminate();
-uint8_t sendMessage( uint16_t* msgSize, const uint8_t * buff );
-uint8_t getMessage( uint16_t* msgSize, uint8_t * buff, int maxSize ); // returns when a packet received
-uint8_t tryGetMessage(uint16_t* msgSize, uint8_t * buff, int maxSize); // returns immediately, but a packet reception is not guaranteed
-
-#endif // __SA_COMMLAYER_H__
+#endif // __SAOUDP_PROTOCOL_H__

@@ -27,19 +27,22 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __YOCTOVM_PROTOCOL_H__
 
 #include "sa-common.h"
-#include "sa-eeprom.h"
+#include "zepto-mem-mngmt.h"
 
 // RET codes
 #define YOCTOVM_FAILED 0 // sunject for system reset
 #define YOCTOVM_OK 1 // if terminating packet received
 #define YOCTOVM_PASS_LOWER 2
 #define YOCTOVM_PASS_LOWER_THEN_IDLE 3 // ret code for testing; same as YOCTOVM_PASS_LOWER but notifies main loop that the chain is over
+#define YOCTOVM_WAIT_TO_CONTINUE 4
 //#define YOCTOVM_RESET_STACK 4
 
-uint8_t slave_process( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
-uint8_t master_start( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
-uint8_t master_continue( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
-uint8_t master_error( uint16_t* sizeInOut, const uint8_t* buffIn, uint8_t* buffOut/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
+uint8_t slave_process( uint8_t* wait_to_process_time, REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
+uint8_t slave_process_continue( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
+uint8_t master_start( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
+uint8_t master_process( uint8_t* wait_to_process_time, REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
+uint8_t master_process_continue( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
+uint8_t master_error( REQUEST_REPLY_HANDLE mem_h/*, int buffOutSize, uint8_t* stack, int stackSize*/ );
 
 // Pure Testing Block
 bool isChainContinued();

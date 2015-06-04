@@ -15,24 +15,20 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#if !defined __SA_EEPROM_H__
-#define __SA_EEPROM_H__
+#if !defined __ZEPTO_MEM_MNGMT_HAL_SPEC_H__
+#define __ZEPTO_MEM_MNGMT_HAL_SPEC_H__
 
-#include "sa-common.h"
+#include "../zepto-mem-mngmt-base.h"
 
-// data IDs (for communication with eeprom
-#define EEPROM_SLOT_DATA_SASP_NONCE_LW_ID 0 // Nonce Lower Watermark
-#define EEPROM_SLOT_DATA_SASP_NONCE_LS_ID 1 // Nonce to use For Sending
+void memory_object_cut_and_make_response( REQUEST_REPLY_HANDLE mem_h, uint16_t offset, uint16_t size );
+void memory_object_response_to_request( REQUEST_REPLY_HANDLE mem_h );
+void memory_object_request_to_response( REQUEST_REPLY_HANDLE mem_h );
+uint8_t* memory_object_append( REQUEST_REPLY_HANDLE mem_h, uint16_t size );
+uint8_t* memory_object_prepend( REQUEST_REPLY_HANDLE mem_h, uint16_t size );
+uint8_t* memory_object_get_request_ptr( REQUEST_REPLY_HANDLE mem_h );
+uint16_t memory_object_get_request_size( REQUEST_REPLY_HANDLE mem_h );
+uint8_t* memory_object_get_response_ptr( REQUEST_REPLY_HANDLE mem_h );
+uint16_t memory_object_get_response_size( REQUEST_REPLY_HANDLE mem_h );
 
-#define EEPROM_SLOT_MAX 2
-// ...to be continued
 
-#define DATA_CONTINUE_LIFE_ID 0Xff // FAKE data used at simulator startup: if not present, a new life (whatever it means) is started
-
-
-// calls
-bool init_eeprom_access();
-void eeprom_write( uint8_t id, uint8_t* data);
-void eeprom_read( uint8_t id, uint8_t* data);
-
-#endif // __SA_EEPROM_H__
+#endif // __ZEPTO_MEM_MNGMT_HAL_SPEC_H__

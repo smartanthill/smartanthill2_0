@@ -15,24 +15,15 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#if !defined __SA_EEPROM_H__
-#define __SA_EEPROM_H__
+#ifndef __SHA256_H___
+#define __SHA256_H___
+
 
 #include "sa-common.h"
 
-// data IDs (for communication with eeprom
-#define EEPROM_SLOT_DATA_SASP_NONCE_LW_ID 0 // Nonce Lower Watermark
-#define EEPROM_SLOT_DATA_SASP_NONCE_LS_ID 1 // Nonce to use For Sending
 
-#define EEPROM_SLOT_MAX 2
-// ...to be continued
+void sha256(const uint8_t* msg, uint16_t len, uint8_t* hash);
+void sha_d_256(const uint8_t* msg, uint16_t len, uint8_t* hash);
 
-#define DATA_CONTINUE_LIFE_ID 0Xff // FAKE data used at simulator startup: if not present, a new life (whatever it means) is started
+#endif //__SHA256_H___
 
-
-// calls
-bool init_eeprom_access();
-void eeprom_write( uint8_t id, uint8_t* data);
-void eeprom_read( uint8_t id, uint8_t* data);
-
-#endif // __SA_EEPROM_H__
