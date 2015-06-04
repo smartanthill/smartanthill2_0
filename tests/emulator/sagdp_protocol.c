@@ -70,6 +70,7 @@ void sagdp_init( SAGDP_DATA* sagdp_data )
 	sa_uint48_set_zero( sagdp_data->prev_first_last_sent_packet_id );
 	sagdp_data->resent_ordinal = 0;
 	sagdp_data->event_type = SAGDP_EV_NONE; // in this case we do not care about next_event_time
+	printf( "------------ event set to SAGDP_EV_NONE ----------------\n" );
 }
 
 // PROCESSING TIMEOUT-BASED SEQUENCES
@@ -88,32 +89,32 @@ void sagdp_init( SAGDP_DATA* sagdp_data )
 
 #define SAGDP_INIT_RESENT_SEQUENCE \
 	sagdp_data->resent_ordinal = 1; \
-	sagdp_data->event_type = SAGDP_EV_RESEND_LSP; \
+	sagdp_data->event_type = SAGDP_EV_RESEND_LSP; printf( "------------ event set to SAGDP_EV_RESEND_LSP ----------------\n" );\
 	setIniLTO( &(sagdp_data->last_timeout) ); \
-	SAGDP_LTO_INCREMENT_BY_CAPPED_EXP_SEC( tact->tv, sagdp_data->resent_ordinal ) \
-	sa_hal_time_val_copy_from( &(sagdp_data->next_event_time), &(tact->tv) );
+	SAGDP_LTO_INCREMENT_BY_CAPPED_EXP_SEC( *currt, sagdp_data->resent_ordinal ) \
+	sa_hal_time_val_copy_from( &(sagdp_data->next_event_time), currt );
 
 
 #define SAGDP_CANCEL_RESENT_SEQUENCE \
 	sagdp_data->resent_ordinal = 0; \
-	sagdp_data->event_type = SAGDP_EV_NONE; \
+	sagdp_data->event_type = SAGDP_EV_NONE; printf( "------------ event set to SAGDP_EV_NONE ----------------\n" ); \
 	cancelLTO( &(sagdp_data->last_timeout) );
 
 
 #define SAGDP_REGISTER_SUBSEQUENT_RESENT \
 	(sagdp_data->resent_ordinal) ++; \
-	sa_hal_time_val_copy_from(&(tact->tv),  &(sagdp_data->next_event_time) );
+	sa_hal_time_val_copy_from(currt,  &(sagdp_data->next_event_time) );
 
 
 #define SAGDP_REGISTER_SUBSEQUENT_RESENT_AND_RESET_TIMEOUT \
 	(sagdp_data->resent_ordinal) ++; \
 	assert( sagdp_data->last_timeout != 0 ); \
-	SAGDP_LTO_INCREMENT_BY_CAPPED_EXP_SEC( tact->tv, sagdp_data->resent_ordinal ) \
-	sa_hal_time_val_copy_from( &(sagdp_data->next_event_time), &(tact->tv) );
+	SAGDP_LTO_INCREMENT_BY_CAPPED_EXP_SEC( *currt, sagdp_data->resent_ordinal ) \
+	sa_hal_time_val_copy_from( &(sagdp_data->next_event_time), currt );
 
 
 #define SAGDP_SHOULD_RESENT \
-	( sagdp_data->event_type == SAGDP_EV_RESEND_LSP && sa_hal_time_val_is_less( &(sagdp_data->next_event_time), &(tact->tv) ) )
+	( sagdp_data->event_type == SAGDP_EV_RESEND_LSP && sa_hal_time_val_is_less( &(sagdp_data->next_event_time), currt ) )
 
 
 #define SAGDP_ASSERT_NO_SEQUENCE \
@@ -125,7 +126,7 @@ void sagdp_init( SAGDP_DATA* sagdp_data )
 
 
 
-uint8_t handler_sagdp_timer( timeout_action* tact, sasp_nonce_type nonce, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
+uint8_t handler_sagdp_timer( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
 {
 	uint8_t state = sagdp_data->state;
 	if ( state == SAGDP_STATE_WAIT_REMOTE )
@@ -166,7 +167,7 @@ uint8_t handler_sagdp_timer( timeout_action* tact, sasp_nonce_type nonce, REQUES
 	}
 }
 
-uint8_t handler_sagdp_receive_up( timeout_action* tact, sasp_nonce_type nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
+uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
 {
 	PRINTF( "handlerSAGDP_receiveNewUP():           pid: %x%x%x%x%x%x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 
@@ -925,7 +926,7 @@ uint8_t handler_sagdp_receive_up( timeout_action* tact, sasp_nonce_type nonce, u
 	}
 }
 
-uint8_t handler_sagdp_receive_request_resend_lsp( timeout_action* tact, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
+uint8_t handler_sagdp_receive_request_resend_lsp( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
 {
 	// SAGDP can legitimately receive a repeated packet in wait-remote state (the other side sounds like "we have not received anything from you; please resend, only then we will probably send you something new")
 	// LSP must be resent
@@ -999,7 +1000,7 @@ uint8_t handler_sagdp_receive_request_resend_lsp( timeout_action* tact, sasp_non
 	}
 }
 
-uint8_t handler_sagdp_receive_hlp( timeout_action* tact, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
+uint8_t handler_sagdp_receive_hlp( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data )
 {
 	// It is a responsibility of a higher level to report the status of a packet. 
 	//

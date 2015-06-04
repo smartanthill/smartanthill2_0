@@ -22,7 +22,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "sa-common.h"
 #include "hal/sa-commlayer.h"
-#include "saccp_protocol.h"
+//#include "saccp_protocol.h"
 #include "sa_test_control_prog.h"
 #include "test-generator.h"
 #include "zepto-mem-mngmt.h"
@@ -52,9 +52,12 @@ int main_loop()
 	uint16_t wake_time_continue_processing;
 
 
-	// Try to initialize connection 
-	if ( !communication_initialize() )
+	// Try to initialize connection
+	bool comm_init_ok = communication_initialize();
+	if ( !comm_init_ok )
+	{
 		return -1;
+	}
 
 
 
@@ -66,6 +69,14 @@ int main_loop()
 #endif
 	ret_code = default_test_control_program_start_new( &control_prog_state, MEMORY_HANDLE_MAIN_LOOP );
 	zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+/*	parser_obj po;
+	zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
+	uint8_t bu[40];
+	memset( bu, 0, 40 );
+	zepto_parse_read_block( &po, bu, zepto_parsing_remaining_bytes( &po ) );
+	for ( int k=0;k<30; k++)
+		printf( "%c [0x%x]\n", bu[k], bu[k] );
+	return 0;*/
 #else
 	uint8_t buff_base[] = {0x2, 0x0, 0x8, 0x1, 0x1, 0x2, 0x0, 0x1, '-', '-', '>' }; 
 	uint8_t buff[128];
@@ -82,21 +93,27 @@ int main_loop()
 	for (;;)
 	{
 wait_for_comm_event:
-		ret_code = wait_for_communication_event( MEMORY_HANDLE_MAIN_LOOP, 1000 ); // TODO: recalculation
-		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+		ret_code = wait_for_communication_event( 200 ); // TODO: recalculation
+//		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 
 		switch ( ret_code )
 		{
 			case COMMLAYER_RET_FROM_COMMM_STACK:
 			{
 				// regular processing will be done below in the next block
+				ret_code = try_get_message_within_master( MEMORY_HANDLE_MAIN_LOOP );
+				if ( ret_code == COMMLAYER_RET_FAILED )
+					return 0;
+				assert( ret_code == COMMLAYER_RET_OK );
+				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+				printf( "msg received; rq_size: %d, rsp_size: %d\n", ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 				goto process_reply;
 				break;
 			}
 			case COMMLAYER_RET_TIMEOUT:
 			{
 				// regular processing will be done below in the next block
-				printf( "just waiting...\n" );
+//				printf( "just waiting...\n" );
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 				goto wait_for_comm_event;
 				break;
@@ -104,8 +121,9 @@ wait_for_comm_event:
 			default:
 			{
 				// unexpected ret_code
-				printf( "Unexpected ret_code %d\n", ret_code );
+				printf( "Unexpected ret_code %d received from wait_for_communication_event()\n", ret_code );
 				assert( 0 );
+				return 0;
 				break;
 			}
 		}
@@ -117,19 +135,27 @@ wait_for_comm_event:
 
 		// 4. Process received command (yoctovm)
 #ifdef MASTER_ENABLE_ALT_TEST_MODE
-process_reply:
+	process_reply:
+#if 0
 		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL, &control_prog_state ); //master_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP );
+		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+#endif
+		ret_code = default_test_control_program_accept_reply( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL, &control_prog_state );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		switch ( ret_code )
 		{
-			case SACCP_RET_CHAIN_DONE:
+			case CONTROL_PROG_OK:
 			{
-				ret_code = handler_sacpp_start_new_chain( MEMORY_HANDLE_MAIN_LOOP, &control_prog_state );
+//				ret_code = handler_sacpp_start_new_chain( MEMORY_HANDLE_MAIN_LOOP, &control_prog_state );
+				ret_code = default_test_control_program_start_new( &control_prog_state, MEMORY_HANDLE_MAIN_LOOP );
+				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 				break;
 			}
-			case SACCP_RET_CHAIN_CONTINUED:
+			case CONTROL_PROG_CONTINUE:
 			{
-				ret_code = handler_sacpp_continue_chain( MEMORY_HANDLE_MAIN_LOOP, &control_prog_state );
+//				ret_code = handler_sacpp_continue_chain( MEMORY_HANDLE_MAIN_LOOP, &control_prog_state );
+				ret_code = default_test_control_program_accept_reply_continue( &control_prog_state, MEMORY_HANDLE_MAIN_LOOP );
+				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 				break;
 			}
 			default:
@@ -140,7 +166,6 @@ process_reply:
 				break;
 			}
 		}
-		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 #else // MASTER_ENABLE_ALT_TEST_MODE
 		// so far just print received packet and exit
 		uint8_t buff[128];

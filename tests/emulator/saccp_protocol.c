@@ -56,7 +56,7 @@ uint8_t handler_sacpp_continue_chain( MEMORY_HANDLE mem_h, void* control_prog_st
 	return SACCP_RET_PASS_LOWER;
 }
 
-#else
+#else // MASTER_ENABLE_ALT_TEST_MODE
 
 uint8_t handler_saccp_prepare_to_send( MEMORY_HANDLE mem_h )
 {
@@ -70,7 +70,8 @@ uint8_t handler_saccp_prepare_to_send( MEMORY_HANDLE mem_h )
 	zepto_convert_part_of_request_to_response( mem_h, &po1, &po );
 	uint8_t hdr = SACCP_NEW_PROGRAM; //TODO: we may want to add extra headers
 	zepto_write_prepend_byte( mem_h, hdr );
-	zepto_write_prepend_byte( mem_h, SAGDP_P_STATUS_FIRST );
+//	zepto_write_prepend_byte( mem_h, SAGDP_P_STATUS_FIRST );
+	zepto_write_prepend_byte( mem_h, first_byte );
 	return SACCP_RET_PASS_LOWER;
 }
 

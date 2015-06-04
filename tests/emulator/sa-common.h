@@ -45,9 +45,13 @@ Copyright (C) 2015 OLogN Technologies AG
 #define false 0
 
 #ifdef _MSC_VER
+#define NOINLINE      __declspec(noinline)
 #define INLINE __inline
+#define FORCE_INLINE	__forceinline
 #else
 #define INLINE static inline
+#define NOINLINE      __attribute__ ((noinline))
+#define	FORCE_INLINE static inline __attribute__((always_inline))
 #endif
 
 

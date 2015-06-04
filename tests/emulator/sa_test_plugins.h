@@ -30,8 +30,9 @@ Copyright (C) 2015 OLogN Technologies AG
 
 typedef struct _DefaultTestingPluginConfig //constant structure filled with a configuration for specific 'ant body part'
 {
-	uint8_t bodypart_id;   //always present
-/*	uint8_t request_pin_number;//pin to request sensor read
+	uint8_t dummy;
+/*	uint8_t bodypart_id;   //always present
+	uint8_t request_pin_number;//pin to request sensor read
 	uint8_t ack_pin_number;//pin to wait for to see when sensor has provided the data
 	uint8_t reply_pin_numbers[4];//pins to read when ack_pin_number shows that the data is ready*/
 } DefaultTestingPluginConfig;

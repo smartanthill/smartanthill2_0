@@ -56,10 +56,22 @@ void zepto_parser_decode_encoded_uint_as_sa_uint48( parser_obj* po, sa_uint48_t 
 #if (SA_USED_ENDIANNES == SA_LITTLE_ENDIAN)
 
 INLINE
-void sa_uint48_increment(  sa_uint48_t t )
+void sa_uint48_increment( sa_uint48_t t )
 {
 	int8_t i;
 	for ( i=0; i<6; i++ )
+	{
+		t[i] ++;
+		if ( t[i] ) break;
+	}
+}
+
+INLINE
+void sa_uint48_roundup_to_the_nearest_multiple_of_0x100( sa_uint48_t t )
+{
+	int8_t i;
+	t[0] = 0;
+	for ( i=1; i<6; i++ )
 	{
 		t[i] ++;
 		if ( t[i] ) break;

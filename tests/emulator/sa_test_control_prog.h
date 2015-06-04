@@ -25,9 +25,10 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "zepto-mem-mngmt.h"
 
 #define CONTROL_PROG_OK 0
-#define CONTROL_PROG_WAIT_TO_CONTINUE 1
+#define CONTROL_PROG_CONTINUE 1
 #define CONTROL_PROG_PASS_LOWER 2
-#define CONTROL_PROG_PASS_LOWER_THEN_IDLE 3
+#define CONTROL_PROG_PASS_LOWER_THEN_IDLE 4
+/*#define CONTROL_PROG_WAIT_TO_CONTINUE 4*/
 
 typedef struct _DefaultTestingControlProgramState 
 {
@@ -45,8 +46,8 @@ typedef struct _DefaultTestingControlProgramState
 uint8_t default_test_control_program_init( void* control_prog_state );
 uint8_t default_test_control_program_accept_reply( void* control_prog_state, uint8_t packet_status, parser_obj* received, uint16_t sz );
 uint8_t default_test_control_program_accept_reply_continue( void* control_prog_state, MEMORY_HANDLE reply );
-uint8_t default_test_control_program_start_new( void* control_prog_state, MEMORY_HANDLE reply );
-
+//uint8_t default_test_control_program_start_new( void* control_prog_state, MEMORY_HANDLE reply );
+uint8_t default_test_control_program_accept_reply( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, void* control_prog_state );
 
 #endif // __SA_TEST_CONTROL_PROG_H__
 
