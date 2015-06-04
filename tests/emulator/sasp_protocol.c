@@ -34,10 +34,8 @@ void SASP_initAtLifeStart( SASP_DATA* sasp_data )
 
 void SASP_restoreFromBackup( SASP_DATA* sasp_data )
 {
-	uint8_t size;
-
-	eeprom_read( EEPROM_SLOT_DATA_SASP_NONCE_LW_ID, sasp_data->nonce_lw, size);
-	eeprom_read( EEPROM_SLOT_DATA_SASP_NONCE_LS_ID, sasp_data->nonce_ls, size);
+	eeprom_read( EEPROM_SLOT_DATA_SASP_NONCE_LW_ID, sasp_data->nonce_lw);
+	eeprom_read( EEPROM_SLOT_DATA_SASP_NONCE_LS_ID, sasp_data->nonce_ls);
 }
 
 void SASP_increment_nonce_last_sent( SASP_DATA* sasp_data )
