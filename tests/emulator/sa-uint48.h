@@ -99,7 +99,7 @@ bool is_uint48_zero( const sa_uint48_t t )
 INLINE
 uint8_t sa_uint48_get_byte( const sa_uint48_t t, uint8_t byte_num ) // returns a byte at position byte_num (in the range 0-5) so that 0 corresponds to the least significant byte
 {
-	assert( byte_num <= 5 );
+	ZEPTO_DEBUG_ASSERT( byte_num <= 5 );
 	return t[ byte_num ];
 }
 
@@ -131,7 +131,7 @@ int8_t sa_uint48_compare( const sa_uint48_t t1, const sa_uint48_t t2 )
 INLINE
 uint8_t sa_uint48_get_byte( const sa_uint48_t t, uint8_t byte_num ) // returns a byte at position byte_num (in the range 0-5) so that 0 corresponds to the least significant byte
 {
-	assert( byte_num <= 5 );
+	ZEPTO_DEBUG_ASSERT( byte_num <= 5 );
 	return t[ 5 - byte_num ];
 }
 

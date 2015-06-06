@@ -25,18 +25,18 @@ double COUNTERS_D[MAX_COUNTERS_CNT];
 const char* CTRS_NAMES_D[MAX_COUNTERS_CNT];
 void printCounters()
 {
-	printf( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n" );
+	ZEPTO_DEBUG_PRINTF_1( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n" );
 	uint16_t i;
 	for ( i=0; i<MAX_COUNTERS_CNT; i++ )
 	{
 		if ( CTRS_NAMES[ i ] )
-			printf( "%d:\t[%d] %s\n", COUNTERS[ i ], i, CTRS_NAMES[ i ] );
+			ZEPTO_DEBUG_PRINTF_4( "%d:\t[%d] %s\n", COUNTERS[ i ], i, CTRS_NAMES[ i ] );
 		else
-			assert( COUNTERS[ i ] == 0 );
+			ZEPTO_DEBUG_ASSERT( COUNTERS[ i ] == 0 );
 		if ( CTRS_NAMES_D[ i ] )
-			printf( "%f:\t[%d] %s\n", COUNTERS_D[ i ], i, CTRS_NAMES_D[ i ] );
+			ZEPTO_DEBUG_PRINTF_4( "%f:\t[%d] %s\n", COUNTERS_D[ i ], i, CTRS_NAMES_D[ i ] );
 	}
-	printf( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n" );
+	ZEPTO_DEBUG_PRINTF_1( "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n" );
 }
 #endif // ENABLE_COUNTER_SYSTEM
 

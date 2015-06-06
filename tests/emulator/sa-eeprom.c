@@ -66,14 +66,14 @@ void format_eeprom_at_lifestart()
 
 void eeprom_write( uint8_t id, uint8_t* data)
 {
-	assert( id < EEPROM_SLOT_MAX );
+	ZEPTO_DEBUG_ASSERT( id < EEPROM_SLOT_MAX );
 	uint8_t buff[3];
 	memset( buff, 0, 3 );
 	bool res;
 	res = hal_eeprom_read( buff, 3, eeprom_slots[id].offset );
-	assert( res );
+	ZEPTO_DEBUG_ASSERT( res );
 	uint16_t sz = ((uint16_t)(buff[2]) << 8) + buff[1];
-	assert( sz == eeprom_slots[id].size ); // TODO: do we need both?
+	ZEPTO_DEBUG_ASSERT( sz == eeprom_slots[id].size ); // TODO: do we need both?
 	if ( buff[0] == 1 )
 	{
 		hal_eeprom_write( data, sz, eeprom_slots[id].offset + 3 );
@@ -94,11 +94,11 @@ void eeprom_write( uint8_t id, uint8_t* data)
 
 void eeprom_read( uint8_t id, uint8_t* data)
 {
-	assert( id < EEPROM_SLOT_MAX );
+	ZEPTO_DEBUG_ASSERT( id < EEPROM_SLOT_MAX );
 	uint8_t buff[3];
 	hal_eeprom_read( buff, 3, eeprom_slots[id].offset );
 	uint16_t sz = ((uint16_t)(buff[2]) << 8) + buff[1];
-	assert( sz == eeprom_slots[id].size ); // TODO: do we need both?
+	ZEPTO_DEBUG_ASSERT( sz == eeprom_slots[id].size ); // TODO: do we need both?
 	if ( buff[0] == 1 )
 		hal_eeprom_read( data, sz, eeprom_slots[id].offset + 3 + sz );
 	else

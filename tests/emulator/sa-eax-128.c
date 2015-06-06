@@ -53,7 +53,7 @@ void eax_128_generate_P( const uint8_t* key, uint8_t * buff )
 
 void eax_128_pad_block( const uint8_t* key, const uint8_t * block_in, uint8_t sz, uint8_t* block_out )
 {
-	assert( sz <= 16 );
+	ZEPTO_DEBUG_ASSERT( sz <= 16 );
 	uint8_t p_b_buff[16];
 	uint8_t i;
 	if ( sz == 16 ) // full block
@@ -89,7 +89,7 @@ void eax_128_update_cbc( const uint8_t* key, const uint8_t* block, uint8_t* cbc 
 
 void eax_128_omac_t_of_single_block_message( const uint8_t* key, uint8_t t, const uint8_t* block_in, uint8_t sz, uint8_t* block_out )
 {
-	assert( sz <= 16 );
+	ZEPTO_DEBUG_ASSERT( sz <= 16 );
 	uint8_t t_blk[16];
 	memset( t_blk, 0, 16 );
 	t_blk[15] = t;
@@ -155,7 +155,7 @@ void eax_128_process_nonterminating_block_encr( const uint8_t* key, uint8_t* ctr
 
 void eax_128_process_terminating_block_encr( const uint8_t* key, uint8_t* ctr, const uint8_t* block_in, uint8_t sz, uint8_t* block_out, uint8_t* msg_cbc_val )
 {
-	assert( sz != 0 );
+	ZEPTO_DEBUG_ASSERT( sz != 0 );
 	uint8_t t_blk[16];
 	memcpy( t_blk, block_in, sz ); // just to ensure that a full-size block is formed
 	eax_128_ctr_encrypt_and_step_ctr( key, ctr, t_blk, block_out );
@@ -172,7 +172,7 @@ void eax_128_process_nonterminating_block_decr( const uint8_t* key, uint8_t* ctr
 
 void eax_128_process_terminating_block_decr( const uint8_t* key, uint8_t* ctr, const uint8_t* block_in, uint8_t sz, uint8_t* block_out, uint8_t* msg_cbc_val )
 {
-	assert( sz != 0 );
+	ZEPTO_DEBUG_ASSERT( sz != 0 );
 	// pad for omac
 	uint8_t t_blk[16];
 	eax_128_pad_block( key, block_in, sz, t_blk );

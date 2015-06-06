@@ -94,12 +94,12 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h )
 	{
 		case SACCP_PAIRING_RESPONSE:
 		{
-			assert( NULL == "Error: not implemented\n" );
+			ZEPTO_DEBUG_ASSERT( NULL == "Error: not implemented\n" );
 			break;
 		}
 		case SACCP_PROGRAMMING_RESPONSE:
 		{
-			assert( NULL == "Error: not implemented\n" );
+			ZEPTO_DEBUG_ASSERT( NULL == "Error: not implemented\n" );
 			break;
 		}
 		case SACCP_REPLY_OK:
@@ -111,10 +111,10 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h )
 			}*/
 			uint8_t is_truncated = packet_head & 0x8; // TODO: use bit field processing instead
 			uint16_t data_full_sz = packet_head >> 4;
-			assert( data_full_sz == zepto_parsing_remaining_bytes( &po ) ); // TODO: can it be not so?
+			ZEPTO_DEBUG_ASSERT( data_full_sz == zepto_parsing_remaining_bytes( &po ) ); // TODO: can it be not so?
 			if ( is_truncated != 0 ) // TODO: use bit field processing instead
 			{
-				assert( NULL == "Error: not implemented\n" );
+				ZEPTO_DEBUG_ASSERT( NULL == "Error: not implemented\n" );
 			}
 			if ( data_full_sz ) // TODO: is it legitimate to have here zero
 			{
@@ -137,14 +137,14 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h )
 						default_test_control_program_accept_reply( control_prog_state, first_byte & SAGDP_P_STATUS_MASK, &po1, frame_sz );
 #else // MASTER_ENABLE_ALT_TEST_MODE
 						// we are in the scope of commstack; prepare for sending to central unit
-						assert( zepto_parsing_remaining_bytes( &po ) == 0 ); // multi-frame responses are not yet implemented
+						ZEPTO_DEBUG_ASSERT( zepto_parsing_remaining_bytes( &po ) == 0 ); // multi-frame responses are not yet implemented
 						zepto_convert_part_of_request_to_response( mem_h, &po1, &po );
 						return SACCP_RET_PASS_TO_CENTRAL_UNIT;
 #endif // MASTER_ENABLE_ALT_TEST_MODE
 					}
 					else
 					{
-						assert( NULL == "error: not implemented" );
+						ZEPTO_DEBUG_ASSERT( NULL == "error: not implemented" );
 					}
 				}
 				while ( zepto_parsing_remaining_bytes( &po ) );
@@ -158,17 +158,17 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h )
 		}
 		case SACCP_REPLY_EXCEPTION:
 		{
-			assert( NULL == "Error: not implemented\n" );
+			ZEPTO_DEBUG_ASSERT( NULL == "Error: not implemented\n" );
 			break;
 		}
 		case SACCP_REPLY_ERROR:
 		{
-			assert( NULL == "Error: not implemented\n" );
+			ZEPTO_DEBUG_ASSERT( NULL == "Error: not implemented\n" );
 			break;
 		}
 		default:
 		{
-			assert( NULL == "Error: unexpected value of packet type\n" );
+			ZEPTO_DEBUG_ASSERT( NULL == "Error: unexpected value of packet type\n" );
 		}
 	}
 
@@ -220,7 +220,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 				// TODO: code below is HIGHLY temporary stub and should be replaced by the commented line above (with proper implementation of the respective function ASAP
 				// (for the sake of quick progress of mainstream development currently we assume that the value of body_part is within single +/- decimal digit)
 				uint16_t body_part = zepto_parse_encoded_uint16( &po );
-				assert( body_part < 128 );
+				ZEPTO_DEBUG_ASSERT( body_part < 128 );
 				body_part -= 64;
 
 				uint16_t data_sz = zepto_parse_encoded_uint16( &po );
@@ -291,12 +291,12 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 			case ZEPTOVM_OP_DECANDJMPIF:
 			case ZEPTOVM_OP_PARALLEL:
 			{
-				assert( NULL == "Error: not implemented\n" );
+				ZEPTO_DEBUG_ASSERT( NULL == "Error: not implemented\n" );
 				break;
 			}
 			default:
 			{
-				assert( NULL == "Error: unexpected value of packet type\n" );
+				ZEPTO_DEBUG_ASSERT( NULL == "Error: unexpected value of packet type\n" );
 			}
 		}
 	}
@@ -304,7 +304,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 
 /*	if ( explicit_exit_called )
 	{
-		assert( NULL == "Error: not implemented\n" );
+		ZEPTO_DEBUG_ASSERT( NULL == "Error: not implemented\n" );
 	}
 	else*/
 	{
@@ -321,7 +321,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 INLINE
 void form_error_packet( MEMORY_HANDLE mem_h, uint8_t error_code, uint8_t incoming_packet_status, sasp_nonce_type chain_id )
 {
-	assert( ( error_code & 0xF8 ) == 0 );
+	ZEPTO_DEBUG_ASSERT( ( error_code & 0xF8 ) == 0 );
 	if ( incoming_packet_status != SAGDP_P_STATUS_TERMINATING )
 	{
 		uint16_t body = error_code;
@@ -356,12 +356,12 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 	{
 		case SACCP_PAIRING:
 		{
-			assert( NULL == "Error: not implemented\n" );
+			ZEPTO_DEBUG_ASSERT( NULL == "Error: not implemented\n" );
 			break;
 		}
 		case SACCP_PROGRAMMING:
 		{
-			assert( NULL == "Error: not implemented\n" );
+			ZEPTO_DEBUG_ASSERT( NULL == "Error: not implemented\n" );
 			break;
 		}
 		case SACCP_NEW_PROGRAM:
@@ -396,13 +396,13 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 						}
 						case ENABLE_ZEPTOERR:
 						{
-							assert( NULL == "Error: not implemented\n" );
+							ZEPTO_DEBUG_ASSERT( NULL == "Error: not implemented\n" );
 							// TODO: read data according to 'sz'; process it
 							break;
 						}
 						default:
 						{
-							assert( NULL == "Error: unexpected value of extra header type\n" );
+							ZEPTO_DEBUG_ASSERT( NULL == "Error: unexpected value of extra header type\n" );
 						}
 					}
 				}
@@ -422,17 +422,17 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 		}
 		case SACCP_REPEAT_OLD_PROGRAM:
 		{
-			assert( NULL == "Error: not implemented\n" );
+			ZEPTO_DEBUG_ASSERT( NULL == "Error: not implemented\n" );
 			break;
 		}
 		case SACCP_REUSE_OLD_PROGRAM:
 		{
-			assert( NULL == "Error: not implemented\n" );
+			ZEPTO_DEBUG_ASSERT( NULL == "Error: not implemented\n" );
 			break;
 		}
 		default:
 		{
-			assert( NULL == "Error: unexpected value of packet type\n" );
+			ZEPTO_DEBUG_ASSERT( NULL == "Error: unexpected value of packet type\n" );
 		}
 	}
 }

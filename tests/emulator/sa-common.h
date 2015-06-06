@@ -22,7 +22,6 @@ Copyright (C) 2015 OLogN Technologies AG
 // common includes
 #include <memory.h> // for memcpy(), memset(), memcmp(). Note: their implementation may or may not be more effective than just by-byte operation on a particular target platform
 #include <string.h> // for memmove()
-#include <assert.h>
 
 #define SA_DEBUG
 
@@ -80,15 +79,35 @@ INLINE void memcpy( void* dest, const void* src, uint8_t cnt )
 
 // debug helpers
 
-#define DEBUG_PRINTING
-
 #ifdef DEBUG_PRINTING
 #include <stdio.h>
-#define PRINTF printf
+#define printf FORBIDDEN_CALL_USE_MACROS_INSTEAD
+#define ZEPTO_DEBUG_PRINTF_1( s ) fprintf( stdout, s )
+#define ZEPTO_DEBUG_PRINTF_2( s, x1 ) fprintf( stdout, s, x1 )
+#define ZEPTO_DEBUG_PRINTF_3( s, x1, x2 ) fprintf( stdout, s, x1, x2 )
+#define ZEPTO_DEBUG_PRINTF_4( s, x1, x2, x3 ) fprintf( stdout, s, x1, x2, x3 )
+#define ZEPTO_DEBUG_PRINTF_5( s, x1, x2, x3, x4 ) fprintf( stdout, s, x1, x2, x3, x4 )
+#define ZEPTO_DEBUG_PRINTF_6( s, x1, x2, x3, x4, x5 ) fprintf( stdout, s, x1, x2, x3, x4, x5 )
+#define ZEPTO_DEBUG_PRINTF_7( s, x1, x2, x3, x4, x5, x6 ) fprintf( stdout, s, x1, x2, x3, x4, x5, x6 )
 #else // DEBUG_PRINTING
-#define PRINTF
+#define printf FORBIDDEN_CALL_OF_PRINTF
+#define fprintf FORBIDDEN_CALL_OF_FPRINTF
+#define ZEPTO_DEBUG_PRINTF_1( s )
+#define ZEPTO_DEBUG_PRINTF_2( s, x1 )
+#define ZEPTO_DEBUG_PRINTF_3( s, x1, x2 )
+#define ZEPTO_DEBUG_PRINTF_4( s, x1, x2, x3 )
+#define ZEPTO_DEBUG_PRINTF_5( s, x1, x2, x3, x4 )
+#define ZEPTO_DEBUG_PRINTF_6( s, x1, x2, x3, x4, x5 )
+#define ZEPTO_DEBUG_PRINTF_7( s, x1, x2, x3, x4, x5, x6 )
 #endif // DEBUG_PRINTING
 
+#ifdef _DEBUG
+#include <assert.h>
+#define ZEPTO_DEBUG_ASSERT( x ) assert( x )
+#else
+#define assert FORBIDDEN_CALL_OF_ASSERT
+#define ZEPTO_DEBUG_ASSERT( x )
+#endif
 
 // counter system
 #define ENABLE_COUNTER_SYSTEM
@@ -110,10 +129,10 @@ void printCounters();
 #define TEST_CTR_SYSTEM
 #ifdef TEST_CTR_SYSTEM
 #define INCREMENT_COUNTER( i, name ) \
-	{if ( (COUNTERS[i]) != 0 ); else { assert( CTRS_NAMES[i] == NULL ); CTRS_NAMES[i] = name; } \
+	{if ( (COUNTERS[i]) != 0 ); else { ZEPTO_DEBUG_ASSERT( CTRS_NAMES[i] == NULL ); CTRS_NAMES[i] = name; } \
 	(COUNTERS[i])++;}
 #define INCREMENT_COUNTER_IF( i, name, cond ) \
-	{ if ( cond ) {if ( (COUNTERS[i]) != 0 ); else { assert( CTRS_NAMES[i] == NULL ); CTRS_NAMES[i] = name; } \
+	{ if ( cond ) {if ( (COUNTERS[i]) != 0 ); else { ZEPTO_DEBUG_ASSERT( CTRS_NAMES[i] == NULL ); CTRS_NAMES[i] = name; } \
 	(COUNTERS[i])++;} }
 #define UPDATE_MAX_COUNTER( i, name, val ) \
 	{CTRS_NAMES[i] = name; \

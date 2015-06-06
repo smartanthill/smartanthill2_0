@@ -85,9 +85,9 @@ void eeprom_write( uint8_t id, uint8_t* data, uint8_t size)
 	char filename[256];
 	prepareFileName( filename, id );
 	FILE* f = fopen( filename, "wb" );
-	assert( f );
+	ZEPTO_DEBUG_ASSERT( f );
 	int written = fwrite( data, 1, size, f );
-	assert( written == size );
+	ZEPTO_DEBUG_ASSERT( written == size );
 	fclose( f );
 }
 
@@ -96,9 +96,9 @@ void eeprom_read_fixed_size( uint8_t id, uint8_t* data, uint8_t size)
 	char filename[256];
 	prepareFileName( filename, id );
 	FILE* f = fopen( filename, "rb" );
-	assert( f );
+	ZEPTO_DEBUG_ASSERT( f );
 	int retrieved = fread ( data, 1, size, f );
-	assert( retrieved == size );
+	ZEPTO_DEBUG_ASSERT( retrieved == size );
 	fclose( f );
 }
 
@@ -107,7 +107,7 @@ uint8_t eeprom_read_size( uint8_t id )
 	char filename[256];
 	prepareFileName( filename, id );
 	FILE* f = fopen( filename, "wb" );
-	assert( f );
+	ZEPTO_DEBUG_ASSERT( f );
 	fseek ( f, 0, SEEK_END );
 	int size = ftell( f );
 	fclose( f );

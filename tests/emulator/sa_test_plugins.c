@@ -58,9 +58,10 @@ uint8_t default_test_plugin_handler_continue( const void* plugin_config, void* p
 	uint16_t msg_size = 11+varln+1;
 
 	// print outgoing packet
-	PRINTF( "Yocto: Packet sent    : [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", msg_size, ps->first_byte, ps->chain_id[0], ps->chain_id[1], ps->chain_ini_size, ps->reply_to_id, ps->self_id, tail );
+	ZEPTO_DEBUG_PRINTF_5( "Yocto: Packet sent    : [%d bytes]  [%d][0x%04x][0x%04x]",  msg_size, ps->first_byte, ps->chain_id[0], ps->chain_id[1] );
+	ZEPTO_DEBUG_PRINTF_5( "[0x%04x][0x%04x][0x%04x]%s\n", ps->chain_ini_size, ps->reply_to_id, ps->self_id, tail );
 
-	assert( msg_size >= 7 && msg_size <= 22 );
+	ZEPTO_DEBUG_ASSERT( msg_size >= 7 && msg_size <= 22 );
 
 	INCREMENT_COUNTER( 1, "slave_process(), packet sent" );
 
@@ -82,8 +83,8 @@ uint8_t default_test_plugin_handler( const void* plugin_config, void* plugin_sta
 		ps->first_byte = first_byte;
 		if ( ( ps->first_byte & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) == SAGDP_P_STATUS_ERROR_MSG )
 		{
-			PRINTF( "slave_process(): ERROR MESSAGE RECEIVED IN YOCTO\n" );
-			assert(0);
+			ZEPTO_DEBUG_PRINTF_1( "slave_process(): ERROR MESSAGE RECEIVED IN YOCTO\n" );
+			ZEPTO_DEBUG_ASSERT(0);
 		}
 
 		ps->chain_id[0] = zepto_parse_encoded_uint16( command );
@@ -97,29 +98,31 @@ uint8_t default_test_plugin_handler( const void* plugin_config, void* plugin_sta
 		tail[ tail_sz ] = 0;
 
 		// print packet
-		PRINTF( "Yocto: Packet received: [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", msg_size, ps->first_byte, ps->chain_id[0], ps->chain_id[1], ps->chain_ini_size, ps->reply_to_id, ps->self_id, tail );
+//		PRINTF( "Yocto: Packet received: [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", msg_size, ps->first_byte, ps->chain_id[0], ps->chain_id[1], ps->chain_ini_size, ps->reply_to_id, ps->self_id, tail );
+		ZEPTO_DEBUG_PRINTF_5( "Yocto: Packet received    : [%d bytes]  [%d][0x%04x][0x%04x]",  msg_size, ps->first_byte, ps->chain_id[0], ps->chain_id[1] );
+		ZEPTO_DEBUG_PRINTF_5( "[0x%04x][0x%04x][0x%04x]%s\n", ps->chain_ini_size, ps->reply_to_id, ps->self_id, tail );
 
 		// test and analyze
 
 		// size
 		if ( !( msg_size >= 7 && msg_size <= 22 ) )
-			printf( "ZEPTO: BAD PACKET RECEIVED\n", msg_size );
-		assert( msg_size >= 7 && msg_size <= 22 );
+			ZEPTO_DEBUG_PRINTF_2( "ZEPTO: BAD PACKET RECEIVED\n", msg_size );
+		ZEPTO_DEBUG_ASSERT( msg_size >= 7 && msg_size <= 22 );
 
 		// flags
-		assert( ( ps->first_byte & 4 ) == 0 );
+		ZEPTO_DEBUG_ASSERT( ( ps->first_byte & 4 ) == 0 );
 		ps->first_byte &= SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING; // to use only respective bits
 		if ( ps->first_byte == SAGDP_P_STATUS_FIRST )
 		{
-			assert( 0 == ps->reply_to_id );
-			assert( ps->chain_id[0] != ps->currChainID[0] || ps->chain_id[1] != ps->currChainID[1] );
+			ZEPTO_DEBUG_ASSERT( 0 == ps->reply_to_id );
+			ZEPTO_DEBUG_ASSERT( ps->chain_id[0] != ps->currChainID[0] || ps->chain_id[1] != ps->currChainID[1] );
 			ps->currChainID[0] = ps->chain_id[0];
 			ps->currChainID[1] = ps->chain_id[1];
 		}
 		else
 		{
-			assert( ps->last_sent_id == ps->reply_to_id );
-			assert( ps->chain_id[0] == ps->currChainID[0] && ps->chain_id[1] == ps->currChainID[1] );
+			ZEPTO_DEBUG_ASSERT( ps->last_sent_id == ps->reply_to_id );
+			ZEPTO_DEBUG_ASSERT( ps->chain_id[0] == ps->currChainID[0] && ps->chain_id[1] == ps->currChainID[1] );
 		}
 
 		if ( ps->first_byte == SAGDP_P_STATUS_TERMINATING )
@@ -156,7 +159,7 @@ uint8_t default_test_plugin_handler( const void* plugin_config, void* plugin_sta
 	}
 	else
 	{
-		assert( NULL == "unknown state\n" );
+		ZEPTO_DEBUG_ASSERT( NULL == "unknown state\n" );
 	}
 
 	return 0;

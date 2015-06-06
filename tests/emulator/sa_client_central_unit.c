@@ -36,8 +36,8 @@ int main_loop()
 #endif // ENABLE_COUNTER_SYSTEM
 
 		
-	printf("starting CLIENT...\n");
-	printf("==================\n\n");
+	ZEPTO_DEBUG_PRINTF_1("starting CLIENT...\n");
+	ZEPTO_DEBUG_PRINTF_1("==================\n\n");
 
 	tester_initTestSystem();
 
@@ -75,7 +75,7 @@ int main_loop()
 	memset( bu, 0, 40 );
 	zepto_parse_read_block( &po, bu, zepto_parsing_remaining_bytes( &po ) );
 	for ( int k=0;k<30; k++)
-		printf( "%c [0x%x]\n", bu[k], bu[k] );
+		ZEPTO_DEBUG_PRINTF_3( "%c [0x%x]\n", bu[k], bu[k] );
 	return 0;*/
 #else
 	uint8_t buff_base[] = {0x2, 0x0, 0x8, 0x1, 0x1, 0x2, 0x0, 0x1, '-', '-', '>' }; 
@@ -104,16 +104,16 @@ wait_for_comm_event:
 				ret_code = try_get_message_within_master( MEMORY_HANDLE_MAIN_LOOP );
 				if ( ret_code == COMMLAYER_RET_FAILED )
 					return 0;
-				assert( ret_code == COMMLAYER_RET_OK );
+				ZEPTO_DEBUG_ASSERT( ret_code == COMMLAYER_RET_OK );
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-				printf( "msg received; rq_size: %d, rsp_size: %d\n", ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
+				ZEPTO_DEBUG_PRINTF_3( "msg received; rq_size: %d, rsp_size: %d\n", ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 				goto process_reply;
 				break;
 			}
 			case COMMLAYER_RET_TIMEOUT:
 			{
 				// regular processing will be done below in the next block
-//				printf( "just waiting...\n" );
+//				ZEPTO_DEBUG_PRINTF_1( "just waiting...\n" );
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 				goto wait_for_comm_event;
 				break;
@@ -121,8 +121,8 @@ wait_for_comm_event:
 			default:
 			{
 				// unexpected ret_code
-				printf( "Unexpected ret_code %d received from wait_for_communication_event()\n", ret_code );
-				assert( 0 );
+				ZEPTO_DEBUG_PRINTF_2( "Unexpected ret_code %d received from wait_for_communication_event()\n", ret_code );
+				ZEPTO_DEBUG_ASSERT( 0 );
 				return 0;
 				break;
 			}
@@ -161,8 +161,8 @@ wait_for_comm_event:
 			default:
 			{
 				// unexpected ret_code
-				printf( "Unexpected ret_code %d\n", ret_code );
-				assert( 0 );
+				ZEPTO_DEBUG_PRINTF_2( "Unexpected ret_code %d\n", ret_code );
+				ZEPTO_DEBUG_ASSERT( 0 );
 				break;
 			}
 		}
@@ -175,15 +175,15 @@ process_reply:
 		zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
 		uint16_t sz = zepto_parsing_remaining_bytes( &po );
 		zepto_parse_read_block( &po, buff, sz );
-		printf( "block received:\n" );
+		ZEPTO_DEBUG_PRINTF_1( "block received:\n" );
 		for ( i=0; i<sz; i++ )
-			printf( "%02x ", buff[i] );
-		printf( "\n\n" );
+			ZEPTO_DEBUG_PRINTF_2( "%02x ", buff[i] );
+		ZEPTO_DEBUG_PRINTF_1( "\n\n" );
 
 #endif // MASTER_ENABLE_ALT_TEST_MODE
 
 send_command:
-		printf( "=============================================Msg is about to be sent; rq_size: %d, rsp_size: %d\n", ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
+		ZEPTO_DEBUG_PRINTF_3( "=============================================Msg is about to be sent; rq_size: %d, rsp_size: %d\n", ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 		send_to_commm_stack( MEMORY_HANDLE_MAIN_LOOP );
 	}
 

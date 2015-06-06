@@ -32,7 +32,7 @@ void calc_r_inv_neg_mod_inv( uint4096_t R, uint4096_t mod, uint4096_t& R_inv, ui
 {
 	uint4096_t q, r, r_prev, tmpu; 
 	int4096_t s, s_prev, t, t_prev, tmp;
-	assert( R > mod );
+	ZEPTO_DEBUG_ASSERT( R > mod );
 	r = mod;
 	r_prev = R;
 	s_prev = 1;
@@ -71,7 +71,7 @@ void calc_neg_mod_inv( uint4096_t R, uint4096_t mod, uint4096_t& mod_inv )
 {
 	uint4096_t q, r, r_prev, tmpu; 
 	int4096_t s, s_prev, t, t_prev, tmp;
-	assert( R > mod );
+	ZEPTO_DEBUG_ASSERT( R > mod );
 	r = mod;
 	r_prev = R;
 	s_prev = 1;
@@ -109,7 +109,7 @@ void calc_r_inv_neg_mod_inv_int( int R, int mod, int& R_inv, int& mod_inv )
 {
 	int q, r, r_prev, tmpu; 
 	int s, s_prev, t, t_prev, tmp;
-	assert( R > mod );
+	ZEPTO_DEBUG_ASSERT( R > mod );
 	r = mod;
 	r_prev = R;
 	s_prev = 1;
@@ -185,11 +185,6 @@ void exponentiate_m( uint4096_t mod, uint4096_t mod_inv, uint4096_t R, uint4096_
 			multiply_m( R, mod, mod_inv, res, x, res );
 //			res = res * x;
 //			res = res % mod;
-			if ( res == 0 )
-			{
-				printf( "res=0 at i=%d\n", i );
-				break;
-			}
 		}
 
 		exp = exp >> 1;
@@ -374,11 +369,11 @@ int clean_test()
 uint8_t calc_selector_factor_int( int mod )
 {
 	int low_bt = mod & 0x100;
-	assert( low_bt != 0 );
+	ZEPTO_DEBUG_ASSERT( low_bt != 0 );
 	for ( int i=1; i<256; i++ )
 		if ( ( ( low_bt * i ) & 0x100 ) == 1 )
 			return 256 - i;
-	assert( 0 );
+	ZEPTO_DEBUG_ASSERT( 0 );
 }
 
 void m_step_int( uint8_t bt_cnt, int mod, uint8_t sel_bt, int a, int b, int& res )
@@ -397,7 +392,7 @@ void m_step_int( uint8_t bt_cnt, int mod, uint8_t sel_bt, int a, int b, int& res
 		factor = low_bt * sel_bt;
 		temp = mod * factor;
 		accum = accum + temp;
-		assert( (accum &0x100) == 0 );
+		ZEPTO_DEBUG_ASSERT( (accum &0x100) == 0 );
 		accum = accum >> 8;
 	}
 }
@@ -419,12 +414,12 @@ void calc_num_prim_int( uint8_t bt_cnt, int mod, int pow2_2n_mod, uint8_t sel_bt
 uint8_t m_calc_selector_factor( uint4096_t mod )
 {
 	uint4096_t low_bt = mod & 0xff;
-	assert( low_bt != 0 );
+	ZEPTO_DEBUG_ASSERT( low_bt != 0 );
 	for ( int i=1; i<256; i++ )
 		if ( ( ( low_bt * i ) & 0xff ) == 1 )
 			return 256 - i;
 //			return i;
-	assert( 0 );
+	ZEPTO_DEBUG_ASSERT( 0 );
 }
 
 void m_step( uint8_t bt_cnt, uint4096_t mod, uint8_t sel_bt, uint4096_t a, uint4096_t b, uint4096_t& res )
@@ -433,8 +428,8 @@ void m_step( uint8_t bt_cnt, uint4096_t mod, uint8_t sel_bt, uint4096_t a, uint4
 	uint4096_t temp;
 	uint8_t i;
 	uint4096_t low_bt, factor;
-	assert( ( a >> ( bt_cnt * 8 ) ) == 0 );
-	assert( ( b >> ( bt_cnt * 8 ) ) == 0 );
+	ZEPTO_DEBUG_ASSERT( ( a >> ( bt_cnt * 8 ) ) == 0 );
+	ZEPTO_DEBUG_ASSERT( ( b >> ( bt_cnt * 8 ) ) == 0 );
 	for ( i = 0; i<bt_cnt; i++ )
 	{
 		low_bt = b & 0xff;
@@ -445,14 +440,14 @@ void m_step( uint8_t bt_cnt, uint4096_t mod, uint8_t sel_bt, uint4096_t a, uint4
 		factor = (low_bt * sel_bt) & 0xff;
 		temp = mod * factor;
 		accum = accum + temp;
-		assert( (accum & 0xff) == 0 );
+		ZEPTO_DEBUG_ASSERT( (accum & 0xff) == 0 );
 		accum = accum >> 8;
 	}
 
 	res = accum;
 
 	if ( res > mod ) res = res - mod;
-	assert( ( res >> ( bt_cnt * 8 ) ) == 0 );
+	ZEPTO_DEBUG_ASSERT( ( res >> ( bt_cnt * 8 ) ) == 0 );
 }
 
 
@@ -481,11 +476,11 @@ void m_step( uint8_t bt_cnt, uint4096_t mod, uint8_t sel_bt, uint4096_t a, uint4
 /*
 uint8_t m_accumulator_calc_selector_factor( uint8_t low_bt )
 {
-	assert( low_bt != 0 );
+	ZEPTO_DEBUG_ASSERT( low_bt != 0 );
 	for ( int i=1; i<256; i++ )
 		if ( ( ( low_bt * i ) & 0xff ) == 1 )
 			return 256 - i;
-	assert( 0 );
+	ZEPTO_DEBUG_ASSERT( 0 );
 }
 */
 
@@ -557,7 +552,7 @@ void m_accumulator_add_product( m_accumulator* accum, const uint8_t* bignum, uin
 	uint8_t i;
 	uint16_t pr;
 	uint16_t factor = bytefactor;
-	assert( accum->cell_ms <= 1 );
+	ZEPTO_DEBUG_ASSERT( accum->cell_ms <= 1 );
 	for ( i=0; i<M_BYTE_SIZE-1; i++ )
 	{
 		pr = factor * bignum[i]; 
@@ -592,7 +587,7 @@ void m_accumulator_do_modular_part( m_accumulator* accum, const uint8_t* mod, ui
 	factor *= (uint8_t)( accum->cells[ accum->offset ] );
 	factor = (uint8_t)factor;
 
-	assert( ( ( ( factor * mod[0] ) & 0xff ) + (uint8_t)( accum->cells[ accum->offset ] ) & 0xff ) == 0 );
+	ZEPTO_DEBUG_ASSERT( ( ( ( factor * mod[0] ) & 0xff ) + (uint8_t)( accum->cells[ accum->offset ] ) & 0xff ) == 0 );
 
 	accum->cells[ accum->offset ] = accum->cell_ms;
 	accum->cell_ms = 0;
@@ -608,8 +603,8 @@ void m_accumulator_do_modular_part( m_accumulator* accum, const uint8_t* mod, ui
 		accum->cells[ ( accum->offset + i + 1 ) & ( M_BYTE_SIZE - 1 ) ] += (uint8_t)(pr >> 8);
 	}
 
-//	assert( accum->cell_ms <= 1 );
-	assert( accum->cell_ms == 0 );
+//	ZEPTO_DEBUG_ASSERT( accum->cell_ms <= 1 );
+	ZEPTO_DEBUG_ASSERT( accum->cell_ms == 0 );
 }
 
 #ifdef M_ALLOW_NEGATIVES
@@ -620,10 +615,10 @@ void m_accumulator_normalize( m_accumulator* accum )
 {
 	uint8_t i;
 	uint16_t tmp = 0, tmp1 = 0;
-	assert( accum->cell_ms <= 1 );
+	ZEPTO_DEBUG_ASSERT( accum->cell_ms <= 1 );
 	for ( i=0; i<M_BYTE_SIZE; i++ )
 	{
-//		assert( accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ] >= 0 && accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ] <= (int16_t)0x7F00 );
+//		ZEPTO_DEBUG_ASSERT( accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ] >= 0 && accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ] <= (int16_t)0x7F00 );
 		tmp += (uint8_t)(accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ]);
 		tmp1 = (accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ]) >> 8;
 		accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ] = (uint8_t)tmp;
@@ -632,16 +627,16 @@ void m_accumulator_normalize( m_accumulator* accum )
 	}
 /*	tmp += accum->cell_ms;
 	accum->cell_ms = (uint8_t)tmp;
-	assert( accum->cell_ms == 0 || accum->cell_ms == 1 );
-	assert( ( tmp >>= 8 ) == 0 );
-	assert( accum->cell_ms <= 1 );*/
+	ZEPTO_DEBUG_ASSERT( accum->cell_ms == 0 || accum->cell_ms == 1 );
+	ZEPTO_DEBUG_ASSERT( ( tmp >>= 8 ) == 0 );
+	ZEPTO_DEBUG_ASSERT( accum->cell_ms <= 1 );*/
 	tmp += (uint8_t)(accum->cell_ms);
 	tmp1 = (accum->cell_ms) >> 8;
 	accum->cell_ms = (uint8_t)tmp;
 	tmp >>= 8;
 	tmp += tmp1;
-	assert( tmp == 0 );
-	assert( accum->cell_ms <= 1 );
+	ZEPTO_DEBUG_ASSERT( tmp == 0 );
+	ZEPTO_DEBUG_ASSERT( accum->cell_ms <= 1 );
 }
 
 #ifdef M_ALLOW_NEGATIVES
@@ -651,14 +646,14 @@ void m_accumulator_normalize_expect_negative( m_accumulator* accum )
 	uint16_t tmp = 0;
 	for ( i=0; i<M_BYTE_SIZE; i++ )
 	{
-		assert( accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ] >= -(int16_t)0x7F00 && accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ] <= (int16_t)0x7F00 );
+		ZEPTO_DEBUG_ASSERT( accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ] >= -(int16_t)0x7F00 && accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ] <= (int16_t)0x7F00 );
 		tmp += accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ];
 		accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ] = (uint8_t)tmp;
 		tmp >>= 8;
 	}
 	tmp += accum->cell_ms;
 	accum->cell_ms = (uint8_t)tmp;
-	assert( ( tmp >>= 8 ) == 0 );
+	ZEPTO_DEBUG_ASSERT( ( tmp >>= 8 ) == 0 );
 }
 #endif
 
@@ -666,8 +661,8 @@ void m_accumulator_make_compact( const m_accumulator* accum, uint8_t* buff )
 {
 	uint8_t i;
 	uint16_t tmp = 0;
-	assert( accum->cell_ms == 0 );
-	assert( ( accum->cells[ ( accum->offset + M_BYTE_SIZE - 1 ) & ( M_BYTE_SIZE - 1 ) ] >> 8 ) == 0 );
+	ZEPTO_DEBUG_ASSERT( accum->cell_ms == 0 );
+	ZEPTO_DEBUG_ASSERT( ( accum->cells[ ( accum->offset + M_BYTE_SIZE - 1 ) & ( M_BYTE_SIZE - 1 ) ] >> 8 ) == 0 );
 	for ( i=0; i<M_BYTE_SIZE; i++ )
 	{
 		tmp += (uint8_t)( accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ] );
@@ -676,7 +671,7 @@ void m_accumulator_make_compact( const m_accumulator* accum, uint8_t* buff )
 		tmp += ( accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ] ) >> 8;
 	}
 
-//	assert( tmp == 0 );
+//	ZEPTO_DEBUG_ASSERT( tmp == 0 );
 
 
 
@@ -687,7 +682,7 @@ void m_accumulator_make_compact( const m_accumulator* accum, uint8_t* buff )
 	tmp += (accum->cell_ms) >> 8;
 	buff[M_BYTE_SIZE+1] = (uint8_t)tmp; 
 	buff[M_BYTE_SIZE+2] = (uint8_t)(tmp>>8); 
-	assert( M_BYTE_SIZE_EXTRA == M_BYTE_SIZE + 3 ); // otherwise set the rest to 0*/
+	ZEPTO_DEBUG_ASSERT( M_BYTE_SIZE_EXTRA == M_BYTE_SIZE + 3 ); // otherwise set the rest to 0*/
 }
 
 void m_accumulator_subtract_mod_unconditionally_and_make_compact( const m_accumulator* accum, const uint8_t* mod, uint8_t* buff )
@@ -696,15 +691,15 @@ void m_accumulator_subtract_mod_unconditionally_and_make_compact( const m_accumu
 	uint16_t tmp;
 //	uint8_t t1;
 
-//	assert( accum->cell_ms <= 1 );
-	assert( accum->cell_ms == 0 );
-	assert( mod[0] != 0 );
+//	ZEPTO_DEBUG_ASSERT( accum->cell_ms <= 1 );
+	ZEPTO_DEBUG_ASSERT( accum->cell_ms == 0 );
+	ZEPTO_DEBUG_ASSERT( mod[0] != 0 );
 
 	tmp = (uint16_t)(uint8_t)( accum->cells[ ( accum->offset ) & ( M_BYTE_SIZE - 1 ) ] ) + ( 0x100 - (uint16_t)(mod[0]) );
 //	t1 = (uint8_t)( accum->cells[ ( accum->offset ) & ( M_BYTE_SIZE - 1 ) ] >> 8 );
 	buff[0] = (uint8_t)(tmp);
 	tmp >>= 8;
-	assert( tmp <= 1 );
+	ZEPTO_DEBUG_ASSERT( tmp <= 1 );
 
 	for ( i=1; i<M_BYTE_SIZE; i++ )
 	{
@@ -714,8 +709,8 @@ void m_accumulator_subtract_mod_unconditionally_and_make_compact( const m_accumu
 		buff[i] = (uint8_t)tmp; 
 		tmp >>= 8;
 	}
-//	assert( tmp == 1 );
-	assert( tmp <= 1 );
+//	ZEPTO_DEBUG_ASSERT( tmp == 1 );
+	ZEPTO_DEBUG_ASSERT( tmp <= 1 );
 }
 
 void m_accumulator_subtract_mod_if_greater_eq_than_mod( const uint8_t* mod, uint8_t* buff )
@@ -740,16 +735,16 @@ void m_accumulator_subtract_mod_if_greater_eq_than_mod( const uint8_t* mod, uint
 		buff[i] = (uint8_t)(tmp);
 		tmp >>= 8;
 	}
-//	assert( tmp == 1 );
-	assert( tmp <= 1 );
+//	ZEPTO_DEBUG_ASSERT( tmp == 1 );
+	ZEPTO_DEBUG_ASSERT( tmp <= 1 );
 }
 
 void m_accumulator_subtract_mod_if_necessary_and_make_compact( const m_accumulator* accum, const uint8_t* mod, uint8_t* buff )
 {
 	uint8_t i;
 	uint16_t tmp = 0;
-	assert( accum->cell_ms == 0 );
-	assert( ( accum->cells[ ( accum->offset + M_BYTE_SIZE - 1 ) & ( M_BYTE_SIZE - 1 ) ] >> 8 ) == 0 );
+	ZEPTO_DEBUG_ASSERT( accum->cell_ms == 0 );
+	ZEPTO_DEBUG_ASSERT( ( accum->cells[ ( accum->offset + M_BYTE_SIZE - 1 ) & ( M_BYTE_SIZE - 1 ) ] >> 8 ) == 0 );
 	for ( i=0; i<M_BYTE_SIZE; i++ )
 	{
 		tmp += (uint8_t)( accum->cells[ ( accum->offset + i ) & ( M_BYTE_SIZE - 1 ) ] );
@@ -783,8 +778,8 @@ void m_accumulator_subtract_mod_if_necessary_and_make_compact( const m_accumulat
 		buff[i] = (uint8_t)(tmp);
 		tmp >>= 8;
 	}
-//	assert( tmp == 1 );
-	assert( tmp <= 1 );
+//	ZEPTO_DEBUG_ASSERT( tmp == 1 );
+	ZEPTO_DEBUG_ASSERT( tmp <= 1 );
 }
 
 bool m_accumulator_is_greater_eq_than_mod( const uint8_t* mod, const uint8_t* buff )
@@ -815,8 +810,8 @@ void m_accumulator_m_step( m_accumulator* accum, const uint8_t* mod, uint8_t inv
 	m_accumulator_to_BOOST( mod, &mod_b );
 	m_accumulator_to_BOOST( a, &a_b );
 	m_accumulator_to_BOOST( b, &b_b );
-	assert( ( a_b >> ( M_BYTE_SIZE * 8 ) ) == 0 );
-	assert( ( b_b >> ( M_BYTE_SIZE * 8 ) ) == 0 );
+	ZEPTO_DEBUG_ASSERT( ( a_b >> ( M_BYTE_SIZE * 8 ) ) == 0 );
+	ZEPTO_DEBUG_ASSERT( ( b_b >> ( M_BYTE_SIZE * 8 ) ) == 0 );
 /*	for ( i = 0; i<M_BYTE_SIZE; i++ )
 	{
 		low_bt = b_b & 0xff;
@@ -827,14 +822,14 @@ void m_accumulator_m_step( m_accumulator* accum, const uint8_t* mod, uint8_t inv
 		factor = (low_bt * inverter) & 0xff;
 		temp_b = mod_b * factor;
 		accum_b = accum_b + temp_b;
-		assert( (accum_b & 0xff) == 0 );
+		ZEPTO_DEBUG_ASSERT( (accum_b & 0xff) == 0 );
 		accum_b = accum_b >> 8;
 	}*/
 /*
 	res_b = accum_b;
 
 	if ( res_b > mod_b ) res_b = res_b - mod_b;
-	assert( ( res_b >> ( M_BYTE_SIZE * 8 ) ) == 0 );
+	ZEPTO_DEBUG_ASSERT( ( res_b >> ( M_BYTE_SIZE * 8 ) ) == 0 );
 	*/
 #endif
 
@@ -852,7 +847,7 @@ void m_accumulator_m_step( m_accumulator* accum, const uint8_t* mod, uint8_t inv
 		temp_b = a_b * low_bt;
 		accum_b = accum_b + temp_b;
 		m_accumulator_ACCUMULATOR_to_BOOST( accum, &accum_alt );
-		assert( accum_b == accum_alt );
+		ZEPTO_DEBUG_ASSERT( accum_b == accum_alt );
 #endif
 		m_accumulator_do_modular_part( accum, mod, inverter );
 #ifdef M_ACCUMULATOR_CHECK_BLOCK
@@ -860,15 +855,15 @@ void m_accumulator_m_step( m_accumulator* accum, const uint8_t* mod, uint8_t inv
 		factor = (low_bt * inverter) & 0xff;
 		temp_b = mod_b * factor;
 		accum_b = accum_b + temp_b;
-		assert( (accum_b & 0xff) == 0 );
+		ZEPTO_DEBUG_ASSERT( (accum_b & 0xff) == 0 );
 		accum_b = accum_b >> 8;
 		m_accumulator_ACCUMULATOR_to_BOOST( accum, &accum_alt );
-		assert( accum_b == accum_alt );
+		ZEPTO_DEBUG_ASSERT( accum_b == accum_alt );
 #endif
 	}
 	m_accumulator_normalize( accum );
 #ifdef M_ACCUMULATOR_CHECK_BLOCK
-		assert( accum_b == accum_alt );
+		ZEPTO_DEBUG_ASSERT( accum_b == accum_alt );
 #endif
 	for ( i = 16; i<M_BYTE_SIZE; i++ )
 	{
@@ -879,7 +874,7 @@ void m_accumulator_m_step( m_accumulator* accum, const uint8_t* mod, uint8_t inv
 		temp_b = a_b * low_bt;
 		accum_b = accum_b + temp_b;
 		m_accumulator_ACCUMULATOR_to_BOOST( accum, &accum_alt );
-		assert( accum_b == accum_alt );
+		ZEPTO_DEBUG_ASSERT( accum_b == accum_alt );
 #endif
 		m_accumulator_do_modular_part( accum, mod, inverter );
 #ifdef M_ACCUMULATOR_CHECK_BLOCK
@@ -887,10 +882,10 @@ void m_accumulator_m_step( m_accumulator* accum, const uint8_t* mod, uint8_t inv
 		factor = (low_bt * inverter) & 0xff;
 		temp_b = mod_b * factor;
 		accum_b = accum_b + temp_b;
-		assert( (accum_b & 0xff) == 0 );
+		ZEPTO_DEBUG_ASSERT( (accum_b & 0xff) == 0 );
 		accum_b = accum_b >> 8;
 		m_accumulator_ACCUMULATOR_to_BOOST( accum, &accum_alt );
-		assert( accum_b == accum_alt );
+		ZEPTO_DEBUG_ASSERT( accum_b == accum_alt );
 #endif
 	}
 #elif M_BYTE_SIZE >= 64
@@ -906,42 +901,42 @@ void m_accumulator_m_step( m_accumulator* accum, const uint8_t* mod, uint8_t inv
 		m_accumulator_subtract_mod_unconditionally_and_make_compact( accum, mod, res );
 #ifdef M_ACCUMULATOR_CHECK_BLOCK
 		res_b = accum_b;
-		assert( res_b >= mod_b );
+		ZEPTO_DEBUG_ASSERT( res_b >= mod_b );
 		res_b = res_b - mod_b;
-		assert( ( res_b >> ( M_BYTE_SIZE * 8 ) ) == 0 );
+		ZEPTO_DEBUG_ASSERT( ( res_b >> ( M_BYTE_SIZE * 8 ) ) == 0 );
 		m_accumulator_to_BOOST( res, &accum_alt );
 		if ( accum_b != accum_alt )
 			accum_b == accum_alt;
-		assert( res_b == accum_alt );
+		ZEPTO_DEBUG_ASSERT( res_b == accum_alt );
 #endif
 	}
 	else
 	{
-		assert( ( accum->cells[ ( accum->offset + M_BYTE_SIZE - 1 ) & ( M_BYTE_SIZE - 1 ) ] >> 8 ) == 0 );
+		ZEPTO_DEBUG_ASSERT( ( accum->cells[ ( accum->offset + M_BYTE_SIZE - 1 ) & ( M_BYTE_SIZE - 1 ) ] >> 8 ) == 0 );
 
 		m_accumulator_subtract_mod_if_necessary_and_make_compact( accum, mod, res );
 
 //		m_accumulator_make_compact( accum, res );
 #ifdef M_ACCUMULATOR_CHECK_BLOCK
 /*		m_accumulator_to_BOOST( res, &accum_alt );
-		assert( accum_b == accum_alt );
+		ZEPTO_DEBUG_ASSERT( accum_b == accum_alt );
 #endif
 		m_accumulator_subtract_mod_if_greater_eq_than_mod( mod, res );
 #ifdef M_ACCUMULATOR_CHECK_BLOCK*/
 		res_b = accum_b;
-		assert( res_b != mod_b );
+		ZEPTO_DEBUG_ASSERT( res_b != mod_b );
 		if ( res_b >= mod_b )
 			res_b = res_b - mod_b;
 		m_accumulator_to_BOOST( res, &accum_alt );
 		if ( res_b != accum_alt )
 			i++;
-		assert( res_b == accum_alt );
-		assert( res_b < mod_b );
+		ZEPTO_DEBUG_ASSERT( res_b == accum_alt );
+		ZEPTO_DEBUG_ASSERT( res_b < mod_b );
 #endif
-		assert( !m_accumulator_is_greater_eq_than_mod( mod, res ) );
+		ZEPTO_DEBUG_ASSERT( !m_accumulator_is_greater_eq_than_mod( mod, res ) );
 /*		if ( !m_accumulator_is_greater_eq_than_mod( mod, res ) )
 			m_accumulator_subtract_mod_if_greater_eq_than_mod( mod, res );
-		assert( !m_accumulator_is_greater_eq_than_mod( mod, res ) );*/
+		ZEPTO_DEBUG_ASSERT( !m_accumulator_is_greater_eq_than_mod( mod, res ) );*/
 	}
 }
 
@@ -1129,7 +1124,7 @@ int test_approach_3()
 	// check validity of convertions
 	uint4096_t tempo;
 	m_accumulator_to_BOOST( modn, &tempo );
-	assert( tempo == mod );
+	ZEPTO_DEBUG_ASSERT( tempo == mod );
 
 	// block 1: using M-mul and boost
 	m_calc_num_prim( bt_cnt, mod, pow2_2n_mod, sel_bt, x, x_prim );
@@ -1169,8 +1164,8 @@ int quick_test()
 		if ( (mod&0xff) == 0 )
 			continue;
 		diff1 = 0x10000 - mod;
-		assert( ( (diff1&0xff) == (0x100 - (uint8_t)mod) ) );
-		assert( ( ((diff1>>8)&0xff) == (0xff - (uint8_t)(mod>>8)) ) );
+		ZEPTO_DEBUG_ASSERT( ( (diff1&0xff) == (0x100 - (uint8_t)mod) ) );
+		ZEPTO_DEBUG_ASSERT( ( ((diff1>>8)&0xff) == (0xff - (uint8_t)(mod>>8)) ) );
 	}
 
 	for ( mod = 0xc6a6; mod<0x10000&&mod<base; mod ++ )
@@ -1189,7 +1184,7 @@ int quick_test()
 
 		if ( diff1 != diff2 )
 			printf( "failed at %d (%x)\n", mod, mod );
-		assert( diff1 == diff2 );
+		ZEPTO_DEBUG_ASSERT( diff1 == diff2 );
 	}
 
 	return 0;

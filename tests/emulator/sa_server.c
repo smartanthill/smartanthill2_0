@@ -59,8 +59,8 @@ int main_loop()
 #endif // ENABLE_COUNTER_SYSTEM
 
 		
-	printf("STARTING SERVER...\n");
-	printf("==================\n\n");
+	ZEPTO_DEBUG_PRINTF_1("STARTING SERVER...\n");
+	ZEPTO_DEBUG_PRINTF_1("==================\n\n");
 
 	// TODO: actual key loading, etc
 	uint8_t sasp_key[16];
@@ -107,11 +107,11 @@ int main_loop()
 	void zepto_vm_init();
 
 
-	printf("\nAwaiting client connection... \n" );
+	ZEPTO_DEBUG_PRINTF_1("\nAwaiting client connection... \n" );
 	if (!communication_initialize())
 		return -1;
 
-	printf("Client connected.\n");
+	ZEPTO_DEBUG_PRINTF_1("Client connected.\n");
 
 	// MAIN LOOP
 	for (;;)
@@ -120,7 +120,7 @@ getmsg:
 #if MODEL_IN_EFFECT == 1
 		if ( wait_to_continue_processing && getTime() >= wake_time_continue_processing )
 		{
-printf( "Processing continued...\n" );
+ZEPTO_DEBUG_PRINTF_1( "Processing continued...\n" );
 			INCREMENT_COUNTER( 98, "MAIN LOOP, continuing processing" );
 			wait_to_continue_processing = 0;
 #ifdef USED_AS_MASTER
@@ -140,7 +140,7 @@ printf( "Processing continued...\n" );
 		// 1. Get message from comm peer
 /*		ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-		assert( ret_code != COMMLAYER_RET_OK || ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ) != 0 );*/
+		ZEPTO_DEBUG_ASSERT( ret_code != COMMLAYER_RET_OK || ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ) != 0 );*/
 		ret_code = COMMLAYER_RET_PENDING;
 		INCREMENT_COUNTER_IF( 91, "MAIN LOOP, packet received [1]", ret_code == COMMLAYER_RET_OK );
 		while ( ret_code == COMMLAYER_RET_PENDING )
@@ -153,7 +153,7 @@ wait_for_comm_event:
 //			ret_code = wait_for_communication_event( 1000 ); // TODO: recalculation
 			ret_code = hal_wait_for( &wait_for );
 			zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-//			printf( "=============================================Msg wait event; ret = %d, rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
+//			ZEPTO_DEBUG_PRINTF_4( "=============================================Msg wait event; ret = %d, rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
 			switch ( ret_code )
 			{
@@ -169,7 +169,7 @@ wait_for_comm_event:
 					ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP );
 					if ( ret_code == COMMLAYER_RET_FAILED )
 						return 0;
-					assert( ret_code == COMMLAYER_RET_OK );
+					ZEPTO_DEBUG_ASSERT( ret_code == COMMLAYER_RET_OK );
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 					goto sauudp_rec;
 					break;
@@ -178,7 +178,7 @@ wait_for_comm_event:
 				{
 //					if ( sagdp_data.event_type ) //TODO: temporary solution
 					{
-//						printf( "no reply received; the last message (if any) will be resent by timer\n" );
+//						ZEPTO_DEBUG_PRINTF_1( "no reply received; the last message (if any) will be resent by timer\n" );
 						sa_get_time( &(currt) );
 						ret_code = handler_sagdp_timer( &currt, &wait_for, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 						if ( ret_code == SAGDP_RET_OK )
@@ -189,18 +189,18 @@ wait_for_comm_event:
 						else if ( ret_code == SAGDP_RET_NEED_NONCE )
 						{
 							ret_code = handler_sasp_get_packet_id( nonce, SASP_NONCE_SIZE, &sasp_data );
-							assert( ret_code == SASP_RET_NONCE );
+							ZEPTO_DEBUG_ASSERT( ret_code == SASP_RET_NONCE );
 							sa_get_time( &(currt) );
 							ret_code = handler_sagdp_timer( &currt, &wait_for, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
-							assert( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_OK );
+							ZEPTO_DEBUG_ASSERT( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_OK );
 							zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 							goto saspsend;
 							break;
 						}
 						else
 						{
-							printf( "ret_code = %d\n", ret_code );
-							assert( 0 );
+							ZEPTO_DEBUG_PRINTF_2( "ret_code = %d\n", ret_code );
+							ZEPTO_DEBUG_ASSERT( 0 );
 						}
 					}
 					goto wait_for_comm_event;
@@ -209,8 +209,8 @@ wait_for_comm_event:
 				default:
 				{
 					// unexpected ret_code
-					printf( "Unexpected ret_code %d\n", ret_code );
-					assert( 0 );
+					ZEPTO_DEBUG_PRINTF_2( "Unexpected ret_code %d\n", ret_code );
+					ZEPTO_DEBUG_ASSERT( 0 );
 					break;
 				}
 			}
@@ -219,7 +219,7 @@ wait_for_comm_event:
 #if MODEL_IN_EFFECT == 1
 			if ( wait_to_continue_processing && getTime() >= wake_time_continue_processing )
 			{
-printf( "Processing continued...\n" );
+ZEPTO_DEBUG_PRINTF_1( "Processing continued...\n" );
 				INCREMENT_COUNTER( 98, "MAIN LOOP, continuing processing" );
 				wait_to_continue_processing = 0;
 #ifdef USED_AS_MASTER
@@ -239,7 +239,7 @@ printf( "Processing continued...\n" );
 //			if ( tact.action )
 			if ( sagdp_data.event_type ) //TODO: temporary solution
 			{
-				printf( "no reply received; the last message (if any) will be resent by timer\n" );
+				ZEPTO_DEBUG_PRINTF_1( "no reply received; the last message (if any) will be resent by timer\n" );
 				sa_get_time( &(currt) );
 				ret_code = handler_sagdp_timer( &currt, &wait_for, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 				if ( ret_code == SAGDP_RET_OK )
@@ -250,19 +250,19 @@ printf( "Processing continued...\n" );
 				else if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
 					ret_code = handler_sasp_get_packet_id( nonce, SASP_NONCE_SIZE, &sasp_data );
-					assert( ret_code == SASP_RET_NONCE );
+					ZEPTO_DEBUG_ASSERT( ret_code == SASP_RET_NONCE );
 					sa_get_time( &(currt) );
 					ret_code = handler_sagdp_timer( &currt, &wait_for, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
-		printf( "ret_code = %d\n", ret_code );
-					assert( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_OK );
+		ZEPTO_DEBUG_PRINTF_2( "ret_code = %d\n", ret_code );
+					ZEPTO_DEBUG_ASSERT( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_OK );
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 					goto saspsend;
 					break;
 				}
 				else
 				{
-					printf( "ret_code = %d\n", ret_code );
-					assert( 0 );
+					ZEPTO_DEBUG_PRINTF_2( "ret_code = %d\n", ret_code );
+					ZEPTO_DEBUG_ASSERT( 0 );
 				}
 			}
 			else if ( wait_for_incoming_chain_with_timer && getTime() >= wake_time_to_start_new_chain )
@@ -282,17 +282,17 @@ printf( "Processing continued...\n" );
 			ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP );
 			zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 			INCREMENT_COUNTER_IF( 92, "MAIN LOOP, packet received [2]", ret_code == COMMLAYER_RET_OK );
-			assert( ret_code != COMMLAYER_RET_OK || ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ) != 0 );*/
+			ZEPTO_DEBUG_ASSERT( ret_code != COMMLAYER_RET_OK || ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ) != 0 );*/
 		}
 		if ( ret_code != COMMLAYER_RET_OK )
 		{
-			printf("\n\nWAITING FOR ESTABLISHING COMMUNICATION WITH SERVER...\n\n");
+			ZEPTO_DEBUG_PRINTF_1("\n\nWAITING FOR ESTABLISHING COMMUNICATION WITH SERVER...\n\n");
 			if (!communication_initialize()) // regardles of errors... quick and dirty solution so far
 				return -1;
 			goto getmsg;
 		}
-		printf("Message from client received\n");
-		printf( "ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
+		ZEPTO_DEBUG_PRINTF_1("Message from client received\n");
+		ZEPTO_DEBUG_PRINTF_4( "ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
 
 		// 2.1. Pass to SAoUDP
@@ -310,8 +310,8 @@ sauudp_rec:
 			default:
 			{
 				// unexpected ret_code
-				printf( "Unexpected ret_code %d\n", ret_code );
-				assert( 0 );
+				ZEPTO_DEBUG_PRINTF_2( "Unexpected ret_code %d\n", ret_code );
+				ZEPTO_DEBUG_ASSERT( 0 );
 				break;
 			}
 		}
@@ -320,13 +320,13 @@ sauudp_rec:
 		// 2.2. Pass to SASP
 		ret_code = handler_sasp_receive( sasp_key, pid, MEMORY_HANDLE_MAIN_LOOP, &sasp_data );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-		printf( "SASP1:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
+		ZEPTO_DEBUG_PRINTF_4( "SASP1:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
 		switch ( ret_code )
 		{
 			case SASP_RET_IGNORE:
 			{
-				printf( "BAD MESSAGE_RECEIVED\n" );
+				ZEPTO_DEBUG_PRINTF_1( "BAD MESSAGE_RECEIVED\n" );
 				goto getmsg;
 				break;
 			}
@@ -342,7 +342,7 @@ sauudp_rec:
 			}
 			case SASP_RET_TO_HIGHER_LAST_SEND_FAILED: // as a result of error-old-nonce
 			{
-				printf( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
+				ZEPTO_DEBUG_PRINTF_1( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
 				sa_get_time( &(currt) );
 				ret_code = handler_sagdp_receive_request_resend_lsp( &currt, &wait_for, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
 				if ( ret_code == SAGDP_RET_TO_LOWER_NONE )
@@ -353,10 +353,10 @@ sauudp_rec:
 				if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
 					ret_code = handler_sasp_get_packet_id( nonce, SASP_NONCE_SIZE, &sasp_data );
-					assert( ret_code == SASP_RET_NONCE );
+					ZEPTO_DEBUG_ASSERT( ret_code == SASP_RET_NONCE );
 					sa_get_time( &(currt) );
 					ret_code = handler_sagdp_receive_request_resend_lsp( &currt, &wait_for, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
-					assert( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_TO_LOWER_NONE );
+					ZEPTO_DEBUG_ASSERT( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_TO_LOWER_NONE );
 				}
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 				goto saspsend;
@@ -365,8 +365,8 @@ sauudp_rec:
 			default:
 			{
 				// unexpected ret_code
-				printf( "Unexpected ret_code %d\n", ret_code );
-				assert( 0 );
+				ZEPTO_DEBUG_PRINTF_2( "Unexpected ret_code %d\n", ret_code );
+				ZEPTO_DEBUG_ASSERT( 0 );
 				break;
 			}
 		}
@@ -380,25 +380,25 @@ sauudp_rec:
 			// TODO: do remaining reinitialization
 			sa_get_time( &(currt) );
 			ret_code = handler_sagdp_receive_up( &currt, &wait_for, NULL, pid, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
-			assert( ret_code != SAGDP_RET_START_OVER_FIRST_RECEIVED );
+			ZEPTO_DEBUG_ASSERT( ret_code != SAGDP_RET_START_OVER_FIRST_RECEIVED );
 		}
 		else if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
 			ret_code = handler_sasp_get_packet_id( nonce, SASP_NONCE_SIZE, &sasp_data );
-			assert( ret_code == SASP_RET_NONCE );
+			ZEPTO_DEBUG_ASSERT( ret_code == SASP_RET_NONCE );
 			sa_get_time( &(currt) );
 			ret_code = handler_sagdp_receive_up( &currt, &wait_for, nonce, pid, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
-			assert( ret_code != SAGDP_RET_NEED_NONCE );
+			ZEPTO_DEBUG_ASSERT( ret_code != SAGDP_RET_NEED_NONCE );
 		}
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-		printf( "SAGDP1: ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
+		ZEPTO_DEBUG_PRINTF_4( "SAGDP1: ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
 		switch ( ret_code )
 		{
 #ifdef USED_AS_MASTER
 			case SAGDP_RET_OK:
 			{
-				printf( "master received unexpected packet. ignored\n" );
+				ZEPTO_DEBUG_PRINTF_1( "master received unexpected packet. ignored\n" );
 				goto getmsg;
 				break;
 			}
@@ -428,8 +428,8 @@ sauudp_rec:
 			default:
 			{
 				// unexpected ret_code
-				printf( "Unexpected ret_code %d\n", ret_code );
-				assert( 0 );
+				ZEPTO_DEBUG_PRINTF_2( "Unexpected ret_code %d\n", ret_code );
+				ZEPTO_DEBUG_ASSERT( 0 );
 				break;
 			}
 		}
@@ -441,7 +441,7 @@ processcmd:
 /*		if ( ret_code == YOCTOVM_RESET_STACK )
 		{
 			sagdp_init( &sagdp_data );
-			printf( "slave_process(): ret_code = YOCTOVM_RESET_STACK\n" );
+			ZEPTO_DEBUG_PRINTF_1( "slave_process(): ret_code = YOCTOVM_RESET_STACK\n" );
 			// TODO: reinit the rest of stack (where applicable)
 			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
 		}*/
@@ -449,9 +449,9 @@ processcmd:
 entry:
 		wait_for_incoming_chain_with_timer = false;
 		if ( ret_code == YOCTOVM_WAIT_TO_CONTINUE )
-			printf( "YOCTO:  ret: %d; waiting to continue ...\n", ret_code );
+			ZEPTO_DEBUG_PRINTF_2( "YOCTO:  ret: %d; waiting to continue ...\n", ret_code );
 		else
-			printf( "YOCTO:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
+			ZEPTO_DEBUG_PRINTF_4( "YOCTO:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
 		switch ( ret_code )
 		{
@@ -465,7 +465,7 @@ entry:
 					sagdp_init( &sagdp_data );
 					ret_code = master_start( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4*/ );
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-					assert( ret_code == YOCTOVM_PASS_LOWER );
+					ZEPTO_DEBUG_ASSERT( ret_code == YOCTOVM_PASS_LOWER );
 				}
 				// regular processing will be done below in the next block
 				break;
@@ -490,10 +490,10 @@ entry:
 				bool start_now = true;
 				if ( start_now )
 				{
-					PRINTF( "   ===  YOCTOVM_OK, forced chain restart  ===\n" );
+					ZEPTO_DEBUG_PRINTF_1( "   ===  YOCTOVM_OK, forced chain restart  ===\n" );
 					ret_code = master_start( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4*/ );
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-					assert( ret_code == YOCTOVM_PASS_LOWER );
+					ZEPTO_DEBUG_ASSERT( ret_code == YOCTOVM_PASS_LOWER );
 					// one more trick: wait for some time to ensure that master will start its own chain, and then send "our own" chain start
 /*					bool mutual = tester_get_rand_val() % 5 == 0;
 					if ( mutual )
@@ -501,7 +501,7 @@ entry:
 				}
 				else
 				{
-					PRINTF( "   ===  YOCTOVM_OK, delayed chain restart  ===\n" );
+					ZEPTO_DEBUG_PRINTF_1( "   ===  YOCTOVM_OK, delayed chain restart  ===\n" );
 					wake_time_to_start_new_chain = getTime() + tester_get_rand_val() % 8;
 					wait_for_incoming_chain_with_timer = true;
 					goto getmsg;
@@ -512,15 +512,15 @@ entry:
 			{
 				if ( wait_to_continue_processing == 0 ) wait_to_continue_processing = 1;
 				wake_time_continue_processing = getTime() + wait_to_continue_processing;
-printf( "Processing in progress... (period = %d, time = %d)\n", wait_to_continue_processing, wake_time_continue_processing );
+ZEPTO_DEBUG_PRINTF_3( "Processing in progress... (period = %d, time = %d)\n", wait_to_continue_processing, wake_time_continue_processing );
 				goto getmsg;
 				break;
 			}
 			default:
 			{
 				// unexpected ret_code
-				printf( "Unexpected ret_code %d\n", ret_code );
-				assert( 0 );
+				ZEPTO_DEBUG_PRINTF_2( "Unexpected ret_code %d\n", ret_code );
+				ZEPTO_DEBUG_ASSERT( 0 );
 				break;
 			}
 		}
@@ -533,18 +533,18 @@ processcmd:
 /*		if ( ret_code == YOCTOVM_RESET_STACK )
 		{
 			sagdp_init( &sagdp_data );
-			printf( "slave_process(): ret_code = YOCTOVM_RESET_STACK\n" );
+			ZEPTO_DEBUG_PRINTF_1( "slave_process(): ret_code = YOCTOVM_RESET_STACK\n" );
 			// TODO: reinit the rest of stack (where applicable)
 			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
 		}*/
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-		printf( "SACCP1: ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
+		ZEPTO_DEBUG_PRINTF_4( "SACCP1: ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 entry:
 		wait_for_incoming_chain_with_timer = false;
 /*		if ( ret_code == YOCTOVM_WAIT_TO_CONTINUE )
-			printf( "YOCTO:  ret: %d; waiting to continue ...\n", ret_code );
+			ZEPTO_DEBUG_PRINTF_2( "YOCTO:  ret: %d; waiting to continue ...\n", ret_code );
 		else
-			printf( "YOCTO:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );*/
+			ZEPTO_DEBUG_PRINTF_4( "YOCTO:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );*/
 
 		switch ( ret_code )
 		{
@@ -558,7 +558,7 @@ entry:
 					sagdp_init( &sagdp_data );
 					ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL ); // master_start( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4*/ )
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-					assert( ret_code == SACCP_RET_PASS_LOWER );
+					ZEPTO_DEBUG_ASSERT( ret_code == SACCP_RET_PASS_LOWER );
 				}
 				// regular processing will be done below in the next block
 				break;
@@ -585,13 +585,13 @@ alt_entry:
 		if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
 			ret_code = handler_sasp_get_packet_id( nonce, SASP_NONCE_SIZE, &sasp_data );
-			assert( ret_code == SASP_RET_NONCE );
+			ZEPTO_DEBUG_ASSERT( ret_code == SASP_RET_NONCE );
 			sa_get_time( &(currt) );
 			ret_code = handler_sagdp_receive_hlp( &currt, &wait_for, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
-			assert( ret_code != SAGDP_RET_NEED_NONCE );
+			ZEPTO_DEBUG_ASSERT( ret_code != SAGDP_RET_NEED_NONCE );
 		}
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-		printf( "SAGDP2: ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
+		ZEPTO_DEBUG_PRINTF_4( "SAGDP2: ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
 		switch ( ret_code )
 		{
@@ -626,8 +626,8 @@ alt_entry:
 			default:
 			{
 				// unexpected ret_code
-				printf( "Unexpected ret_code %d\n", ret_code );
-				assert( 0 );
+				ZEPTO_DEBUG_PRINTF_2( "Unexpected ret_code %d\n", ret_code );
+				ZEPTO_DEBUG_ASSERT( 0 );
 				break;
 			}
 		}
@@ -636,7 +636,7 @@ alt_entry:
 saspsend:
 		ret_code = handler_sasp_send( sasp_key, nonce, MEMORY_HANDLE_MAIN_LOOP, &sasp_data );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-		printf( "SASP2:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
+		ZEPTO_DEBUG_PRINTF_4( "SASP2:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
 		switch ( ret_code )
 		{
@@ -648,8 +648,8 @@ saspsend:
 			default:
 			{
 				// unexpected ret_code
-				printf( "Unexpected ret_code %d\n", ret_code );
-				assert( 0 );
+				ZEPTO_DEBUG_PRINTF_2( "Unexpected ret_code %d\n", ret_code );
+				ZEPTO_DEBUG_ASSERT( 0 );
 				break;
 			}
 		}
@@ -670,8 +670,8 @@ saoudp_send:
 			default:
 			{
 				// unexpected ret_code
-				printf( "Unexpected ret_code %d\n", ret_code );
-				assert( 0 );
+				ZEPTO_DEBUG_PRINTF_2( "Unexpected ret_code %d\n", ret_code );
+				ZEPTO_DEBUG_ASSERT( 0 );
 				break;
 			}
 		}
@@ -684,7 +684,7 @@ sendmsg:
 			}
 			zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 			INCREMENT_COUNTER( 90, "MAIN LOOP, packet sent" );
-			printf("\nMessage replied to client\n");
+			ZEPTO_DEBUG_PRINTF_1("\nMessage replied to client\n");
 
 	}
 

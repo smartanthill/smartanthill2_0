@@ -34,8 +34,10 @@ void SASP_initAtLifeStart( SASP_DATA* sasp_data )
 
 void SASP_restoreFromBackup( SASP_DATA* sasp_data )
 {
-	eeprom_read( EEPROM_SLOT_DATA_SASP_NONCE_LW_ID, sasp_data->nonce_lw);
-	eeprom_read( EEPROM_SLOT_DATA_SASP_NONCE_LS_ID, sasp_data->nonce_ls);
+	uint8_t size;
+
+	eeprom_read( EEPROM_SLOT_DATA_SASP_NONCE_LW_ID, sasp_data->nonce_lw, size);
+	eeprom_read( EEPROM_SLOT_DATA_SASP_NONCE_LS_ID, sasp_data->nonce_ls, size);
 }
 
 void SASP_increment_nonce_last_sent( SASP_DATA* sasp_data )
@@ -111,13 +113,13 @@ void SASP_EncryptAndAddAuthenticationData( REQUEST_REPLY_HANDLE mem_h, const uin
 		while ( zepto_parsing_remaining_bytes( &po ) > 16 )
 		{
 			read_ok = zepto_parse_read_block( &po, block, SASP_ENC_BLOCK_SIZE );
-			assert( read_ok );
+			ZEPTO_DEBUG_ASSERT( read_ok );
 			eax_128_process_nonterminating_block_encr( key, ctr, block, block, msg_cbc_val );
 			zepto_write_block( mem_h, block, SASP_ENC_BLOCK_SIZE );
 		}
 		uint16_t remaining_sz = zepto_parsing_remaining_bytes( &po );
 		read_ok = zepto_parse_read_block( &po, block, remaining_sz );
-		assert( read_ok );
+		ZEPTO_DEBUG_ASSERT( read_ok );
 		eax_128_process_terminating_block_encr( key, ctr, block, remaining_sz, block, msg_cbc_val );
 		zepto_write_block( mem_h, block, remaining_sz );
 
@@ -225,8 +227,8 @@ void DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( MEMORY_HANDLE mem_h, con
 	zepto_parser_init( &po, mem_h );
 	uint16_t inisz = zepto_parsing_remaining_bytes( &po );
 
-	PRINTF( "handler_sasp_send(): nonce used: %02x %02x %02x %02x %02x %02x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
-	PRINTF( "handler_sasp_send(): size: %d\n", inisz );
+	ZEPTO_DEBUG_PRINTF_7( "handler_sasp_send(): nonce used: %02x %02x %02x %02x %02x %02x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
+	ZEPTO_DEBUG_PRINTF_2( "handler_sasp_send(): size: %d\n", inisz );
 
 	uint16_t encr_sz, decr_sz;
 	uint8_t inimsg[1024]; zepto_parse_read_block( &po, inimsg, inisz );
@@ -257,25 +259,25 @@ void DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( MEMORY_HANDLE mem_h, con
 	zepto_response_to_request( MEMORY_HANDLE_DBG_TMP );
 
 	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( key, MEMORY_HANDLE_DBG_TMP, dbg_nonce );
-	assert( ipaad );
+	ZEPTO_DEBUG_ASSERT( ipaad );
 	zepto_response_to_request( MEMORY_HANDLE_DBG_TMP );
 	zepto_parser_init( &po, MEMORY_HANDLE_DBG_TMP );
 	decr_sz = zepto_parsing_remaining_bytes( &po );
 	zepto_parse_read_block( &po, checkedMsg, decr_sz );
 
-	PRINTF( "handler_sasp_send():     nonce: %02x %02x %02x %02x %02x %02x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
-	PRINTF( "handler_sasp_send(): dbg_nonce: %02x %02x %02x %02x %02x %02x\n", dbg_nonce[0], dbg_nonce[1], dbg_nonce[2], dbg_nonce[3], dbg_nonce[4], dbg_nonce[5] );
-	assert( ipaad );
-	assert( decr_sz == inisz );
-	assert( memcmp( nonce, dbg_nonce, 6 ) == 0 );
+	ZEPTO_DEBUG_PRINTF_7( "handler_sasp_send():     nonce: %02x %02x %02x %02x %02x %02x\n", nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5] );
+	ZEPTO_DEBUG_PRINTF_7( "handler_sasp_send(): dbg_nonce: %02x %02x %02x %02x %02x %02x\n", dbg_nonce[0], dbg_nonce[1], dbg_nonce[2], dbg_nonce[3], dbg_nonce[4], dbg_nonce[5] );
+	ZEPTO_DEBUG_ASSERT( ipaad );
+	ZEPTO_DEBUG_ASSERT( decr_sz == inisz );
+	ZEPTO_DEBUG_ASSERT( memcmp( nonce, dbg_nonce, 6 ) == 0 );
 	uint8_t k;
 	for ( k=0; k<decr_sz; k++ )
-		assert( inimsg[k] == checkedMsg[k] );
+		ZEPTO_DEBUG_ASSERT( inimsg[k] == checkedMsg[k] );
 }
 
 uint8_t handler_sasp_send( const uint8_t* key, const sa_uint48_t packet_id, MEMORY_HANDLE mem_h, SASP_DATA* sasp_data )
 {
-	assert( sa_uint48_compare( packet_id, sasp_data->nonce_ls ) >= 0 );
+	ZEPTO_DEBUG_ASSERT( sa_uint48_compare( packet_id, sasp_data->nonce_ls ) >= 0 );
 
 //	SASP_EncryptAndAddAuthenticationData( mem_h, packet_id );
 	DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( mem_h, key, packet_id );
@@ -298,11 +300,11 @@ uint8_t handler_sasp_receive( const uint8_t* key, uint8_t* pid, MEMORY_HANDLE me
 
 	bool ipaad = SASP_IntraPacketAuthenticateAndDecrypt( key, mem_h, pid );
 
-	PRINTF( "handler_sasp_receive(): PID: %02x %02x %02x %02x %02x %02x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
+	ZEPTO_DEBUG_PRINTF_7( "handler_sasp_receive(): PID: %02x %02x %02x %02x %02x %02x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 	if ( !ipaad )
 	{
 		INCREMENT_COUNTER( 12, "handler_sasp_receive(), garbage in" );
-		PRINTF( "handler_sasp_receive(): BAD PACKET RECEIVED\n" );
+		ZEPTO_DEBUG_PRINTF_1( "handler_sasp_receive(): BAD PACKET RECEIVED\n" );
 		return SASP_RET_IGNORE;
 	}
 	bool for_sasp = SASP_is_for_sasp(  mem_h );
@@ -320,10 +322,10 @@ uint8_t handler_sasp_receive( const uint8_t* key, uint8_t* pid, MEMORY_HANDLE me
 		zepto_parser_decode_encoded_uint_as_sa_uint48( &po1, new_nls );
 
 #ifdef SA_DEBUG
-		PRINTF( "handler_sasp_receive(): packet for SASP received...\n" );
+		ZEPTO_DEBUG_PRINTF_1( "handler_sasp_receive(): packet for SASP received...\n" );
 		uint8_t* nls = sasp_data->nonce_ls;
-		PRINTF( "   current  NLS: %02x %02x %02x %02x %02x %02x\n", nls[0], nls[1], nls[2], nls[3], nls[4], nls[5] );
-		PRINTF( "   proposed NLS: %02x %02x %02x %02x %02x %02x\n", new_nls[0], new_nls[1], new_nls[2], new_nls[3], new_nls[4], new_nls[5] );
+		ZEPTO_DEBUG_PRINTF_7( "   current  NLS: %02x %02x %02x %02x %02x %02x\n", nls[0], nls[1], nls[2], nls[3], nls[4], nls[5] );
+		ZEPTO_DEBUG_PRINTF_7( "   proposed NLS: %02x %02x %02x %02x %02x %02x\n", new_nls[0], new_nls[1], new_nls[2], new_nls[3], new_nls[4], new_nls[5] );
 #endif
 
 		// Recommended value of NLS starts from the second byte of the message; we should update NLS, if the recommended value is greater
@@ -337,7 +339,7 @@ uint8_t handler_sasp_receive( const uint8_t* key, uint8_t* pid, MEMORY_HANDLE me
 			// TODO: shuold we do anything else?
 			return SASP_RET_TO_HIGHER_LAST_SEND_FAILED;
 		}
-		PRINTF( "handler_sasp_receive(), for SASP, error old nonce, not applied\n" );
+		ZEPTO_DEBUG_PRINTF_1( "handler_sasp_receive(), for SASP, error old nonce, not applied\n" );
 		return SASP_RET_IGNORE;
 	}
 
@@ -347,10 +349,10 @@ uint8_t handler_sasp_receive( const uint8_t* key, uint8_t* pid, MEMORY_HANDLE me
 	{
 #ifdef SA_DEBUG
 		INCREMENT_COUNTER( 15, "handler_sasp_receive(), error old nonce" );
-		PRINTF( "handler_sasp_receive(): old nonce; packet for SASP is being prepared...\n" );
-		PRINTF( "   nonce received: %02x %02x %02x %02x %02x %02x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
+		ZEPTO_DEBUG_PRINTF_1( "handler_sasp_receive(): old nonce; packet for SASP is being prepared...\n" );
+		ZEPTO_DEBUG_PRINTF_7( "   nonce received: %02x %02x %02x %02x %02x %02x\n", pid[0], pid[1], pid[2], pid[3], pid[4], pid[5] );
 		uint8_t* nlw = sasp_data->nonce_lw;
-		PRINTF( "   current    NLW: %02x %02x %02x %02x %02x %02x\n", nlw[0], nlw[1], nlw[2], nlw[3], nlw[4], nlw[5] );
+		ZEPTO_DEBUG_PRINTF_7( "   current    NLW: %02x %02x %02x %02x %02x %02x\n", nlw[0], nlw[1], nlw[2], nlw[3], nlw[4], nlw[5] );
 #endif
 
 		zepto_response_to_request( mem_h ); // we have to create a new response (with error old nonce)
@@ -363,8 +365,8 @@ uint8_t handler_sasp_receive( const uint8_t* key, uint8_t* pid, MEMORY_HANDLE me
 		uint8_t ne[ SASP_HEADER_SIZE ];
 		memcpy( ne, pid, SASP_NONCE_SIZE );
 		SASP_EncryptAndAddAuthenticationData( mem_h,key, ne );
-		PRINTF( "handler_sasp_receive(): ------------------- ERROR OLD NONCE WILL BE SENT ----------------------\n" );
-//		assert( ugly_hook_get_response_size( mem_h ) <= 39 );
+		ZEPTO_DEBUG_PRINTF_1( "handler_sasp_receive(): ------------------- ERROR OLD NONCE WILL BE SENT ----------------------\n" );
+//		ZEPTO_DEBUG_ASSERT( ugly_hook_get_response_size( mem_h ) <= 39 );
 		return SASP_RET_TO_LOWER_ERROR;
 	}
 

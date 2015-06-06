@@ -28,7 +28,7 @@ uint8_t handler_saoudp_send( MEMORY_HANDLE mem_h )
 	parser_obj po, po1;
 	zepto_parser_init( &po, mem_h );
 
-	PRINTF( "Entering handler_saoudp_receive(); msg. sz = %d\n", zepto_parsing_remaining_bytes( &po ) );
+	ZEPTO_DEBUG_PRINTF_2( "Entering handler_saoudp_receive(); msg. sz = %d\n", zepto_parsing_remaining_bytes( &po ) );
 
 	zepto_parser_init_by_parser( &po1, &po );
 	zepto_parse_skip_block( &po1, zepto_parsing_remaining_bytes( &po ) );
@@ -47,22 +47,22 @@ uint8_t handler_saoudp_receive( MEMORY_HANDLE mem_h )
 	parser_obj po, po1;
 	zepto_parser_init( &po, mem_h );
 
-	PRINTF( "Entering handler_saoudp_receive(); msg. sz = %d\n", zepto_parsing_remaining_bytes( &po ) );
+	ZEPTO_DEBUG_PRINTF_2( "Entering handler_saoudp_receive(); msg. sz = %d\n", zepto_parsing_remaining_bytes( &po ) );
 
 	// read optional headers
 	bool more_hdrs = true;
 	do
 	{
 		uint16_t header_type = zepto_parse_encoded_uint16( &po );
-		PRINTF( "handler_saoudp_receive(): header type = %d\n", header_type );
+		ZEPTO_DEBUG_PRINTF_2( "handler_saoudp_receive(): header type = %d\n", header_type );
 		switch ( header_type )
 		{
 			case SAOIP_HEADER_INTERNAL:
 			case SAOIP_HEADER_AGGREGATE_REQUEST:
 			case SAOIP_HEADER_AGGREGATE_REPLY:
 			{
-				PRINTF( "processing of header type %d is not yet implemented\n", header_type );
-				assert( 0 );
+				ZEPTO_DEBUG_PRINTF_2( "processing of header type %d is not yet implemented\n", header_type );
+				ZEPTO_DEBUG_ASSERT( 0 );
 				break;
 			}
 			case SAOIP_HEADER_LAST_HEADER:
@@ -72,8 +72,8 @@ uint8_t handler_saoudp_receive( MEMORY_HANDLE mem_h )
 			}
 			default:
 			{
-				PRINTF( "Unknown header type %d\n", header_type );
-				assert( 0 );
+				ZEPTO_DEBUG_PRINTF_2( "Unknown header type %d\n", header_type );
+				ZEPTO_DEBUG_ASSERT( 0 );
 				break;
 			}
 		}

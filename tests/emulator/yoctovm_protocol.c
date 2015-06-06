@@ -286,7 +286,7 @@ uint8_t master_process( uint8_t* wait_to_process_time, REQUEST_REPLY_HANDLE mem_
 
 	// size
 	if ( !( msg_size >= 7 && msg_size <= 22 ) )
-		printf( "ZEPTO: BAD PACKET RECEIVED\n", msg_size );
+		SA_DEBUG_PRINTF_2( "ZEPTO: BAD PACKET RECEIVED\n", msg_size );
 	assert( msg_size >= 7 && msg_size <= 22 );
 
 	// flags
