@@ -1,0 +1,13 @@
+language: python
+python:
+    - "2.7"
+
+env:
+    - SA_BASH_CMD="platformio --force run"
+    - SA_BASH_CMD="cd tests/emulator && ./build-slv"
+
+install:
+    - python -c "$(curl -fsSL https://raw.githubusercontent.com/platformio/platformio/master/scripts/get-platformio.py)"
+
+script:
+    - bash -c '$SA_BASH_CMD'
