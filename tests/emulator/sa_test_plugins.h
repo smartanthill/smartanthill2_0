@@ -19,9 +19,9 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __SA_TEST_PLUGINS_H__
 #define __SA_TEST_PLUGINS_H__
 
-#include "sa-common.h"
-#include "sa-data-types.h"
-#include "zepto-mem-mngmt.h"
+#include "../../firmware/src/common/sa-common.h"
+#include "../../firmware/src/common/sa-data-types.h"
+#include "../../firmware/src/common/zepto-mem-mngmt.h"
 
 #define PLUGIN_OK 0
 #define PLUGIN_WAIT_TO_CONTINUE 1

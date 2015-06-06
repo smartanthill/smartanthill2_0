@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -18,7 +18,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __SA_HAL_WAITING_H__
 #define __SA_HAL_WAITING_H__
 
-#include "../sa-common.h"
+#include "../common/sa-common.h"
 #include "sa-hal-time-provider.h"
 
 typedef struct _waiting_for
@@ -36,7 +36,7 @@ typedef struct _waiting_for
 #define WAIT_RESULTED_IN_TIMEOUT 1
 #define WAIT_RESULTED_IN_PACKET 2
 #define WAIT_RESULTED_IN_I2C 3
-#define WAIT_RESULTED_IN_PINS 4	
+#define WAIT_RESULTED_IN_PINS 4
 
 uint8_t hal_wait_for( waiting_for* wf );
 

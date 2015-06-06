@@ -15,9 +15,9 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#include "sa-common.h"
-#include "hal/sa-commlayer.h"
-#include "test-generator.h"
+#include "../../firmware/src/common/sa-common.h"
+#include "../../firmware/src/common/sa-common.h"
+#include "../../firmware/src/hal/sa-commlayer.h"
 #include <stdlib.h> // for get_rand_val()
 
 #define MAX_IPACKETS_TO_STORE ((uint16_t)5)

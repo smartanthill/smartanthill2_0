@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -20,25 +20,26 @@ Copyright (C) 2015 OLogN Technologies AG
 #define MODEL_IN_EFFECT 2
 
 
-#include "sa-common.h"
-#include "sa-uint48.h"
-#include "hal/sa-hal-time-provider.h"
-#include "hal/sa-commlayer.h"
-#include "hal/hal-waiting.h"
+#include "../../firmware/src/common/sa-common.h"
+#include "../../firmware/src/common/sa-uint48.h"
+#include "../../firmware/src/hal/hal-platform.h"
+#include "../../firmware/src/hal/sa-hal-time-provider.h"
+#include "../../firmware/src/hal/sa-commlayer.h"
+#include "../../firmware/src/hal/hal-waiting.h"
 //#include "sa-timer.h"
-#include "saoudp_protocol.h"
-#include "sasp_protocol.h"
-#include "sagdp_protocol.h"
+#include "../../firmware/src/common/saoudp_protocol.h"
+#include "../../firmware/src/common/sasp_protocol.h"
+#include "../../firmware/src/common/sagdp_protocol.h"
 #if MODEL_IN_EFFECT == 1
-#include "yoctovm_protocol.h"
+#include "../../firmware/src/common/yoctovm_protocol.h"
 #elif MODEL_IN_EFFECT == 2
-#include "saccp_protocol.h"
+#include "../../firmware/src/common/saccp_protocol.h"
 #include "sa_test_plugins.h"
 #else
 #error #error Unexpected value of MODEL_IN_EFFECT
 #endif
 #include "test-generator.h"
-#include <stdio.h> 
+#include <stdio.h>
 
 
 uint8_t pid[ SASP_NONCE_SIZE ];
@@ -58,7 +59,7 @@ int main_loop()
 	INIT_COUNTER_SYSTEM
 #endif // ENABLE_COUNTER_SYSTEM
 
-		
+
 	ZEPTO_DEBUG_PRINTF_1("STARTING SERVER...\n");
 	ZEPTO_DEBUG_PRINTF_1("==================\n\n");
 
@@ -91,7 +92,7 @@ int main_loop()
 	waiting_for wait_for;
 	memset( &wait_for, 0, sizeof( waiting_for ) );
 	wait_for.wait_packet = 1;
-	TIME_MILLISECONDS16_TO_TIMEVAL( 1000, wait_for.wait_time ) //+++TODO: actual processing throughout the code
+	TIME_MILLISECONDS16_TO_TIMEVAL( 1000, wait_for.wait_time ); //+++TODO: actual processing throughout the code
 
 	// test setup values
 	bool wait_for_incoming_chain_with_timer = 0;
@@ -483,7 +484,7 @@ entry:
 				// NOTE: no 'break' is here as the rest is the same as for YOCTOVM_OK
 			case YOCTOVM_OK:
 			{
-				// here, in general, two main options are present: 
+				// here, in general, two main options are present:
 				// (1) to start a new chain immediately, or
 				// (2) to wait, during certain period of time, for an incoming chain, and then, if no packet is received, to start a new chain
 //				bool start_now = tester_get_rand_val() % 3;
@@ -575,8 +576,8 @@ entry:
 #else
 #error #error Unexpected value of MODEL_IN_EFFECT
 #endif
-			
-			
+
+
 		// 5. SAGDP
 alt_entry:
 //		uint8_t timer_val;

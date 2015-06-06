@@ -18,8 +18,8 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __TEST_GENERATOR_H__
 #define __TEST_GENERATOR_H__
 
-#include "sa-common.h"
-#include "zepto-mem-mngmt.h"
+#include "../../firmware/src/common/sa-common.h"
+#include "../../firmware/src/common/zepto-mem-mngmt.h"
 
 // initialization
 void tester_initTestSystem();

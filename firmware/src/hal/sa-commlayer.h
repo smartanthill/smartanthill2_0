@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -18,9 +18,9 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __SA_COMMLAYER_H__
 #define __SA_COMMLAYER_H__
 
-#include "../sa-common.h"
+#include "../common/sa-common.h"
 #include "zepto-mem-mngmt-hal-spec.h"
-#include "../zepto-mem-mngmt.h"
+#include "../common/zepto-mem-mngmt.h"
 
 bool communication_initialize();
 void communication_terminate();

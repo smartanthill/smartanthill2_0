@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -18,8 +18,9 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __SA_HAL_TIME_PROVIDER_H__
 #define __SA_HAL_TIME_PROVIDER_H__
 
-#include "../sa-common.h"
-#include <hal-time-convertions.h>
+#include "../common/sa-common.h"
+#include "hal-platform.h"
+
 
 typedef struct _sa_time_struct
 {
@@ -33,7 +34,17 @@ typedef sa_time_struct sa_time_val;
 #define TIME_MILLISECONDS16_TO_TIMEVAL( mslow, timeval ) HAL_TIME_MILLISECONDS16_TO_TIMEVAL( mslow, timeval )
 #define TIME_MILLISECONDS32_TO_TIMEVAL( mslow, mshigh, timeval ) HAL_TIME_MILLISECONDS32_TO_TIMEVAL( mslow, mshigh, timeval )
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void sa_get_time( sa_time_val* t ); // PLATFORM-SPECIFIC IMPLEMENTATION
+
+#ifdef __cplusplus
+}
+#endif
+
+
 
 
 

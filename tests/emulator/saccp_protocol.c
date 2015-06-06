@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -16,10 +16,10 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 
-#include "saccp_protocol.h"
-#include "sagdp_protocol.h" // for packet status in chain
-#include "sa-uint48.h"
-#include "saccp_protocol_constants.h"
+#include "../../firmware/src/common/saccp_protocol.h"
+#include "../../firmware/src/common/sagdp_protocol.h" // for packet status in chain
+#include "../../firmware/src/common/sa-uint48.h"
+#include "../../firmware/src/common/saccp_protocol_constants.h"
 
 
 
@@ -176,14 +176,14 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h )
 
 #else // USED_AS_MASTER
 
-//#include "sa_test_plugins.h"
+#include "sa_test_plugins.h"
 
-//DefaultTestingPluginConfig pl_conf;
-//DefaultTestingPluginState pl_state;
+DefaultTestingPluginConfig pl_conf;
+DefaultTestingPluginState pl_state;
 
 void zepto_vm_init()
 {
-	// default_test_plugin_handler_init( (void*)(&pl_conf), (void*)(&pl_state) );
+	default_test_plugin_handler_init( (void*)(&pl_conf), (void*)(&pl_state) );
 }
 
 
@@ -235,7 +235,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 //				handler_zepto_test_plugin( MEMORY_HANDLE_DEFAULT_PLUGIN );
 				parser_obj po3;
 				zepto_parser_init( &po3, MEMORY_HANDLE_DEFAULT_PLUGIN );
-//				default_test_plugin_handler( &pl_conf, &pl_state, &po3, MEMORY_HANDLE_DEFAULT_PLUGIN/*, WaitingFor* waiting_for*/, first_byte );
+				default_test_plugin_handler( &pl_conf, &pl_state, &po3, MEMORY_HANDLE_DEFAULT_PLUGIN/*, WaitingFor* waiting_for*/, first_byte );
 				// now we have raw data from plugin; form a frame
 				// TODO: here is a place to form optional headers, if any
 				uint16_t ret_data_sz = zepto_writer_get_response_size( MEMORY_HANDLE_DEFAULT_PLUGIN );

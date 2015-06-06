@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -18,13 +18,19 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __HAL_EEPROM_H__
 #define __HAL_EEPROM_H__
 
-#include "../sa-common.h"
+#include "../common/sa-common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-// calls
 bool hal_init_eeprom_access();
 bool hal_eeprom_write( const uint8_t* data, uint16_t size, uint16_t address );
 bool hal_eeprom_read( uint8_t* data, uint16_t size, uint16_t address);
 void hal_eeprom_flush();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __HAL_EEPROM_H__

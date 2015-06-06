@@ -19,7 +19,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __SHA256_H___
 
 
-#include "sa-common.h"
+#include "../../firmware/src/common/sa-common.h"
 
 
 void sha256(const uint8_t* msg, uint16_t len, uint8_t* hash);

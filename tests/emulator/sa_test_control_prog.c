@@ -17,8 +17,8 @@ Copyright (C) 2015 OLogN Technologies AG
 #ifdef MASTER_ENABLE_ALT_TEST_MODE
 
 #include "sa_test_control_prog.h"
-#include "sagdp_protocol.h" // for packet flags
-#include "saccp_protocol_constants.h"
+#include "../../firmware/src/common/sagdp_protocol.h" // for packet flags
+#include "../../firmware/src/common/saccp_protocol_constants.h"
 
 #include "test-generator.h"
 #include <stdio.h> // for sprintf() in fake implementation

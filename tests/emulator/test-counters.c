@@ -16,7 +16,7 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 
-#include "sa-common.h"
+#include "../../firmware/src/common/sa-common.h"
 
 #ifdef ENABLE_COUNTER_SYSTEM
 size_t COUNTERS[MAX_COUNTERS_CNT];

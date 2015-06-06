@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -18,7 +18,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __ZEPTO_MEM_MNGMT_HAL_SPEC_H__
 #define __ZEPTO_MEM_MNGMT_HAL_SPEC_H__
 
-#include "../zepto-mem-mngmt-base.h"
+#include "../common/zepto-mem-mngmt-base.h"
 
 void memory_object_cut_and_make_response( REQUEST_REPLY_HANDLE mem_h, uint16_t offset, uint16_t size );
 void memory_object_response_to_request( REQUEST_REPLY_HANDLE mem_h );

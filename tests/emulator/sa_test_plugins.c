@@ -17,7 +17,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 
 #include "sa_test_plugins.h"
-#include "sagdp_protocol.h" // for packet flags
+#include "../../firmware/src/common/sagdp_protocol.h" // for packet flags
 
 #include "test-generator.h"
 #include <stdio.h> // for sprintf() in fake implementation

@@ -20,9 +20,9 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __SA_TEST_CONTROL_PROG_H__
 #define __SA_TEST_CONTROL_PROG_H__
 
-#include "sa-common.h"
-#include "sa-data-types.h"
-#include "zepto-mem-mngmt.h"
+#include "../../firmware/src/common/sa-common.h"
+#include "../../firmware/src/common/sa-data-types.h"
+#include "../../firmware/src/common/zepto-mem-mngmt.h"
 
 #define CONTROL_PROG_OK 0
 #define CONTROL_PROG_CONTINUE 1

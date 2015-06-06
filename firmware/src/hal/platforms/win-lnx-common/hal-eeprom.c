@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -15,13 +15,19 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#include "../hal-eeprom.h"
+#ifdef WINLNXCOMMON
+
+#include "../../hal-eeprom.h"
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <stdio.h> 
+#include <stdio.h>
 #ifdef _MSC_VER
 #include <windows.h>
 #include <io.h>
+#endif
+
+#ifndef O_BINARY
+#define O_BINARY 0
 #endif
 
 
@@ -79,38 +85,5 @@ void hal_eeprom_flush()
 #endif
 }
 
-/*
-void eeprom_write( uint8_t id, uint8_t* data, uint8_t size)
-{
-	char filename[256];
-	prepareFileName( filename, id );
-	FILE* f = fopen( filename, "wb" );
-	ZEPTO_DEBUG_ASSERT( f );
-	int written = fwrite( data, 1, size, f );
-	ZEPTO_DEBUG_ASSERT( written == size );
-	fclose( f );
-}
+#endif
 
-void eeprom_read_fixed_size( uint8_t id, uint8_t* data, uint8_t size)
-{
-	char filename[256];
-	prepareFileName( filename, id );
-	FILE* f = fopen( filename, "rb" );
-	ZEPTO_DEBUG_ASSERT( f );
-	int retrieved = fread ( data, 1, size, f );
-	ZEPTO_DEBUG_ASSERT( retrieved == size );
-	fclose( f );
-}
-
-uint8_t eeprom_read_size( uint8_t id )
-{
-	char filename[256];
-	prepareFileName( filename, id );
-	FILE* f = fopen( filename, "wb" );
-	ZEPTO_DEBUG_ASSERT( f );
-	fseek ( f, 0, SEEK_END );
-	int size = ftell( f );
-	fclose( f );
-	return size;
-}
-*/

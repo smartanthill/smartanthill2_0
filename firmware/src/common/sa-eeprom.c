@@ -16,7 +16,7 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 #include "sa-eeprom.h"
-#include "hal/hal-eeprom.h"
+#include "../hal/hal-eeprom.h"
 
 // slot structure:
 // [byte 0]   record selection bit
@@ -61,7 +61,6 @@ void format_eeprom_at_lifestart()
 		buff[2] = descr->size >> 8;
 		hal_eeprom_write( buff, 3, descr->offset );
 	}
-	return true;
 }
 
 void eeprom_write( uint8_t id, uint8_t* data)
