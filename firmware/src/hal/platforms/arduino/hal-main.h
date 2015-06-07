@@ -21,6 +21,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __HAL_PLATFORM_ARDUINO_MAIN_H__
 
 #include <Arduino.h>
+#include "../../../sa-main.h"
 #include "hal-time-convertions.h"
 
 #endif // __HAL_PLATFORM_ARDUINO_MAIN_H__

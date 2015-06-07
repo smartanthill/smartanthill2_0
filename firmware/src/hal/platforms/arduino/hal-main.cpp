@@ -21,11 +21,12 @@ Copyright (C) 2015 OLogN Technologies AG
 
 void setup()
 {
+    // sa_main_init();
 }
 
 void loop()
 {
-
+    // sa_main_loop();
 }
 
 #endif

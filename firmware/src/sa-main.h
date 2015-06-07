@@ -15,14 +15,10 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#ifdef WINLNXCOMMON
+#if !defined __SA_MAIN_H__
+#define __SA_MAIN_H__
 
-#if !defined __HAL_PLATFORM_WINLNXCOMMON_MAIN_H__
-#define __HAL_PLATFORM_WINLNXCOMMON_MAIN_H__
+void sa_main_init();
+void sa_main_loop();
 
-#include "../../../sa-main.h"
-#include "hal-time-convertions.h"
-
-#endif // __HAL_PLATFORM_WINLNXCOMMON_MAIN_H__
-
-#endif
+#endif // __SA_MAIN_H__

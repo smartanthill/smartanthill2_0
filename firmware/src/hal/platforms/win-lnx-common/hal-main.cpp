@@ -17,12 +17,17 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #ifdef WINLNXCOMMON
 
-#if !defined __HAL_PLATFORM_WINLNXCOMMON_MAIN_H__
-#define __HAL_PLATFORM_WINLNXCOMMON_MAIN_H__
+#include "hal-main.h"
 
-#include "../../../sa-main.h"
-#include "hal-time-convertions.h"
+int main(int argc, char *argv[])
+{
+    // sa_main_init();
 
-#endif // __HAL_PLATFORM_WINLNXCOMMON_MAIN_H__
+    for (;;) {
+        // sa_main_loop();
+    }
+
+    return 0;
+}
 
 #endif
