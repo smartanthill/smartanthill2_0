@@ -16,8 +16,8 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 
-#if !defined __SA_TEST_PLUGINS_H__
-#define __SA_TEST_PLUGINS_H__
+#if !defined __SA_SMART_ECHO_PLUGIN_H__
+#define __SA_SMART_ECHO_PLUGIN_H__
 
 #include "../../common/sa-common.h"
 #include "../../common/sa-data-types.h"
@@ -54,4 +54,4 @@ uint8_t smart_echo_plugin_handler_init( const void* plugin_config, void* plugin_
 uint8_t smart_echo_plugin_handler( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply/*, WaitingFor* waiting_for*/, uint8_t first_byte );
 
 
-#endif // __SA_TEST_PLUGINS_H__
+#endif // __SA_SMART_ECHO_PLUGIN_H__
