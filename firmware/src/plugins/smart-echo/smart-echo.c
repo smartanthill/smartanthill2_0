@@ -16,16 +16,15 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 
-#include "sa_test_plugins.h"
-#include "../../firmware/src/common/sagdp_protocol.h" // for packet flags
+#include "smart-echo.h"
+#include "../../common/sagdp_protocol.h" // for packet flags
 
-#include "test-generator.h"
 #include <stdio.h> // for sprintf() in fake implementation
 
-uint8_t default_test_plugin_handler_init( const void* plugin_config, void* plugin_state )
+uint8_t smart_echo_plugin_handler_init( const void* plugin_config, void* plugin_state )
 {
 	//perform sensor initialization if necessary
-	DefaultTestingPluginState* ps = (DefaultTestingPluginState*)plugin_state;
+	SmartEchoPluginState* ps = (SmartEchoPluginState*)plugin_state;
 	ps->state = 0;
 	ps->currChainIdBase[0] = 0;
 	ps->currChainIdBase[1] = MASTER_SLAVE_BIT << 15;
@@ -33,10 +32,10 @@ uint8_t default_test_plugin_handler_init( const void* plugin_config, void* plugi
 }
 
 
-uint8_t default_test_plugin_handler_continue( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply )
+uint8_t smart_echo_plugin_handler_continue( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply )
 {
-	const DefaultTestingPluginConfig* pc = (DefaultTestingPluginConfig*) plugin_config;
-	DefaultTestingPluginState* ps = (DefaultTestingPluginState*)plugin_state;
+	const SmartEchoPluginConfig* pc = (SmartEchoPluginConfig*) plugin_config;
+	SmartEchoPluginState* ps = (SmartEchoPluginState*)plugin_state;
 
 	zepto_response_to_request( reply );
 
@@ -71,10 +70,10 @@ uint8_t default_test_plugin_handler_continue( const void* plugin_config, void* p
 }
 
 
-uint8_t default_test_plugin_handler( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply/*, WaitingFor* waiting_for*/, uint8_t first_byte )
+uint8_t smart_echo_plugin_handler( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply/*, WaitingFor* waiting_for*/, uint8_t first_byte )
 {
-	const DefaultTestingPluginConfig* pc = (DefaultTestingPluginConfig*) plugin_config;
-	DefaultTestingPluginState* ps = (DefaultTestingPluginState*)plugin_state;
+	const SmartEchoPluginConfig* pc = (SmartEchoPluginConfig*) plugin_config;
+	SmartEchoPluginState* ps = (SmartEchoPluginState*)plugin_state;
 
 	if ( ps->state == 0 )
 	{
@@ -148,7 +147,7 @@ uint8_t default_test_plugin_handler( const void* plugin_config, void* plugin_sta
 		{
 			// just go through
 //			*wait_to_process_time = 0;
-			return default_test_plugin_handler_continue( plugin_config, plugin_state, command, reply );
+			return smart_echo_plugin_handler_continue( plugin_config, plugin_state, command, reply );
 		}
 /*		else
 		{

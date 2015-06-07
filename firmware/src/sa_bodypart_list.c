@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -23,17 +23,17 @@ THIS FILE IS MANUALLY OR AUTOMATICALLY GENERATED BASED ON DESIRED PLUGIN LIST
 #include "sa_bodypart_list.h"
 
 // include declarations of respective plugins
-#include "sa_test_plugins.h"
+#include "plugins/smart-echo/smart-echo.h"
 
-DefaultTestingPluginConfig DefaultTestingPluginConfig_struct = 
+SmartEchoPluginConfig SmartEchoPluginConfig_struct =
 {
 	0,
 };
 
-DefaultTestingPluginState DefaultTestingPluginState_struct;
+SmartEchoPluginState SmartEchoPluginState_struct;
 
 
 const bodypart_item bodyparts[ BODYPARTS_MAX ] =
 {
-	{ default_test_plugin_handler_init, default_test_plugin_handler, &DefaultTestingPluginConfig_struct, &DefaultTestingPluginState_struct },
+	{ smart_echo_plugin_handler_init, smart_echo_plugin_handler, &SmartEchoPluginConfig_struct, &SmartEchoPluginState_struct },
 };

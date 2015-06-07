@@ -1,0 +1,15 @@
+<smartanthill.plugin name="smart-echo" title="Smart Echo" version="1.0">
+
+    <description>Smart Echo (Test) plugin</description>
+
+    <reply>
+        <field name="ok" type="encoded-uint[max=1]" min="1" max="1" />
+    </reply>
+
+    <configuration>
+    	<options>
+    		<option type="uint[1]" name="dummy" default="0" title="Dummy option" />
+    	</options>
+    </configuration>
+
+</smartanthill.plugin>

@@ -34,7 +34,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "../../firmware/src/common/yoctovm_protocol.h"
 #elif MODEL_IN_EFFECT == 2
 #include "../../firmware/src/common/saccp_protocol.h"
-#include "sa_test_plugins.h"
+#include "../../firmware/src/plugins/smart-echo/smart-echo.h"
 #else
 #error #error Unexpected value of MODEL_IN_EFFECT
 #endif
@@ -83,8 +83,8 @@ int main_loop()
 //	uint16_t wake_time = 0;
 	// TODO: revise time/timer management
 
-//	DefaultTestingPluginConfig pl_conf;
-//	DefaultTestingPluginState pl_state;
+//	SmartEchoPluginConfig pl_conf;
+//	SmartEchoPluginState pl_state;
 
 	uint8_t ret_code;
 
