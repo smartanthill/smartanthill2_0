@@ -4,6 +4,8 @@ python:
 
 env:
     - SA_BASH_CMD="platformio --force run --project-dir=firmware"
+    - SA_BASH_CMD="cd tests/emulator && ./build-cs"
+    - SA_BASH_CMD="cd tests/emulator && ./build-cu"
     - SA_BASH_CMD="cd tests/emulator && ./build-slv"
 
 install:

@@ -16,15 +16,15 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 
-#include "sa-common.h"
-#include "hal/sa-commlayer.h"
-#include "hal/sa-hal-time-provider.h"
-#include "saoudp_protocol.h"
-#include "sasp_protocol.h"
-#include "sagdp_protocol.h"
-#include "saccp_protocol.h"
+#include "../../firmware/src/common/sa-common.h"
+#include "../../firmware/src/hal/sa-commlayer.h"
+#include "../../firmware/src/hal/sa-hal-time-provider.h"
+#include "../../firmware/src/common/saoudp_protocol.h"
+#include "../../firmware/src/common/sasp_protocol.h"
+#include "../../firmware/src/common/sagdp_protocol.h"
+#include "../../firmware/src/common/saccp_protocol.h"
 #include "test-generator.h"
-#include <stdio.h> 
+#include <stdio.h>
 
 uint8_t pid[ SASP_NONCE_SIZE ];
 uint8_t nonce[ SASP_NONCE_SIZE ];

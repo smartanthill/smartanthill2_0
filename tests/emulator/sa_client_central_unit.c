@@ -20,13 +20,13 @@ Copyright (C) 2015 OLogN Technologies AG
 #define MODEL_IN_EFFECT 2
 
 
-#include "sa-common.h"
-#include "hal/sa-commlayer.h"
+#include "../../firmware/src/common/sa-common.h"
+#include "../../firmware/src/hal/sa-commlayer.h"
 //#include "saccp_protocol.h"
 #include "sa_test_control_prog.h"
 #include "test-generator.h"
-#include "zepto-mem-mngmt.h"
-#include <stdio.h> 
+#include "../../firmware/src/common/zepto-mem-mngmt.h"
+#include <stdio.h>
 
 
 int main_loop()
