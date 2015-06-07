@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -71,7 +71,7 @@ uint8_t default_test_plugin_handler_continue( const void* plugin_config, void* p
 }
 
 
-uint8_t default_test_plugin_handler( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply/*, WaitingFor* waiting_for*/, uint8_t first_byte ) 
+uint8_t default_test_plugin_handler( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply/*, WaitingFor* waiting_for*/, uint8_t first_byte )
 {
 	const DefaultTestingPluginConfig* pc = (DefaultTestingPluginConfig*) plugin_config;
 	DefaultTestingPluginState* ps = (DefaultTestingPluginState*)plugin_state;

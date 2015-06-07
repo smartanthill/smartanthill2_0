@@ -1,1 +1,1 @@
-gcc ../../firmware/src/hal/platforms/win-lnx-common/sa-commlayer.c sa_client_central_unit.c sa_test_control_prog.c test-counters.c test-generator.c ../../firmware/src/common/zepto-mem-mngmt.c -std=c99 -DWINLNXCOMMON -DUSED_AS_MASTER -DUSED_AS_MASTER_CORE -DDEBUG_PRINTING -D_DEBUG -o ../cu.bin
+gcc ../../firmware/src/hal/platforms/win-lnx-common/sa-commlayer.c sa_client_central_unit.c sa_test_control_prog.c test-counters.c test-generator.c ../../firmware/src/common/zepto-mem-mngmt.c -DWINLNXCOMMON -DUSED_AS_MASTER -DUSED_AS_MASTER_CORE -DDEBUG_PRINTING -D_DEBUG -o ../cu.bin
