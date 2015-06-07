@@ -1,0 +1,9 @@
+<smartanthill.plugin name="ping" title="Ping" version="1.0">
+
+    <description>The plugin allows to indicate if device is on-line ("1" will be returned in response) and to mesure latency</description>
+
+    <reply>
+        <field name="ok" type="encoded-uint[max=1]" min="1" max="1" />
+    </reply>
+
+</smartanthill.plugin>
