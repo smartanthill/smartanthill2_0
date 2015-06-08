@@ -18,7 +18,15 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __SA_MAIN_H__
 #define __SA_MAIN_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void sa_main_init();
 void sa_main_loop();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __SA_MAIN_H__
