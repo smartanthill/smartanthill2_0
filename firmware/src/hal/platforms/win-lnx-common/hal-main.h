@@ -21,7 +21,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __HAL_PLATFORM_WINLNXCOMMON_MAIN_H__
 
 #include "../../../sa-main.h"
-#include "hal-time-convertions.h"
+#include "hal-time-conversions.h"
 
 #endif // __HAL_PLATFORM_WINLNXCOMMON_MAIN_H__
 
