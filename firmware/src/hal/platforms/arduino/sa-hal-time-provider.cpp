@@ -15,13 +15,15 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#ifdef ARDUINO
+#if defined ARDUINO && (!defined ENERGIA)
 
 #include "../../sa-hal-time-provider.h"
 
 void sa_get_time(sa_time_val* t)
 {
-
+    uint32_t sys_t = millis();
+    t->high_t = sys_t >> 16;
+    t->low_t = (uint16_t)sys_t;
 }
 
 #endif

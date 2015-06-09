@@ -15,27 +15,57 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#ifdef ARDUINO
+#if defined ARDUINO && (!defined ENERGIA)
 
 #include "../../hal-eeprom.h"
+#include <EEPROM.h>
+
+#define EEPROM_SIZE (EEPROM.length())
+
+
+static inline bool _validate_operation (uint16_t size, uint16_t address)
+{
+    if ((address+size > EEPROM_SIZE) || (size > EEPROM_SIZE) || (address > EEPROM_SIZE))
+        return false;
+    else
+        return true;
+}
+
 
 bool hal_init_eeprom_access()
 {
-	return 0;
+	return true;
 }
 
 bool hal_eeprom_write( const uint8_t* data, uint16_t size, uint16_t address )
 {
-	return 0;
+	if (_validate_operation (size, address)) {
+        for (uint32_t i = 0; i < size; i++) {
+            EEPROM.write(address++, data[i]);
+        }
+        return true;
+    }
+
+    return false;
 }
 
 bool hal_eeprom_read( uint8_t* data, uint16_t size, uint16_t address)
 {
-	return 0;
+    if (_validate_operation (size, address)) {
+        for (uint32_t i = 0; i < size; i++) {
+            data[i] = EEPROM.read(address++);
+        }
+        return true;
+    }
+
+    return false;
 }
 
 void hal_eeprom_flush()
 {
+	for (uint32_t i = 0; i < EEPROM.length(); i++ ) {
+         EEPROM.write(i, 0);
+    }
 }
 
 #endif
