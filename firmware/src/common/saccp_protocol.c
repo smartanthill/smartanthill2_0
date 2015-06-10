@@ -374,7 +374,7 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 				{
 					uint16_t hh = zepto_parse_encoded_uint16( &po );
 					// TODO: use bit field processing instead in the code below where applicable
-					uint8_t h_type = hh && 0x7;
+					uint8_t h_type = hh & 0x7;
 					uint16_t sz = hh >> 3;
 					switch ( h_type )
 					{
