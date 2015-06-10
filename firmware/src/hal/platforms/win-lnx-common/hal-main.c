@@ -23,11 +23,7 @@ int main(int argc, char *argv[])
 {
     sa_main_init();
 
-    for (;;) {
-        sa_main_loop();
-    }
-
-    return 0;
+    return sa_main_loop();
 }
 
 #endif

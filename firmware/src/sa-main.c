@@ -111,6 +111,9 @@ bool sa_main_init()
 
 int sa_main_loop()
 {
+	for (;;)
+	{
+
 getmsg:
 #if MODEL_IN_EFFECT == 1
 		if ( wait_to_continue_processing && getTime() >= wake_time_continue_processing )
@@ -681,7 +684,7 @@ sendmsg:
 			INCREMENT_COUNTER( 90, "MAIN LOOP, packet sent" );
 			ZEPTO_DEBUG_PRINTF_1("\nMessage replied to client\n");
 
-
+	}
 
 	return 0;
 }
