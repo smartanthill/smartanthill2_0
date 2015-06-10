@@ -17,11 +17,12 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #if defined ARDUINO && (!defined ENERGIA)
 
+#include "../../../common/sa-common.h"
 #include "hal-main.h"
 
 void setup()
 {
-    sa_main_init();
+    ZEPTO_DEBUG_ASSERT(sa_main_init());
 }
 
 void loop()

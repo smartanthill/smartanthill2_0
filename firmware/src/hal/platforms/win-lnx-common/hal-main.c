@@ -21,10 +21,10 @@ Copyright (C) 2015 OLogN Technologies AG
 
 int main(int argc, char *argv[])
 {
-    // sa_main_init();
+    sa_main_init();
 
     for (;;) {
-        // sa_main_loop();
+        sa_main_loop();
     }
 
     return 0;

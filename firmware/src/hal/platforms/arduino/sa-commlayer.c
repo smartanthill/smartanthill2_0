@@ -15,20 +15,33 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#if !defined __SA_MAIN_H__
-#define __SA_MAIN_H__
+#if defined ARDUINO && (!defined ENERGIA)
 
-#include "common/sa-common.h"
+#include "../../sa-commlayer.h"
+#include "../../hal-waiting.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-bool sa_main_init();
-int sa_main_loop();
-
-#ifdef __cplusplus
+uint8_t hal_wait_for( waiting_for* wf )
+{
+	ZEPTO_DEBUG_ASSERT(0);
+	return 0;
 }
-#endif
 
-#endif // __SA_MAIN_H__
+uint8_t tryGetMessage( MEMORY_HANDLE mem_h )
+{
+	ZEPTO_DEBUG_ASSERT(0);
+	return 0;
+}
+
+uint8_t communication_initialize()
+{
+	ZEPTO_DEBUG_ASSERT(0);
+	return false;
+}
+
+uint8_t sendMessage( MEMORY_HANDLE mem_h )
+{
+	ZEPTO_DEBUG_ASSERT(0);
+	return 0;
+}
+
+#endif

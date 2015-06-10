@@ -26,4 +26,9 @@ void sa_get_time(sa_time_val* t)
     t->low_t = (uint16_t)sys_t;
 }
 
+unsigned short getTime()
+{
+    return millis();
+}
+
 #endif

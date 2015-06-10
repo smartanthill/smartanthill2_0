@@ -20,103 +20,97 @@ Copyright (C) 2015 OLogN Technologies AG
 #define MODEL_IN_EFFECT 2
 
 
-#include "../../firmware/src/common/sa-common.h"
-#include "../../firmware/src/common/sa-uint48.h"
-#include "../../firmware/src/hal/hal-platform.h"
-#include "../../firmware/src/hal/sa-hal-time-provider.h"
-#include "../../firmware/src/hal/sa-commlayer.h"
-#include "../../firmware/src/hal/hal-waiting.h"
-//#include "sa-timer.h"
-#include "../../firmware/src/common/saoudp_protocol.h"
-#include "../../firmware/src/common/sasp_protocol.h"
-#include "../../firmware/src/common/sagdp_protocol.h"
+#include "common/sa-common.h"
+#include "common/sa-uint48.h"
+#include "hal/hal-platform.h"
+#include "hal/sa-hal-time-provider.h"
+#include "hal/sa-commlayer.h"
+#include "hal/hal-waiting.h"
+#include "common/saoudp_protocol.h"
+#include "common/sasp_protocol.h"
+#include "common/sagdp_protocol.h"
 #if MODEL_IN_EFFECT == 1
-#include "../../firmware/src/common/yoctovm_protocol.h"
+// #include "common/yoctovm_protocol.h"
 #elif MODEL_IN_EFFECT == 2
-#include "../../firmware/src/common/saccp_protocol.h"
-#include "../../firmware/src/plugins/smart-echo/smart-echo.h"
+#include "common/saccp_protocol.h"
+#include "plugins/smart-echo/smart-echo.h"
 #else
 #error #error Unexpected value of MODEL_IN_EFFECT
 #endif
-#include "test-generator.h"
+// #include "test-generator.h"
 #include <stdio.h>
 
 
 uint8_t pid[ SASP_NONCE_SIZE ];
 uint8_t nonce[ SASP_NONCE_SIZE ];
 
+// TODO: actual key loading, etc
+uint8_t sasp_key[16];
 
+// tester_initTestSystem();
 
-
-
-
-
-
-
-int main_loop()
-{
-#ifdef ENABLE_COUNTER_SYSTEM
-	INIT_COUNTER_SYSTEM
-#endif // ENABLE_COUNTER_SYSTEM
-
-
-	ZEPTO_DEBUG_PRINTF_1("STARTING SERVER...\n");
-	ZEPTO_DEBUG_PRINTF_1("==================\n\n");
-
-	// TODO: actual key loading, etc
-	uint8_t sasp_key[16];
-	memcpy( sasp_key, "16-byte fake key", 16 );
-
-	tester_initTestSystem();
-
-	SASP_DATA sasp_data;
+SASP_DATA sasp_data;
+SAGDP_DATA sagdp_data;
 
 //	timeout_action tact;
 //	tact.action = 0;
 
-
-
-	// in this preliminary implementation all memory segments are kept separately
-	// All memory objects are listed below
-	// TODO: revise memory management
+// in this preliminary implementation all memory segments are kept separately
+// All memory objects are listed below
+// TODO: revise memory management
 //	uint8_t timer_val = 0;
 //	uint16_t wake_time = 0;
-	// TODO: revise time/timer management
+// TODO: revise time/timer management
 
 //	SmartEchoPluginConfig pl_conf;
 //	SmartEchoPluginState pl_state;
 
-	uint8_t ret_code;
+uint8_t ret_code;
 
-	sa_time_val currt;
-	waiting_for wait_for;
+sa_time_val currt;
+waiting_for wait_for;
+
+// test setup values
+bool wait_for_incoming_chain_with_timer = 0;
+uint16_t wake_time_to_start_new_chain = 0;
+
+uint8_t wait_to_continue_processing = 0;
+uint16_t wake_time_continue_processing = 0;
+
+bool sa_main_init()
+{
+	zepto_mem_man_init_memory_management();
+	if (!init_eeprom_access())
+		return false;
+//	format_eeprom_at_lifestart();
+
+#ifdef ENABLE_COUNTER_SYSTEM
+	INIT_COUNTER_SYSTEM
+#endif // ENABLE_COUNTER_SYSTEM
+
+	ZEPTO_DEBUG_PRINTF_1("STARTING SERVER...\n");
+	ZEPTO_DEBUG_PRINTF_1("==================\n\n");
+
 	memset( &wait_for, 0, sizeof( waiting_for ) );
 	wait_for.wait_packet = 1;
 	TIME_MILLISECONDS16_TO_TIMEVAL( 1000, wait_for.wait_time ); //+++TODO: actual processing throughout the code
 
-	// test setup values
-	bool wait_for_incoming_chain_with_timer = 0;
-	uint16_t wake_time_to_start_new_chain = 0;
-
-	uint8_t wait_to_continue_processing = 0;
-	uint16_t wake_time_continue_processing = 0;
-
-	// do necessary initialization
+    memcpy( sasp_key, "16-byte fake key", 16 );
 	SASP_initAtLifeStart( &sasp_data ); // TODO: replace by more extensive restore-from-backup-etc
-	SAGDP_DATA sagdp_data;
 	sagdp_init( &sagdp_data );
 	void zepto_vm_init();
 
-
 	ZEPTO_DEBUG_PRINTF_1("\nAwaiting client connection... \n" );
 	if (!communication_initialize())
-		return -1;
+		return false;
 
 	ZEPTO_DEBUG_PRINTF_1("Client connected.\n");
 
-	// MAIN LOOP
-	for (;;)
-	{
+    return true;
+}
+
+int sa_main_loop()
+{
 getmsg:
 #if MODEL_IN_EFFECT == 1
 		if ( wait_to_continue_processing && getTime() >= wake_time_continue_processing )
@@ -349,7 +343,7 @@ sauudp_rec:
 				if ( ret_code == SAGDP_RET_TO_LOWER_NONE )
 				{
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-					continue;
+					return 0;
 				}
 				if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
@@ -687,17 +681,7 @@ sendmsg:
 			INCREMENT_COUNTER( 90, "MAIN LOOP, packet sent" );
 			ZEPTO_DEBUG_PRINTF_1("\nMessage replied to client\n");
 
-	}
+
 
 	return 0;
-}
-
-int main(int argc, char *argv[])
-{
-	zepto_mem_man_init_memory_management();
-	if (!init_eeprom_access())
-		return 0;
-//	format_eeprom_at_lifestart();
-
-	return main_loop();
 }
