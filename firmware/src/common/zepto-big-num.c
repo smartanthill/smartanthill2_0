@@ -172,7 +172,9 @@ void zepto_bignum_m_restore_num( const uint8_t* mod, uint8_t sel_bt, uint8_t* nu
 FORCE_INLINE
 void zepto_bignum_m_exponentiate_m2m( const uint8_t* mod, uint8_t inverter, uint8_t* x, const uint8_t* exp, uint8_t* res )
 {
-	for ( int16_t i=0; i<M_BYTE_SIZE*8; i++ )
+	uint16_t i;
+
+	for ( i=0; i<M_BYTE_SIZE*8; i++ )
 	{
 		if ( exp[i>>3] & (1 << (i&7)) )
 		{
