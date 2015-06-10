@@ -20,7 +20,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __SA_COMMON_H__
 
 // common includes
-//#include <memory.h> // for memcpy(), memset(), memcmp(). Note: their implementation may or may not be more effective than just by-byte operation on a particular target platform
+#include <memory.h> // for memcpy(), memset(), memcmp(). Note: their implementation may or may not be more effective than just by-byte operation on a particular target platform
 #include <string.h> // for memmove()
 
 #define SA_DEBUG
@@ -55,22 +55,54 @@ Copyright (C) 2015 OLogN Technologies AG
 
 
 
-/*
-INLINE void memset( void* dest, uint8_t val, uint8_t cnt )
+INLINE void zepto_memset( void* dest, uint8_t val, uint16_t cnt )
 {
 	uint8_t i;
 	for ( i=0; i<cnt; i++ )
 		((uint8_t*)dest)[i] = val;
 }
 
-INLINE void memcpy( void* dest, const void* src, uint8_t cnt )
+INLINE void zepto_memcpy( void* dest, const void* src, uint16_t cnt )
 {
 	uint8_t i;
 	for ( i=0; i<cnt; i++ )
 		((uint8_t*)dest)[i] = ((uint8_t*)src)[i];
 }
-*/
+
+#define ZEPTO_MEMSET zepto_memset
+#define ZEPTO_MEMCPY zepto_memcpy
+
+
+//#define ZEPTO_PROGMEM_IN_USE // platform-specific; consider moving to project-level
+
+#ifdef ZEPTO_PROGMEM_IN_USE
+
+#include <avr/pgmspace.h>
+
+#define ZEPTO_PROGMEM      __attribute__ ((progmem))
+#define ZEPTO_PROG_CONSTANT_LOCATION ZEPTO_PROGMEM
+#define ZEPTO_PROG_CONSTANT_READ_BYTE(x) pgm_read_byte(x)
+/*INLINE void zepto_memcpy_from_progmem( void* dest, const void* src, uint16_t cnt )
+{
+	uint8_t i;
+	for ( i=0; i<cnt; i++ )
+		((uint8_t*)dest)[i] = pgm_read_byte( ((uint8_t*)src) + i );
+}*/
+#define ZEPTO_MEMCPY_FROM_PROGMEM memcpy_PF
+
+#else // ZEPTO_PROGMEM_IN_USE
+
+#define ZEPTO_PROG_CONSTANT_LOCATION
+#define ZEPTO_PROG_CONSTANT_READ_BYTE(x) (*(x))
+#define ZEPTO_MEMCPY_FROM_PROGMEM ZEPTO_MEMCPY
+
+#endif // ZEPTO_PROGMEM_IN_USE
+
+
+
 // Master/Slave distinguishing bit; USED_AS_MASTER is assumed to be a preprocessor definition if necessary
+
+
 #ifdef USED_AS_MASTER
 #define MASTER_SLAVE_BIT 1
 #else // USED_AS_MASTER
@@ -90,7 +122,8 @@ INLINE void memcpy( void* dest, const void* src, uint8_t cnt )
 #define ZEPTO_DEBUG_PRINTF_6( s, x1, x2, x3, x4, x5 ) fprintf( stdout, s, x1, x2, x3, x4, x5 )
 #define ZEPTO_DEBUG_PRINTF_7( s, x1, x2, x3, x4, x5, x6 ) fprintf( stdout, s, x1, x2, x3, x4, x5, x6 )
 #else // DEBUG_PRINTING
-#define printf FORBIDDEN_CALL_OF_PRINTF
+#include <stdio.h>
+//#define printf FORBIDDEN_CALL_OF_PRINTF
 #define fprintf FORBIDDEN_CALL_OF_FPRINTF
 #define ZEPTO_DEBUG_PRINTF_1( s )
 #define ZEPTO_DEBUG_PRINTF_2( s, x1 )
@@ -104,9 +137,11 @@ INLINE void memcpy( void* dest, const void* src, uint8_t cnt )
 #ifdef _DEBUG
 #include <assert.h>
 #define ZEPTO_DEBUG_ASSERT( x ) assert( x )
+#define ZEPTO_RUNTIME_CHECK( x ) assert( x )
 #else
 #define assert FORBIDDEN_CALL_OF_ASSERT
 #define ZEPTO_DEBUG_ASSERT( x )
+#define ZEPTO_RUNTIME_CHECK( x )  //TODO: define 
 #endif
 
 // counter system
