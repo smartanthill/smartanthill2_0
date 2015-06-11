@@ -12,4 +12,4 @@ install:
     - python -c "$(curl -fsSL https://raw.githubusercontent.com/platformio/platformio/master/scripts/get-platformio.py)"
 
 script:
-    - bash -c '$SA_BASH_CMD'
+    - eval $SA_BASH_CMD
