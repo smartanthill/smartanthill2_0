@@ -145,9 +145,8 @@ INLINE void zepto_memcpy( void* dest, const void* src, uint16_t cnt )
 #endif
 
 // counter system
-#define ENABLE_COUNTER_SYSTEM
+//#define ENABLE_COUNTER_SYSTEM
 
-#define ENABLE_COUNTER_SYSTEM
 #ifdef ENABLE_COUNTER_SYSTEM
 #define MAX_COUNTERS_CNT 100
 extern size_t COUNTERS[MAX_COUNTERS_CNT];
@@ -177,6 +176,11 @@ void printCounters();
 #endif // TEST_CTR_SYSTEM
 
 #else
+#define INIT_COUNTER_SYSTEM
+#define PRINT_COUNTERS()
+#define INCREMENT_COUNTER( i, name )
+#define INCREMENT_COUNTER_IF( i, name, cond )
+#define UPDATE_MAX_COUNTER( i, name, val )
 #define PRINT_COUNTERS()
 #endif // ENABLE_COUNTER_SYSTEM
 
