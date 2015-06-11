@@ -73,7 +73,9 @@ INLINE void zepto_memcpy( void* dest, const void* src, uint16_t cnt )
 #define ZEPTO_MEMCPY zepto_memcpy
 
 
-//#define ZEPTO_PROGMEM_IN_USE // platform-specific; consider moving to project-level
+#if !defined WINLNXCOMMON // TODO: this is a clear misuse of definitions; instead it should be a test that we build for a respective architecture 
+#define ZEPTO_PROGMEM_IN_USE // platform-specific; consider moving to project-level
+#endif // WINLNXCOMMON
 
 #ifdef ZEPTO_PROGMEM_IN_USE
 

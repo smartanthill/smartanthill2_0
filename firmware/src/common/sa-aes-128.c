@@ -16,7 +16,7 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 #include "sa-aes-128.h"
-const uint8_t rijndael_sbox[256] =
+const uint8_t rijndael_sbox[256] ZEPTO_PROG_CONSTANT_LOCATION =
 {
    0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
    0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
@@ -40,10 +40,10 @@ const uint8_t rijndael_sbox[256] =
 
 void sa_aes_128_nextKeyExp(uint8_t* ksc, uint8_t* rcon)
 {
-    ksc[0] ^= rijndael_sbox[ksc[13]] ^ *rcon;
-    ksc[1] ^= rijndael_sbox[ksc[14]];
-    ksc[2] ^= rijndael_sbox[ksc[15]];
-    ksc[3] ^= rijndael_sbox[ksc[12]]; // RotWord
+    ksc[0] ^= ZEPTO_PROG_CONSTANT_READ_BYTE(rijndael_sbox+ksc[13]) ^ *rcon;
+    ksc[1] ^= ZEPTO_PROG_CONSTANT_READ_BYTE(rijndael_sbox+ksc[14]);
+    ksc[2] ^= ZEPTO_PROG_CONSTANT_READ_BYTE(rijndael_sbox+ksc[15]);
+    ksc[3] ^= ZEPTO_PROG_CONSTANT_READ_BYTE(rijndael_sbox+ksc[12]); // RotWord
 
 	uint8_t i;
     for ( i= 4; i < 16; i += 4)
@@ -119,7 +119,7 @@ void sa_aes_128_encrypt_block( const uint8_t* key, const uint8_t* _block, uint8_
 	for ( round=0; round<9; round++ )
 	{
 		for (i = 0; i < 16; (i)++) // subBytes
-			block[i] = rijndael_sbox[block[i]];
+			block[i] = ZEPTO_PROG_CONSTANT_READ_BYTE(rijndael_sbox+block[i]);
 		sa_aes_128_shiftRows(block);
 		sa_aes_128_mixColumns(block);
 
@@ -129,7 +129,7 @@ void sa_aes_128_encrypt_block( const uint8_t* key, const uint8_t* _block, uint8_
 	}
 
     for (i = 0; i < 16; (i)++) // subBytes
-        block[i] = rijndael_sbox[block[i]];
+        block[i] = ZEPTO_PROG_CONSTANT_READ_BYTE(rijndael_sbox+block[i]);
 	sa_aes_128_shiftRows(block);
 
     sa_aes_128_nextKeyExp( ksc, &rcon );
