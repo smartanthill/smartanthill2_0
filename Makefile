@@ -23,18 +23,19 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 # DAMAGE
 
-language: python
-python:
-    - "2.7"
+.PHONY: build-firmware build-cs build-cu build-slv astyle
 
-env:
-    - SA_BASH_CMD="platformio --force run --project-dir=firmware -e uno"
-    - SA_BASH_CMD="make build-cs"
-    - SA_BASH_CMD="make build-cu"
-    - SA_BASH_CMD="make build-slv"
+build-firmware:
+	platformio run --project-dir=firmware
 
-install:
-    - python -c "$(curl -fsSL https://raw.githubusercontent.com/platformio/platformio/master/scripts/get-platformio.py)"
+build-cs:
+	cd tests/emulator; ./build-cs
 
-script:
-    - eval $SA_BASH_CMD
+build-cu:
+	cd tests/emulator; ./build-cu
+
+build-slv:
+	cd tests/emulator; ./build-slv
+
+astyle:
+	astyle --options=.astylerc -rn "firmware/src/hal/*"
