@@ -19,6 +19,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __HAL_PLATFORM_H__
 
 #include "platforms/arduino/hal-main.h"
+#include "platforms/energia/hal-main.h"
 #include "platforms/win-lnx-common/hal-main.h"
 
 #endif // __HAL_PLATFORM_H__

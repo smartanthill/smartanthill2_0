@@ -28,7 +28,7 @@ python:
     - "2.7"
 
 env:
-    - SA_BASH_CMD="platformio --force run --project-dir=firmware -e uno"
+    - SA_BASH_CMD="platformio --force run --project-dir=firmware"
     - SA_BASH_CMD="make build-cs"
     - SA_BASH_CMD="make build-cu"
     - SA_BASH_CMD="make build-slv"
