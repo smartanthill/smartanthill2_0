@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as
+    it under the terms of the GNU General Public License version 2 as 
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -15,16 +15,11 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#ifdef WINLNXCOMMON
+#include "../sa-commlayer.h"
+#include "../hal-waiting.h"
+#include <stdio.h> 
 
-#include "../../sa-commlayer.h"
-#include "../../hal-waiting.h"
-#include <stdio.h>
-
-
-#define BUFSIZE 512
-
-#define MAX_PACKET_SIZE 128
+#define MAX_PACKET_SIZE 50
 
 
 #include <stdio.h>
@@ -84,7 +79,7 @@ bool communication_preinitialize()
 	WSADATA wsaData;
 	int iResult;
 	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-	if (iResult != 0)
+	if (iResult != 0) 
 	{
 		ZEPTO_DEBUG_PRINTF_2("WSAStartup failed with error: %d\n", iResult);
 		return false;
@@ -154,7 +149,7 @@ uint8_t sendMessage( MEMORY_HANDLE mem_h )
 	uint8_t* buff = memory_object_get_request_ptr( mem_h );
 	ZEPTO_DEBUG_ASSERT( buff != NULL );
 	int bytes_sent = sendto(sock, (char*)buff, sz, 0, (struct sockaddr*)&sa_other, sizeof sa_other);
-	if (bytes_sent < 0)
+	if (bytes_sent < 0) 
 	{
 #ifdef _MSC_VER
 		int error = WSAGetLastError();
@@ -184,7 +179,7 @@ uint8_t tryGetMessage( MEMORY_HANDLE mem_h )
 	socklen_t fromlen = sizeof(sa_other);
 //	int recsize = recvfrom(sock, (char *)buffer_in, sizeof(buffer_in), 0, (struct sockaddr *)&sa_other, &fromlen);
 	uint16_t recsize = recvfrom(sock, (char *)buff, MAX_PACKET_SIZE, 0, (struct sockaddr *)&sa_other, &fromlen);
-	if (recsize < 0)
+	if (recsize < 0) 
 	{
 #ifdef _MSC_VER
 		int error = WSAGetLastError();
@@ -287,7 +282,7 @@ bool communication_with_comm_layer_initialize()
     }
 
 	sock_with_cl_accepted = accept(sock_with_cl, NULL, NULL);
-
+ 
       if ( 0 > sock_with_cl_accepted )
       {
         perror("error accept failed");
@@ -346,7 +341,7 @@ uint8_t try_get_packet_within_master_loop( uint8_t* buff, uint16_t sz )
 {
 	socklen_t fromlen = sizeof(sa_other_with_cl);
 	int recsize = recvfrom(sock_with_cl, (char *)(buff + buffer_in_with_cl_pos), sz - buffer_in_with_cl_pos, 0, (struct sockaddr *)&sa_other_with_cl, &fromlen);
-	if (recsize < 0)
+	if (recsize < 0) 
 	{
 #ifdef _MSC_VER
 		int error = WSAGetLastError();
@@ -380,7 +375,7 @@ uint8_t try_get_packet_size_within_master_loop( uint8_t* buff )
 {
 	socklen_t fromlen = sizeof(sa_other_with_cl);
 	int recsize = recvfrom(sock_with_cl, (char *)(buff + buffer_in_with_cl_pos), 2 - buffer_in_with_cl_pos, 0, (struct sockaddr *)&sa_other_with_cl, &fromlen);
-	if (recsize < 0)
+	if (recsize < 0) 
 	{
 #ifdef _MSC_VER
 		int error = WSAGetLastError();
@@ -445,7 +440,7 @@ uint8_t try_get_message_within_master( MEMORY_HANDLE mem_h )
 uint8_t send_within_master( MEMORY_HANDLE mem_h )
 {
 	ZEPTO_DEBUG_PRINTF_1( "send_within_master() called...\n" );
-
+	
 	uint16_t sz = memory_object_get_request_size( mem_h );
 	memory_object_request_to_response( mem_h );
 	ZEPTO_DEBUG_ASSERT( sz == memory_object_get_response_size( mem_h ) );
@@ -460,7 +455,7 @@ uint8_t send_within_master( MEMORY_HANDLE mem_h )
 	memory_object_response_to_request( mem_h );
 
 
-	if (bytes_sent < 0)
+	if (bytes_sent < 0) 
 	{
 #ifdef _MSC_VER
 		int error = WSAGetLastError();
@@ -567,7 +562,7 @@ uint8_t wait_for_communication_event( unsigned int timeout )
 			return COMMLAYER_RET_FROM_DEV;
 		}
 #ifdef USED_AS_MASTER
-		else
+		else 
 		{
 //			ZEPTO_DEBUG_ASSERT( rfds.fd_array[0] == sock_with_cl );
 			ZEPTO_DEBUG_ASSERT( FD_ISSET(sock_with_cl, &rfds) );
@@ -643,4 +638,3 @@ uint8_t hal_wait_for( waiting_for* wf )
 	}
 }
 
-#endif

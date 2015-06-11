@@ -28,7 +28,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define MEMORY_HANDLE_TEST_SUPPORT 4
 #define MEMORY_HANDLE_DBG_TMP 5
 
-#define MEMORY_HANDLE_MAX 8 // TODO: keep updated!!!
+#define MEMORY_HANDLE_MAX 6 // TODO: keep updated!!!
 
 
 

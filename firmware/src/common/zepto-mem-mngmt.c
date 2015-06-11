@@ -19,12 +19,12 @@ Copyright (C) 2015 OLogN Technologies AG
 
 typedef struct _request_reply_mem_obj
 { 
-	uint8_t* ptr;
+	uint8_t* ptr; // TODO: switch to offfset
 	uint16_t rq_size;
 	uint16_t rsp_size;
 } request_reply_mem_obj;
 
-#define BASE_MEM_BLOCK_SIZE	0x2000
+#define BASE_MEM_BLOCK_SIZE	0xA0
 uint8_t BASE_MEM_BLOCK[ BASE_MEM_BLOCK_SIZE ];
 request_reply_mem_obj memory_objects[ MEMORY_HANDLE_MAX ]; // fixed size array for a while
 
@@ -114,6 +114,34 @@ uint16_t zepto_mem_man_parse_encoded_uint16_no_size_checks_backward( uint8_t* bu
 	return ret;
 }
 
+
+#ifdef _DEBUG
+uint16_t zepto_mem_man_ever_reached = 0;
+
+void zepto_mem_man_print_mem_stats()
+{
+	uint8_t i;
+	uint16_t total_mem = 0;
+	ZEPTO_DEBUG_PRINTF_1( "Memory stats:\n" );
+	for ( i=0; i<MEMORY_HANDLE_MAX; i++ )
+	{
+		ZEPTO_DEBUG_PRINTF_6( "[%d] @[+%d (0x%02x)]:\t%d\t%d\n", i, i, (uint16_t)(memory_objects[i].ptr - BASE_MEM_BLOCK), memory_objects[i].rq_size, memory_objects[i].rsp_size );
+		total_mem += memory_objects[i].rq_size + memory_objects[i].rsp_size;
+	}
+	ZEPTO_DEBUG_PRINTF_3( "Size actually used: %d bytes (%d bytes max)\n\n", total_mem, zepto_mem_man_ever_reached );
+}
+
+void zepto_mem_man_update_ever_reached()
+{
+	uint8_t i;
+	uint16_t total_mem = 0;
+	for ( i=0; i<MEMORY_HANDLE_MAX; i++ )
+	{
+		total_mem += memory_objects[i].rq_size + memory_objects[i].rsp_size;
+	}
+	if ( zepto_mem_man_ever_reached < total_mem ) zepto_mem_man_ever_reached = total_mem;
+}
+
 void zepto_mem_man_check_sanity()
 {
 	uint8_t i;		
@@ -177,7 +205,14 @@ void zepto_mem_man_check_sanity()
 	}
 
 	ZEPTO_DEBUG_ASSERT( total_sz == BASE_MEM_BLOCK_SIZE );
+
+	zepto_mem_man_update_ever_reached();
 }
+#else // _DEBUG
+void zepto_mem_man_print_mem_stats(){}
+void zepto_mem_man_update_ever_reached(){}
+void zepto_mem_man_check_sanity(){}
+#endif // _DEBUG
 
 
 
@@ -363,12 +398,12 @@ void zepto_mem_man_move_all_left( REQUEST_REPLY_HANDLE h_left, REQUEST_REPLY_HAN
 	ZEPTO_DEBUG_ASSERT( h_left !=  MEMORY_HANDLE_INVALID );
 	ZEPTO_DEBUG_ASSERT( memory_objects[h_left].ptr <= memory_objects[h_right].ptr );
 	REQUEST_REPLY_HANDLE h_iter = h_left;
-	do
+//	do
+	while ( h_iter != MEMORY_HANDLE_INVALID && h_iter != h_right )
 	{
 		zepto_mem_man_move_obj_max_left( h_iter );
 		h_iter = zepto_mem_man_get_next_block( h_iter );
 	}
-	while ( h_iter != MEMORY_HANDLE_INVALID && h_iter != h_right );
 }
 
 
@@ -533,6 +568,8 @@ uint8_t* memory_object_append( REQUEST_REPLY_HANDLE mem_h, uint16_t size )
 {
 zepto_mem_man_check_sanity();
 	uint8_t* ret;
+	if (size == 128)
+		size = size;
 	
 	ret = zepto_mem_man_try_expand_right( mem_h, size );
 zepto_mem_man_check_sanity();
@@ -545,7 +582,9 @@ zepto_mem_man_check_sanity();
 	REQUEST_REPLY_HANDLE last_at_right;
 	uint16_t freeable_at_right = zepto_mem_man_get_total_freeable_space_at_right( mem_h, &last_at_right, size );
 	ZEPTO_DEBUG_ASSERT( last_at_right != MEMORY_HANDLE_INVALID );
+zepto_mem_man_print_mem_stats();
 	zepto_mem_man_move_all_right( last_at_right, mem_h );
+zepto_mem_man_print_mem_stats();
 zepto_mem_man_check_sanity();
 	if ( freeable_at_right >= size )
 	{
@@ -556,15 +595,25 @@ zepto_mem_man_check_sanity();
 	}
 
 	REQUEST_REPLY_HANDLE last_at_left;
+zepto_mem_man_print_mem_stats();
 	uint16_t freeable_at_left = zepto_mem_man_get_total_freeable_space_at_left( mem_h, &last_at_left, size );
 	ZEPTO_DEBUG_ASSERT( last_at_left != MEMORY_HANDLE_INVALID );
 	zepto_mem_man_move_all_left( last_at_left, mem_h );
+zepto_mem_man_print_mem_stats();
 zepto_mem_man_check_sanity();
 	if ( freeable_at_left + freeable_at_right >= size )
 	{
+zepto_mem_man_print_mem_stats();
 		ret = zepto_mem_man_try_move_left_expand_right( mem_h, size );
+#ifdef _DEBUG
 zepto_mem_man_check_sanity();
+		if ( ret == 0 )
+		{
+			ZEPTO_DEBUG_PRINTF_3( "memory_object_append(): (re)allocation failed for handle %d and size=%d\n", mem_h, size );
+			zepto_mem_man_print_mem_stats();
+		}
 		ZEPTO_DEBUG_ASSERT( ret ); // TODO: yet to be considered: forced truncation and further error handling
+#endif
 		return ret;
 	}
 	else
@@ -645,6 +694,11 @@ zepto_mem_man_check_sanity();
 zepto_mem_man_check_sanity();
 		return memory_objects[ mem_h ].ptr;
 //		return;
+	}
+	else
+	{
+		ZEPTO_DEBUG_ASSERT( 0 );
+		return NULL;
 	}
 }
 
