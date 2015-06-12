@@ -24,12 +24,12 @@ Copyright (C) 2015 OLogN Technologies AG
 
 typedef struct _PingPluginConfig
 {
-
+	uint8_t dummy;
 } PingPluginConfig;
 
 typedef struct _PingPluginState
 {
-
+	uint8_t dummy;
 } PingPluginState;
 
 uint8_t ping_plugin_handler_init( const void* plugin_config, void* plugin_state );

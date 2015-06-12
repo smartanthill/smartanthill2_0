@@ -44,7 +44,8 @@ int main_loop()
 
 	// TODO: actual key loading, etc
 	uint8_t sasp_key[16];
-	memcpy( sasp_key, "16-byte fake key", 16 );
+//	memcpy( sasp_key, "16-byte fake key", 16 );
+    memset( sasp_key, 0xab, 16 );
 
 //	timeout_action tact;
 //	tact.action = 0;

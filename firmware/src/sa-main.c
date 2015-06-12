@@ -615,7 +615,8 @@ alt_entry:
 				sagdp_init();
 //				bool start_now = tester_get_rand_val() % 3;
 				bool start_now = true;
-				wake_time_to_start_new_chain = start_now ? getTime() : getTime() + tester_get_rand_val() % 8;
+//				wake_time_to_start_new_chain = start_now ? getTime() : getTime() + tester_get_rand_val() % 8;
+				wake_time_to_start_new_chain = getTime();
 				wait_for_incoming_chain_with_timer = true;
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 				goto saspsend;
