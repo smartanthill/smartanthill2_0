@@ -338,7 +338,7 @@ sauudp_rec:
 				if ( ret_code == SAGDP_RET_TO_LOWER_NONE )
 				{
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-					return 0;
+					continue;
 				}
 				if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
