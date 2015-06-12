@@ -24,14 +24,14 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "../../firmware/src/common/sagdp_protocol.h"
 #include "../../firmware/src/common/saccp_protocol.h"
 #include "test-generator.h"
-#include <stdio.h>
-
-uint8_t pid[ SASP_NONCE_SIZE ];
-uint8_t nonce[ SASP_NONCE_SIZE ];
+#include <stdio.h> 
 
 
 int main_loop()
 {
+	uint8_t pid[ SASP_NONCE_SIZE ];
+	uint8_t nonce[ SASP_NONCE_SIZE ];
+
 #ifdef ENABLE_COUNTER_SYSTEM
 	INIT_COUNTER_SYSTEM
 #endif // ENABLE_COUNTER_SYSTEM
@@ -64,10 +64,12 @@ int main_loop()
 	uint16_t wake_time_continue_processing;
 
 	// do necessary initialization
-	SAGDP_DATA sagdp_data;
+/*	SAGDP_DATA sagdp_data;
 	SASP_DATA sasp_data;
 	sagdp_init( &sagdp_data );
-	SASP_initAtLifeStart( &sasp_data );
+	SASP_initAtLifeStart( &sasp_data );*/
+	sagdp_init();
+	SASP_initAtLifeStart();
 
 	// Try to initialize connection 
 	if ( !communication_initialize() )
@@ -138,11 +140,12 @@ wait_for_comm_event:
 
 				goto wait_for_comm_event;
 				break;*/
-				if ( sagdp_data.event_type ) //TODO: temporary solution
+//				if ( sagdp_data.event_type ) //TODO: temporary solution
+				if (1) //TODO: temporary solution
 				{
 					ZEPTO_DEBUG_PRINTF_1( "no reply received; the last message (if any) will be resent by timer\n" );
 					sa_get_time( &currt );
-					ret_code = handler_sagdp_timer( &currt, &wait_for, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+					ret_code = handler_sagdp_timer( &currt, &wait_for, NULL, MEMORY_HANDLE_MAIN_LOOP/*, &sagdp_data*/ );
 					if ( ret_code == SAGDP_RET_OK )
 					{
 						zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -150,10 +153,10 @@ wait_for_comm_event:
 					}
 					else if ( ret_code == SAGDP_RET_NEED_NONCE )
 					{
-						ret_code = handler_sasp_get_packet_id( nonce, SASP_NONCE_SIZE, &sasp_data );
+						ret_code = handler_sasp_get_packet_id( nonce, SASP_NONCE_SIZE/*, &sasp_data*/ );
 						ZEPTO_DEBUG_ASSERT( ret_code == SASP_RET_NONCE );
 						sa_get_time( &currt );
-						ret_code = handler_sagdp_timer( &currt, &wait_for, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+						ret_code = handler_sagdp_timer( &currt, &wait_for, nonce, MEMORY_HANDLE_MAIN_LOOP/*, &sagdp_data*/ );
 //			ZEPTO_DEBUG_PRINTF_1( "ret_code = %d\n", ret_code );
 						ZEPTO_DEBUG_ASSERT( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_OK );
 						zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -206,7 +209,7 @@ saoudp_in:
 		}
 
 		// 2.2. Pass to SASP
-		ret_code = handler_sasp_receive( sasp_key, pid, MEMORY_HANDLE_MAIN_LOOP, &sasp_data );
+		ret_code = handler_sasp_receive( sasp_key, pid, MEMORY_HANDLE_MAIN_LOOP/*, &sasp_data*/ );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		ZEPTO_DEBUG_PRINTF_4( "SASP1:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
@@ -232,7 +235,7 @@ saoudp_in:
 			{
 				ZEPTO_DEBUG_PRINTF_1( "NONCE_LAST_SENT has been reset; the last message (if any) will be resent\n" );
 				sa_get_time( &currt );
-				ret_code = handler_sagdp_receive_request_resend_lsp( &currt, &wait_for, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+				ret_code = handler_sagdp_receive_request_resend_lsp( &currt, &wait_for, NULL, MEMORY_HANDLE_MAIN_LOOP/*, &sagdp_data*/ );
 				if ( ret_code == SAGDP_RET_TO_LOWER_NONE )
 				{
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -240,10 +243,10 @@ saoudp_in:
 				}
 				else if ( ret_code == SAGDP_RET_NEED_NONCE )
 				{
-					ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
+					ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE/*, &sasp_data*/ );
 					ZEPTO_DEBUG_ASSERT( ret_code == SASP_RET_NONCE );
 					sa_get_time( &currt );
-					ret_code = handler_sagdp_receive_request_resend_lsp( &currt, &wait_for, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+					ret_code = handler_sagdp_receive_request_resend_lsp( &currt, &wait_for, nonce, MEMORY_HANDLE_MAIN_LOOP/*, &sagdp_data*/ );
 					ZEPTO_DEBUG_ASSERT( ret_code != SAGDP_RET_NEED_NONCE && ret_code != SAGDP_RET_TO_LOWER_NONE );
 				}
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -261,13 +264,13 @@ saoudp_in:
 
 		// 3. pass to SAGDP a new packet
 		sa_get_time( &currt );
-		ret_code = handler_sagdp_receive_up( &currt, &wait_for, NULL, pid, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+		ret_code = handler_sagdp_receive_up( &currt, &wait_for, NULL, pid, MEMORY_HANDLE_MAIN_LOOP/*, &sagdp_data*/ );
 		if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
-			ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
+			ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE/*, &sasp_data*/ );
 			ZEPTO_DEBUG_ASSERT( ret_code == SASP_RET_NONCE );
 			sa_get_time( &currt );
-			ret_code = handler_sagdp_receive_up( &currt, &wait_for, nonce, pid, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+			ret_code = handler_sagdp_receive_up( &currt, &wait_for, nonce, pid, MEMORY_HANDLE_MAIN_LOOP/*, &sagdp_data*/ );
 			ZEPTO_DEBUG_ASSERT( ret_code != SAGDP_RET_NEED_NONCE );
 		}
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -366,13 +369,13 @@ client_received:
 		// 5. SAGDP
 		ZEPTO_DEBUG_PRINTF_3( "@client_received: rq_size: %d, rsp_size: %d\n", ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 		sa_get_time( &currt );
-		ret_code = handler_sagdp_receive_hlp( &currt, &wait_for, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+		ret_code = handler_sagdp_receive_hlp( &currt, &wait_for, NULL, MEMORY_HANDLE_MAIN_LOOP/*, &sagdp_data*/ );
 		if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
-			ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE, &sasp_data );
+			ret_code = handler_sasp_get_packet_id(  nonce, SASP_NONCE_SIZE/*, &sasp_data*/ );
 			ZEPTO_DEBUG_ASSERT( ret_code == SASP_RET_NONCE );
 			sa_get_time( &currt );
-			ret_code = handler_sagdp_receive_hlp( &currt, &wait_for, nonce, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );
+			ret_code = handler_sagdp_receive_hlp( &currt, &wait_for, nonce, MEMORY_HANDLE_MAIN_LOOP/*, &sagdp_data*/ );
 			ZEPTO_DEBUG_ASSERT( ret_code != SAGDP_RET_NEED_NONCE );
 		}
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -403,7 +406,7 @@ client_received:
 
 		// SASP
 saspsend:
-		ret_code = handler_sasp_send( sasp_key, nonce, MEMORY_HANDLE_MAIN_LOOP, &sasp_data );
+		ret_code = handler_sasp_send( sasp_key, nonce, MEMORY_HANDLE_MAIN_LOOP/*, &sasp_data*/ );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		ZEPTO_DEBUG_PRINTF_4( "SASP2: ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
