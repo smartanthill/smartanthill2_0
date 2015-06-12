@@ -79,10 +79,10 @@ typedef struct _SAGDP_DATA
 
 
 // handlers
-void sagdp_init( SAGDP_DATA* sagdp_data );
-uint8_t handler_sagdp_timer( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
-uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
-uint8_t handler_sagdp_receive_request_resend_lsp( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
-uint8_t handler_sagdp_receive_hlp( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, MEMORY_HANDLE mem_h, SAGDP_DATA* sagdp_data );
+void sagdp_init( /*SAGDP_DATA* sagdp_data*/ );
+uint8_t handler_sagdp_timer( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, REQUEST_REPLY_HANDLE mem_h/*, SAGDP_DATA* sagdp_data*/ );
+uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, uint8_t* pid, REQUEST_REPLY_HANDLE mem_h/*, SAGDP_DATA* sagdp_data*/ );
+uint8_t handler_sagdp_receive_request_resend_lsp( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, MEMORY_HANDLE mem_h/*, SAGDP_DATA* sagdp_data*/ );
+uint8_t handler_sagdp_receive_hlp( sa_time_val* currt, waiting_for* wf, sasp_nonce_type nonce, MEMORY_HANDLE mem_h/*, SAGDP_DATA* sagdp_data*/ );
 
 #endif // __SAGDP_PROTOCOL_H__

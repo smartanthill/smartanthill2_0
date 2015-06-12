@@ -38,7 +38,7 @@ typedef struct _eeprom_slot_descriptor
 	uint16_t size;
 } eeprom_slot_descriptor;
 
-eeprom_slot_descriptor eeprom_slots[] =
+const eeprom_slot_descriptor eeprom_slots[] ZEPTO_PROG_CONSTANT_LOCATION =
 {
 	{0, DATA_SASP_NONCE_LW_SIZE},
 	{SLOT_SIZE_FROM_RECORD_SIZE( DATA_SASP_NONCE_LW_SIZE ), DATA_SASP_NONCE_LS_SIZE },
