@@ -15,6 +15,7 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
+#include "sa-common.h"
 #include "sa-aes-128.h"
 const uint8_t rijndael_sbox[256] ZEPTO_PROG_CONSTANT_LOCATION =
 {
@@ -107,7 +108,7 @@ void sa_aes_128_encrypt_block( const uint8_t* key, const uint8_t* _block, uint8_
 {
 	uint8_t block[16], ksc[16];
     memcpy( block, _block, 16 );
-	memcpy( ksc, key, 16 );
+	ZEPTO_MEMCPY_FROM_PROGMEM( ksc, key, 16 );
 	uint8_t rcon = 1;
 
 	uint8_t i;

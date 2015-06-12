@@ -170,14 +170,16 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h )
 
 #else // USED_AS_MASTER
 
-#include "../plugins/smart-echo/smart-echo.h"
+//#include "../plugins/smart-echo/smart-echo.h"
+#include "../sa_bodypart_list.h"
 
-SmartEchoPluginConfig pl_conf;
-SmartEchoPluginState pl_state;
+//SmartEchoPluginConfig pl_conf;
+//SmartEchoPluginState pl_state;
 
 void zepto_vm_init()
 {
-	smart_echo_plugin_handler_init( (void*)(&pl_conf), (void*)(&pl_state) );
+//	smart_echo_plugin_handler_init( (void*)(&pl_conf), (void*)(&pl_state) );
+	smart_echo_plugin_handler_init( (void*)(bodyparts[0].ph_config), (void*)(bodyparts[0].ph_state) );
 }
 
 
@@ -229,7 +231,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 //				handler_zepto_test_plugin( MEMORY_HANDLE_DEFAULT_PLUGIN );
 				parser_obj po3;
 				zepto_parser_init( &po3, MEMORY_HANDLE_DEFAULT_PLUGIN );
-				smart_echo_plugin_handler( &pl_conf, &pl_state, &po3, MEMORY_HANDLE_DEFAULT_PLUGIN/*, WaitingFor* waiting_for*/, first_byte );
+				smart_echo_plugin_handler( (void*)(bodyparts[0].ph_config), (void*)(bodyparts[0].ph_state), &po3, MEMORY_HANDLE_DEFAULT_PLUGIN/*, WaitingFor* waiting_for*/, first_byte );
 				// now we have raw data from plugin; form a frame
 				// TODO: here is a place to form optional headers, if any
 				uint16_t ret_data_sz = zepto_writer_get_response_size( MEMORY_HANDLE_DEFAULT_PLUGIN );

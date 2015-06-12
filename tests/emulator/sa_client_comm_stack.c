@@ -25,6 +25,9 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "../../firmware/src/common/saccp_protocol.h"
 #include "test-generator.h"
 #include <stdio.h> 
+#include "../../firmware/src/zepto_config.h"
+
+DECLARE_AES_ENCRYPTION_KEY
 
 
 int main_loop()
@@ -43,9 +46,9 @@ int main_loop()
 	tester_initTestSystem();
 
 	// TODO: actual key loading, etc
-	uint8_t sasp_key[16];
-//	memcpy( sasp_key, "16-byte fake key", 16 );
-    memset( sasp_key, 0xab, 16 );
+//	uint8_t AES_ENCRYPTION_KEY[16];
+//	memcpy( AES_ENCRYPTION_KEY, "16-byte fake key", 16 );
+//	memset( AES_ENCRYPTION_KEY, 0xab, 16 );
 
 //	timeout_action tact;
 //	tact.action = 0;
@@ -210,7 +213,7 @@ saoudp_in:
 		}
 
 		// 2.2. Pass to SASP
-		ret_code = handler_sasp_receive( sasp_key, pid, MEMORY_HANDLE_MAIN_LOOP/*, &sasp_data*/ );
+		ret_code = handler_sasp_receive( AES_ENCRYPTION_KEY, pid, MEMORY_HANDLE_MAIN_LOOP/*, &sasp_data*/ );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		ZEPTO_DEBUG_PRINTF_4( "SASP1:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
@@ -407,7 +410,7 @@ client_received:
 
 		// SASP
 saspsend:
-		ret_code = handler_sasp_send( sasp_key, nonce, MEMORY_HANDLE_MAIN_LOOP/*, &sasp_data*/ );
+		ret_code = handler_sasp_send( AES_ENCRYPTION_KEY, nonce, MEMORY_HANDLE_MAIN_LOOP/*, &sasp_data*/ );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		ZEPTO_DEBUG_PRINTF_4( "SASP2: ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 

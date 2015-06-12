@@ -39,11 +39,13 @@ Copyright (C) 2015 OLogN Technologies AG
 #endif
 // #include "test-generator.h"
 #include <stdio.h>
+#include "zepto_config.h"
 
 
 
 // TODO: actual key loading, etc
-uint8_t sasp_key[16];
+//uint8_t AES_ENCRYPTION_KEY[16];
+DECLARE_AES_ENCRYPTION_KEY
 
 // tester_initTestSystem();
 
@@ -71,7 +73,7 @@ bool sa_main_init()
 	wait_for.wait_packet = 1;
 	TIME_MILLISECONDS16_TO_TIMEVAL( 1000, wait_for.wait_time ); //+++TODO: actual processing throughout the code
 
-    memset( sasp_key, 0xab, 16 );
+//    memset( AES_ENCRYPTION_KEY, 0xab, 16 );
 //	SASP_initAtLifeStart( &sasp_data ); // TODO: replace by more extensive restore-from-backup-etc
 	SASP_initAtLifeStart(); // TODO: replace by more extensive restore-from-backup-etc
 //	sagdp_init( &sagdp_data );
@@ -308,7 +310,7 @@ sauudp_rec:
 
 
 		// 2.2. Pass to SASP
-		ret_code = handler_sasp_receive( sasp_key, pid, MEMORY_HANDLE_MAIN_LOOP/*, &sasp_data*/ );
+		ret_code = handler_sasp_receive( AES_ENCRYPTION_KEY, pid, MEMORY_HANDLE_MAIN_LOOP/*, &sasp_data*/ );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		ZEPTO_DEBUG_PRINTF_4( "SASP1:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
@@ -633,7 +635,7 @@ alt_entry:
 
 		// SASP
 saspsend:
-		ret_code = handler_sasp_send( sasp_key, nonce, MEMORY_HANDLE_MAIN_LOOP/*, &sasp_data*/ );
+		ret_code = handler_sasp_send( AES_ENCRYPTION_KEY, nonce, MEMORY_HANDLE_MAIN_LOOP/*, &sasp_data*/ );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		ZEPTO_DEBUG_PRINTF_4( "SASP2:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
