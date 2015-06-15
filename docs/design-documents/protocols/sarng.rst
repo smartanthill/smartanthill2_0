@@ -27,7 +27,7 @@
 SmartAnthill SmartAnthill Random Number Generation and Key Generation
 =====================================================================
 
-:Version:   v0.1.5a
+:Version:   v0.1.5b
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -113,7 +113,7 @@ NB: when "feeding entropy to Fortuna", exact bit representation doesn't matter, 
 
 * During each "pairing" (IMPORTANT: it applies to any "pairing", not just first "pairing"), the following procedure of RNG additional seeding MUST be performed:
 
-  + When pairing procedure starts, Device MUST initialize two internal variables (Network-Time-VonNeumann-Count and ADC-VonNeumann-Count) as zeros
+  + When pairing procedure starts, Device MUST initialize two internal variables (Network-Time-Change-Count and ADC-Change-Count) as zeros
   + Device MUST implement "Entropy Gathering" procedure as defined in :ref:`sapairing` document
 
   + On receiving each packet with entropy, Device MUST:
@@ -122,7 +122,7 @@ NB: when "feeding entropy to Fortuna", exact bit representation doesn't matter, 
     - feed entropy which is based on pseudo-measured time since the request has been sent, with at least 1mks precision; for the purposes of pseudo-measurement of time, exact time isn't important, what is important is that two different times with 1mks difference, produce two different results with a probability at least 50%.
 
       * in particular, time MAY be pseudo-measured using "tight loops" (increment-pseudo-time-check-packet-arrival-repeat-until-packet-arrives), provided that 1mks requirement is satisfied (i.e. that "tight loop" time is less than 1mks, i.e. `MCU-frequency * tight-loop-clock-count < 1mks`). Device MAY perform some non-time-measured operations (for example, some measurements and/or calculations) after sending a packet and before going into time-pseudo-measuring "tight loop", as long as `maximum-possible-time-before-tight-loop < minimum-possible-packet-round-trip-time`.
-      * if pseudo-measured time is different from last pseudo-measured time, increment Network-Time-VonNeumann-Count. NB: even if Network-Time-VonNeumann-Count is not incremented, time data SHOULD still be fed to Fortuna PRNG
+      * if pseudo-measured time is different from last pseudo-measured time, increment Network-Time-Change-Count. NB: even if Network-Time-Change-Count is not incremented, time data SHOULD still be fed to Fortuna PRNG
       * additionally, if another independent timer (such as WDT on AVR) is available, it SHOULD be read on packet arrival, and the data from the timer SHOULD be fed to Fortuna PRNG
 
   + in addition, if bare-metal implementation is used, whenever an interrupt happens (this includes interrupt on receiving packets, and/or any other interrupts), Device SHOULD feed "program-counter-before-interrupt has been called" (which is usually readily available as `[SP-some_constant]`, and usually has 1 or more bits of entropy if the MCU is actively running at the moment) to Fortuna PRNG.
@@ -131,18 +131,18 @@ NB: when "feeding entropy to Fortuna", exact bit representation doesn't matter, 
     - in addition, if another independent timer (such as WDT on AVR) is available, it SHOULD be read on all the interrupts, and the data from the timer SHOULD be fed to Fortuna PRNG. If independent timer is read-and-fed-to-Fortuna on interrupt, and all packet arrivals are handled via interrupts, then independent timer SHOULD NOT be read-and-fed-to-Fortuna outside of interrupt (tight-loop pseudo-measure of time outside of interrupt is still necessary)
     - to pass entropy from interrupt handler to Fortuna, entropy MAY be combined within different calls to interrupt handlers; in particular, the entropy MAY be accumulated via XOR-ing (with or without rotations, or using some other mixing function which doesn't affect bit balance; good mixing functions examples include addition/substraction modulo 2^n, XOR, rotations, CRC functions, and crypto hash functions; bad examples include AND,OR, and shifts without rotations which may lose informaiton from some bits completely) incoming entropy in a fixed-size buffer until it is atomically-read-and-removed-from-fixed-size-buffer (TODO: is atomicity strictly required here?) outside of the interrupt handler and is fed to Fortuna PRNG. Regardless of mixing function, implementations MUST provide DEBUG compile-time flag which will ensure that each entropy component is passed separately without any mixing, and is never overwritten until it is read-and-removed; this is necessary to validate implementation to return what is expected (PC and/or timer) and to evaluate amount of entropy they produce.
 
-  + Device MUST continue "Entropy Gathering" procedure at least until Network-Time-VonNeumann-Count reaches `250 * number-of-Fortuna-pools`.
+  + Device MUST continue "Entropy Gathering" procedure at least until Network-Time-Change-Count reaches `250 * number-of-Fortuna-pools`.
   + in addition, Device MUST perform measurements of "noise ADC" and feed the results to the Fortuna PRNG
 
-    - on every such measurement, if measurement result is neither maximum nor minimum possible value for the ADC in question (usually, but not necessarily, minimum is all-zeros, and maximum is all-ones), *and* measurement result doesn't match previous measurement from "noise ADC", ADC-VonNeumann-Count is incremented. NB: even if ADC-VonNeumann-Counter is not incremented, entropy still SHOULD be fed to Fortuna PRNG. NB2: "neither maximum nor minimum" requirement effectively rules out using 1-bit ADCs as "noise ADCs". 
+    - on every such measurement, if measurement result is neither maximum nor minimum possible value for the ADC in question (usually, but not necessarily, minimum is all-zeros, and maximum is all-ones), *and* measurement result doesn't match previous measurement from "noise ADC", ADC-Change-Count is incremented. NB: even if ADC-Change-Count is not incremented, entropy still SHOULD be fed to Fortuna PRNG. NB2: "neither maximum nor minimum" requirement effectively rules out using 1-bit ADCs as "noise ADCs". 
     - these measurements MUST be performed in parallel with "Entropy Gathering" network exchange; at least one ADC measurement per "Entropy Gathering" packet MUST be performed; more than one is fine.
 
   + in addition, Device SHOULD perform measurements of all the other ADCs in the system (e.g. one measurement for each other ADC for one measurement of "noise ADC") and feed the results to Fortuna PRNG
-  + Device MUST continue measurements of "noise ADC" at least until ADC-VonNeumann-Count reaches `250 * number-of-Fortuna-pools`.
+  + Device MUST continue measurements of "noise ADC" at least until ADC-Change-Count reaches `250 * number-of-Fortuna-pools`.
 
   + if hardware RNG (for example, accessible via a special MCU instruction) is available, Device SHOULD feed it's output to Fortuna
 
-  + after both ADC-VonNeumann-Count and Network-Time-VonNeumann-Count reach 250, Device MAY decide to complete RNG additional seeding
+  + after both ADC-Change-Count and Network-Time-Change-Count reach 250, Device MAY decide to complete RNG additional seeding
   + to complete RNG additional seeding, Device MUST explicitly call Fortuna's RESEED() (see [Fortuna] for details), and then MUST skip at least TODO bits of Fortuna output
 
 * Until RNG additional seeding is completed, RNG output MUST NOT be used in any manner
