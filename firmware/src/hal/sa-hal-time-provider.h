@@ -45,10 +45,6 @@ unsigned short getTime();
 }
 #endif
 
-
-
-
-
 // operations (to be added upon necessity)
 
 INLINE void sa_hal_time_val_copy_from( sa_time_val* t1, const sa_time_val* t2 )

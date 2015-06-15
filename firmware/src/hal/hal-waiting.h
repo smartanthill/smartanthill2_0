@@ -38,6 +38,14 @@ typedef struct _waiting_for
 #define WAIT_RESULTED_IN_I2C 3
 #define WAIT_RESULTED_IN_PINS 4
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 uint8_t hal_wait_for( waiting_for* wf );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __SA_HAL_WAITING_H__

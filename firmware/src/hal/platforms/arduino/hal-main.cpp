@@ -17,7 +17,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #if defined ARDUINO && (!defined ENERGIA)
 
-#include "../../../common/sa-common.h"
+#include "../../../sa-main.h"
 #include "hal-main.h"
 
 void setup()

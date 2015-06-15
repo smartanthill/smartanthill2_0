@@ -21,8 +21,12 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __HAL_PLATFORM_ENERGIA_MAIN_H__
 
 #include <Energia.h>
-#include "../../../sa-main.h"
 #include "hal-time-conversions.h"
+
+#define ZEPTO_PROGMEM_IN_USE
+#define ZEPTO_PROGMEM      __attribute__ ((progmem))
+#define ZEPTO_PROG_CONSTANT_LOCATION ZEPTO_PROGMEM
+#define ZEPTO_PROG_CONSTANT_READ_BYTE(x) pgm_read_byte(x)
 
 #endif // __HAL_PLATFORM_ENERGIA_MAIN_H__
 

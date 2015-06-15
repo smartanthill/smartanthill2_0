@@ -18,6 +18,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #ifdef WINLNXCOMMON
 
 #include "hal-main.h"
+#include "../../../sa-main.h"
 
 int main(int argc, char *argv[])
 {

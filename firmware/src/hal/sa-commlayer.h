@@ -22,10 +22,6 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "zepto-mem-mngmt-hal-spec.h"
 #include "../common/zepto-mem-mngmt.h"
 
-bool communication_initialize();
-void communication_terminate();
-
-
 // RET codes
 #define COMMLAYER_RET_FAILED 0
 #define COMMLAYER_RET_OK 1
@@ -37,9 +33,18 @@ void communication_terminate();
 
 #define COMMLAYER_RET_FROM_COMMM_STACK 10
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-
+bool communication_initialize();
+void communication_terminate();
 uint8_t sendMessage( MEMORY_HANDLE mem_h );
+uint8_t tryGetMessage( MEMORY_HANDLE mem_h );
+
+#ifdef __cplusplus
+}
+#endif
 
 //uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout );
 //uint8_t wait_for_communication_event( uint16_t timeout );

@@ -32,7 +32,7 @@ uint8_t tryGetMessage( MEMORY_HANDLE mem_h )
 	return 0;
 }
 
-uint8_t communication_initialize()
+bool communication_initialize()
 {
 	ZEPTO_DEBUG_ASSERT(0);
 	return false;

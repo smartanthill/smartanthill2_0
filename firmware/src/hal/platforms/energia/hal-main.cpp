@@ -17,6 +17,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #ifdef ENERGIA
 
+#include "../../../sa-main.h"
 #include "hal-main.h"
 
 void setup()

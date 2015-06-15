@@ -20,8 +20,13 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __HAL_PLATFORM_WINLNXCOMMON_MAIN_H__
 #define __HAL_PLATFORM_WINLNXCOMMON_MAIN_H__
 
-#include "../../../sa-main.h"
 #include "hal-time-conversions.h"
+
+#ifdef _MSC_VER
+#define NOINLINE      __declspec(noinline)
+#define INLINE __inline
+#define FORCE_INLINE    __forceinline
+#endif
 
 #endif // __HAL_PLATFORM_WINLNXCOMMON_MAIN_H__
 

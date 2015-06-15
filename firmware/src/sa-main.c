@@ -22,7 +22,6 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "common/sa-common.h"
 #include "common/sa-uint48.h"
-#include "hal/hal-platform.h"
 #include "hal/sa-hal-time-provider.h"
 #include "hal/sa-commlayer.h"
 #include "hal/hal-waiting.h"
@@ -99,7 +98,7 @@ int sa_main_loop()
 	// test setup values
 	// TODO: all code related to simulation and test generation MUST be moved out here ASAP!
 	bool wait_for_incoming_chain_with_timer = 0;
-	uint16_t wake_time_to_start_new_chain = 0;	
+	uint16_t wake_time_to_start_new_chain = 0;
 	uint8_t wait_to_continue_processing = 0;
 	uint16_t wake_time_continue_processing = 0;
 	// END OF test setup values
