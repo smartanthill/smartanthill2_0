@@ -21,6 +21,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __HAL_PLATFORM_WINLNXCOMMON_MAIN_H__
 
 #include "hal-time-conversions.h"
+#include <stdint.h>
 
 #ifdef _MSC_VER
 #define NOINLINE      __declspec(noinline)
