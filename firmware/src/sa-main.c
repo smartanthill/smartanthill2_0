@@ -16,10 +16,6 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 
-//#define MODEL_IN_EFFECT 1
-#define MODEL_IN_EFFECT 2
-
-
 #include "common/sa-common.h"
 #include "common/sa-uint48.h"
 #include "hal/sa-hal-time-provider.h"
@@ -28,16 +24,8 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "common/saoudp_protocol.h"
 #include "common/sasp_protocol.h"
 #include "common/sagdp_protocol.h"
-#if MODEL_IN_EFFECT == 1
-// #include "common/yoctovm_protocol.h"
-#elif MODEL_IN_EFFECT == 2
 #include "common/saccp_protocol.h"
 #include "plugins/smart-echo/smart-echo.h"
-#else
-#error #error Unexpected value of MODEL_IN_EFFECT
-#endif
-// #include "test-generator.h"
-#include <stdio.h>
 #include "zepto_config.h"
 
 
@@ -45,12 +33,6 @@ Copyright (C) 2015 OLogN Technologies AG
 // TODO: actual key loading, etc
 //uint8_t AES_ENCRYPTION_KEY[16];
 DECLARE_AES_ENCRYPTION_KEY
-
-// tester_initTestSystem();
-
-//SASP_DATA sasp_data;
-//SAGDP_DATA sagdp_data;
-
 
 waiting_for wait_for;
 
@@ -73,9 +55,7 @@ bool sa_main_init()
 	TIME_MILLISECONDS16_TO_TIMEVAL( 1000, wait_for.wait_time ); //+++TODO: actual processing throughout the code
 
 //    memset( AES_ENCRYPTION_KEY, 0xab, 16 );
-//	SASP_initAtLifeStart( &sasp_data ); // TODO: replace by more extensive restore-from-backup-etc
 	SASP_initAtLifeStart(); // TODO: replace by more extensive restore-from-backup-etc
-//	sagdp_init( &sagdp_data );
 	sagdp_init();
 	void zepto_vm_init();
 
@@ -98,7 +78,7 @@ int sa_main_loop()
 	// test setup values
 	// TODO: all code related to simulation and test generation MUST be moved out here ASAP!
 	bool wait_for_incoming_chain_with_timer = 0;
-	uint16_t wake_time_to_start_new_chain = 0;
+	uint16_t wake_time_to_start_new_chain = 0;	
 	uint8_t wait_to_continue_processing = 0;
 	uint16_t wake_time_continue_processing = 0;
 	// END OF test setup values
@@ -107,26 +87,6 @@ int sa_main_loop()
 	{
 
 getmsg:
-#if MODEL_IN_EFFECT == 1
-		if ( wait_to_continue_processing && getTime() >= wake_time_continue_processing )
-		{
-ZEPTO_DEBUG_PRINTF_1( "Processing continued...\n" );
-			INCREMENT_COUNTER( 98, "MAIN LOOP, continuing processing" );
-			wait_to_continue_processing = 0;
-#ifdef USED_AS_MASTER
-			ret_code = master_process_continue( MEMORY_HANDLE_MAIN_LOOP );
-#else
-			ret_code = slave_process_continue( MEMORY_HANDLE_MAIN_LOOP );
-#endif
-			zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-			goto entry;
-			break;
-		}
-#elif MODEL_IN_EFFECT == 2
-#else
-#error #error Unexpected value of MODEL_IN_EFFECT
-#endif
-
 		// 1. Get message from comm peer
 /*		ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -206,25 +166,6 @@ wait_for_comm_event:
 			}
 
 
-#if MODEL_IN_EFFECT == 1
-			if ( wait_to_continue_processing && getTime() >= wake_time_continue_processing )
-			{
-ZEPTO_DEBUG_PRINTF_1( "Processing continued...\n" );
-				INCREMENT_COUNTER( 98, "MAIN LOOP, continuing processing" );
-				wait_to_continue_processing = 0;
-#ifdef USED_AS_MASTER
-				ret_code = master_process_continue( MEMORY_HANDLE_MAIN_LOOP );
-#else
-				ret_code = slave_process_continue( MEMORY_HANDLE_MAIN_LOOP );
-#endif
-				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-				goto entry;
-				break;
-			}
-#elif MODEL_IN_EFFECT == 2
-#else
-#error #error Unexpected value of MODEL_IN_EFFECT
-#endif
 //			if ( timer_val && getTime() >= wake_time )
 //			if ( tact.action )
 //			if ( sagdp_data.event_type ) //TODO: temporary solution
@@ -259,12 +200,6 @@ ZEPTO_DEBUG_PRINTF_1( "Processing continued...\n" );
 			else if ( wait_for_incoming_chain_with_timer && getTime() >= wake_time_to_start_new_chain )
 			{
 				wait_for_incoming_chain_with_timer = false;
-#if MODEL_IN_EFFECT == 1
-				ret_code = master_start( MEMORY_HANDLE_MAIN_LOOP );
-#elif MODEL_IN_EFFECT == 2
-#else
-#error #error Unexpected value of MODEL_IN_EFFECT
-#endif
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 				goto alt_entry;
 				break;
@@ -387,14 +322,6 @@ sauudp_rec:
 
 		switch ( ret_code )
 		{
-#ifdef USED_AS_MASTER
-			case SAGDP_RET_OK:
-			{
-				ZEPTO_DEBUG_PRINTF_1( "master received unexpected packet. ignored\n" );
-				goto getmsg;
-				break;
-			}
-#else
 			case SAGDP_RET_SYS_CORRUPTED:
 			{
 				// TODO: reinitialize all
@@ -404,7 +331,6 @@ sauudp_rec:
 				goto saspsend;
 				break;
 			}
-#endif
 			case SAGDP_RET_TO_HIGHER:
 			{
 				// regular processing will be done below in the next block
@@ -427,102 +353,6 @@ sauudp_rec:
 			}
 		}
 
-#if MODEL_IN_EFFECT == 1
-processcmd:
-		// 4. Process received command (yoctovm)
-		ret_code = slave_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4*/ );
-/*		if ( ret_code == YOCTOVM_RESET_STACK )
-		{
-//			sagdp_init( &sagdp_data );
-			sagdp_init();
-			ZEPTO_DEBUG_PRINTF_1( "slave_process(): ret_code = YOCTOVM_RESET_STACK\n" );
-			// TODO: reinit the rest of stack (where applicable)
-			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
-		}*/
-		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-entry:
-		wait_for_incoming_chain_with_timer = false;
-		if ( ret_code == YOCTOVM_WAIT_TO_CONTINUE )
-			ZEPTO_DEBUG_PRINTF_2( "YOCTO:  ret: %d; waiting to continue ...\n", ret_code );
-		else
-			ZEPTO_DEBUG_PRINTF_4( "YOCTO:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
-
-		switch ( ret_code )
-		{
-			case YOCTOVM_PASS_LOWER:
-			{
-				 // test generation: sometimes slave can start a new chain at not in-chain reason (although in this case it won't be accepted by Master)
-//				bool restart_chain = tester_get_rand_val() % 8 == 0;
-				bool restart_chain = false;
-				if ( restart_chain )
-				{
-//					sagdp_init( &sagdp_data );
-					sagdp_init();
-					ret_code = master_start( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4*/ );
-					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-					ZEPTO_DEBUG_ASSERT( ret_code == YOCTOVM_PASS_LOWER );
-				}
-				// regular processing will be done below in the next block
-				break;
-			}
-			case YOCTOVM_PASS_LOWER_THEN_IDLE:
-			{
-//				bool start_now = tester_get_rand_val() % 3;
-				bool start_now = true;
-				wake_time_to_start_new_chain = start_now ? getTime() : getTime() + tester_get_rand_val() % 8;
-				wait_for_incoming_chain_with_timer = true;
-				break;
-			}
-			case YOCTOVM_FAILED:
-//				sagdp_init( &sagdp_data );
-				sagdp_init();
-				// NOTE: no 'break' is here as the rest is the same as for YOCTOVM_OK
-			case YOCTOVM_OK:
-			{
-				// here, in general, two main options are present:
-				// (1) to start a new chain immediately, or
-				// (2) to wait, during certain period of time, for an incoming chain, and then, if no packet is received, to start a new chain
-//				bool start_now = tester_get_rand_val() % 3;
-				bool start_now = true;
-				if ( start_now )
-				{
-					ZEPTO_DEBUG_PRINTF_1( "   ===  YOCTOVM_OK, forced chain restart  ===\n" );
-					ret_code = master_start( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4*/ );
-					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-					ZEPTO_DEBUG_ASSERT( ret_code == YOCTOVM_PASS_LOWER );
-					// one more trick: wait for some time to ensure that master will start its own chain, and then send "our own" chain start
-/*					bool mutual = tester_get_rand_val() % 5 == 0;
-					if ( mutual )
-						justWait( 4 );*/
-				}
-				else
-				{
-					ZEPTO_DEBUG_PRINTF_1( "   ===  YOCTOVM_OK, delayed chain restart  ===\n" );
-					wake_time_to_start_new_chain = getTime() + tester_get_rand_val() % 8;
-					wait_for_incoming_chain_with_timer = true;
-					goto getmsg;
-				}
-				break;
-			}
-			case YOCTOVM_WAIT_TO_CONTINUE:
-			{
-				if ( wait_to_continue_processing == 0 ) wait_to_continue_processing = 1;
-				wake_time_continue_processing = getTime() + wait_to_continue_processing;
-ZEPTO_DEBUG_PRINTF_3( "Processing in progress... (period = %d, time = %d)\n", wait_to_continue_processing, wake_time_continue_processing );
-				goto getmsg;
-				break;
-			}
-			default:
-			{
-				// unexpected ret_code
-				ZEPTO_DEBUG_PRINTF_2( "Unexpected ret_code %d\n", ret_code );
-				ZEPTO_DEBUG_ASSERT( 0 );
-				break;
-			}
-		}
-
-#elif MODEL_IN_EFFECT == 2
-
 processcmd:
 		// 4. Process received command (yoctovm)
 		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL ); // slave_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP );
@@ -538,10 +368,6 @@ processcmd:
 		ZEPTO_DEBUG_PRINTF_4( "SACCP1: ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 entry:
 		wait_for_incoming_chain_with_timer = false;
-/*		if ( ret_code == YOCTOVM_WAIT_TO_CONTINUE )
-			ZEPTO_DEBUG_PRINTF_2( "YOCTO:  ret: %d; waiting to continue ...\n", ret_code );
-		else
-			ZEPTO_DEBUG_PRINTF_4( "YOCTO:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );*/
 
 		switch ( ret_code )
 		{
@@ -561,18 +387,7 @@ entry:
 				// regular processing will be done below in the next block
 				break;
 			}
-/*			case YOCTOVM_PASS_LOWER_THEN_IDLE:
-			{
-//				bool start_now = tester_get_rand_val() % 3;
-				bool start_now = true;
-				wake_time_to_start_new_chain = start_now ? getTime() : getTime() + tester_get_rand_val() % 8;
-				wait_for_incoming_chain_with_timer = true;
-				break;
-			}*/
 		}
-#else
-#error #error Unexpected value of MODEL_IN_EFFECT
-#endif
 
 
 		// 5. SAGDP
@@ -612,7 +427,6 @@ alt_entry:
 			case SAGDP_RET_SYS_CORRUPTED: // TODO: is it possible here?
 			{
 				// TODO: process reset
-//				sagdp_init( &sagdp_data );
 				sagdp_init();
 //				bool start_now = tester_get_rand_val() % 3;
 				bool start_now = true;
