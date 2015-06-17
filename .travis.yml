@@ -29,9 +29,9 @@ python:
 
 env:
     - SA_BASH_CMD="platformio --force run --project-dir=firmware"
-    - SA_BASH_CMD="make build-cs"
+    - SA_BASH_CMD="make build-cs" SA_EMBEDDED_EXTRA_OPTIONS="-lrt"
     - SA_BASH_CMD="make build-cu"
-    - SA_BASH_CMD="make build-slv"
+    - SA_BASH_CMD="make build-slv" SA_EMBEDDED_EXTRA_OPTIONS="-lrt"
 
 install:
     - python -c "$(curl -fsSL https://raw.githubusercontent.com/platformio/platformio/master/scripts/get-platformio.py)"
