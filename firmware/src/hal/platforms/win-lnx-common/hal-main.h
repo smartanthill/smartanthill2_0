@@ -22,12 +22,25 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "hal-time-conversions.h"
 
+
+// data types
+#ifdef _MSC_VER
+#define uint8_t unsigned char
+#define int8_t char
+#define uint16_t unsigned short
+#define int16_t short
+#else
+#include "stdint.h"
+#endif
+
 #ifdef _MSC_VER
 #define NOINLINE      __declspec(noinline)
 #define INLINE __inline
-#define FORCE_INLINE    __forceinline
+#define FORCE_INLINE	__forceinline
 #else
-#include <stdint.h>
+#define INLINE static inline
+#define NOINLINE      __attribute__ ((noinline))
+#define	FORCE_INLINE static inline __attribute__((always_inline))
 #endif
 
 #endif // __HAL_PLATFORM_WINLNXCOMMON_MAIN_H__

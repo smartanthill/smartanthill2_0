@@ -36,8 +36,40 @@ DECLARE_AES_ENCRYPTION_KEY
 
 waiting_for wait_for;
 
+#ifdef TEST_RAM_CONSUMPTION
+
+const uint8_t TEST_PACKET[] ZEPTO_PROG_CONSTANT_LOCATION =
+{
+	0x02, 0x89, 0x61, 0xd9, 0x1d, 0x54, 0xb4, 0xac,
+	0xbb, 0xcb, 0x6c, 0x74, 0x0f, 0x53, 0xbf, 0x7f,
+	0x0a, 0x63, 0xac, 0x7d, 0xf8, 0x31, 0x0c, 0xe2,
+	0x2f, 0x25, 0xc8, 0x8c, 0x6f, 0xd0, 0x15, 0x53,
+	0x79, 0x15, 0xbd, 0x15, 0xf9, 0x8a, 0x10, 0x3c,
+	0x73, 0x9e, 0x93, 0xf4,
+};
+
+uint8_t FAKE_ARRAY_UNDER_STACK[1024-291] __attribute__ ((section (".noinit"))); // TODO: 1024 stands for RAM available, and 291 for reported total size of initial allocations for globals/statics
+
+void StackPaint(void)
+{
+	volatile int test_byte = 0;
+	test_byte++;
+	uint8_t *p = FAKE_ARRAY_UNDER_STACK;
+	while( p <= FAKE_ARRAY_UNDER_STACK + sizeof(FAKE_ARRAY_UNDER_STACK) - 64 )
+	{
+		*p = 0xaa;
+		p++;
+	}
+	test_byte++;
+}
+
+#endif // TEST_RAM_CONSUMPTION
+
 bool sa_main_init()
 {
+#ifdef TEST_RAM_CONSUMPTION
+	StackPaint();
+#endif // TEST_RAM_CONSUMPTION
 	zepto_mem_man_init_memory_management();
 	if (!init_eeprom_access())
 		return false;
@@ -70,6 +102,12 @@ bool sa_main_init()
 
 int sa_main_loop()
 {
+#ifdef TEST_RAM_CONSUMPTION
+	uint8_t j;
+	volatile int test_byte = 0;
+	test_byte++;
+#endif // TEST_RAM_CONSUMPTION
+
 	uint8_t pid[ SASP_NONCE_SIZE ];
 	uint8_t nonce[ SASP_NONCE_SIZE ];
 	uint8_t ret_code;
@@ -85,8 +123,6 @@ int sa_main_loop()
 
 	for (;;)
 	{
-
-getmsg:
 		// 1. Get message from comm peer
 /*		ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
@@ -98,11 +134,15 @@ getmsg:
 			//waitForTimeQuantum();
 //			justWaitMSec( 200 );
 
+//			return 0;
 wait_for_comm_event:
 //			ret_code = wait_for_communication_event( MEMORY_HANDLE_MAIN_LOOP, 1000 ); // TODO: recalculation
 //			ret_code = wait_for_communication_event( 1000 ); // TODO: recalculation
+//#ifdef TEST_AVR
+#if !defined TEST_RAM_CONSUMPTION
 			ret_code = hal_wait_for( &wait_for );
 			zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+
 //			ZEPTO_DEBUG_PRINTF_4( "=============================================Msg wait event; ret = %d, rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 
 			switch ( ret_code )
@@ -164,6 +204,13 @@ wait_for_comm_event:
 					break;
 				}
 			}
+#else // TEST_RAM_CONSUMPTION
+			for ( j=0; j<sizeof(TEST_PACKET); j++ );
+//			for ( j=0; j<44; j++ )
+				zepto_write_uint8( MEMORY_HANDLE_MAIN_LOOP, ZEPTO_PROG_CONSTANT_READ_BYTE( TEST_PACKET + j ) );
+			zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+			goto sasp_rec;
+#endif // TEST_RAM_CONSUMPTION
 
 
 //			if ( timer_val && getTime() >= wake_time )
@@ -204,7 +251,7 @@ wait_for_comm_event:
 				goto alt_entry;
 				break;
 			}
-/*trygetmsg:
+/*trystart_over:
 			ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP );
 			zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 			INCREMENT_COUNTER_IF( 92, "MAIN LOOP, packet received [2]", ret_code == COMMLAYER_RET_OK );
@@ -215,7 +262,7 @@ wait_for_comm_event:
 			ZEPTO_DEBUG_PRINTF_1("\n\nWAITING FOR ESTABLISHING COMMUNICATION WITH SERVER...\n\n");
 			if (!communication_initialize()) // regardles of errors... quick and dirty solution so far
 				return -1;
-			goto getmsg;
+			goto start_over;
 		}
 		ZEPTO_DEBUG_PRINTF_1("Message from client received\n");
 		ZEPTO_DEBUG_PRINTF_4( "ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
@@ -244,16 +291,16 @@ sauudp_rec:
 
 
 		// 2.2. Pass to SASP
+sasp_rec:
 		ret_code = handler_sasp_receive( AES_ENCRYPTION_KEY, pid, MEMORY_HANDLE_MAIN_LOOP/*, &sasp_data*/ );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		ZEPTO_DEBUG_PRINTF_4( "SASP1:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
-
 		switch ( ret_code )
 		{
 			case SASP_RET_IGNORE:
 			{
 				ZEPTO_DEBUG_PRINTF_1( "BAD MESSAGE_RECEIVED\n" );
-				goto getmsg;
+				goto start_over;
 				break;
 			}
 			case SASP_RET_TO_LOWER_ERROR:
@@ -342,7 +389,7 @@ sauudp_rec:
 			}
 			case SAGDP_RET_OK:
 			{
-				goto getmsg;
+				goto start_over;
 			}
 			default:
 			{
@@ -416,12 +463,12 @@ alt_entry:
 			}
 			case SAGDP_RET_OK: // TODO: is it possible here?
 			{
-				goto getmsg;
+				goto start_over;
 				break;
 			}
 			case SAGDP_RET_TO_LOWER_REPEATED: // TODO: is it possible here?
 			{
-				goto getmsg;
+				goto start_over;
 				break;
 			}
 			case SAGDP_RET_SYS_CORRUPTED: // TODO: is it possible here?
@@ -500,6 +547,10 @@ sendmsg:
 			INCREMENT_COUNTER( 90, "MAIN LOOP, packet sent" );
 			ZEPTO_DEBUG_PRINTF_1("\nMessage replied to client\n");
 
+start_over:;
+#ifdef TEST_RAM_CONSUMPTION
+			return 0;
+#endif // TEST_RAM_CONSUMPTION
 	}
 
 	return 0;
