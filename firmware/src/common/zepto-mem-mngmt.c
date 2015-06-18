@@ -773,6 +773,13 @@ zepto_mem_man_check_sanity();
 
 }
 
+void memory_object_free( REQUEST_REPLY_HANDLE mem_h )
+{
+	// TODO: make sure such implementation is optimal
+	memory_object_request_to_response( mem_h );
+	memory_object_request_to_response( mem_h );
+}
+
 
 
 
@@ -1349,6 +1356,11 @@ void zepto_parser_encode_and_prepend_uint16( MEMORY_HANDLE mem_h, uint16_t num )
 #else
 #error SA_USED_ENDIANNES has unexpected value
 #endif
+
+void zepto_parser_free_memory( REQUEST_REPLY_HANDLE mem_h )
+{
+	memory_object_free( mem_h );
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -89,4 +89,17 @@ Copyright (C) 2015 OLogN Technologies AG
 #define ZEPTOVM_OP_PARALLEL 0x26
 
 
+// ZEPTOVM_OP_DEVICECAPS REQUESTED-FIELDS field indicators:
+#define DEVICECAPS_END_OF_LIST 0
+#define SACCP_GUARANTEED_PAYLOAD 1	// Encoded-Unsigned-Int<max=2>
+#define ZEPTOVM_LEVEL 2	// 1 byte (enum)
+#define ZEPTOVM_REPLY_BUFFER_AND_EXPR_STACK_BYTE_SIZES 3	// 3 fields, each having type Encoded-Unsigned-Int<max=2>
+#define ZEPTOVM_REPLY_STACK_SIZE 4	// Encoded-Unsigned-Int<max=2>
+#define ZEPTOVM_EXPR_FLOAT_TYPE 5	// 1 byte (enum)
+#define ZEPTOVM_MAX_PSEUDOTHREADS 6	// Encoded-Unsigned-Int<max=2>
+
+#define ZEPTOVM_TRANSMITTER_ONOFF_OFF 0
+#define ZEPTOVM_TRANSMITTER_ONOFF_ON 1
+
+
 #endif

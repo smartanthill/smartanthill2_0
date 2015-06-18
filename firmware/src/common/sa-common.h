@@ -24,6 +24,16 @@ Copyright (C) 2015 OLogN Technologies AG
 #include <string.h> // for memmove()
 #include "../hal/hal-platform.h"
 
+// ZEPTO_VM LEVELS
+#define ZEPTO_VM_ONE 1
+#define ZEPTO_VM_TINY 2
+#define ZEPTO_VM_SMALL 3
+#define ZEPTO_VM_MEDIUM 4
+
+#if !defined ZEPTO_VM_LEVEL
+#define ZEPTO_VM_LEVEL ZEPTO_VM_ONE
+#endif
+
 #define SA_DEBUG
 
 #define SA_LITTLE_ENDIAN 0
