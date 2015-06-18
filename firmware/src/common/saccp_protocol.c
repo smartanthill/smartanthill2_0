@@ -20,21 +20,17 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "sagdp_protocol.h" // for packet status in chain
 #include "sa-uint48.h"
 #include "saccp_protocol_constants.h"
-
-
-//#include "../plugins/smart-echo/smart-echo.h"
 #include "../sa_bodypart_list.h"
 
-//SmartEchoPluginConfig pl_conf;
-//SmartEchoPluginState pl_state;
 
 void zepto_vm_init()
 {
-//	smart_echo_plugin_handler_init( (void*)(&pl_conf), (void*)(&pl_state) );
-	smart_echo_plugin_handler_init( (void*)(bodyparts[0].ph_config), (void*)(bodyparts[0].ph_state) );
+	uint16_t i;
+	for (i = 0; i < BODYPARTS_MAX; i++)
+	{
+		bodyparts[i].phi_fn( (void*)(bodyparts[i].ph_config), (void*)(bodyparts[i].ph_state) );
+	}
 }
-
-
 
 void handler_zepto_test_plugin( MEMORY_HANDLE mem_h )
 {
@@ -68,8 +64,8 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 				// TODO: code below is HIGHLY temporary stub and should be replaced by the commented line above (with proper implementation of the respective function ASAP
 				// (for the sake of quick progress of mainstream development currently we assume that the value of body_part is within single +/- decimal digit)
 				uint16_t body_part = zepto_parse_encoded_uint16( &po );
-				ZEPTO_DEBUG_ASSERT( body_part < 128 );
-				body_part -= 64;
+				ZEPTO_DEBUG_ASSERT( body_part < 128 && body_part < BODYPARTS_MAX );
+				// body_part -= 64; @TODO WHY??? Overflow!
 
 				uint16_t data_sz = zepto_parse_encoded_uint16( &po );
 
@@ -83,7 +79,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 //				handler_zepto_test_plugin( MEMORY_HANDLE_DEFAULT_PLUGIN );
 				parser_obj po3;
 				zepto_parser_init( &po3, MEMORY_HANDLE_DEFAULT_PLUGIN );
-				smart_echo_plugin_handler( (void*)(bodyparts[0].ph_config), (void*)(bodyparts[0].ph_state), &po3, MEMORY_HANDLE_DEFAULT_PLUGIN/*, WaitingFor* waiting_for*/, first_byte );
+				bodyparts[body_part].ph_fn( (void*)(bodyparts[body_part].ph_config), (void*)(bodyparts[body_part].ph_state), &po3, MEMORY_HANDLE_DEFAULT_PLUGIN/*, WaitingFor* waiting_for*/, first_byte );
 				// now we have raw data from plugin; form a frame
 				// TODO: here is a place to form optional headers, if any
 				uint16_t ret_data_sz = zepto_writer_get_response_size( MEMORY_HANDLE_DEFAULT_PLUGIN );
