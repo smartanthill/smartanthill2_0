@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.11
+:Version:   v0.2.11a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -213,7 +213,7 @@ The following table shows how many Encoded-Unsigned-Int bytes is necessary to en
 |9 223 372 036 854 775 808|                     |                  |                  |
 +-------------------------+---------------------+------------------+------------------+
 
-IMPORTANT: parsers of Encoded-Unsigned-Int MUST take into account "max=N" parameter (see below), and raise an exception as soon as maximum number of bytes needed by "canonical" representation, is exceeded. For example, if Encoded-Unsigned-Int<max=2> is parsed, then as soon as 3rd byte in encoding is > 127, an exception MUST be raised (as non-canonical representations are expressly prohibited).
+IMPORTANT: Encoding-Unsigned-Int encoding (specifically, low-to-high byte encoding order) guarantees that for even numbers, first byte of encoded value is always even. This property MAY be relied on in other places in protocol stack, specifically, in "indicate an error in an unknown-length field" scenarios (so if we decide to change order of bytes in the encoding, we need to change logic in those places too). 
 
 Table of correspondence of "max=" parameter and maximum possible encoding length: 
 

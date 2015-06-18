@@ -27,7 +27,7 @@
 Zepto VM
 ========
 
-:Version:   v0.2.11
+:Version:   v0.2.12
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saccp` *documents, please make sure to read them before proceeding.*
 
@@ -241,22 +241,29 @@ REQUESTED-FIELDS is a sequence of indicators which configuration parameters are 
 +------------------------------------------------+-----------------------------+
 | Indicator                                      | Return Type                 |
 +================================================+=============================+
-| SACCP_GUARANTEED_PAYLOAD                       | Encoded-Unsigned-Int<max=2> |
+| SACCP_GUARANTEED_PAYLOAD                       | DEVICE-CAPS-UINT2,          |
+|                                                | as described below          |
 +------------------------------------------------+-----------------------------+
 | ZEPTOVM_LEVEL                                  | 1 byte (enum)               |
 +------------------------------------------------+-----------------------------+
 | ZEPTOVM_REPLY_BUFFER_AND_EXPR_STACK_BYTE_SIZES | See below                   |
 +------------------------------------------------+-----------------------------+
-| ZEPTOVM_REPLY_STACK_SIZE                       | Encoded-Unsigned-Int<max=2> |
+| ZEPTOVM_REPLY_STACK_SIZE                       | DEVICE-CAPS-UINT2           |
 +------------------------------------------------+-----------------------------+
 | ZEPTOVM_EXPR_FLOAT_TYPE                        | 1 byte (enum)               |
 +------------------------------------------------+-----------------------------+
-| ZEPTOVM_MAX_PSEUDOTHREADS                      | Encoded-Unsigned-Int<max=2> |
+| ZEPTOVM_MAX_PSEUDOTHREADS                      | DEVICE-CAPS-UINT2           |
++------------------------------------------------+-----------------------------+
+| DEVICECAPS_END_OF_LIST                         | n/a                         |
 +------------------------------------------------+-----------------------------+
 
-Reply to DEVICECAPS instruction contains data which correspond to indicators (and come in the same order as indicators within the request).
+DEVICECAPS_END_OF_LIST specifies end of REQUESTED-FIELDS list. Reply to DEVICECAPS instruction contains data which correspond to indicators (and come in the same order as indicators within the request). 
 
-For ZEPTOVM_REPLY_BUFFER_AND_EXPR_STACK_BYTE_SIZES indicator, DEVICECAPS instruction returns 3 fields, each having type Encoded-Unsigned-Int<max=2>. First field is MAX_REPLY_BUFFER_SIZE (in bytes), second field is MAX_EXPR_STACK_BYTE_SIZE (in bytes, so to calculate number of stack entries one needs to use EXPR_FLOAT_TYPE), and third field is MAX_COMBINED_REPLY_BUFFER_SIZE_AND_EXPR_STACK_BYTE_SIZE (in bytes). If device implements "reply buffer" and "expression stack" separately, then device reports MAX_COMBINED_REPLY_BUFFER_SIZE_AND_EXPR_STACK_BYTE_SIZE as equal to MAX_REPLY_BUFFER_SIZE+MAX_EXPR_STACK_BYTE_SIZE; if they use shared portion of memory and one can grow at the expense of another one, then device may report, for example, MAX_REPLY_BUFFER_SIZE = MAX_EXPR_STACK_BYTE_SIZE = MAX_COMBINED_REPLY_BUFFER_SIZE_AND_EXPR_STACK_SIZE.
+If Device doesn't support specific indicator, it MUST return single byte 0xFF in the appropriate place of the reply buffer. All the valid replies are constructed in the way that cannot possibly have first byte as 0xFF.
+
+DEVICE-CAPS-UINT2 is an Encoded-Unsigned-Int<max=2> which is used as a bitfield substrate, with bit[0] being always 0 (this guarantees that "0xFF is impossible" requirement is met, see about even byte encodings and "indicate an error in an unknown-length field" scenarios in :ref:`saprotostack`), and bits[1..] representing value.
+
+For ZEPTOVM_REPLY_BUFFER_AND_EXPR_STACK_BYTE_SIZES indicator, DEVICECAPS instruction returns 3 fields, first having type DEVICE-CAPS-UINT2, the other two having type Encoded-Unsigned-Int<max=2>. First field is MAX_REPLY_BUFFER_SIZE (in bytes), second field is MAX_EXPR_STACK_BYTE_SIZE (in bytes, so to calculate number of stack entries one needs to use EXPR_FLOAT_TYPE), and third field is MAX_COMBINED_REPLY_BUFFER_SIZE_AND_EXPR_STACK_BYTE_SIZE (in bytes). If device implements "reply buffer" and "expression stack" separately, then device reports MAX_COMBINED_REPLY_BUFFER_SIZE_AND_EXPR_STACK_BYTE_SIZE as equal to MAX_REPLY_BUFFER_SIZE+MAX_EXPR_STACK_BYTE_SIZE; if they use shared portion of memory and one can grow at the expense of another one, then device may report, for example, MAX_REPLY_BUFFER_SIZE = MAX_EXPR_STACK_BYTE_SIZE = MAX_COMBINED_REPLY_BUFFER_SIZE_AND_EXPR_STACK_SIZE.
 
 IMPORTANT: for all the reported sizes, device MUST report them as if implementation does not use any of them for temporary purposes. For example, if implementation has an expression stack with size=8, but when processing a EXPRBINOP_EX2 instruction with PUSH-FLAG=0, implementation first temporarily pushes the result to the top of the stack, before modifying the appropriate value of the stack - such a device MUST report expression stack size reduced by 1 entry (the one used for temporary purposes), i.e. 7*stack_entry_size.
 
