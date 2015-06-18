@@ -39,8 +39,8 @@ extern "C" {
 
 bool communication_initialize();
 void communication_terminate();
-uint8_t sendMessage( MEMORY_HANDLE mem_h );
-uint8_t tryGetMessage( MEMORY_HANDLE mem_h );
+uint8_t send_message( MEMORY_HANDLE mem_h );
+uint8_t try_get_message( MEMORY_HANDLE mem_h );
 
 #ifdef __cplusplus
 }

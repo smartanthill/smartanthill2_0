@@ -87,7 +87,7 @@ bool sa_main_init()
 	TIME_MILLISECONDS16_TO_TIMEVAL( 1000, wait_for.wait_time ); //+++TODO: actual processing throughout the code
 
 //    memset( AES_ENCRYPTION_KEY, 0xab, 16 );
-	SASP_initAtLifeStart(); // TODO: replace by more extensive restore-from-backup-etc
+	sasp_init_at_lifestart(); // TODO: replace by more extensive restore-from-backup-etc
 	sagdp_init();
 	void zepto_vm_init();
 
@@ -124,7 +124,7 @@ int sa_main_loop()
 	for (;;)
 	{
 		// 1. Get message from comm peer
-/*		ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP );
+/*		ret_code = try_get_message( MEMORY_HANDLE_MAIN_LOOP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		ZEPTO_DEBUG_ASSERT( ret_code != COMMLAYER_RET_OK || ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ) != 0 );*/
 		ret_code = COMMLAYER_RET_PENDING;
@@ -156,7 +156,7 @@ wait_for_comm_event:
 				case WAIT_RESULTED_IN_PACKET:
 				{
 					// regular processing will be done below in the next block
-					ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP );
+					ret_code = try_get_message( MEMORY_HANDLE_MAIN_LOOP );
 					if ( ret_code == COMMLAYER_RET_FAILED )
 						return 0;
 					ZEPTO_DEBUG_ASSERT( ret_code == COMMLAYER_RET_OK );
@@ -252,7 +252,7 @@ wait_for_comm_event:
 				break;
 			}
 /*trystart_over:
-			ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP );
+			ret_code = try_get_message( MEMORY_HANDLE_MAIN_LOOP );
 			zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 			INCREMENT_COUNTER_IF( 92, "MAIN LOOP, packet received [2]", ret_code == COMMLAYER_RET_OK );
 			ZEPTO_DEBUG_ASSERT( ret_code != COMMLAYER_RET_OK || ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ) != 0 );*/
@@ -538,7 +538,7 @@ saoudp_send:
 		}
 
 sendmsg:
-			ret_code = sendMessage( MEMORY_HANDLE_MAIN_LOOP );
+			ret_code = send_message( MEMORY_HANDLE_MAIN_LOOP );
 			if (ret_code != COMMLAYER_RET_OK )
 			{
 				return -1;

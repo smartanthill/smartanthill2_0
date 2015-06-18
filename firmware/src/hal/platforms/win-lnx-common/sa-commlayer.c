@@ -143,7 +143,7 @@ void _communication_terminate()
 	CLOSE_SOCKET(sock);
 }
 
-uint8_t sendMessage( MEMORY_HANDLE mem_h )
+uint8_t send_message( MEMORY_HANDLE mem_h )
 {
 	uint16_t sz = memory_object_get_request_size( mem_h );
 	ZEPTO_DEBUG_ASSERT( sz != 0 ); // note: any valid message would have to have at least some bytes for headers, etc, so it cannot be empty
@@ -168,7 +168,7 @@ uint8_t sendMessage( MEMORY_HANDLE mem_h )
 	return COMMLAYER_RET_OK;
 }
 
-uint8_t tryGetMessage( MEMORY_HANDLE mem_h )
+uint8_t try_get_message( MEMORY_HANDLE mem_h )
 {
 	// It is assumed here that the system must be able to receive a packet up to MAX_PACKET_SIZE BYTES. Thus we first request this amount of memory, and then release unnecessary part
 
@@ -556,7 +556,7 @@ uint8_t wait_for_communication_event( unsigned int timeout )
 	{
 		if ( FD_ISSET(sock, &rfds) )
 		{
-/*			uint8_t ret_code = tryGetMessage( mem_h );
+/*			uint8_t ret_code = try_get_message( mem_h );
 			if ( ret_code == COMMLAYER_RET_FAILED )
 				return ret_code;
 			ZEPTO_DEBUG_ASSERT( ret_code == COMMLAYER_RET_OK );*/

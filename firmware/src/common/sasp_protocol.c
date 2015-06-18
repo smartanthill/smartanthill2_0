@@ -24,7 +24,7 @@ static 	SASP_DATA sasp_data;
 
 
 
-void SASP_initAtLifeStart( /*SASP_DATA* sasp_data*/ )
+void sasp_init_at_lifestart( /*SASP_DATA* sasp_data*/ )
 {
 	sa_uint48_set_zero( sasp_data.nonce_lw );
 	sa_uint48_set_zero( sasp_data.nonce_ls );
@@ -34,7 +34,7 @@ void SASP_initAtLifeStart( /*SASP_DATA* sasp_data*/ )
 	eeprom_write( EEPROM_SLOT_DATA_SASP_NONCE_LS_ID, sasp_data.nonce_ls );
 }
 
-void SASP_restoreFromBackup( /*SASP_DATA* sasp_data*/ )
+void sasp_restore_from_backup( /*SASP_DATA* sasp_data*/ )
 {
 	uint8_t size;
 

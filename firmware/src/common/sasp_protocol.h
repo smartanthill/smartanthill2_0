@@ -52,8 +52,8 @@ typedef struct _SASP_DATA
 
 
 // initializing and backup
-void SASP_initAtLifeStart( /*SASP_DATA* sasp_data*/ );
-void SASP_restoreFromBackup( /*SASP_DATA* sasp_data*/ );
+void sasp_init_at_lifestart( /*SASP_DATA* sasp_data*/ );
+void sasp_restore_from_backup( /*SASP_DATA* sasp_data*/ );
 
 // handlers
 uint8_t handler_sasp_receive( const uint8_t* key, uint8_t* packet_id, MEMORY_HANDLE mem_h/*, SASP_DATA* sasp_data*/ );

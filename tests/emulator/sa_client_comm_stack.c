@@ -22,7 +22,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "../../firmware/src/common/saoudp_protocol.h"
 #include "../../firmware/src/common/sasp_protocol.h"
 #include "../../firmware/src/common/sagdp_protocol.h"
-#include "../../firmware/src/common/saccp_protocol.h"
+#include "saccp_protocol_client_side.h"
 #include "test-generator.h"
 #include <stdio.h> 
 #include "../../firmware/src/zepto_config.h"
@@ -71,9 +71,9 @@ int main_loop()
 /*	SAGDP_DATA sagdp_data;
 	SASP_DATA sasp_data;
 	sagdp_init( &sagdp_data );
-	SASP_initAtLifeStart( &sasp_data );*/
+	sasp_init_at_lifestart( &sasp_data );*/
 	sagdp_init();
-	SASP_initAtLifeStart();
+	sasp_init_at_lifestart();
 
 	// Try to initialize connection 
 	if ( !communication_initialize() )
@@ -111,7 +111,7 @@ wait_for_comm_event:
 			case COMMLAYER_RET_FROM_DEV:
 			{
 				// regular processing will be done below in the next block
-				ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP );
+				ret_code = try_get_message( MEMORY_HANDLE_MAIN_LOOP );
 				if ( ret_code == COMMLAYER_RET_FAILED )
 					return 0;
 				ZEPTO_DEBUG_ASSERT( ret_code == COMMLAYER_RET_OK );
@@ -476,7 +476,7 @@ saoudp_send:
 			{
 				INCREMENT_COUNTER( 80, "MAIN LOOP, packet inserted" );
 				zepto_response_to_request( MEMORY_HANDLE_TEST_SUPPORT );
-				sendMessage( MEMORY_HANDLE_TEST_SUPPORT );
+				send_message( MEMORY_HANDLE_TEST_SUPPORT );
 				zepto_response_to_request( MEMORY_HANDLE_TEST_SUPPORT );
 			}
 
@@ -484,7 +484,7 @@ saoudp_send:
 			{
 				if ( is_packet_to_send )
 				{
-					ret_code = sendMessage( MEMORY_HANDLE_MAIN_LOOP );
+					ret_code = send_message( MEMORY_HANDLE_MAIN_LOOP );
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 					if (ret_code != COMMLAYER_RET_OK )
 					{
