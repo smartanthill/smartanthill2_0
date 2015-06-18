@@ -92,7 +92,7 @@ int8_t main_loop()
 	SAGDP_DATA sagdp_data;
 	sagdp_init( &sagdp_data );
 	SASP_DATA sasp_data;
-	SASP_initAtLifeStart( &sasp_data );
+	sasp_init_at_lifestart( &sasp_data );
 
 
 
@@ -142,7 +142,7 @@ printf( "Processing continued...\n" );
 		}
 		else
 		{
-			ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP ); 
+			ret_code = try_get_message( MEMORY_HANDLE_MAIN_LOOP );
 			zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 			INCREMENT_COUNTER_IF( 96, "MAIN LOOP, packet received [1]", ret_code == COMMLAYER_RET_OK );
 		}
@@ -161,7 +161,7 @@ printf( "Processing continued...\n" );
 			{
 				zepto_response_to_request( MEMORY_HANDLE_TEST_SUPPORT );
 				INCREMENT_COUNTER( 89, "MAIN LOOP, packet sent sync with receiving [1]" );
-				sendMessage( MEMORY_HANDLE_TEST_SUPPORT );
+				send_message( MEMORY_HANDLE_TEST_SUPPORT );
 				zepto_response_to_request( MEMORY_HANDLE_TEST_SUPPORT );
 				assert( ugly_hook_get_request_size( MEMORY_HANDLE_TEST_SUPPORT ) == 0 && ugly_hook_get_response_size( MEMORY_HANDLE_TEST_SUPPORT ) == 0 );
 			}
@@ -217,7 +217,7 @@ printf( "ret_code = %d\n", ret_code );
 						if ( tester_releaseOutgoingPacket( MEMORY_HANDLE_TEST_SUPPORT ) ) // we are on the safe side here as buffer out is not yet used
 						{
 							zepto_response_to_request( MEMORY_HANDLE_TEST_SUPPORT );
-							sendMessage( MEMORY_HANDLE_TEST_SUPPORT );
+							send_message( MEMORY_HANDLE_TEST_SUPPORT );
 							zepto_response_to_request( MEMORY_HANDLE_TEST_SUPPORT );
 							tester_requestHoldingPacket();
 							INCREMENT_COUNTER( 90, "MAIN LOOP, packet sent sync with receiving [2] (because of timer)" );
@@ -247,7 +247,7 @@ printf( "ret_code = %d\n", ret_code );
 				break;
 			}
 trygetmsg:
-			ret_code = tryGetMessage( MEMORY_HANDLE_MAIN_LOOP );
+			ret_code = try_get_message( MEMORY_HANDLE_MAIN_LOOP );
 			zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 			INCREMENT_COUNTER_IF( 97, "MAIN LOOP, packet received [2]", ret_code == COMMLAYER_RET_OK );
 			assert( ret_code != COMMLAYER_RET_OK || ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ) != 0 );
@@ -259,7 +259,7 @@ trygetmsg:
 				{
 					INCREMENT_COUNTER( 93, "MAIN LOOP, packet sent sync with receiving [3]" );
 					zepto_response_to_request( MEMORY_HANDLE_TEST_SUPPORT );
-					sendMessage( MEMORY_HANDLE_TEST_SUPPORT );
+					send_message( MEMORY_HANDLE_TEST_SUPPORT );
 					zepto_response_to_request( MEMORY_HANDLE_TEST_SUPPORT );
 				}/*+*/
 
@@ -663,7 +663,7 @@ saoudp_send:
 			{
 				INCREMENT_COUNTER( 80, "MAIN LOOP, packet inserted" );
 				zepto_response_to_request( MEMORY_HANDLE_TEST_SUPPORT );
-				sendMessage( MEMORY_HANDLE_TEST_SUPPORT );
+				send_message( MEMORY_HANDLE_TEST_SUPPORT );
 				zepto_response_to_request( MEMORY_HANDLE_TEST_SUPPORT );
 			}
 
@@ -671,7 +671,7 @@ saoudp_send:
 			{
 				if ( is_packet_to_send )
 				{
-					ret_code = sendMessage( MEMORY_HANDLE_MAIN_LOOP );
+					ret_code = send_message( MEMORY_HANDLE_MAIN_LOOP );
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 					if (ret_code != COMMLAYER_RET_OK )
 					{
