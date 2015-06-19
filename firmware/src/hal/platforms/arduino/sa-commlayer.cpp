@@ -20,16 +20,45 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "../../sa-commlayer.h"
 #include "../../hal-waiting.h"
 
+#define MAX_PACKET_SIZE 50
+#define START_OF_PACKET 0x1
+#define END_OF_TRANSMISSION 0x17
+
 uint8_t hal_wait_for( waiting_for* wf )
 {
-	ZEPTO_DEBUG_ASSERT(0);
-	return 0;
+    if (wf->wait_packet != 0)
+    {
+        while (Serial.available())
+        {
+            if (Serial.read() == START_OF_PACKET)
+            {
+                return WAIT_RESULTED_IN_PACKET
+            }
+        }
+    }
+
+	return WAIT_RESULTED_IN_FAILURE;
 }
 
 uint8_t try_get_message( MEMORY_HANDLE mem_h )
 {
-	ZEPTO_DEBUG_ASSERT(0);
-	return 0;
+    // do cleanup
+    memory_object_response_to_request( mem_h );
+    memory_object_response_to_request( mem_h );
+    uint8_t* buff = memory_object_append( mem_h, MAX_PACKET_SIZE );
+
+    uint8_t index = 0, byte;
+    while (Serial.available()) {
+        byte = Serial.read();
+        if (byte == END_OF_TRANSMISSION)
+        {
+            return COMMLAYER_RET_OK;
+        }
+
+        buff[index++] = byte;
+    }
+
+    return COMMLAYER_RET_FAILED;
 }
 
 bool communication_initialize()
@@ -40,8 +69,12 @@ bool communication_initialize()
 
 uint8_t send_message( MEMORY_HANDLE mem_h )
 {
-	ZEPTO_DEBUG_ASSERT(0);
-	return 0;
+    uint16_t sz = memory_object_get_request_size( mem_h );
+    ZEPTO_DEBUG_ASSERT( sz != 0 ); // note: any valid message would have to have at least some bytes for headers, etc, so it cannot be empty
+    uint8_t* buff = memory_object_get_request_ptr( mem_h );
+    ZEPTO_DEBUG_ASSERT( buff != NULL );
+    Serial.write(buff, sz);
+    return COMMLAYER_RET_OK;
 }
 
 #endif
