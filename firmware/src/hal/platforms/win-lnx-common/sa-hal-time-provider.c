@@ -36,6 +36,24 @@ unsigned short getTime()
 	return (unsigned short)( GetTickCount() / 200 );
 }
 
+void mcu_sleep( uint16_t sec, uint8_t transmitter_state_on_exit )
+{
+	if ( transmitter_state_on_exit == 0 )
+		keep_transmitter_on( false );
+	Sleep( ( unsigned int )sec * 1000 );
+	if ( transmitter_state_on_exit )
+		keep_transmitter_on( true );
+}
+
+void just_sleep( sa_time_val* timeval )
+{
+	unsigned int ms = timeval->high_t;
+	ms <<= 16;
+	ms += timeval->low_t;
+	Sleep( ms );
+}
+
+
 #else
 
 #include <unistd.h>
@@ -71,6 +89,21 @@ void sa_get_time( sa_time_val* t )
 	t->high_t = sys_t >> 16;
 	t->low_t = (unsigned short)sys_t;
 }
+
+void mcu_sleep( uint16_t sec )
+{
+	unsigned int timeout = (unsigned int)sec * 1000;
+	wait_for_timeout( timeout);
+}
+
+void just_sleep( sa_time_val* timeval )
+{
+	unsigned int timeout = timeval->high_t;
+	timeout <<= 16;
+	timeout += timeval->low_t;
+	wait_for_timeout( timeout);
+}
+
 
 // TODO: get rid of it
 unsigned short getTime()

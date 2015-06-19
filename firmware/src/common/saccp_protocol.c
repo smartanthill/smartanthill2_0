@@ -190,13 +190,15 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 			{
 				uint32_t ms;
 				zepto_parser_decode_uint( &po, &ms, 4 );
-				// TODO: fill waiting_for struct, then -- ?
+				sa_time_val timeval;
+				TIME_MILLISECONDS32_TO_TIMEVAL( (uint16_t)ms, (uint16_t)(ms >> 16), timeval );
+				just_sleep( &timeval );
 				break;
 			}
 			case ZEPTOVM_OP_TRANSMITTER:
 			{
 				uint8_t on_off = zepto_parse_uint8( &po );
-				// TODO: what then?
+				keep_transmitter_on( on_off == ZEPTOVM_TRANSMITTER_ONOFF_ON );
 				break;
 			}
 			case ZEPTOVM_OP_MCUSLEEP:
@@ -207,11 +209,17 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 					ZEPTO_DEBUG_ASSERT(0);
 					break;
 				}
-				uint32_t sec;
-				zepto_parser_decode_uint( &po, &sec, 4 );
+				uint16_t sec;
+				sec = zepto_parse_encoded_uint16( &po );
 				uint8_t flags = zepto_parse_uint8( &po );
 				zepto_vm_mcusleep_invoked = true;
-				// TODO: fill waiting_for struct, then -- ?
+				uint8_t transmitter_on_when_back = flags & 1; // TODO: use bitfield processing instead
+				if ( flags & 2 ) // TODO: use bitfield processing instead
+				{
+					// MAYDROPEARLIERINSTRUCTIONS 
+					zepto_parser_strip_beginning_of_request( &po );
+				}
+				mcu_sleep( sec, transmitter_on_when_back );
 				break;
 			}
 			case ZEPTOVM_OP_POPREPLIES:
@@ -224,6 +232,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 					ZEPTO_DEBUG_ASSERT(0);
 					break;
 				}
+				zepto_parser_free_response( mem_h );
 #elif ZEPTO_VM_LEVEL <= ZEPTO_VM_TINY
 #error not implemented
 #else
@@ -232,8 +241,8 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 				// TODO: fill waiting_for struct, then -- ?
 				break;
 			}
-			case ZEPTOVM_OP_APPENDTOREPLY:
 
+			case ZEPTOVM_OP_APPENDTOREPLY:
 			case ZEPTOVM_OP_JMP:
 			case ZEPTOVM_OP_JMPIFREPLYFIELD_LT:
 			case ZEPTOVM_OP_JMPIFREPLYFIELD_GT:

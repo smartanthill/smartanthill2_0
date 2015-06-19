@@ -759,8 +759,10 @@ zepto_mem_man_check_sanity();
 		uint8_t* right_end_of_free_space = memory_objects[ mem_h ].ptr - 1;
 		uint16_t sz_at_left = zepto_mem_man_parse_encoded_uint16_no_size_checks_backward( right_end_of_free_space );
 		uint8_t* left_end_of_free_space = right_end_of_free_space - sz_at_left + 1;
+#ifdef _DEBUG
 		uint16_t sz_at_left_copy = zepto_mem_man_parse_encoded_uint16_no_size_checks_forward( left_end_of_free_space );
 		ZEPTO_DEBUG_ASSERT( sz_at_left == sz_at_left_copy );
+#endif
 		sz_at_left += freeing_at_left;
 		zepto_mem_man_write_encoded_uint16_no_size_checks_forward( left_end_of_free_space, sz_at_left );
 		zepto_mem_man_write_encoded_uint16_no_size_checks_backward( right_end_of_free_space + freeing_at_left, sz_at_left );
@@ -778,6 +780,54 @@ void memory_object_free( REQUEST_REPLY_HANDLE mem_h )
 	// TODO: make sure such implementation is optimal
 	memory_object_request_to_response( mem_h );
 	memory_object_request_to_response( mem_h );
+}
+
+void memory_object_free_response( REQUEST_REPLY_HANDLE mem_h )
+{
+zepto_mem_man_check_sanity();
+
+	uint16_t freeing_at_right = memory_objects[ mem_h ].rsp_size;
+	if ( freeing_at_right )
+	{
+		uint8_t* left_end_of_free_space = memory_objects[ mem_h ].ptr + memory_objects[ mem_h ].rq_size + memory_objects[ mem_h ].rsp_size;
+		uint16_t sz_at_right = zepto_mem_man_parse_encoded_uint16_no_size_checks_forward( left_end_of_free_space );
+		uint8_t* right_end_of_free_space = left_end_of_free_space + sz_at_right - 1;
+#ifdef _DEBUG
+		uint16_t sz_at_right_copy = zepto_mem_man_parse_encoded_uint16_no_size_checks_backward( right_end_of_free_space );
+		ZEPTO_DEBUG_ASSERT( sz_at_right == sz_at_right_copy );
+#endif
+		sz_at_right += freeing_at_right;
+		zepto_mem_man_write_encoded_uint16_no_size_checks_forward( left_end_of_free_space - freeing_at_right, sz_at_right );
+		zepto_mem_man_write_encoded_uint16_no_size_checks_backward( right_end_of_free_space, sz_at_right );
+	}
+	memory_objects[ mem_h ].rsp_size = 0;
+
+zepto_mem_man_check_sanity();
+}
+
+void memory_object_strip_beginning_of_request( REQUEST_REPLY_HANDLE mem_h, uint16_t freeing_at_left )
+{
+zepto_mem_man_check_sanity();
+	// former request is no longer necessary, and memory must be released
+	ZEPTO_DEBUG_ASSERT( freeing_at_left <= memory_objects[ mem_h ].rq_size );
+	if ( freeing_at_left )
+	{
+		uint8_t* right_end_of_free_space = memory_objects[ mem_h ].ptr - 1;
+		uint16_t sz_at_left = zepto_mem_man_parse_encoded_uint16_no_size_checks_backward( right_end_of_free_space );
+		uint8_t* left_end_of_free_space = right_end_of_free_space - sz_at_left + 1;
+#ifdef _DEBUG
+		uint16_t sz_at_left_copy = zepto_mem_man_parse_encoded_uint16_no_size_checks_forward( left_end_of_free_space );
+		ZEPTO_DEBUG_ASSERT( sz_at_left == sz_at_left_copy );
+#endif
+		sz_at_left += freeing_at_left;
+		zepto_mem_man_write_encoded_uint16_no_size_checks_forward( left_end_of_free_space, sz_at_left );
+		zepto_mem_man_write_encoded_uint16_no_size_checks_backward( right_end_of_free_space + freeing_at_left, sz_at_left );
+	}
+
+	memory_objects[ mem_h ].ptr += freeing_at_left;
+	memory_objects[ mem_h ].rq_size -= freeing_at_left;
+zepto_mem_man_check_sanity();
+
 }
 
 
@@ -1360,6 +1410,17 @@ void zepto_parser_encode_and_prepend_uint16( MEMORY_HANDLE mem_h, uint16_t num )
 void zepto_parser_free_memory( REQUEST_REPLY_HANDLE mem_h )
 {
 	memory_object_free( mem_h );
+}
+
+void zepto_parser_free_response( REQUEST_REPLY_HANDLE mem_h )
+{
+	memory_object_free_response( mem_h );
+}
+
+void zepto_parser_strip_beginning_of_request( parser_obj* po )
+{
+	memory_object_strip_beginning_of_request( po->mem_handle, po->offset );
+	po->offset = 0;
 }
 
 

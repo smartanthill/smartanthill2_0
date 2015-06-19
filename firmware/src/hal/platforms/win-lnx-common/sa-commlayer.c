@@ -638,4 +638,10 @@ uint8_t hal_wait_for( waiting_for* wf )
 		}
 	}
 }
+
+void keep_transmitter_on( bool keep_on )
+{
+	// TODO: add reasonable implementation
+}
+
 #endif
