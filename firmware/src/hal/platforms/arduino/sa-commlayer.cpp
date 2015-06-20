@@ -37,7 +37,7 @@ uint8_t hal_wait_for( waiting_for* wf )
         }
     }
 
-	return WAIT_RESULTED_IN_FAILURE;
+    return WAIT_RESULTED_IN_FAILURE;
 }
 
 uint8_t try_get_message( MEMORY_HANDLE mem_h )
@@ -47,15 +47,18 @@ uint8_t try_get_message( MEMORY_HANDLE mem_h )
     memory_object_response_to_request( mem_h );
     uint8_t* buff = memory_object_append( mem_h, MAX_PACKET_SIZE );
 
-    uint8_t index = 0, byte;
+    uint8_t i = 0, byte;
     while (Serial.available()) {
         byte = Serial.read();
         if (byte == END_OF_TRANSMISSION)
         {
+            ZEPTO_DEBUG_ASSERT( i && i <= MAX_PACKET_SIZE );
+            memory_object_response_to_request( mem_h );
+            memory_object_cut_and_make_response( mem_h, 0, i );
             return COMMLAYER_RET_OK;
         }
 
-        buff[index++] = byte;
+        buff[i++] = byte;
     }
 
     return COMMLAYER_RET_FAILED;
@@ -63,8 +66,8 @@ uint8_t try_get_message( MEMORY_HANDLE mem_h )
 
 bool communication_initialize()
 {
-	ZEPTO_DEBUG_ASSERT(0);
-	return false;
+    Serial.begin(9600);
+    return true;
 }
 
 uint8_t send_message( MEMORY_HANDLE mem_h )
