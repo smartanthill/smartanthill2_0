@@ -18,11 +18,9 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __HAL_PLATFORM_H__
 #define __HAL_PLATFORM_H__
 
-#if defined ARDUINO && (!defined ENERGIA)
-#include "platforms/arduino/hal-main.h"
-#elif defined ENERGIA
-#include "platforms/energia/hal-main.h"
-#elif defined __MBED__
+#if defined SA_PLATFORM_WIRING
+#include "platforms/wiring/hal-main.h"
+#elif defined SA_PLATFORM_MBED
 #include "platforms/mbed/hal-main.h"
 #elif defined WINLNXCOMMON
 #include "platforms/win-lnx-common/hal-main.h"
