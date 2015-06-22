@@ -22,8 +22,8 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "platforms/wiring/hal-main.h"
 #elif defined SA_PLATFORM_MBED
 #include "platforms/mbed/hal-main.h"
-#elif defined WINLNXCOMMON
-#include "platforms/win-lnx-common/hal-main.h"
+#elif defined SA_PLATFORM_DESKTOP
+#include "platforms/desktop/hal-main.h"
 #endif
 
 #endif // __HAL_PLATFORM_H__

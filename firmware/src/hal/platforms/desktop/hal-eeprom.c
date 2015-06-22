@@ -15,8 +15,6 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#ifdef WINLNXCOMMON
-
 #include "../../hal-eeprom.h"
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -84,6 +82,3 @@ void hal_eeprom_flush()
 	fsync( efile );
 #endif
 }
-
-#endif
-

@@ -15,8 +15,6 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#ifdef WINLNXCOMMON
-
 #include "../../sa-hal-time-provider.h"
 
 
@@ -110,7 +108,5 @@ unsigned short getTime()
 {
 	return (unsigned short)( getTick() / 200 );
 }
-
-#endif
 
 #endif

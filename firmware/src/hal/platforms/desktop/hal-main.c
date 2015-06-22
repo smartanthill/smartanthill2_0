@@ -15,8 +15,6 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#ifdef WINLNXCOMMON
-
 #include "hal-main.h"
 #include "../../../sa-main.h"
 
@@ -26,5 +24,3 @@ int main(int argc, char *argv[])
 
     return sa_main_loop();
 }
-
-#endif
