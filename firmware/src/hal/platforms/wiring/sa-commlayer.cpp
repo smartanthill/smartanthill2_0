@@ -15,8 +15,6 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#if defined ARDUINO && (!defined ENERGIA)
-
 #include "../../sa-commlayer.h"
 #include "../../hal-waiting.h"
 
@@ -85,5 +83,3 @@ uint8_t send_message( MEMORY_HANDLE mem_h )
     Serial.write(buff, sz);
     return COMMLAYER_RET_OK;
 }
-
-#endif

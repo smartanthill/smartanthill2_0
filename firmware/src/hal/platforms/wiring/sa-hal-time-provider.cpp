@@ -15,8 +15,6 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#if defined ARDUINO && (!defined ENERGIA)
-
 #include "../../sa-hal-time-provider.h"
 #include "../../hal-waiting.h"
 
@@ -53,5 +51,3 @@ void keep_transmitter_on( bool keep_on )
 {
     // TODO: add reasonable implementation
 }
-
-#endif

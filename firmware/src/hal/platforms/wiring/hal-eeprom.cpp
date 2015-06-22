@@ -15,13 +15,17 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#if defined ARDUINO && (!defined ENERGIA)
-
 #include "../../hal-eeprom.h"
+
+#if defined ENERGIA
+#include "MspFlash.h"
+/* Notice! Flash memory segment size in MSP430 is 64 bytes. */
+#define flash SEGMENT_C
+#define EEPROM_SIZE 64
+#else
 #include <EEPROM.h>
-
 #define EEPROM_SIZE (EEPROM.length())
-
+#endif
 
 static inline bool _validate_operation (uint16_t size, uint16_t address)
 {
@@ -31,7 +35,6 @@ static inline bool _validate_operation (uint16_t size, uint16_t address)
         return true;
 }
 
-
 bool hal_init_eeprom_access()
 {
 	return true;
@@ -40,9 +43,13 @@ bool hal_init_eeprom_access()
 bool hal_eeprom_write( const uint8_t* data, uint16_t size, uint16_t address )
 {
 	if (_validate_operation (size, address)) {
+#if defined ENERGIA
+        Flash.write(flash, (unsigned char*) data, size);
+#else
         for (uint32_t i = 0; i < size; i++) {
             EEPROM.write(address++, data[i]);
         }
+#endif
         return true;
     }
 
@@ -52,9 +59,13 @@ bool hal_eeprom_write( const uint8_t* data, uint16_t size, uint16_t address )
 bool hal_eeprom_read( uint8_t* data, uint16_t size, uint16_t address)
 {
     if (_validate_operation (size, address)) {
+#if defined ENERGIA
+        Flash.read(flash, (unsigned char*) data, size);
+#else
         for (uint32_t i = 0; i < size; i++) {
             data[i] = EEPROM.read(address++);
         }
+#endif
         return true;
     }
 
@@ -63,9 +74,11 @@ bool hal_eeprom_read( uint8_t* data, uint16_t size, uint16_t address)
 
 void hal_eeprom_flush()
 {
+#if defined ENERGIA
+    Flash.erase(flash);
+#else
 	for (uint32_t i = 0; i < EEPROM.length(); i++ ) {
          EEPROM.write(i, 0);
     }
-}
-
 #endif
+}

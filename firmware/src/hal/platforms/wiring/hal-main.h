@@ -15,22 +15,21 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#if defined ARDUINO && (!defined ENERGIA)
+#if !defined __HAL_PLATFORM_WIRING_MAIN_H__
+#define __HAL_PLATFORM_WIRING_MAIN_H__
 
-#if !defined __HAL_PLATFORM_ARDUINO_MAIN_H__
-#define __HAL_PLATFORM_ARDUINO_MAIN_H__
-
+#if !defined ENERGIA
 #include <avr/pgmspace.h>
-#include <Arduino.h>
 #include "stdint.h"
+#define ZEPTO_MEMCPY_FROM_PROGMEM memcpy_PF
+#endif
+
+#include <Arduino.h>
 #include "hal-time-conversions.h"
 
 #define ZEPTO_PROGMEM_IN_USE
 #define ZEPTO_PROGMEM      __attribute__ ((progmem))
 #define ZEPTO_PROG_CONSTANT_LOCATION ZEPTO_PROGMEM
 #define ZEPTO_PROG_CONSTANT_READ_BYTE(x) pgm_read_byte(x)
-#define ZEPTO_MEMCPY_FROM_PROGMEM memcpy_PF
 
-#endif // __HAL_PLATFORM_ARDUINO_MAIN_H__
-
-#endif // ARDUINO && (!defined ENERGIA)
+#endif // __HAL_PLATFORM_WIRING_MAIN_H__
