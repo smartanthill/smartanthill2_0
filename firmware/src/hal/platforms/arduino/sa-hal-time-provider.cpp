@@ -18,6 +18,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #if defined ARDUINO && (!defined ENERGIA)
 
 #include "../../sa-hal-time-provider.h"
+#include "../../hal-waiting.h"
 
 void sa_get_time(sa_time_val* t)
 {
@@ -29,6 +30,28 @@ void sa_get_time(sa_time_val* t)
 unsigned short getTime()
 {
     return millis();
+}
+
+void mcu_sleep( uint16_t sec, uint8_t transmitter_state_on_exit )
+{
+    if ( transmitter_state_on_exit == 0 )
+        keep_transmitter_on( false );
+    delay( ( uint16_t )sec * 1000 );
+    if ( transmitter_state_on_exit )
+        keep_transmitter_on( true );
+}
+
+void just_sleep( sa_time_val* timeval )
+{
+    uint32_t timeout = timeval->high_t;
+    timeout <<= 16;
+    timeout += timeval->low_t;
+    wait_for_timeout( timeout);
+}
+
+void keep_transmitter_on( bool keep_on )
+{
+    // TODO: add reasonable implementation
 }
 
 #endif

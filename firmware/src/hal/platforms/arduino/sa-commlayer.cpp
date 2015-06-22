@@ -32,12 +32,18 @@ uint8_t hal_wait_for( waiting_for* wf )
         {
             if (Serial.read() == START_OF_PACKET)
             {
-                return WAIT_RESULTED_IN_PACKET
+                return WAIT_RESULTED_IN_PACKET;
             }
         }
     }
 
     return WAIT_RESULTED_IN_FAILURE;
+}
+
+uint8_t wait_for_timeout( uint32_t timeout)
+{
+    ZEPTO_DEBUG_ASSERT(0);
+    return 0;
 }
 
 uint8_t try_get_message( MEMORY_HANDLE mem_h )

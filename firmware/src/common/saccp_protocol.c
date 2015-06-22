@@ -21,11 +21,9 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "sa-uint48.h"
 #include "saccp_protocol_constants.h"
 #include "../sa_bodypart_list.h"
-
+#include "../hal/hal-waiting.h"
 
 bool zepto_vm_mcusleep_invoked;
-
-
 
 void zepto_vm_init()
 {
@@ -36,8 +34,6 @@ void zepto_vm_init()
 	}
 	zepto_vm_mcusleep_invoked = false;
 }
-
-
 
 void handler_zepto_test_plugin( MEMORY_HANDLE mem_h )
 {
@@ -216,7 +212,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 				uint8_t transmitter_on_when_back = flags & 1; // TODO: use bitfield processing instead
 				if ( flags & 2 ) // TODO: use bitfield processing instead
 				{
-					// MAYDROPEARLIERINSTRUCTIONS 
+					// MAYDROPEARLIERINSTRUCTIONS
 					zepto_parser_strip_beginning_of_request( &po );
 				}
 				mcu_sleep( sec, transmitter_on_when_back );
