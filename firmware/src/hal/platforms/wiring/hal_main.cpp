@@ -20,7 +20,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 void setup()
 {
-    ZEPTO_DEBUG_ASSERT(sa_main_init());
+    sa_main_init();
 }
 
 void loop()
