@@ -18,8 +18,8 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "common/sa_common.h"
 #include "common/sa_uint48.h"
-#include "hal/sa_hal_time_provider.h"
-#include "hal/sa_commlayer.h"
+#include "hal/hal_time_provider.h"
+#include "hal/hal_commlayer.h"
 #include "hal/hal_waiting.h"
 #include "common/saoudp_protocol.h"
 #include "common/sasp_protocol.h"

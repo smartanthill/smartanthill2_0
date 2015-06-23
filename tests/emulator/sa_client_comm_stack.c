@@ -17,8 +17,8 @@ Copyright (C) 2015 OLogN Technologies AG
 
 
 #include "../../firmware/src/common/sa_common.h"
-#include "../../firmware/src/hal/sa_commlayer.h"
-#include "../../firmware/src/hal/sa_hal_time_provider.h"
+#include "../../firmware/src/hal/hal_commlayer.h"
+#include "../../firmware/src/hal/hal_time_provider.h"
 #include "../../firmware/src/common/saoudp_protocol.h"
 #include "../../firmware/src/common/sasp_protocol.h"
 #include "../../firmware/src/common/sagdp_protocol.h"

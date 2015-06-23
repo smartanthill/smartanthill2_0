@@ -15,7 +15,7 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#include "../../sa_hal_time_provider.h"
+#include "../../hal_time_provider.h"
 #include "../../hal_waiting.h"
 
 void sa_get_time(sa_time_val* t)

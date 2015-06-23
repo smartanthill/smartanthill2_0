@@ -15,23 +15,34 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#include "../../sa_hal_time_provider.h"
+#include "../../hal_commlayer.h"
+#include "../../hal_waiting.h"
 
-void sa_get_time(sa_time_val* t)
+uint8_t hal_wait_for( waiting_for* wf )
 {
+	ZEPTO_DEBUG_ASSERT(0);
+	return 0;
 }
 
-unsigned short getTime()
+uint8_t try_get_message( MEMORY_HANDLE mem_h )
 {
-    return 0;
+	ZEPTO_DEBUG_ASSERT(0);
+	return 0;
 }
 
-void mcu_sleep( uint16_t sec, uint8_t transmitter_state_on_exit )
+bool communication_initialize()
 {
+	ZEPTO_DEBUG_ASSERT(0);
+	return false;
 }
 
-void just_sleep( sa_time_val* timeval )
+uint8_t send_message( MEMORY_HANDLE mem_h )
 {
-
+	ZEPTO_DEBUG_ASSERT(0);
+	return 0;
 }
 
+void keep_transmitter_on( bool keep_on )
+{
+	ZEPTO_DEBUG_ASSERT(0);
+}

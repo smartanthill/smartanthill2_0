@@ -19,7 +19,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __SA_HAL_WAITING_H__
 
 #include "../common/sa_common.h"
-#include "sa_hal_time_provider.h"
+#include "hal_time_provider.h"
 
 typedef struct _waiting_for
 {

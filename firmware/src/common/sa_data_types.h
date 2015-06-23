@@ -19,7 +19,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __SA_DATA_TYPES_H__
 
 #include "sa_uint48.h"
-#include "../hal/sa_hal_time_provider.h"
+#include "../hal/hal_time_provider.h"
 
 
 typedef sa_uint48_t sasp_nonce_type;

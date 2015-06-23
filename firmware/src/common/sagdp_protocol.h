@@ -23,7 +23,7 @@ Copyright (C) 2015 OLogN Technologies AG
 //#include "sa_eeprom.h"
 #include "zepto_mem_mngmt.h"
 #include "sa_data_types.h"
-#include "../hal/sa_hal_time_provider.h"
+#include "../hal/hal_time_provider.h"
 #include "../hal/hal_waiting.h"
 
 
