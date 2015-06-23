@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -17,8 +17,8 @@ Copyright (C) 2015 OLogN Technologies AG
 
 
 #include "sasp_protocol.h"
-#include "zepto-mem-mngmt.h"
-#include "sa-eax-128.h"
+#include "zepto_mem_mngmt.h"
+#include "sa_eax_128.h"
 
 static 	SASP_DATA sasp_data;
 
@@ -139,12 +139,12 @@ void SASP_EncryptAndAddAuthenticationData( REQUEST_REPLY_HANDLE mem_h, const uin
 	zepto_parser_encode_and_prepend_uint( mem_h, packet_id, SASP_NONCE_SIZE );
 }
 
-bool SASP_IntraPacketAuthenticateAndDecrypt( const uint8_t* key, REQUEST_REPLY_HANDLE mem_h, sa_uint48_t pid ) 
+bool SASP_IntraPacketAuthenticateAndDecrypt( const uint8_t* key, REQUEST_REPLY_HANDLE mem_h, sa_uint48_t pid )
 {
 	// input data structure: prefix (with nonce; not a part of EAX header) | encrypted data | tag
 	// Structure of output buffer: first_byte | byte_sequence
 	// pid (Packet ID) is formed from prefix data
-	
+
 	uint8_t block[ SASP_ENC_BLOCK_SIZE ];
 	uint8_t tag_calculted[16];
 	uint8_t ctr[16];
@@ -202,7 +202,7 @@ bool SASP_IntraPacketAuthenticateAndDecrypt( const uint8_t* key, REQUEST_REPLY_H
 }
 
 
-bool SASP_is_for_sasp( REQUEST_REPLY_HANDLE mem_h ) 
+bool SASP_is_for_sasp( REQUEST_REPLY_HANDLE mem_h )
 {
 	parser_obj po;
 	zepto_response_to_request( mem_h );
@@ -245,7 +245,7 @@ void DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( MEMORY_HANDLE mem_h, con
 
 	// init parser object
 	zepto_parser_init( &po, mem_h );
-	zepto_parser_init( &po1, mem_h );	
+	zepto_parser_init( &po1, mem_h );
 
 
 	// TODO: if this debug code remains in use, lines below must be replaced by getting a new handle

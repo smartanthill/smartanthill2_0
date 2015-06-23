@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -19,7 +19,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __SHA256_H___
 
 
-#include "../../firmware/src/common/sa-common.h"
+#include "../../firmware/src/common/sa_common.h"
 
 
 void sha256(const uint8_t* msg, uint16_t len, uint8_t* hash);

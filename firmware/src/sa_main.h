@@ -15,20 +15,20 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
+#if !defined __SA_MAIN_H__
+#define __SA_MAIN_H__
 
-#if !defined __SAOUDP_PROTOCOL_H__
-#define __SAOUDP_PROTOCOL_H__
+#include "common/sa_common.h"
 
-#include "sa_common.h"
-#include "zepto_mem_mngmt.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
+bool sa_main_init();
+int sa_main_loop();
 
-// ret codes
-#define SAOUDP_RET_FAILED 0
-#define SAOUDP_RET_OK 1
+#ifdef __cplusplus
+}
+#endif
 
-uint8_t handler_saoudp_send( MEMORY_HANDLE mem_h );
-uint8_t handler_saoudp_receive( MEMORY_HANDLE mem_h );
-
-
-#endif // __SAOUDP_PROTOCOL_H__
+#endif // __SA_MAIN_H__

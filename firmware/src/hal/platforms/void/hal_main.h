@@ -19,7 +19,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define __HAL_PLATFORM_VOID_MAIN_H__
 
 #include "stdint.h"
-#include "hal-time-conversions.h"
+#include "hal_time_conversions.h"
 
 #if defined __AVR
 #define ZEPTO_PROGMEM_IN_USE

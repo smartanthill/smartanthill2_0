@@ -15,20 +15,31 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
+#if !defined __HAL_PLATFORM_DESKTOP_MAIN_H__
+#define __HAL_PLATFORM_DESKTOP_MAIN_H__
 
-#if !defined __SAOUDP_PROTOCOL_H__
-#define __SAOUDP_PROTOCOL_H__
-
-#include "sa_common.h"
-#include "zepto_mem_mngmt.h"
+#include "hal_time_conversions.h"
 
 
-// ret codes
-#define SAOUDP_RET_FAILED 0
-#define SAOUDP_RET_OK 1
+// data types
+#ifdef _MSC_VER
+#define uint8_t unsigned char
+#define int8_t char
+#define uint16_t unsigned short
+#define int16_t short
+#define uint32_t unsigned int
+#else
+#include "stdint.h"
+#endif
 
-uint8_t handler_saoudp_send( MEMORY_HANDLE mem_h );
-uint8_t handler_saoudp_receive( MEMORY_HANDLE mem_h );
+#ifdef _MSC_VER
+#define NOINLINE      __declspec(noinline)
+#define INLINE __inline
+#define FORCE_INLINE	__forceinline
+#else
+#define INLINE static inline
+#define NOINLINE      __attribute__ ((noinline))
+#define	FORCE_INLINE static inline __attribute__((always_inline))
+#endif
 
-
-#endif // __SAOUDP_PROTOCOL_H__
+#endif // __HAL_PLATFORM_DESKTOP_MAIN_H__

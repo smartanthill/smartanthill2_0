@@ -29,13 +29,13 @@ build-firmware:
 	platformio run --project-dir=firmware
 
 build-cs:
-	cd tests/emulator; ./build-cs
+	cd tests/emulator; ./build_cs
 
 build-cu:
-	cd tests/emulator; ./build-cu
+	cd tests/emulator; ./build_cu
 
 build-slv:
-	cd tests/emulator; ./build-slv
+	cd tests/emulator; ./build_slv
 
 astyle:
-	astyle --options=.astylerc -rn "firmware/src/hal/*"
+	astyle --options=.astylerc -rn "firmware/src/*"

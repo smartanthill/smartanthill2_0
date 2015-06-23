@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -15,7 +15,7 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#include "../../firmware/src/common/sa-common.h"
+#include "../../firmware/src/common/sa_common.h"
 
 #define SHA256_BYTES_TO_UINT32( num, bytes ) {num = (bytes)[0]; num <<= 8; num += (bytes)[1]; num <<= 8; num += (bytes)[2]; num <<= 8; num += (bytes)[3];}
 #define SHA256_UINT32_TO_BYTES( num, bytes ) {(bytes)[3] = (uint8_t)(num); (bytes)[2] = (uint8_t)((num)>>8); (bytes)[1] = (uint8_t)((num)>>16); (bytes)[0] = (uint8_t)((num)>>24);}

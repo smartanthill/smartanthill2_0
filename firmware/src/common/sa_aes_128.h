@@ -16,19 +16,11 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 
-#if !defined __SAOUDP_PROTOCOL_H__
-#define __SAOUDP_PROTOCOL_H__
-
 #include "sa_common.h"
-#include "zepto_mem_mngmt.h"
 
+#ifndef __SA_AES_128_H__
+#define __SA_AES_128_H__
 
-// ret codes
-#define SAOUDP_RET_FAILED 0
-#define SAOUDP_RET_OK 1
+void sa_aes_128_encrypt_block( const uint8_t* key, const uint8_t* _block, uint8_t* res );
 
-uint8_t handler_saoudp_send( MEMORY_HANDLE mem_h );
-uint8_t handler_saoudp_receive( MEMORY_HANDLE mem_h );
-
-
-#endif // __SAOUDP_PROTOCOL_H__
+#endif //__SA_AES_128_H__

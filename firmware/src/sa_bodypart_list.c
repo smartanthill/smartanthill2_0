@@ -23,7 +23,7 @@ THIS FILE IS MANUALLY OR AUTOMATICALLY GENERATED BASED ON DESIRED PLUGIN LIST
 #include "sa_bodypart_list.h"
 
 // include declarations of respective plugins
-#include "plugins/smart-echo/smart-echo.h"
+#include "plugins/smart_echo/smart_echo.h"
 
 SmartEchoPluginConfig SmartEchoPluginConfig_struct =
 {

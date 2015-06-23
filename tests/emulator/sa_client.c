@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -20,10 +20,10 @@ Copyright (C) 2015 OLogN Technologies AG
 //#define MODEL_IN_EFFECT 2
 
 
-#include "sa-common.h"
-#include "sa-commlayer.h"
-#include "sa-hal-time-provider.h"
-#include "sa-timer.h"
+#include "sa_common.h"
+#include "sa_commlayer.h"
+#include "sa_hal_time_provider.h"
+#include "sa_timer.h"
 #include "saoudp_protocol.h"
 #include "sasp_protocol.h"
 #include "sagdp_protocol.h"
@@ -35,8 +35,8 @@ Copyright (C) 2015 OLogN Technologies AG
 #else
 #error #error Unexpected value of MODEL_IN_EFFECT
 #endif
-#include "test-generator.h"
-#include <stdio.h> 
+#include "test_generator.h"
+#include <stdio.h>
 
 
 uint8_t pid[ SASP_NONCE_SIZE ];
@@ -49,7 +49,7 @@ int8_t main_loop()
 	INIT_COUNTER_SYSTEM
 #endif // ENABLE_COUNTER_SYSTEM
 
-		
+
 	printf("starting CLIENT...\n");
 	printf("==================\n\n");
 
@@ -398,7 +398,7 @@ trygetmsg:
 #endif
 			case SAGDP_RET_TO_HIGHER:
 			{
-				// regular processing will be done below, but we need to jump over 
+				// regular processing will be done below, but we need to jump over
 				break;
 			}
 #if 0
@@ -442,7 +442,7 @@ processcmd:
 			ret_code = master_start( sizeInOut, rwBuff, rwBuff + BUF_SIZE / 4 );
 		}*/
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-entry:	
+entry:
 		wait_for_incoming_chain_with_timer = false;
 		if ( ret_code == YOCTOVM_WAIT_TO_CONTINUE )
 			printf( "YOCTO:  ret: %d; waiting to continue ...\n", ret_code );
@@ -477,7 +477,7 @@ entry:
 				// NOTE: no 'break' is here as the rest is the same as for YOCTOVM_OK
 			case YOCTOVM_OK:
 			{
-				// here, in general, two main options are present: 
+				// here, in general, two main options are present:
 				// (1) to start a new chain immediately, or
 				// (2) to wait, during certain period of time, for an incoming chain, and then, if no packet is received, to start a new chain
 //				bool start_now = get_rand_val() % 3 == 0;
@@ -552,12 +552,12 @@ processcmd:
 			}
 		}
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-entry:	
+entry:
 
 #else
 #error Unexpected value of MODEL_IN_EFFECT
 #endif
-			
+
 		// 5. SAGDP
 		sa_get_time( &(tact.tv) ); tact.action = 0;
 		ret_code = handler_sagdp_receive_hlp( &tact, NULL, MEMORY_HANDLE_MAIN_LOOP, &sagdp_data );

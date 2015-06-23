@@ -18,10 +18,10 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "saccp_protocol.h"
 #include "sagdp_protocol.h" // for packet status in chain
-#include "sa-uint48.h"
+#include "sa_uint48.h"
 #include "saccp_protocol_constants.h"
 #include "../sa_bodypart_list.h"
-#include "../hal/hal-waiting.h"
+#include "../hal/hal_waiting.h"
 
 bool zepto_vm_mcusleep_invoked;
 

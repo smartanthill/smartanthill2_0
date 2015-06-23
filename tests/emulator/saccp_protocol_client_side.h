@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -19,9 +19,9 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __SACCP_PROTOCOL_H__
 #define __SACCP_PROTOCOL_H__
 
-#include "../../firmware/src/common/sa-common.h"
-#include "../../firmware/src/common/sa-data-types.h"
-#include "../../firmware/src/common/zepto-mem-mngmt.h"
+#include "../../firmware/src/common/sa_common.h"
+#include "../../firmware/src/common/sa_data_types.h"
+#include "../../firmware/src/common/zepto_mem_mngmt.h"
 
 
 // handlers

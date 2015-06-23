@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -19,9 +19,9 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __SA_SA_BODYPART_LIST_COMMON_H__
 #define __SA_SA_BODYPART_LIST_COMMON_H__
 
-#include "sa-common.h"
-#include "sa-data-types.h"
-#include "zepto-mem-mngmt.h"
+#include "sa_common.h"
+#include "sa_data_types.h"
+#include "zepto_mem_mngmt.h"
 
 typedef uint8_t (*plugin_handler_config_fn)(const void* plugin_config, void* plugin_state);
 typedef uint8_t (*plugin_handler_fn)( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply/*, WaitingFor* waiting_for*/, uint8_t first_byte );

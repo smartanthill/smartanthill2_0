@@ -15,20 +15,17 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
+#if !defined __HAL_PLATFORM_H__
+#define __HAL_PLATFORM_H__
 
-#if !defined __SAOUDP_PROTOCOL_H__
-#define __SAOUDP_PROTOCOL_H__
+#if defined SA_PLATFORM_WIRING
+#include "platforms/wiring/hal_main.h"
+#elif defined SA_PLATFORM_MBED
+#include "platforms/mbed/hal_main.h"
+#elif defined SA_PLATFORM_DESKTOP
+#include "platforms/desktop/hal_main.h"
+#elif defined SA_PLATFORM_VOID
+#include "platforms/void/hal_main.h"
+#endif
 
-#include "sa_common.h"
-#include "zepto_mem_mngmt.h"
-
-
-// ret codes
-#define SAOUDP_RET_FAILED 0
-#define SAOUDP_RET_OK 1
-
-uint8_t handler_saoudp_send( MEMORY_HANDLE mem_h );
-uint8_t handler_saoudp_receive( MEMORY_HANDLE mem_h );
-
-
-#endif // __SAOUDP_PROTOCOL_H__
+#endif // __HAL_PLATFORM_H__

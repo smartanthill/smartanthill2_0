@@ -15,22 +15,29 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#ifdef MASTER_ENABLE_ALT_TEST_MODE
 
-#if !defined __SA_TEST_CONTROL_PROG_H__
-#define __SA_TEST_CONTROL_PROG_H__
+#if !defined __SA_SMART_ECHO_PLUGIN_H__
+#define __SA_SMART_ECHO_PLUGIN_H__
 
-#include "../../firmware/src/common/sa_common.h"
-#include "../../firmware/src/common/sa_data_types.h"
-#include "../../firmware/src/common/zepto_mem_mngmt.h"
+#include "../../common/sa_common.h"
+#include "../../common/sa_data_types.h"
+#include "../../common/zepto_mem_mngmt.h"
 
-#define CONTROL_PROG_OK 0
-#define CONTROL_PROG_CONTINUE 1
-#define CONTROL_PROG_PASS_LOWER 2
-#define CONTROL_PROG_PASS_LOWER_THEN_IDLE 4
-/*#define CONTROL_PROG_WAIT_TO_CONTINUE 4*/
+#define PLUGIN_OK 0
+#define PLUGIN_WAIT_TO_CONTINUE 1
+#define PLUGIN_PASS_LOWER 2
 
-typedef struct _DefaultTestingControlProgramState
+
+typedef struct _SmartEchoPluginConfig //constant structure filled with a configuration for specific 'ant body part'
+{
+	uint8_t dummy;
+/*	uint8_t bodypart_id;   //always present
+	uint8_t request_pin_number;//pin to request sensor read
+	uint8_t ack_pin_number;//pin to wait for to see when sensor has provided the data
+	uint8_t reply_pin_numbers[4];//pins to read when ack_pin_number shows that the data is ready*/
+} SmartEchoPluginConfig;
+
+typedef struct _SmartEchoPluginState
 {
 	uint8_t state; //'0' means 'be ready to process incoming command', '1' means 'prepare reply'
 	uint16_t last_sent_id;
@@ -41,14 +48,10 @@ typedef struct _DefaultTestingControlProgramState
 	uint16_t chain_ini_size;
 	uint16_t reply_to_id;
 	uint16_t self_id;
-} DefaultTestingControlProgramState;
+} SmartEchoPluginState;
 
-uint8_t default_test_control_program_init( void* control_prog_state );
-uint8_t default_test_control_program_accept_reply( void* control_prog_state, uint8_t packet_status, parser_obj* received, uint16_t sz );
-uint8_t default_test_control_program_accept_reply_continue( void* control_prog_state, MEMORY_HANDLE reply );
-//uint8_t default_test_control_program_start_new( void* control_prog_state, MEMORY_HANDLE reply );
-uint8_t default_test_control_program_accept_reply( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, void* control_prog_state );
+uint8_t smart_echo_plugin_handler_init( const void* plugin_config, void* plugin_state );
+uint8_t smart_echo_plugin_handler( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply/*, WaitingFor* waiting_for*/, uint8_t first_byte );
 
-#endif // __SA_TEST_CONTROL_PROG_H__
 
-#endif // MASTER_ENABLE_ALT_TEST_MODE
+#endif // __SA_SMART_ECHO_PLUGIN_H__

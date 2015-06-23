@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -18,10 +18,10 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __SASP_PROTOCOL_H__
 #define __SASP_PROTOCOL_H__
 
-#include "sa-common.h"
-#include "sa-data-types.h"
-#include "sa-eeprom.h"
-#include "zepto-mem-mngmt.h"
+#include "sa_common.h"
+#include "sa_data_types.h"
+#include "sa_eeprom.h"
+#include "zepto_mem_mngmt.h"
 
 // RET codes
 #define SASP_RET_IGNORE 0 // not authenticated, etc

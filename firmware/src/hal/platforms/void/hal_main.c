@@ -15,8 +15,8 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#include "../../../sa-main.h"
-#include "hal-main.h"
+#include "../../../sa_main.h"
+#include "hal_main.h"
 
 
 int main(int argc, char *argv[])

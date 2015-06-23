@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
+    it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -16,15 +16,15 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 
-#include "../../firmware/src/common/sa-common.h"
-#include "../../firmware/src/hal/sa-commlayer.h"
-#include "../../firmware/src/hal/sa-hal-time-provider.h"
+#include "../../firmware/src/common/sa_common.h"
+#include "../../firmware/src/hal/sa_commlayer.h"
+#include "../../firmware/src/hal/sa_hal_time_provider.h"
 #include "../../firmware/src/common/saoudp_protocol.h"
 #include "../../firmware/src/common/sasp_protocol.h"
 #include "../../firmware/src/common/sagdp_protocol.h"
 #include "saccp_protocol_client_side.h"
-#include "test-generator.h"
-#include <stdio.h> 
+#include "test_generator.h"
+#include <stdio.h>
 #include "../../firmware/src/zepto_config.h"
 
 DECLARE_AES_ENCRYPTION_KEY
@@ -39,7 +39,7 @@ int main_loop()
 	INIT_COUNTER_SYSTEM
 #endif // ENABLE_COUNTER_SYSTEM
 
-		
+
 	ZEPTO_DEBUG_PRINTF_1("starting CLIENT's COMMM STACK...\n");
 	ZEPTO_DEBUG_PRINTF_1("================================\n\n");
 
@@ -75,7 +75,7 @@ int main_loop()
 	sagdp_init();
 	sasp_init_at_lifestart();
 
-	// Try to initialize connection 
+	// Try to initialize connection
 	if ( !communication_initialize() )
 		return -1;
 
@@ -299,7 +299,7 @@ saoudp_in:
 #endif
 			case SAGDP_RET_TO_HIGHER:
 			{
-				// regular processing will be done below, but we need to jump over 
+				// regular processing will be done below, but we need to jump over
 				break;
 			}
 #if 0
@@ -358,7 +358,7 @@ saoudp_in:
 				break;
 			}
 		}
-#endif			
+#endif
 
 
 

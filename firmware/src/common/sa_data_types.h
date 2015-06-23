@@ -15,20 +15,21 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
+#if !defined __SA_DATA_TYPES_H__
+#define __SA_DATA_TYPES_H__
 
-#if !defined __SAOUDP_PROTOCOL_H__
-#define __SAOUDP_PROTOCOL_H__
-
-#include "sa_common.h"
-#include "zepto_mem_mngmt.h"
-
-
-// ret codes
-#define SAOUDP_RET_FAILED 0
-#define SAOUDP_RET_OK 1
-
-uint8_t handler_saoudp_send( MEMORY_HANDLE mem_h );
-uint8_t handler_saoudp_receive( MEMORY_HANDLE mem_h );
+#include "sa_uint48.h"
+#include "../hal/sa_hal_time_provider.h"
 
 
-#endif // __SAOUDP_PROTOCOL_H__
+typedef sa_uint48_t sasp_nonce_type;
+#define SASP_NONCE_TYPE_SIZE 6 // sizeof(sa_uint48_t)
+
+typedef struct _timeout_action // NOTE: might be a temporary solution
+{
+	sa_time_val tv;
+	uint8_t action;
+} timeout_action;
+
+
+#endif // __SA_DATA_TYPES_H__

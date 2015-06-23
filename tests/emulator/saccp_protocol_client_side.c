@@ -18,7 +18,7 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "saccp_protocol_client_side.h"
 #include "../../firmware/src/common/sagdp_protocol.h" // for packet status in chain
-#include "../../firmware/src/common/sa-uint48.h"
+#include "../../firmware/src/common/sa_uint48.h"
 #include "../../firmware/src/common/saccp_protocol_constants.h"
 
 
