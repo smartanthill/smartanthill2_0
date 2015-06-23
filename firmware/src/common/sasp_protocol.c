@@ -221,6 +221,7 @@ bool SASP_is_for_sasp( REQUEST_REPLY_HANDLE mem_h )
 	return for_sasp;
 }
 
+#ifdef _DEBUG
 void DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( MEMORY_HANDLE mem_h, const uint8_t* key, const sa_uint48_t nonce )
 {
 	uint8_t header[6];
@@ -276,6 +277,7 @@ void DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( MEMORY_HANDLE mem_h, con
 	for ( k=0; k<decr_sz; k++ )
 		ZEPTO_DEBUG_ASSERT( inimsg[k] == checkedMsg[k] );
 }
+#endif
 
 uint8_t handler_sasp_send( const uint8_t* key, const sa_uint48_t packet_id, MEMORY_HANDLE mem_h/*, SASP_DATA* sasp_data*/ )
 {

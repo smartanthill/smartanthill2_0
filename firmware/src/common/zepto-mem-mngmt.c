@@ -17,6 +17,10 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "zepto-mem-mngmt.h"
 
+#define MEM_MNGMT_ORDERED_HANDLES
+
+//#define MEM_MNGMT_OLD_APPROACH	// TODO: test "new" and get rid of this "old" approach
+
 typedef struct _request_reply_mem_obj
 { 
 	uint8_t* ptr; // TODO: switch to offfset
@@ -239,10 +243,13 @@ void zepto_mem_man_init_memory_management()
 	memory_objects[ MEMORY_HANDLE_ADDITIONAL_ANSWER ].ptr = BASE_MEM_BLOCK + 3;
 	memory_objects[ MEMORY_HANDLE_ADDITIONAL_ANSWER ].rq_size = 0;
 	memory_objects[ MEMORY_HANDLE_ADDITIONAL_ANSWER ].rsp_size = 0;
+#if !defined PLAIN_REPLY_FRAME
 	BASE_MEM_BLOCK[3] = 1;
 	memory_objects[ MEMORY_HANDLE_DEFAULT_PLUGIN ].ptr = BASE_MEM_BLOCK + 4;
 	memory_objects[ MEMORY_HANDLE_DEFAULT_PLUGIN ].rq_size = 0;
 	memory_objects[ MEMORY_HANDLE_DEFAULT_PLUGIN ].rsp_size = 0;
+#endif // PLAIN_REPLY_FRAME
+#ifdef _DEBUG
 	BASE_MEM_BLOCK[4] = 1;
 	memory_objects[ MEMORY_HANDLE_TEST_SUPPORT ].ptr = BASE_MEM_BLOCK + 5;
 	memory_objects[ MEMORY_HANDLE_TEST_SUPPORT ].rq_size = 0;
@@ -251,10 +258,11 @@ void zepto_mem_man_init_memory_management()
 	memory_objects[ MEMORY_HANDLE_DBG_TMP ].ptr = BASE_MEM_BLOCK + 6;
 	memory_objects[ MEMORY_HANDLE_DBG_TMP ].rq_size = 0;
 	memory_objects[ MEMORY_HANDLE_DBG_TMP ].rsp_size = 0;
+#endif
 
-	uint16_t remains_at_right = BASE_MEM_BLOCK_SIZE - 6;
+	uint16_t remains_at_right = BASE_MEM_BLOCK_SIZE - MEMORY_HANDLE_MAX;
 
-	zepto_mem_man_write_encoded_uint16_no_size_checks_forward( BASE_MEM_BLOCK + 6, remains_at_right );
+	zepto_mem_man_write_encoded_uint16_no_size_checks_forward( BASE_MEM_BLOCK + MEMORY_HANDLE_MAX, remains_at_right );
 	zepto_mem_man_write_encoded_uint16_no_size_checks_backward( BASE_MEM_BLOCK + BASE_MEM_BLOCK_SIZE - 1, remains_at_right );
 
 	zepto_mem_man_check_sanity();
@@ -262,11 +270,13 @@ void zepto_mem_man_init_memory_management()
 
 void zepto_mem_man_move_obj_max_right( REQUEST_REPLY_HANDLE mem_h )
 {
+#ifdef _DEBUG
 	if ( memory_objects[ mem_h ].ptr == 0 )
 	{
 		ZEPTO_DEBUG_PRINTF_2( "handle = %d: ptr == NULL\n", mem_h );
 	}
 	ZEPTO_DEBUG_ASSERT( memory_objects[ mem_h ].ptr != 0 );
+#endif
 
 	uint8_t* left_end_of_free_space_at_right = memory_objects[ mem_h ].ptr + memory_objects[ mem_h ].rq_size + memory_objects[ mem_h ].rsp_size;
 	uint16_t free_at_right = zepto_mem_man_parse_encoded_uint16_no_size_checks_forward( left_end_of_free_space_at_right );
@@ -330,6 +340,71 @@ uint16_t zepto_mem_man_get_freeable_size_at_left( REQUEST_REPLY_HANDLE mem_h )
 	ZEPTO_DEBUG_ASSERT( free_at_left >= 1 );
 	return free_at_left - 1;
 }
+
+#ifdef MEM_MNGMT_ORDERED_HANDLES
+REQUEST_REPLY_HANDLE zepto_mem_man_get_next_block( REQUEST_REPLY_HANDLE mem_h )
+{
+	return (mem_h + 1) < MEMORY_HANDLE_MAX ? mem_h + 1 : MEMORY_HANDLE_INVALID;
+}
+
+REQUEST_REPLY_HANDLE zepto_mem_man_get_prev_block( REQUEST_REPLY_HANDLE mem_h )
+{
+	return (mem_h > 0 ) ? mem_h - 1 : MEMORY_HANDLE_INVALID ;
+}
+
+void zepto_mem_man_move_all_right( REQUEST_REPLY_HANDLE h_right, REQUEST_REPLY_HANDLE h_left )
+{
+	ZEPTO_DEBUG_ASSERT( h_right !=  MEMORY_HANDLE_INVALID );
+	ZEPTO_DEBUG_ASSERT( h_left !=  MEMORY_HANDLE_INVALID );
+	REQUEST_REPLY_HANDLE h_iter;
+	for ( h_iter = h_right; h_iter > h_left; h_iter-- )
+	{
+zepto_mem_man_check_sanity();
+		zepto_mem_man_move_obj_max_right( h_iter );
+zepto_mem_man_check_sanity();
+	}
+}
+
+void zepto_mem_man_move_all_left( REQUEST_REPLY_HANDLE h_left, REQUEST_REPLY_HANDLE h_right )
+{
+	ZEPTO_DEBUG_ASSERT( h_right !=  MEMORY_HANDLE_INVALID );
+	ZEPTO_DEBUG_ASSERT( h_left !=  MEMORY_HANDLE_INVALID );
+	ZEPTO_DEBUG_ASSERT( memory_objects[h_left].ptr <= memory_objects[h_right].ptr );
+	REQUEST_REPLY_HANDLE h_iter;
+	for ( h_iter = h_left; h_iter < h_right; h_iter++ )
+	{
+		zepto_mem_man_move_obj_max_left( h_iter );
+	}
+}
+
+uint16_t zepto_mem_man_get_total_freeable_space_at_right( REQUEST_REPLY_HANDLE mem_h, REQUEST_REPLY_HANDLE* h_very_right, uint16_t desired_size )
+{
+	REQUEST_REPLY_HANDLE h_iter = mem_h;
+	uint16_t free_at_right = 0;
+	while ( free_at_right < desired_size && h_iter < MEMORY_HANDLE_MAX )
+	{
+		*h_very_right = h_iter;
+		free_at_right += zepto_mem_man_get_freeable_size_at_right( h_iter );
+		h_iter++;
+	}
+	return free_at_right;
+}
+
+uint16_t zepto_mem_man_get_total_freeable_space_at_left( REQUEST_REPLY_HANDLE mem_h, REQUEST_REPLY_HANDLE* h_very_left, uint16_t desired_size )
+{
+	REQUEST_REPLY_HANDLE h_iter = mem_h;
+	uint16_t free_at_left = 0;
+	while ( free_at_left < desired_size )
+	{
+		*h_very_left = h_iter;
+		free_at_left += zepto_mem_man_get_freeable_size_at_left( h_iter );
+		if ( h_iter == 0 ) break;
+		h_iter--;
+	}
+	return free_at_left;
+}
+
+#else // MEM_MNGMT_ORDERED_HANDLES
 
 REQUEST_REPLY_HANDLE zepto_mem_man_get_next_block( REQUEST_REPLY_HANDLE mem_h )
 {
@@ -405,6 +480,34 @@ void zepto_mem_man_move_all_left( REQUEST_REPLY_HANDLE h_left, REQUEST_REPLY_HAN
 		h_iter = zepto_mem_man_get_next_block( h_iter );
 	}
 }
+
+uint16_t zepto_mem_man_get_total_freeable_space_at_right( REQUEST_REPLY_HANDLE mem_h, REQUEST_REPLY_HANDLE* h_very_right, uint16_t desired_size )
+{
+	REQUEST_REPLY_HANDLE h_iter = mem_h;
+	uint16_t free_at_right = 0;
+	while ( free_at_right < desired_size && h_iter != MEMORY_HANDLE_INVALID )
+	{
+		*h_very_right = h_iter;
+		free_at_right += zepto_mem_man_get_freeable_size_at_right( h_iter );
+		h_iter = zepto_mem_man_get_next_block( h_iter );
+	}
+	return free_at_right;
+}
+
+uint16_t zepto_mem_man_get_total_freeable_space_at_left( REQUEST_REPLY_HANDLE mem_h, REQUEST_REPLY_HANDLE* h_very_left, uint16_t desired_size )
+{
+	REQUEST_REPLY_HANDLE h_iter = mem_h;
+	uint16_t free_at_left = 0;
+	while ( free_at_left < desired_size && h_iter != MEMORY_HANDLE_INVALID )
+	{
+		*h_very_left = h_iter;
+		free_at_left += zepto_mem_man_get_freeable_size_at_left( h_iter );
+		h_iter = zepto_mem_man_get_prev_block( h_iter );
+	}
+	return free_at_left;
+}
+
+#endif // MEM_MNGMT_ORDERED_HANDLES
 
 
 
@@ -534,32 +637,6 @@ bool zepto_mem_man_try_move_right_expand_left( REQUEST_REPLY_HANDLE mem_h, uint1
 	bool ret = zepto_mem_man_try_expand_left( mem_h, size );
 	ZEPTO_DEBUG_ASSERT( ret );
 	return ret;
-}
-
-uint16_t zepto_mem_man_get_total_freeable_space_at_right( REQUEST_REPLY_HANDLE mem_h, REQUEST_REPLY_HANDLE* h_very_right, uint16_t desired_size )
-{
-	REQUEST_REPLY_HANDLE h_iter = mem_h;
-	uint16_t free_at_right = 0;
-	while ( free_at_right < desired_size && h_iter != MEMORY_HANDLE_INVALID )
-	{
-		*h_very_right = h_iter;
-		free_at_right += zepto_mem_man_get_freeable_size_at_right( h_iter );
-		h_iter = zepto_mem_man_get_next_block( h_iter );
-	}
-	return free_at_right;
-}
-
-uint16_t zepto_mem_man_get_total_freeable_space_at_left( REQUEST_REPLY_HANDLE mem_h, REQUEST_REPLY_HANDLE* h_very_left, uint16_t desired_size )
-{
-	REQUEST_REPLY_HANDLE h_iter = mem_h;
-	uint16_t free_at_left = 0;
-	while ( free_at_left < desired_size && h_iter != MEMORY_HANDLE_INVALID )
-	{
-		*h_very_left = h_iter;
-		free_at_left += zepto_mem_man_get_freeable_size_at_left( h_iter );
-		h_iter = zepto_mem_man_get_prev_block( h_iter );
-	}
-	return free_at_left;
 }
 
 
@@ -702,6 +779,10 @@ zepto_mem_man_check_sanity();
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// calls leading to trimming of a memory block
+
+#ifdef MEM_MNGMT_OLD_APPROACH
 
 void memory_object_cut_and_make_response( REQUEST_REPLY_HANDLE mem_h, uint16_t offset, uint16_t size )
 {
@@ -830,11 +911,103 @@ zepto_mem_man_check_sanity();
 
 }
 
+#else // MEM_MNGMT_OLD_APPROACH
 
+void memory_block_trim_at_right( uint8_t* block, uint16_t ini_sz, uint16_t size_to_trim )
+{
+	uint8_t* left_end_of_free_space = block + ini_sz;
+	uint16_t sz_at_right = zepto_mem_man_parse_encoded_uint16_no_size_checks_forward( left_end_of_free_space );
+	uint8_t* right_end_of_free_space = left_end_of_free_space + sz_at_right - 1;
+#ifdef _DEBUG
+		uint16_t sz_at_right_copy = zepto_mem_man_parse_encoded_uint16_no_size_checks_backward( right_end_of_free_space );
+		ZEPTO_DEBUG_ASSERT( sz_at_right == sz_at_right_copy );
+#endif
+	zepto_mem_man_write_encoded_uint16_no_size_checks_forward( left_end_of_free_space - size_to_trim, sz_at_right + size_to_trim );
+	zepto_mem_man_write_encoded_uint16_no_size_checks_backward( right_end_of_free_space, sz_at_right + size_to_trim );
+}
 
+void memory_block_trim_at_left( uint8_t* block, uint16_t ini_sz, uint16_t size_to_trim )
+{
+	uint16_t sz_at_left = zepto_mem_man_parse_encoded_uint16_no_size_checks_backward( block - 1 );
+	uint8_t* left_end_of_free_space = block - sz_at_left;
+#ifdef _DEBUG
+		uint16_t sz_at_left_copy = zepto_mem_man_parse_encoded_uint16_no_size_checks_forward( left_end_of_free_space );
+		ZEPTO_DEBUG_ASSERT( sz_at_left == sz_at_left_copy );
+#endif
+	zepto_mem_man_write_encoded_uint16_no_size_checks_forward( left_end_of_free_space, sz_at_left + size_to_trim );
+	zepto_mem_man_write_encoded_uint16_no_size_checks_backward( block + size_to_trim - 1, sz_at_left + size_to_trim );
+}
 
+void memory_object_cut_and_make_response( REQUEST_REPLY_HANDLE mem_h, uint16_t offset, uint16_t size )
+{
+	ZEPTO_DEBUG_ASSERT( offset <= memory_objects[ mem_h ].rq_size );
+	ZEPTO_DEBUG_ASSERT( offset + size <= memory_objects[ mem_h ].rq_size );
 
+	uint8_t* ini_block = memory_objects[ mem_h ].ptr;
+	uint16_t ini_sz = memory_objects[ mem_h ].rq_size + memory_objects[ mem_h ].rsp_size;
+	memory_objects[ mem_h ].ptr += offset;
+	memory_objects[ mem_h ].rq_size = 0;
+	memory_objects[ mem_h ].rsp_size = size;
+	memory_block_trim_at_left( ini_block, ini_sz, offset );
+	memory_block_trim_at_right( ini_block + offset, ini_sz - offset, ini_sz - offset - size );
 
+zepto_mem_man_check_sanity();
+}
+
+void memory_object_request_to_response( REQUEST_REPLY_HANDLE mem_h )
+{
+	memory_object_cut_and_make_response( mem_h, 0, memory_objects[ mem_h ].rq_size );
+}
+
+void memory_object_response_to_request( REQUEST_REPLY_HANDLE mem_h )
+{
+	uint8_t* ini_block = memory_objects[ mem_h ].ptr;
+	uint16_t ini_sz = memory_objects[ mem_h ].rq_size + memory_objects[ mem_h ].rsp_size;
+	uint16_t trimmed_sz = memory_objects[ mem_h ].rq_size;
+	memory_objects[ mem_h ].ptr += trimmed_sz;
+	memory_objects[ mem_h ].rq_size = memory_objects[ mem_h ].rsp_size;
+	memory_objects[ mem_h ].rsp_size = 0;
+	memory_block_trim_at_left( ini_block, ini_sz, trimmed_sz );
+
+zepto_mem_man_check_sanity();
+}
+
+void memory_object_free( REQUEST_REPLY_HANDLE mem_h )
+{
+	uint8_t* ini_block = memory_objects[ mem_h ].ptr;
+	uint16_t ini_sz = memory_objects[ mem_h ].rq_size + memory_objects[ mem_h ].rsp_size;
+	memory_objects[ mem_h ].rq_size = 0;
+	memory_objects[ mem_h ].rsp_size = 0;
+	memory_block_trim_at_right( ini_block, ini_sz, ini_sz );
+
+zepto_mem_man_check_sanity();
+}
+
+void memory_object_free_response( REQUEST_REPLY_HANDLE mem_h )
+{
+	uint8_t* ini_block = memory_objects[ mem_h ].ptr;
+	uint16_t ini_sz = memory_objects[ mem_h ].rq_size + memory_objects[ mem_h ].rsp_size;
+	uint16_t trimmed_sz = memory_objects[ mem_h ].rsp_size;
+	memory_objects[ mem_h ].rsp_size = 0;
+	memory_block_trim_at_right( ini_block, ini_sz, trimmed_sz );
+
+zepto_mem_man_check_sanity();
+}
+
+void memory_object_strip_beginning_of_request( REQUEST_REPLY_HANDLE mem_h, uint16_t freeing_at_left )
+{
+	ZEPTO_DEBUG_ASSERT( freeing_at_left <= memory_objects[ mem_h ].rq_size );
+
+	uint8_t* ini_block = memory_objects[ mem_h ].ptr;
+	uint16_t ini_sz = memory_objects[ mem_h ].rq_size + memory_objects[ mem_h ].rsp_size;
+	memory_objects[ mem_h ].ptr += freeing_at_left;
+	memory_objects[ mem_h ].rq_size -= freeing_at_left;
+	memory_block_trim_at_left( ini_block, ini_sz, freeing_at_left );
+
+zepto_mem_man_check_sanity();
+}
+
+#endif // MEM_MNGMT_OLD_APPROACH
 
 
 

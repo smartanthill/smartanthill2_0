@@ -20,15 +20,31 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "zepto-mem-mngmt-base.h"
 
+//#define PLAIN_REPLY_FRAME	// TODO: this should be defined on a project level somewhere together with other system properties such as a level od Zepto-VM
+
 // named memory handles
 #define MEMORY_HANDLE_MAIN_LOOP 0
 #define MEMORY_HANDLE_SAGDP_LSM 1
 #define MEMORY_HANDLE_ADDITIONAL_ANSWER 2
+#if !defined PLAIN_REPLY_FRAME
 #define MEMORY_HANDLE_DEFAULT_PLUGIN 3
+#ifdef _DEBUG
 #define MEMORY_HANDLE_TEST_SUPPORT 4
 #define MEMORY_HANDLE_DBG_TMP 5
-
 #define MEMORY_HANDLE_MAX 6 // TODO: keep updated!!!
+#else
+#define MEMORY_HANDLE_MAX 4 // TODO: keep updated!!!
+#endif
+#else
+#ifdef _DEBUG
+#define MEMORY_HANDLE_TEST_SUPPORT 3
+#define MEMORY_HANDLE_DBG_TMP 4
+#define MEMORY_HANDLE_MAX 5 // TODO: keep updated!!!
+#else
+#define MEMORY_HANDLE_MAX 3 // TODO: keep updated!!!
+#endif
+#endif // PLAIN_REPLY_FRAME
+
 
 
 
