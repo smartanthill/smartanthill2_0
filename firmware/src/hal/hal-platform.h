@@ -24,6 +24,8 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "platforms/mbed/hal-main.h"
 #elif defined SA_PLATFORM_DESKTOP
 #include "platforms/desktop/hal-main.h"
+#elif defined SA_PLATFORM_VOID
+#include "platforms/void/hal-main.h"
 #endif
 
 #endif // __HAL_PLATFORM_H__
