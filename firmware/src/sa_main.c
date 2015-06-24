@@ -36,19 +36,39 @@ DECLARE_AES_ENCRYPTION_KEY
 
 waiting_for wait_for;
 
+#define ALLOW_PRINTING_SASP_INCOMING_MESSAGE
+#define ALLOW_PRINTING_SASP_OUTGOING_MESSAGE
+#define TEST_RAM_CONSUMPTION
+
 #ifdef TEST_RAM_CONSUMPTION
 
-const uint8_t TEST_PACKET[] ZEPTO_PROG_CONSTANT_LOCATION =
+const uint8_t INCOMING_TEST_PACKET[] ZEPTO_PROG_CONSTANT_LOCATION =
 {
-	0x02, 0x89, 0x61, 0xd9, 0x1d, 0x54, 0xb4, 0xac,
+/*	0x02, 0x89, 0x61, 0xd9, 0x1d, 0x54, 0xb4, 0xac,
 	0xbb, 0xcb, 0x6c, 0x74, 0x0f, 0x53, 0xbf, 0x7f,
 	0x0a, 0x63, 0xac, 0x7d, 0xf8, 0x31, 0x0c, 0xe2,
 	0x2f, 0x25, 0xc8, 0x8c, 0x6f, 0xd0, 0x15, 0x53,
 	0x79, 0x15, 0xbd, 0x15, 0xf9, 0x8a, 0x10, 0x3c,
-	0x73, 0x9e, 0x93, 0xf4,
+	0x73, 0x9e, 0x93, 0xf4,*/
+	0x02, 0x89, 0x61, 0xd9, 0x1d, 0x54, 0xb4, 0xac,
+	0xbb, 0xcb, 0x6c, 0x74, 0x0c, 0x53, 0xbf, 0x7f,
+	0x0a, 0x63, 0xac, 0x7d, 0xd3, 0x31, 0x0c, 0xe2,
+	0x2f, 0x36, 0xfe, 0x84, 0x4a, 0xb5, 0xdb, 0x59,
+	0xaf, 0xf1, 0x45, 0x08, 0x3c, 0xfa, 0xab, 0x99,
+	0x9c, 0x74, 0x68, 0x3c, 0xe5,
 };
 
-uint8_t FAKE_ARRAY_UNDER_STACK[1024-291] __attribute__ ((section (".noinit"))); // TODO: 1024 stands for RAM available, and 291 for reported total size of initial allocations for globals/statics
+const uint8_t OUTGOING_TEST_PACKET[] ZEPTO_PROG_CONSTANT_LOCATION =
+{
+	0x02, 0x88, 0xe1, 0xd6, 0xe3, 0xaa, 0x4a, 0x53,
+	0x25, 0x36, 0x6e, 0x7c, 0x03, 0x50, 0x3a, 0xad,
+	0x27, 0x46, 0x81, 0x42, 0x14, 0x86, 0x7a, 0xe1,
+	0x2c, 0x10, 0xca, 0x1f, 0x25, 0xcb, 0xed, 0xcc,
+	0xc0, 0xe2, 0x29, 0xaf,
+};
+
+//uint8_t FAKE_ARRAY_UNDER_STACK[1024-291] __attribute__ ((section (".noinit"))); // TODO: 1024 stands for RAM available, and 291 for reported total size of initial allocations for globals/statics
+uint8_t FAKE_ARRAY_UNDER_STACK[1024-291];
 
 void StackPaint(void)
 {
@@ -108,6 +128,7 @@ int sa_main_loop()
 	test_byte++;
 #endif // TEST_RAM_CONSUMPTION
 
+	waiting_for ret_wf;
 	uint8_t pid[ SASP_NONCE_SIZE ];
 	uint8_t nonce[ SASP_NONCE_SIZE ];
 	uint8_t ret_code;
@@ -205,9 +226,8 @@ wait_for_comm_event:
 				}
 			}
 #else // TEST_RAM_CONSUMPTION
-			for ( j=0; j<sizeof(TEST_PACKET); j++ );
-//			for ( j=0; j<44; j++ )
-				zepto_write_uint8( MEMORY_HANDLE_MAIN_LOOP, ZEPTO_PROG_CONSTANT_READ_BYTE( TEST_PACKET + j ) );
+			for ( j=0; j<sizeof(INCOMING_TEST_PACKET); j++ )
+				zepto_write_uint8( MEMORY_HANDLE_MAIN_LOOP, ZEPTO_PROG_CONSTANT_READ_BYTE( INCOMING_TEST_PACKET + j ) );
 			zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 			goto sasp_rec;
 #endif // TEST_RAM_CONSUMPTION
@@ -291,7 +311,23 @@ sauudp_rec:
 
 
 		// 2.2. Pass to SASP
-sasp_rec:
+	sasp_rec:
+#ifdef ALLOW_PRINTING_SASP_INCOMING_MESSAGE
+		{
+			parser_obj* po;
+			int ctr = 0;
+			zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
+			ZEPTO_DEBUG_PRINTF_2( "SASP_INCOMING_MESSAGE (%d bytes):\n", zepto_parsing_remaining_bytes( &po ) );
+			while ( zepto_parsing_remaining_bytes( &po ) != 0 )
+			{
+				ZEPTO_DEBUG_PRINTF_2( "0x%02x, ", zepto_parse_uint8( &po ) );
+				ctr++;
+				if ( (ctr & 7) == 0 )
+					ZEPTO_DEBUG_PRINTF_1( "\n" );
+			}
+			ZEPTO_DEBUG_PRINTF_1( "\n\n" );
+		}
+#endif // ALLOW_PRINTING_SASP_INCOMING_MESSAGE
 		ret_code = handler_sasp_receive( AES_ENCRYPTION_KEY, pid, MEMORY_HANDLE_MAIN_LOOP/*, &sasp_data*/ );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		ZEPTO_DEBUG_PRINTF_4( "SASP1:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
@@ -402,7 +438,7 @@ sasp_rec:
 
 processcmd:
 		// 4. Process received command (yoctovm)
-		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL ); // slave_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP );
+		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL, &ret_wf ); // slave_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP );
 /*		if ( ret_code == YOCTOVM_RESET_STACK )
 		{
 //			sagdp_init( &sagdp_data );
@@ -427,7 +463,7 @@ entry:
 				{
 //					sagdp_init( &sagdp_data );
 					sagdp_init();
-					ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL ); // master_start( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4*/ )
+					ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL, &ret_wf ); // master_start( MEMORY_HANDLE_MAIN_LOOP/*, BUF_SIZE / 4*/ )
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 					ZEPTO_DEBUG_ASSERT( ret_code == SACCP_RET_PASS_LOWER );
 				}
@@ -518,6 +554,35 @@ saspsend:
 
 		// Pass to SAoUDP
 saoudp_send:
+#ifdef ALLOW_PRINTING_SASP_OUTGOING_MESSAGE
+		{
+			parser_obj* po;
+			int ctr = 0;
+			zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
+			ZEPTO_DEBUG_PRINTF_2( "SASP_OUTGOING_MESSAGE (%d bytes):\n", zepto_parsing_remaining_bytes( &po ) );
+			while ( zepto_parsing_remaining_bytes( &po ) != 0 )
+			{
+				ZEPTO_DEBUG_PRINTF_2( "0x%02x, ", zepto_parse_uint8( &po ) );
+				ctr++;
+				if ( (ctr & 7) == 0 )
+					ZEPTO_DEBUG_PRINTF_1( "\n" );
+			}
+			ZEPTO_DEBUG_PRINTF_1( "\n\n" );
+		}
+#endif // ALLOW_PRINTING_SASP_OUTGOING_MESSAGE
+#ifdef TEST_RAM_CONSUMPTION
+		{
+			parser_obj* po;
+			zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
+			bool OK = true;
+			for ( j=0; j<sizeof(OUTGOING_TEST_PACKET); j++ )
+			{
+				OK = OK && zepto_parsing_remaining_bytes( &po ) != 0 && ZEPTO_PROG_CONSTANT_READ_BYTE( OUTGOING_TEST_PACKET + j ) == zepto_parse_uint8( &po );
+			}
+			ZEPTO_DEBUG_PRINTF_2( "Testing output: %s\n\n", OK ? "OK" : "FAILED" );
+			return 0;
+		}
+#endif // TEST_RAM_CONSUMPTION
 		ret_code = handler_saoudp_send( MEMORY_HANDLE_MAIN_LOOP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 

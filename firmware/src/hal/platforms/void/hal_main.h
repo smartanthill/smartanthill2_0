@@ -30,6 +30,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define ZEPTO_PROGMEM      __attribute__ ((progmem))
 #define ZEPTO_PROG_CONSTANT_LOCATION ZEPTO_PROGMEM
 #define ZEPTO_PROG_CONSTANT_READ_BYTE(x) pgm_read_byte(x)
+#define ZEPTO_PROG_CONSTANT_READ_PTR(x) ((void*)(pgm_read_ptr_near(x)))
 #define ZEPTO_MEMCPY_FROM_PROGMEM memcpy_PF
 #endif // ZEPTO_PROGMEM_IN_USE
 

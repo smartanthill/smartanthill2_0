@@ -36,7 +36,7 @@ void zepto_vm_init()
 	uint16_t i;
 	for (i = 0; i < BODYPARTS_MAX; i++)
 	{
-		bodyparts[i].phi_fn( (void*)(bodyparts[i].ph_config), (void*)(bodyparts[i].ph_state) );
+		(( plugin_handler_config_fn)( ZEPTO_PROG_CONSTANT_READ_PTR( &(bodyparts[i].phi_fn) ) ) )( (void*)(ZEPTO_PROG_CONSTANT_READ_PTR(&(bodyparts[i].ph_config))), (void*)(ZEPTO_PROG_CONSTANT_READ_PTR(&(bodyparts[i].ph_state))) );
 	}
 	saccp_data.next_command_offset = 0;
 	saccp_data.zepto_vm_mcusleep_invoked = false;
@@ -79,7 +79,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte, waiting_for* wf 
 				//+++ TODO: rethink memory management
 #ifdef ZEPTO_VM_USE_SIMPLE_FRAME
 				zepto_write_uint8( mem_h, 0 ); // start of a "regular" plugin frame
-				bodyparts[body_part].ph_fn( (void*)(bodyparts[body_part].ph_config), (void*)(bodyparts[body_part].ph_state), &po, mem_h/*, WaitingFor* waiting_for*/, first_byte );
+				(( plugin_handler_fn)( ZEPTO_PROG_CONSTANT_READ_PTR( &(bodyparts[body_part].ph_fn) ) ) )( (void*)(ZEPTO_PROG_CONSTANT_READ_PTR(&(bodyparts[body_part].ph_config))), (void*)(ZEPTO_PROG_CONSTANT_READ_PTR(&(bodyparts[body_part].ph_state))), &po, mem_h/*, WaitingFor* waiting_for*/, first_byte );
 #else // ZEPTO_VM_USE_SIMPLE_FRAME
 				zepto_parser_init_by_parser( &po1, &po );
 //				zepto_parse_skip_block( &po, zepto_parsing_remaining_bytes( &po ) );

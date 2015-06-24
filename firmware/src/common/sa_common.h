@@ -93,6 +93,10 @@ INLINE void zepto_memcpy( void* dest, const void* src, uint16_t cnt )
 #define ZEPTO_PROG_CONSTANT_READ_BYTE(x) (*(x))
 #endif
 
+#ifndef ZEPTO_PROG_CONSTANT_READ_PTR
+#define ZEPTO_PROG_CONSTANT_READ_PTR(x) ((void*)(*(x)))
+#endif
+
 #ifndef ZEPTO_MEMCPY_FROM_PROGMEM
 #define ZEPTO_MEMCPY_FROM_PROGMEM ZEPTO_MEMCPY
 #endif
