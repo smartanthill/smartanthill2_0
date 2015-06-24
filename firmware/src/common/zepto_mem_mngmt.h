@@ -20,7 +20,9 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "zepto_mem_mngmt_base.h"
 
-//#define PLAIN_REPLY_FRAME	// TODO: this should be defined on a project level somewhere together with other system properties such as a level od Zepto-VM
+#ifdef ZEPTO_VM_USE_SIMPLE_FRAME
+#define PLAIN_REPLY_FRAME
+#endif
 
 // named memory handles
 #define MEMORY_HANDLE_MAIN_LOOP 0
@@ -81,6 +83,7 @@ void zepto_write_block( REQUEST_REPLY_HANDLE mem_h, const uint8_t* block, uint16
 // extended writing functions
 void zepto_response_to_request( MEMORY_HANDLE mem_h );
 void zepto_convert_part_of_request_to_response( MEMORY_HANDLE mem_h, parser_obj* po_start, parser_obj* po_end );
+void zepto_append_part_of_request_to_response( MEMORY_HANDLE mem_h, parser_obj* po_start, parser_obj* po_end );
 void zepto_copy_request_to_response_of_another_handle( MEMORY_HANDLE mem_h, MEMORY_HANDLE target_mem_h );
 void zepto_copy_response_to_response_of_another_handle( MEMORY_HANDLE mem_h, MEMORY_HANDLE target_mem_h );
 void zepto_append_response_to_response_of_another_handle( MEMORY_HANDLE mem_h, MEMORY_HANDLE target_mem_h );

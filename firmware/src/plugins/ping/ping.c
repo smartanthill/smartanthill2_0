@@ -24,7 +24,6 @@ uint8_t ping_plugin_handler_init( const void* plugin_config, void* plugin_state 
 
 uint8_t ping_plugin_handler( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply/*, WaitingFor* waiting_for*/, uint8_t first_byte )
 {
-	zepto_response_to_request( reply );
 	zepto_write_uint8( reply, 1 ); // answer with "1", we are on-line!
 	return 0;
 }

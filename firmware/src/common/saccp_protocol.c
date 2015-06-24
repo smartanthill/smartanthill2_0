@@ -74,6 +74,10 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 				uint16_t data_sz = zepto_parse_encoded_uint16( &po );
 
 				//+++ TODO: rethink memory management
+#ifdef ZEPTO_VM_USE_SIMPLE_FRAME
+				zepto_write_uint8( mem_h, 0 ); // start of a "regular" plugin frame
+				bodyparts[body_part].ph_fn( (void*)(bodyparts[body_part].ph_config), (void*)(bodyparts[body_part].ph_state), &po, mem_h/*, WaitingFor* waiting_for*/, first_byte );
+#else // ZEPTO_VM_USE_SIMPLE_FRAME
 				zepto_parser_init_by_parser( &po1, &po );
 //				zepto_parse_skip_block( &po, zepto_parsing_remaining_bytes( &po ) );
 				zepto_parse_skip_block( &po, data_sz );
@@ -91,8 +95,8 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 				zepto_parser_encode_and_prepend_uint16( MEMORY_HANDLE_DEFAULT_PLUGIN, prefix );
 
 				zepto_append_response_to_response_of_another_handle( MEMORY_HANDLE_DEFAULT_PLUGIN, mem_h );
-				zepto_response_to_request( MEMORY_HANDLE_DEFAULT_PLUGIN );
-				zepto_response_to_request( MEMORY_HANDLE_DEFAULT_PLUGIN );
+				zepto_parser_free_memory( MEMORY_HANDLE_DEFAULT_PLUGIN );
+#endif // ZEPTO_VM_USE_SIMPLE_FRAME
 				break;
 			}
 			case ZEPTOVM_OP_EXIT:
@@ -107,7 +111,13 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 //				int16_t body_part = zepto_parse_encoded_int16( &po );
 				// TODO: code below is HIGHLY temporary stub and should be replaced by the commented line above (with proper implementation of the respective function ASAP
 				// (for the sake of quick progress of mainstream development currently we assume that the value of body_part is within single +/- decimal digit)
-				zepto_parser_free_memory( MEMORY_HANDLE_DEFAULT_PLUGIN );
+#ifdef ZEPTO_VM_USE_SIMPLE_FRAME
+				MEMORY_HANDLE reply_handle = mem_h;
+				zepto_write_uint8( reply_handle, 0 ); // regular frame start
+#else
+				MEMORY_HANDLE reply_handle = MEMORY_HANDLE_DEFAULT_PLUGIN;
+				zepto_parser_free_memory( reply_handle );
+#endif // ZEPTO_VM_USE_SIMPLE_FRAME
 				uint8_t field_indicator = zepto_parse_uint8( &po );
 				while ( field_indicator != DEVICECAPS_END_OF_LIST )
 				{
@@ -116,38 +126,38 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 					{
 						case SACCP_GUARANTEED_PAYLOAD:
 						{
-							zepto_write_uint8( MEMORY_HANDLE_DEFAULT_PLUGIN, 0xFF );
+							zepto_write_uint8( reply_handle, 0xFF );
 							break;
 						}
 						case ZEPTOVM_LEVEL:
 						{
-							zepto_write_uint8( MEMORY_HANDLE_DEFAULT_PLUGIN, (uint8_t)ZEPTO_VM_LEVEL );
+							zepto_write_uint8( reply_handle, (uint8_t)ZEPTO_VM_LEVEL );
 							break;
 						}
 						case ZEPTOVM_REPLY_BUFFER_AND_EXPR_STACK_BYTE_SIZES:
 						{
-							zepto_write_uint8( MEMORY_HANDLE_DEFAULT_PLUGIN, 0xFF );
+							zepto_write_uint8( reply_handle, 0xFF );
 							break;
 						}
 						case ZEPTOVM_REPLY_STACK_SIZE:
 						{
-							zepto_write_uint8( MEMORY_HANDLE_DEFAULT_PLUGIN, 0xFF );
+							zepto_write_uint8( reply_handle, 0xFF );
 							break;
 						}
 						case ZEPTOVM_EXPR_FLOAT_TYPE:
 						{
-							zepto_write_uint8( MEMORY_HANDLE_DEFAULT_PLUGIN, 0xFF );
+							zepto_write_uint8( reply_handle, 0xFF );
 							break;
 						}
 						case ZEPTOVM_MAX_PSEUDOTHREADS:
 						{
-							zepto_write_uint8( MEMORY_HANDLE_DEFAULT_PLUGIN, 0xFF );
+							zepto_write_uint8( reply_handle, 0xFF );
 							break;
 						}
 						default:
 						{
 							// NOTE: this is a right reply since we do not know this type
-							zepto_write_uint8( MEMORY_HANDLE_DEFAULT_PLUGIN, 0xFF );
+							zepto_write_uint8( reply_handle, 0xFF );
 							break;
 						}
 					}
@@ -155,18 +165,29 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 				}
 
 				// now we have raw data collected; form a frame
+#if !defined ZEPTO_VM_USE_SIMPLE_FRAME
 				// TODO: here is a place to form optional headers, if any
 				uint16_t ret_data_sz = zepto_writer_get_response_size( MEMORY_HANDLE_DEFAULT_PLUGIN );
 				uint16_t prefix = (uint16_t)1 | ( ret_data_sz << 2 ); // TODO: if data were truncated, add a respective bit; TODO: usi bit field processing instead
 				zepto_parser_encode_and_prepend_uint16( MEMORY_HANDLE_DEFAULT_PLUGIN, prefix );
 				zepto_append_response_to_response_of_another_handle( MEMORY_HANDLE_DEFAULT_PLUGIN, mem_h );
 				zepto_parser_free_memory( MEMORY_HANDLE_DEFAULT_PLUGIN );
+#endif
 				break;
 			}
 			case ZEPTOVM_OP_PUSHREPLY:
 			{
 				uint16_t reply_body_size = zepto_parse_encoded_uint16( &po );
 				// TODO: ensure that 'reply_body_size' is within the remaining part of request
+#ifdef ZEPTO_VM_USE_SIMPLE_FRAME
+				MEMORY_HANDLE reply_handle = mem_h;
+				zepto_write_uint8( reply_handle, 0 ); // regular frame start
+				zepto_parser_init_by_parser( &po1, &po );
+				zepto_parse_skip_block( &po, reply_body_size );
+				zepto_append_part_of_request_to_response( mem_h, &po1, &po );
+#else
+				MEMORY_HANDLE reply_handle = MEMORY_HANDLE_DEFAULT_PLUGIN;
+				zepto_parser_free_memory( reply_handle );
 				zepto_parser_free_memory( MEMORY_HANDLE_DEFAULT_PLUGIN );
 				parser_obj po1;
 				zepto_parser_init_by_parser( &po1, &po );
@@ -180,6 +201,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 				zepto_parser_encode_and_prepend_uint16( MEMORY_HANDLE_DEFAULT_PLUGIN, prefix );
 				zepto_append_response_to_response_of_another_handle( MEMORY_HANDLE_DEFAULT_PLUGIN, mem_h );
 				zepto_parser_free_memory( MEMORY_HANDLE_DEFAULT_PLUGIN );
+#endif // ZEPTO_VM_USE_SIMPLE_FRAME
 				break;
 			}
 			case ZEPTOVM_OP_SLEEP:
@@ -210,11 +232,13 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 				uint8_t flags = zepto_parse_uint8( &po );
 				zepto_vm_mcusleep_invoked = true;
 				uint8_t transmitter_on_when_back = flags & 1; // TODO: use bitfield processing instead
+#if ZEPTO_VM_LEVEL > ZEPTO_VM_ONE
 				if ( flags & 2 ) // TODO: use bitfield processing instead
 				{
 					// MAYDROPEARLIERINSTRUCTIONS
 					zepto_parser_strip_beginning_of_request( &po );
 				}
+#endif
 				mcu_sleep( sec, transmitter_on_when_back );
 				break;
 			}

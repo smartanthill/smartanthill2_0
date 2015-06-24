@@ -1176,6 +1176,20 @@ void zepto_convert_part_of_request_to_response( MEMORY_HANDLE mem_h, parser_obj*
 	memory_object_cut_and_make_response( ret_handle, po_start->offset, po_end->offset - po_start->offset );
 }
 
+void zepto_append_part_of_request_to_response( MEMORY_HANDLE mem_h, parser_obj* po_start, parser_obj* po_end )
+{
+	ZEPTO_DEBUG_ASSERT( mem_h != MEMORY_HANDLE_INVALID );
+	ZEPTO_DEBUG_ASSERT( po_start->mem_handle == mem_h );
+	ZEPTO_DEBUG_ASSERT( po_start->mem_handle == po_end->mem_handle );
+	ZEPTO_DEBUG_ASSERT( po_start->mem_handle < MEMORY_HANDLE_MAX );
+	ZEPTO_DEBUG_ASSERT( po_start->offset <= po_end->offset );
+	uint8_t* src_buff = memory_object_get_request_ptr( po_start->mem_handle ) + po_start->offset;
+	ZEPTO_DEBUG_ASSERT( src_buff != NULL );
+	uint8_t* dest_buff = memory_object_append( mem_h, po_end->offset - po_start->offset );
+	memcpy( dest_buff, src_buff, po_end->offset - po_start->offset );
+	po_start->offset = po_end->offset;
+}
+
 void zepto_copy_response_to_response_of_another_handle( MEMORY_HANDLE mem_h, MEMORY_HANDLE target_mem_h )
 {
 	ZEPTO_DEBUG_ASSERT( mem_h != target_mem_h );

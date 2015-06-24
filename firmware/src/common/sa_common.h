@@ -34,6 +34,10 @@ Copyright (C) 2015 OLogN Technologies AG
 #define ZEPTO_VM_LEVEL ZEPTO_VM_ONE
 #endif
 
+#ifdef ZEPTO_VM_ONE
+#define ZEPTO_VM_USE_SIMPLE_FRAME
+#endif
+
 #define SA_DEBUG
 
 #define SA_LITTLE_ENDIAN 0

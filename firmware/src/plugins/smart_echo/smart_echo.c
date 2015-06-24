@@ -36,8 +36,7 @@ uint8_t smart_echo_plugin_handler_continue( const void* plugin_config, void* plu
 {
 	const SmartEchoPluginConfig* pc = (SmartEchoPluginConfig*) plugin_config;
 	SmartEchoPluginState* ps = (SmartEchoPluginState*)plugin_state;
-
-	zepto_response_to_request( reply );
+	uint8_t varln = 6 - ps->self_id % 7; // 0:6
 
 	zepto_write_uint8( reply, ps->first_byte );
 	zepto_parser_encode_and_append_uint16( reply, ps->chain_id[0] );
@@ -45,9 +44,9 @@ uint8_t smart_echo_plugin_handler_continue( const void* plugin_config, void* plu
 	zepto_parser_encode_and_append_uint16( reply, ps->chain_ini_size );
 	zepto_parser_encode_and_append_uint16( reply, ps->reply_to_id );
 	zepto_parser_encode_and_append_uint16( reply, ps->self_id );
+	zepto_write_uint8( reply, varln + 1 );
 
 	char tail[256];
-	uint16_t varln = 6 - ps->self_id % 7; // 0:6
 	uint8_t i;
 	for ( i=0;i<varln; i++ )
 		tail[ i] = '-';
@@ -91,8 +90,9 @@ uint8_t smart_echo_plugin_handler( const void* plugin_config, void* plugin_state
 		ps->chain_ini_size = zepto_parse_encoded_uint16( command );
 		ps->reply_to_id = zepto_parse_encoded_uint16( command );
 		ps->self_id = zepto_parse_encoded_uint16( command );
+//		uint8_t tail_sz = zepto_parsing_remaining_bytes( command );
+		uint8_t tail_sz = zepto_parse_uint8( command );
 		char tail[256];
-		uint16_t tail_sz = zepto_parsing_remaining_bytes( command );
 		zepto_parse_read_block( command, (uint8_t*)tail, tail_sz );
 		tail[ tail_sz ] = 0;
 
