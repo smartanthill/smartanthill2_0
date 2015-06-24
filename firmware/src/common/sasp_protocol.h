@@ -45,10 +45,6 @@ typedef struct _SASP_DATA
 	sasp_nonce_type nonce_lw;
 	sasp_nonce_type nonce_ls;
 } SASP_DATA;
-//#define DATA_SASP_SIZE (SASP_NONCE_SIZE+SASP_NONCE_SIZE+SASP_TAG_SIZE)
-//#define DATA_SASP_NONCE_LW_OFFSET 0 // Nonce Lower Watermark
-//#define DATA_SASP_NONCE_LS_OFFSET SASP_NONCE_SIZE // Nonce to use For Sending
-//#define DATA_SASP_LRPS_OFFSET (SASP_NONCE_SIZE+SASP_NONCE_SIZE) // Last Received Packet Signature TODO: Check whether we need it
 
 
 // initializing and backup

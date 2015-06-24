@@ -21,9 +21,15 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "sa_uint48.h"
 #include "saccp_protocol_constants.h"
 #include "../sa_bodypart_list.h"
-#include "../hal/hal_waiting.h"
 
-bool zepto_vm_mcusleep_invoked;
+typedef struct _SACCP_DATA
+{
+	uint16_t next_command_offset; // after sleep to continue from
+	bool zepto_vm_mcusleep_invoked;
+} SACCP_DATA;
+
+static 	SACCP_DATA saccp_data;
+
 
 void zepto_vm_init()
 {
@@ -32,23 +38,20 @@ void zepto_vm_init()
 	{
 		bodyparts[i].phi_fn( (void*)(bodyparts[i].ph_config), (void*)(bodyparts[i].ph_state) );
 	}
-	zepto_vm_mcusleep_invoked = false;
+	saccp_data.next_command_offset = 0;
+	saccp_data.zepto_vm_mcusleep_invoked = false;
 }
 
-void handler_zepto_test_plugin( MEMORY_HANDLE mem_h )
+void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte, waiting_for* wf )
 {
 	parser_obj po, po1;
 	zepto_parser_init( &po, mem_h );
-	zepto_parser_init( &po1, mem_h );
-	zepto_parse_skip_block( &po1, zepto_parsing_remaining_bytes( &po ) );
 
-	zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
-}
-
-void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
-{
-	parser_obj po, po1;
-	zepto_parser_init( &po, mem_h );
+	if ( saccp_data.next_command_offset != 0 )
+	{
+		ZEPTO_DEBUG_ASSERT( saccp_data.next_command_offset <= zepto_parsing_remaining_bytes( &po ) );
+		zepto_parse_skip_block( &po, saccp_data.next_command_offset );
+	}
 
 	uint8_t op_code;
 	bool explicit_exit_called = false;
@@ -230,7 +233,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 				uint16_t sec;
 				sec = zepto_parse_encoded_uint16( &po );
 				uint8_t flags = zepto_parse_uint8( &po );
-				zepto_vm_mcusleep_invoked = true;
+				saccp_data.zepto_vm_mcusleep_invoked = true;
 				uint8_t transmitter_on_when_back = flags & 1; // TODO: use bitfield processing instead
 #if ZEPTO_VM_LEVEL > ZEPTO_VM_ONE
 				if ( flags & 2 ) // TODO: use bitfield processing instead
@@ -240,6 +243,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte )
 				}
 #endif
 				mcu_sleep( sec, transmitter_on_when_back );
+				saccp_data.zepto_vm_mcusleep_invoked = false;
 				break;
 			}
 			case ZEPTOVM_OP_POPREPLIES:
@@ -345,7 +349,7 @@ void form_error_packet( MEMORY_HANDLE mem_h, uint8_t error_code, uint8_t incomin
 	}
 }
 
-uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
+uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, waiting_for* wf )
 {
 	parser_obj po;
 	zepto_parser_init( &po, mem_h );
@@ -418,7 +422,7 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id )
 			zepto_convert_part_of_request_to_response( mem_h, &po, &po1 );
 			zepto_response_to_request( mem_h );
 
-			handler_zepto_vm( mem_h, first_byte ); // TODO: it can be implemented as an additional layer
+			handler_zepto_vm( mem_h, first_byte, wf ); // TODO: it can be implemented as an additional layer
 			return SACCP_RET_PASS_LOWER;
 			break;
 		}

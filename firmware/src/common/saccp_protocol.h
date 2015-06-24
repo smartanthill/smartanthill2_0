@@ -22,6 +22,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "sa_common.h"
 #include "sa_data_types.h"
 #include "zepto_mem_mngmt.h"
+#include "../hal/hal_waiting.h"
 
 
 // handlers
@@ -29,10 +30,11 @@ Copyright (C) 2015 OLogN Technologies AG
 // RET codes
 #define SACCP_RET_FAILED 0 // any failure
 #define SACCP_RET_PASS_LOWER 1 // packet must be sent to a communication peer
+#define SACCP_RET_WAIT 2 // processing is not over; WaitingFor describes details
 
 void zepto_vm_init();
 
-uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id );
+uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, waiting_for* wf );
 //uint8_t handler_sacpp_reply( MEMORY_HANDLE mem_h );
 
 #endif // __SACCP_PROTOCOL_H__
