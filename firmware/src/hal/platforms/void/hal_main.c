@@ -18,10 +18,11 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "../../../sa_main.h"
 #include "hal_main.h"
 
-
+/*
 int main(int argc, char *argv[])
 {
     sa_main_init();
 
     return sa_main_loop();
 }
+*/
