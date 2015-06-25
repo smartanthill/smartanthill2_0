@@ -88,8 +88,6 @@ void SASP_EncryptAndAddAuthenticationData( REQUEST_REPLY_HANDLE mem_h, const uin
 
 	// data under encryption is as follows: first_byte | message_byte_sequence
 
-	bool read_ok;
-
 	uint8_t nonce[16];
 	SASP_make_nonce_for_encryption( packet_id, MASTER_SLAVE_BIT, nonce );
 
@@ -113,8 +111,8 @@ void SASP_EncryptAndAddAuthenticationData( REQUEST_REPLY_HANDLE mem_h, const uin
 		while ( zepto_parsing_remaining_bytes( &po ) > 16 )
 		{
 #ifdef SA_DEBUG
-			read_ok = zepto_parse_read_block( &po, block, SASP_ENC_BLOCK_SIZE );
-			ZEPTO_DEBUG_ASSERT( read_ok );
+			bool read_ok_1 = zepto_parse_read_block( &po, block, SASP_ENC_BLOCK_SIZE );
+			ZEPTO_DEBUG_ASSERT( read_ok_1 );
 #else
 			zepto_parse_read_block( &po, block, SASP_ENC_BLOCK_SIZE );
 #endif
@@ -122,8 +120,12 @@ void SASP_EncryptAndAddAuthenticationData( REQUEST_REPLY_HANDLE mem_h, const uin
 			zepto_write_block( mem_h, block, SASP_ENC_BLOCK_SIZE );
 		}
 		uint16_t remaining_sz = zepto_parsing_remaining_bytes( &po );
-		read_ok = zepto_parse_read_block( &po, block, remaining_sz );
-		ZEPTO_DEBUG_ASSERT( read_ok );
+#ifdef SA_DEBUG
+		bool read_ok_2 = zepto_parse_read_block( &po, block, remaining_sz );
+		ZEPTO_DEBUG_ASSERT( read_ok_2 );
+#else
+		zepto_parse_read_block( &po, block, remaining_sz );
+#endif
 		eax_128_process_terminating_block_encr( key, ctr, block, (uint8_t)remaining_sz, block, msg_cbc_val );
 		zepto_write_block( mem_h, block, remaining_sz );
 
