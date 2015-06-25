@@ -246,7 +246,7 @@ void zepto_mem_man_init_memory_management()
 	memory_objects[ MEMORY_HANDLE_ADDITIONAL_ANSWER ].rq_size = 0;
 	memory_objects[ MEMORY_HANDLE_ADDITIONAL_ANSWER ].rsp_size = 0;
 #ifdef PLAIN_REPLY_FRAME
-#ifdef _DEBUG
+#ifdef SA_DEBUG
 	BASE_MEM_BLOCK[3] = 1;
 	memory_objects[ MEMORY_HANDLE_TEST_SUPPORT ].ptr = BASE_MEM_BLOCK + 4;
 	memory_objects[ MEMORY_HANDLE_TEST_SUPPORT ].rq_size = 0;
@@ -261,7 +261,7 @@ void zepto_mem_man_init_memory_management()
 	memory_objects[ MEMORY_HANDLE_DEFAULT_PLUGIN ].ptr = BASE_MEM_BLOCK + 4;
 	memory_objects[ MEMORY_HANDLE_DEFAULT_PLUGIN ].rq_size = 0;
 	memory_objects[ MEMORY_HANDLE_DEFAULT_PLUGIN ].rsp_size = 0;
-#ifdef _DEBUG
+#ifdef SA_DEBUG
 	BASE_MEM_BLOCK[4] = 1;
 	memory_objects[ MEMORY_HANDLE_TEST_SUPPORT ].ptr = BASE_MEM_BLOCK + 5;
 	memory_objects[ MEMORY_HANDLE_TEST_SUPPORT ].rq_size = 0;

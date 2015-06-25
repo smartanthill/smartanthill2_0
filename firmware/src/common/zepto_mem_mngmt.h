@@ -30,7 +30,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define MEMORY_HANDLE_ADDITIONAL_ANSWER 2
 #if !defined PLAIN_REPLY_FRAME
 #define MEMORY_HANDLE_DEFAULT_PLUGIN 3
-#ifdef _DEBUG
+#ifdef SA_DEBUG
 #define MEMORY_HANDLE_TEST_SUPPORT 4
 #define MEMORY_HANDLE_DBG_TMP 5
 #define MEMORY_HANDLE_MAX 6 // TODO: keep updated!!!
@@ -38,7 +38,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define MEMORY_HANDLE_MAX 4 // TODO: keep updated!!!
 #endif
 #else
-#ifdef _DEBUG
+#ifdef SA_DEBUG
 #define MEMORY_HANDLE_TEST_SUPPORT 3
 #define MEMORY_HANDLE_DBG_TMP 4
 #define MEMORY_HANDLE_MAX 5 // TODO: keep updated!!!
