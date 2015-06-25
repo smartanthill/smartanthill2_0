@@ -116,6 +116,10 @@ INLINE void zepto_memcpy( void* dest, const void* src, uint16_t cnt )
 
 // debug helpers
 
+#ifdef SA_DEBUG
+#define DEBUG_PRINTING
+#endif
+
 #ifdef DEBUG_PRINTING
 #include <stdio.h>
 #define printf FORBIDDEN_CALL_USE_MACROS_INSTEAD
@@ -139,7 +143,7 @@ INLINE void zepto_memcpy( void* dest, const void* src, uint16_t cnt )
 #define ZEPTO_DEBUG_PRINTF_7( s, x1, x2, x3, x4, x5, x6 )
 #endif // DEBUG_PRINTING
 
-#ifdef _DEBUG
+#ifdef SA_DEBUG
 #include <assert.h>
 #define ZEPTO_DEBUG_ASSERT( x ) assert( x )
 #define ZEPTO_RUNTIME_CHECK( x ) assert( x )
