@@ -21,8 +21,10 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined ENERGIA
 #include <avr/pgmspace.h>
 #include "stdint.h"
+#define ZEPTO_PROGMEM      __attribute__ ((progmem))
 #define ZEPTO_MEMCPY_FROM_PROGMEM memcpy_PF
 #else
+#define ZEPTO_PROGMEM
 #define ZEPTO_MEMCPY_FROM_PROGMEM( dest, src, len )\
 {\
 	uint16_t i; \
@@ -35,7 +37,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "hal_time_conversions.h"
 
 #define ZEPTO_PROGMEM_IN_USE
-#define ZEPTO_PROGMEM      __attribute__ ((progmem))
+
 #define ZEPTO_PROG_CONSTANT_LOCATION ZEPTO_PROGMEM
 #define ZEPTO_PROG_CONSTANT_READ_BYTE(x) pgm_read_byte(x)
 
