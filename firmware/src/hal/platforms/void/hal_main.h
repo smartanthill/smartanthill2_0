@@ -36,7 +36,7 @@ Copyright (C) 2015 OLogN Technologies AG
 { /*saves 12 bytes of code and allows getting rid of type-cast-related warning*/\
 	uint16_t i; \
 	for ( i=0; i<len; i++ )\
-	dest[i] = pgm_read_byte( ((uint8_t*)src) + i ); \
+	((uint8_t*)dest)[i] = pgm_read_byte( ((uint8_t*)src) + i ); \
 }
 #endif // ZEPTO_PROGMEM_IN_USE
 

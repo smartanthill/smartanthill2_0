@@ -84,7 +84,7 @@ INLINE void zepto_memcpy( void* dest, const void* src, uint16_t cnt )
 
 /*INLINE void zepto_memcpy_from_progmem( void* dest, const void* src, uint16_t cnt )
 {
-	uint8_t i;
+	uint16_t i;
 	for ( i=0; i<cnt; i++ )
 		((uint8_t*)dest)[i] = pgm_read_byte( ((uint8_t*)src) + i );
 }*/
