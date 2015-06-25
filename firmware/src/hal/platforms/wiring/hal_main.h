@@ -22,6 +22,13 @@ Copyright (C) 2015 OLogN Technologies AG
 #include <avr/pgmspace.h>
 #include "stdint.h"
 #define ZEPTO_MEMCPY_FROM_PROGMEM memcpy_PF
+#else
+#define ZEPTO_MEMCPY_FROM_PROGMEM( dest, src, len )\
+{\
+	uint16_t i; \
+	for ( i=0; i<len; i++ )\
+	((uint8_t*)dest)[i] = pgm_read_byte( ((uint8_t*)src) + i ); \
+}
 #endif
 
 #include <Arduino.h>

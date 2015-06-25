@@ -51,7 +51,11 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #ifndef bool
 #define bool uint8_t
+#endif
+#ifndef true
 #define true 1
+#endif
+#ifndef false
 #define false 0
 #endif
 
@@ -74,20 +78,13 @@ INLINE void zepto_memset( void* dest, uint8_t val, uint16_t cnt )
 
 INLINE void zepto_memcpy( void* dest, const void* src, uint16_t cnt )
 {
-	uint8_t i;
+	uint16_t i;
 	for ( i=0; i<cnt; i++ )
 		((uint8_t*)dest)[i] = ((uint8_t*)src)[i];
 }
 
 #define ZEPTO_MEMSET zepto_memset
 #define ZEPTO_MEMCPY zepto_memcpy
-
-/*INLINE void zepto_memcpy_from_progmem( void* dest, const void* src, uint16_t cnt )
-{
-	uint16_t i;
-	for ( i=0; i<cnt; i++ )
-		((uint8_t*)dest)[i] = pgm_read_byte( ((uint8_t*)src) + i );
-}*/
 
 #ifndef ZEPTO_PROG_CONSTANT_LOCATION
 #define ZEPTO_PROG_CONSTANT_LOCATION
