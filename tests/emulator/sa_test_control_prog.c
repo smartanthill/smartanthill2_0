@@ -20,7 +20,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "../../firmware/src/common/sagdp_protocol.h" // for packet flags
 #include "../../firmware/src/common/saccp_protocol_constants.h"
 
-#include "test-generator.h"
+#include "test_generator.h"
 #include <stdio.h> // for sprintf() in fake implementation
 
 #define CHAIN_MAX_SIZE 9
@@ -79,9 +79,10 @@ uint8_t default_test_control_program_start_new( void* control_prog_state, MEMORY
 	zepto_parser_encode_and_append_uint16( reply, ps->chain_ini_size );
 	zepto_parser_encode_and_append_uint16( reply, ps->reply_to_id );
 	zepto_parser_encode_and_append_uint16( reply, ps->self_id );
+	uint8_t varln = 6 - ps->self_id % 7; // 0:6
+	zepto_write_uint8( reply, varln + 1 );
 
 	char tail[256];
-	uint16_t varln = 6 - ps->self_id % 7; // 0:6
 	uint8_t i;
 	for ( i=0;i<varln; i++ )
 		tail[ i] = '-';
@@ -136,9 +137,10 @@ uint8_t default_test_control_program_accept_reply_continue( void* control_prog_s
 	zepto_parser_encode_and_append_uint16( reply, ps->chain_ini_size );
 	zepto_parser_encode_and_append_uint16( reply, ps->reply_to_id );
 	zepto_parser_encode_and_append_uint16( reply, ps->self_id );
+	uint8_t varln = 6 - ps->self_id % 7; // 0:6
+	zepto_write_uint8( reply, varln + 1 );
 
 	char tail[256];
-	uint16_t varln = 6 - ps->self_id % 7; // 0:6
 	uint8_t i;
 	for ( i=0;i<varln; i++ )
 		tail[ i] = '-';
@@ -213,7 +215,8 @@ uint8_t _default_test_control_program_accept_reply( void* control_prog_state, ui
 	ps->reply_to_id = zepto_parse_encoded_uint16( received );
 	ps->self_id = zepto_parse_encoded_uint16( received );
 	char tail[256];
-	uint16_t tail_sz = zepto_parsing_remaining_bytes( received );
+//	uint16_t tail_sz = zepto_parsing_remaining_bytes( received );
+	uint8_t tail_sz = zepto_parse_uint8( received );
 	zepto_parse_read_block( received, (uint8_t*)tail, tail_sz );
 	tail[ tail_sz ] = 0;
 

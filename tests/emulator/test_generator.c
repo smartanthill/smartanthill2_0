@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as
+    it under the terms of the GNU General Public License version 2 as 
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -15,7 +15,6 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#include "../../firmware/src/common/sa_common.h"
 #include "../../firmware/src/common/sa_common.h"
 #include "../../firmware/src/hal/hal_commlayer.h"
 #include <stdlib.h> // for get_rand_val()

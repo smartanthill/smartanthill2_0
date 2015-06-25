@@ -786,6 +786,7 @@ uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonc
 				{
 					// if ACK is requested, send it
 					ZEPTO_DEBUG_ASSERT(0);
+					return SAGDP_RET_SYS_CORRUPTED; // just as long as not implemented
 				}
 				else
 				{
@@ -819,6 +820,7 @@ uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonc
 				{
 					// if ACK is requested, send it
 					ZEPTO_DEBUG_ASSERT(0);
+					return SAGDP_RET_SYS_CORRUPTED; // just as long as not implemented
 				}
 				else
 				{

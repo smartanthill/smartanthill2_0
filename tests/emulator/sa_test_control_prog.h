@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as
+    it under the terms of the GNU General Public License version 2 as 
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -30,7 +30,7 @@ Copyright (C) 2015 OLogN Technologies AG
 #define CONTROL_PROG_PASS_LOWER_THEN_IDLE 4
 /*#define CONTROL_PROG_WAIT_TO_CONTINUE 4*/
 
-typedef struct _DefaultTestingControlProgramState
+typedef struct _DefaultTestingControlProgramState 
 {
 	uint8_t state; //'0' means 'be ready to process incoming command', '1' means 'prepare reply'
 	uint16_t last_sent_id;
@@ -44,9 +44,9 @@ typedef struct _DefaultTestingControlProgramState
 } DefaultTestingControlProgramState;
 
 uint8_t default_test_control_program_init( void* control_prog_state );
-uint8_t default_test_control_program_accept_reply( void* control_prog_state, uint8_t packet_status, parser_obj* received, uint16_t sz );
+//uint8_t default_test_control_program_accept_reply( void* control_prog_state, uint8_t packet_status, parser_obj* received, uint16_t sz );
 uint8_t default_test_control_program_accept_reply_continue( void* control_prog_state, MEMORY_HANDLE reply );
-//uint8_t default_test_control_program_start_new( void* control_prog_state, MEMORY_HANDLE reply );
+uint8_t default_test_control_program_start_new( void* control_prog_state, MEMORY_HANDLE reply );
 uint8_t default_test_control_program_accept_reply( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, void* control_prog_state );
 
 #endif // __SA_TEST_CONTROL_PROG_H__

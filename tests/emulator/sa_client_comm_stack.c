@@ -64,8 +64,8 @@ int main_loop()
 
 	uint8_t ret_code;
 
-	uint8_t wait_to_continue_processing = 0;
-	uint16_t wake_time_continue_processing;
+//	uint8_t wait_to_continue_processing = 0;
+//	uint16_t wake_time_continue_processing;
 
 	// do necessary initialization
 /*	SAGDP_DATA sagdp_data;
@@ -451,7 +451,6 @@ saoudp_send:
 			}
 		}
 
-	sendmsg:
 		tester_registerOutgoingPacket( MEMORY_HANDLE_MAIN_LOOP );
 
 		bool syncSendReceive;

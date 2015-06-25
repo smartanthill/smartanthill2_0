@@ -165,5 +165,7 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h )
 		}
 	}
 
+	ZEPTO_DEBUG_ASSERT( NULL == "Error: we should not be here anyway\n" );
+	return SACCP_RET_FAILED;
 }
 

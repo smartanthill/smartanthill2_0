@@ -43,13 +43,10 @@ uint8_t send_message( MEMORY_HANDLE mem_h );
 uint8_t try_get_message( MEMORY_HANDLE mem_h );
 void keep_transmitter_on( bool keep_on );
 
-#ifdef __cplusplus
-}
-#endif
-
 //uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout );
-//uint8_t wait_for_communication_event( uint16_t timeout );
 #ifdef USED_AS_MASTER
+uint8_t wait_for_communication_event( unsigned int timeout );
+uint8_t try_get_message_within_master( MEMORY_HANDLE mem_h );
 #ifdef USED_AS_MASTER_COMMSTACK
 uint8_t send_to_central_unit( MEMORY_HANDLE mem_h );
 #elif defined USED_AS_MASTER_CORE
@@ -57,6 +54,10 @@ uint8_t send_to_commm_stack( MEMORY_HANDLE mem_h );
 #else
 #error unknown configuration
 #endif
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 

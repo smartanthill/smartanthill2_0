@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as
+    it under the terms of the GNU General Public License version 2 as 
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -35,7 +35,7 @@ int main_loop()
 	INIT_COUNTER_SYSTEM
 #endif // ENABLE_COUNTER_SYSTEM
 
-
+		
 	ZEPTO_DEBUG_PRINTF_1("starting CLIENT...\n");
 	ZEPTO_DEBUG_PRINTF_1("==================\n\n");
 
@@ -45,11 +45,11 @@ int main_loop()
 	uint8_t ret_code;
 
 	// test setup values
-	bool wait_for_incoming_chain_with_timer = false;
-	uint16_t wake_time_to_start_new_chain;
+//	bool wait_for_incoming_chain_with_timer = false;
+//	uint16_t wake_time_to_start_new_chain;
 
 	uint8_t wait_to_continue_processing = 0;
-	uint16_t wake_time_continue_processing;
+//	uint16_t wake_time_continue_processing;
 
 
 	// Try to initialize connection
@@ -78,7 +78,7 @@ int main_loop()
 		ZEPTO_DEBUG_PRINTF_3( "%c [0x%x]\n", bu[k], bu[k] );
 	return 0;*/
 #else
-	uint8_t buff_base[] = {0x2, 0x0, 0x8, 0x1, 0x1, 0x2, 0x0, 0x1, '-', '-', '>' };
+	uint8_t buff_base[] = {0x2, 0x0, 0x8, 0x1, 0x1, 0x2, 0x0, 0x1, '-', '-', '>' }; 
 	uint8_t buff[128];
 	buff[0] = 1; // first in the chain
 	memcpy( buff+1, buff_base, sizeof(buff_base) );

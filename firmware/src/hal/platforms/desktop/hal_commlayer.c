@@ -215,9 +215,14 @@ uint8_t try_get_message( MEMORY_HANDLE mem_h )
 
 #if (defined USED_AS_MASTER) && ( (defined USED_AS_MASTER_COMMSTACK) || (defined USED_AS_MASTER_CORE) )
 
-const char* inet_addr_as_string_with_cl = "127.0.0.1";
+#ifdef _MSC_VER
+SOCKET sock_with_cl;
+SOCKET sock_with_cl_accepted;
+#else
 int sock_with_cl;
 int sock_with_cl_accepted;
+#endif
+const char* inet_addr_as_string_with_cl = "127.0.0.1";
 struct sockaddr_in sa_self_with_cl, sa_other_with_cl;
 
 #ifdef USED_AS_MASTER_COMMSTACK
@@ -524,10 +529,10 @@ uint8_t wait_for_communication_event( unsigned int timeout )
 #ifdef USED_AS_MASTER_COMMSTACK
     FD_SET(sock, &rfds);
 	FD_SET(sock_with_cl, &rfds);
-	fd_cnt = sock > sock_with_cl ? sock + 1 : sock_with_cl + 1;
+	fd_cnt = (int)(sock > sock_with_cl ? sock + 1 : sock_with_cl + 1);
 #else
     FD_SET(sock_with_cl, &rfds);
-	fd_cnt = sock_with_cl + 1;
+	fd_cnt = (int)(sock_with_cl + 1);
 #endif
 #else
     FD_SET(sock, &rfds);

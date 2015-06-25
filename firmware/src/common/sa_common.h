@@ -117,7 +117,9 @@ INLINE void zepto_memcpy( void* dest, const void* src, uint16_t cnt )
 // debug helpers
 
 #ifdef SA_DEBUG
+#if !defined DEBUG_PRINTING
 #define DEBUG_PRINTING
+#endif
 #endif
 
 #ifdef DEBUG_PRINTING

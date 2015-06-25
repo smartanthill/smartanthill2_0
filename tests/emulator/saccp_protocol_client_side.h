@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as
+    it under the terms of the GNU General Public License version 2 as 
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -48,6 +48,7 @@ uint8_t handler_sacpp_continue_chain( MEMORY_HANDLE mem_h, void* control_prog_st
 #define SACCP_RET_PASS_TO_CENTRAL_UNIT 1 // packet must be sent to a communication peer
 
 uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h );
+uint8_t handler_saccp_prepare_to_send( MEMORY_HANDLE mem_h );
 
 #endif // MASTER_ENABLE_ALT_TEST_MODE
 

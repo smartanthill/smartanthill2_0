@@ -2,7 +2,7 @@
 Copyright (C) 2015 OLogN Technologies AG
 
     This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as
+    it under the terms of the GNU General Public License version 2 as 
     published by the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -15,10 +15,10 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-#include "sa_common.h"
-#include "sa_aes_128.h"
-#include "sa_eax_128.h"
-#include "sa_unit_tests_aes_eax.h"
+#include "sa-common.h"
+#include "sa-aes-128.h"
+#include "sa-eax-128.h"
+#include "sa-unit-tests-aes-eax.h"
 
 void sa_aes_print_msg(const char* name, const uint8_t* msg, uint16_t msg_sz)
 {
