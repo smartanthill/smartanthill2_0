@@ -217,6 +217,7 @@ uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonc
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_IS_ACK )
 		{
 			ZEPTO_DEBUG_ASSERT(0);
+			return SAGDP_RET_SYS_CORRUPTED; // just as long as not implemented
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) != SAGDP_P_STATUS_FIRST )
 		{
@@ -294,12 +295,14 @@ uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonc
 		{
 			SAGDP_CANCEL_RESENT_SEQUENCE
 			ZEPTO_DEBUG_ASSERT(0);
+			return SAGDP_RET_SYS_CORRUPTED; // just as long as not implemented
 		}
 		if ( ( packet_status & SAGDP_P_STATUS_MASK ) != SAGDP_P_STATUS_FIRST )
 		{
 			sasp_nonce_type enc_reply_to;
 			zepto_parser_decode_encoded_uint_as_sa_uint48( &po, enc_reply_to );
 
+#ifdef SA_DEBUG
 			uint8_t* pidprevlsent_first = sagdp_data.prev_first_last_sent_packet_id;
 			uint8_t* pidlsent_first = sagdp_data.first_last_sent_packet_id;
 			uint8_t* pidlsent_last = sagdp_data.next_last_sent_packet_id;
@@ -307,6 +310,8 @@ uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonc
 			ZEPTO_DEBUG_PRINTF_7( "handlerSAGDP_receiveNewUP(): PID last sent first   : %x%x%x%x%x%x\n", pidlsent_first[0], pidlsent_first[1], pidlsent_first[2], pidlsent_first[3], pidlsent_first[4], pidlsent_first[5] );
 			ZEPTO_DEBUG_PRINTF_7( "handlerSAGDP_receiveNewUP(): PID reply-to in packet: %x%x%x%x%x%x\n", enc_reply_to[0], enc_reply_to[1], enc_reply_to[2], enc_reply_to[3], enc_reply_to[4], enc_reply_to[5] );
 			ZEPTO_DEBUG_PRINTF_7( "handlerSAGDP_receiveNewUP(): PID last sent last    : %x%x%x%x%x%x\n", pidlsent_last[0], pidlsent_last[1], pidlsent_last[2], pidlsent_last[3], pidlsent_last[4], pidlsent_last[5] );
+#endif
+
 			bool isold = (!is_pid_zero(sagdp_data.prev_first_last_sent_packet_id)) && sa_uint48_compare( enc_reply_to, sagdp_data.first_last_sent_packet_id ) < 0  && sa_uint48_compare( enc_reply_to, sagdp_data.prev_first_last_sent_packet_id ) >= 0;
 			if ( isold )
 			{
@@ -458,6 +463,7 @@ uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonc
 		{
 			SAGDP_CANCEL_RESENT_SEQUENCE;
 			ZEPTO_DEBUG_ASSERT(0);
+			return SAGDP_RET_SYS_CORRUPTED; // just as long as not implemented
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_FIRST )
 		{
@@ -597,6 +603,7 @@ uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonc
 		{
 			SAGDP_CANCEL_RESENT_SEQUENCE
 			ZEPTO_DEBUG_ASSERT(0);
+			return SAGDP_RET_SYS_CORRUPTED; // just as long as not implemented
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_FIRST )
 		{
@@ -638,6 +645,8 @@ uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonc
 
 			sasp_nonce_type enc_reply_to;
 			zepto_parser_decode_encoded_uint_as_sa_uint48( &po, enc_reply_to );
+
+#ifdef SA_DEBUG
 			uint8_t* pidprevlsent_first = sagdp_data.prev_first_last_sent_packet_id;
 			uint8_t* pidlsent_first = sagdp_data.first_last_sent_packet_id;
 			uint8_t* pidlsent_last = sagdp_data.next_last_sent_packet_id;
@@ -645,6 +654,8 @@ uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonc
 			ZEPTO_DEBUG_PRINTF_7( "handlerSAGDP_receiveNewUP(): PID last sent first   : %x%x%x%x%x%x\n", pidlsent_first[0], pidlsent_first[1], pidlsent_first[2], pidlsent_first[3], pidlsent_first[4], pidlsent_first[5] );
 			ZEPTO_DEBUG_PRINTF_7( "handlerSAGDP_receiveNewUP(): PID reply-to in packet: %x%x%x%x%x%x\n", enc_reply_to[0], enc_reply_to[1], enc_reply_to[2], enc_reply_to[3], enc_reply_to[4], enc_reply_to[5] );
 			ZEPTO_DEBUG_PRINTF_7( "handlerSAGDP_receiveNewUP(): PID last sent last    : %x%x%x%x%x%x\n", pidlsent_last[0], pidlsent_last[1], pidlsent_last[2], pidlsent_last[3], pidlsent_last[4], pidlsent_last[5] );
+#endif
+
 			bool isold = (!is_pid_zero(sagdp_data.prev_first_last_sent_packet_id)) && sa_uint48_compare( enc_reply_to, sagdp_data.first_last_sent_packet_id ) < 0  && sa_uint48_compare( enc_reply_to, sagdp_data.prev_first_last_sent_packet_id ) >= 0;
 			if ( isold )
 			{
@@ -757,6 +768,7 @@ uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonc
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_IS_ACK )
 		{
 			ZEPTO_DEBUG_ASSERT(0);
+			return SAGDP_RET_SYS_CORRUPTED; // just as long as not implemented
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_FIRST ) // TODO: same plus request ACK
 		{
@@ -838,6 +850,7 @@ uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonc
 		{
 			SAGDP_CANCEL_RESENT_SEQUENCE
 			ZEPTO_DEBUG_ASSERT(0);
+			return SAGDP_RET_SYS_CORRUPTED; // just as long as not implemented
 		}
 		else if ( ( packet_status & SAGDP_P_STATUS_MASK ) == SAGDP_P_STATUS_FIRST ) // TODO: same plus request ACK
 		{
@@ -853,6 +866,7 @@ uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonc
 				{
 					// if ACK is requested, send it
 					ZEPTO_DEBUG_ASSERT(0);
+					return SAGDP_RET_SYS_CORRUPTED; // just as long as not implemented
 				}
 				else
 				{
@@ -874,6 +888,8 @@ uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonc
 
 			sasp_nonce_type enc_reply_to;
 			zepto_parser_decode_encoded_uint_as_sa_uint48( &po, enc_reply_to );
+
+#ifdef SA_DEBUG
 			uint8_t* pidprevlsent_first = sagdp_data.prev_first_last_sent_packet_id;
 			uint8_t* pidlsent_first = sagdp_data.first_last_sent_packet_id;
 			uint8_t* pidlsent_last = sagdp_data.next_last_sent_packet_id;
@@ -881,6 +897,8 @@ uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonc
 			ZEPTO_DEBUG_PRINTF_7( "handlerSAGDP_receiveNewUP(): PID last sent first   : %x%x%x%x%x%x\n", pidlsent_first[0], pidlsent_first[1], pidlsent_first[2], pidlsent_first[3], pidlsent_first[4], pidlsent_first[5] );
 			ZEPTO_DEBUG_PRINTF_7( "handlerSAGDP_receiveNewUP(): PID reply-to in packet: %x%x%x%x%x%x\n", enc_reply_to[0], enc_reply_to[1], enc_reply_to[2], enc_reply_to[3], enc_reply_to[4], enc_reply_to[5] );
 			ZEPTO_DEBUG_PRINTF_7( "handlerSAGDP_receiveNewUP(): PID last sent last    : %x%x%x%x%x%x\n", pidlsent_last[0], pidlsent_last[1], pidlsent_last[2], pidlsent_last[3], pidlsent_last[4], pidlsent_last[5] );
+#endif
+
 			bool isrepeated = is_pid_in_range( enc_reply_to, sagdp_data.first_last_sent_packet_id, sagdp_data.next_last_sent_packet_id );
 			if ( isrepeated ) // so we've got what we are currently processing
 			{
@@ -889,6 +907,7 @@ uint8_t handler_sagdp_receive_up( sa_time_val* currt, waiting_for* wf, sasp_nonc
 				{
 					// if ACK is requested, send it
 					ZEPTO_DEBUG_ASSERT(0);
+					return SAGDP_RET_SYS_CORRUPTED; // just as long as not implemented
 				}
 				else
 				{

@@ -52,12 +52,12 @@ bool init_eeprom_access()
 void format_eeprom_at_lifestart()
 {
 	uint8_t buff[32];
-	uint8_t i, j;
+	uint8_t i;
 	for ( i=0; i<EEPROM_SLOT_MAX; i++ )
 	{
-		eeprom_slot_descriptor* descr = eeprom_slots + i;
+		const eeprom_slot_descriptor* descr = eeprom_slots + i;
 		buff[0] = 0;
-		buff[1] = descr->size;
+		buff[1] = (uint8_t)(descr->size);
 		buff[2] = descr->size >> 8;
 		hal_eeprom_write( buff, 3, descr->offset );
 	}
@@ -68,9 +68,14 @@ void eeprom_write( uint8_t id, uint8_t* data)
 	ZEPTO_DEBUG_ASSERT( id < EEPROM_SLOT_MAX );
 	uint8_t buff[3];
 	memset( buff, 0, 3 );
+#ifdef SA_DEBUG
 	bool res;
 	res = hal_eeprom_read( buff, 3, eeprom_slots[id].offset );
 	ZEPTO_DEBUG_ASSERT( res );
+#else
+	// TODO: make sure we have a chance to handle errors!!!
+	hal_eeprom_read( buff, 3, eeprom_slots[id].offset );
+#endif
 	uint16_t sz = ((uint16_t)(buff[2]) << 8) + buff[1];
 	ZEPTO_DEBUG_ASSERT( sz == eeprom_slots[id].size ); // TODO: do we need both?
 	if ( buff[0] == 1 )

@@ -210,7 +210,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte, waiting_for* wf 
 			case ZEPTOVM_OP_SLEEP:
 			{
 				uint32_t ms;
-				zepto_parser_decode_uint( &po, &ms, 4 );
+				zepto_parser_decode_uint( &po, (uint8_t*)(&ms), 4 );
 				sa_time_val timeval;
 				TIME_MILLISECONDS32_TO_TIMEVAL( (uint16_t)ms, (uint16_t)(ms >> 16), timeval );
 				just_sleep( &timeval );
@@ -441,6 +441,9 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, wa
 			ZEPTO_DEBUG_ASSERT( NULL == "Error: unexpected value of packet type\n" );
 		}
 	}
+	
+	ZEPTO_DEBUG_ASSERT( NULL == "Error: we should not be here!\n" );
+	return SACCP_RET_FAILED;
 }
 /*
 uint8_t handler_sacpp_reply( MEMORY_HANDLE mem_h )

@@ -138,8 +138,8 @@ int sa_main_loop()
 	// TODO: all code related to simulation and test generation MUST be moved out here ASAP!
 	bool wait_for_incoming_chain_with_timer = 0;
 	uint16_t wake_time_to_start_new_chain = 0;
-	uint8_t wait_to_continue_processing = 0;
-	uint16_t wake_time_continue_processing = 0;
+//	uint8_t wait_to_continue_processing = 0;
+//	uint16_t wake_time_continue_processing = 0;
 	// END OF test setup values
 
 	for (;;)
@@ -182,7 +182,7 @@ wait_for_comm_event:
 						return 0;
 					ZEPTO_DEBUG_ASSERT( ret_code == COMMLAYER_RET_OK );
 					zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-					goto sauudp_rec;
+					goto saoudp_rec;
 					break;
 				}
 				case WAIT_RESULTED_IN_TIMEOUT:
@@ -289,7 +289,7 @@ wait_for_comm_event:
 
 
 		// 2.1. Pass to SAoUDP
-sauudp_rec:
+saoudp_rec:
 		ret_code = handler_saoudp_receive( MEMORY_HANDLE_MAIN_LOOP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 
@@ -311,10 +311,12 @@ sauudp_rec:
 
 
 		// 2.2. Pass to SASP
+#ifdef TEST_RAM_CONSUMPTION
 	sasp_rec:
+#endif
 #ifdef ALLOW_PRINTING_SASP_INCOMING_MESSAGE
 		{
-			parser_obj* po;
+			parser_obj po;
 			int ctr = 0;
 			zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
 			ZEPTO_DEBUG_PRINTF_2( "SASP_INCOMING_MESSAGE (%d bytes):\n", zepto_parsing_remaining_bytes( &po ) );
@@ -382,6 +384,22 @@ sauudp_rec:
 
 		// 3. pass to SAGDP a new packet
 		sa_get_time( &(currt) );
+#ifdef ALLOW_PRINTING_SASP_INCOMING_MESSAGE
+		{
+			parser_obj po;
+			int ctr = 0;
+			zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
+			ZEPTO_DEBUG_PRINTF_2( "SAGDP_INCOMING_MESSAGE (%d bytes):\n", zepto_parsing_remaining_bytes( &po ) );
+			while ( zepto_parsing_remaining_bytes( &po ) != 0 )
+			{
+				ZEPTO_DEBUG_PRINTF_2( "0x%02x, ", zepto_parse_uint8( &po ) );
+				ctr++;
+				if ( (ctr & 7) == 0 )
+					ZEPTO_DEBUG_PRINTF_1( "\n" );
+			}
+			ZEPTO_DEBUG_PRINTF_1( "\n\n" );
+		}
+#endif // ALLOW_PRINTING_SASP_INCOMING_MESSAGE
 		ret_code = handler_sagdp_receive_up( &currt, &wait_for, NULL, pid, MEMORY_HANDLE_MAIN_LOOP/*, &sagdp_data*/ );
 		if ( ret_code == SAGDP_RET_START_OVER_FIRST_RECEIVED )
 		{
@@ -436,8 +454,24 @@ sauudp_rec:
 			}
 		}
 
-processcmd:
+
 		// 4. Process received command (yoctovm)
+#ifdef ALLOW_PRINTING_SASP_INCOMING_MESSAGE
+		{
+			parser_obj po;
+			int ctr = 0;
+			zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
+			ZEPTO_DEBUG_PRINTF_2( "SACCP_INCOMING_MESSAGE (%d bytes):\n", zepto_parsing_remaining_bytes( &po ) );
+			while ( zepto_parsing_remaining_bytes( &po ) != 0 )
+			{
+				ZEPTO_DEBUG_PRINTF_2( "0x%02x, ", zepto_parse_uint8( &po ) );
+				ctr++;
+				if ( (ctr & 7) == 0 )
+					ZEPTO_DEBUG_PRINTF_1( "\n" );
+			}
+			ZEPTO_DEBUG_PRINTF_1( "\n\n" );
+		}
+#endif // ALLOW_PRINTING_SASP_INCOMING_MESSAGE
 		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL, &ret_wf ); // slave_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP );
 /*		if ( ret_code == YOCTOVM_RESET_STACK )
 		{
@@ -449,7 +483,7 @@ processcmd:
 		}*/
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		ZEPTO_DEBUG_PRINTF_4( "SACCP1: ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
-entry:
+
 		wait_for_incoming_chain_with_timer = false;
 
 		switch ( ret_code )
@@ -477,6 +511,22 @@ entry:
 alt_entry:
 //		uint8_t timer_val;
 		sa_get_time( &(currt) );
+#ifdef ALLOW_PRINTING_SASP_INCOMING_MESSAGE
+		{
+			parser_obj po;
+			int ctr = 0;
+			zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
+			ZEPTO_DEBUG_PRINTF_2( "SAGDP_INCOMING_MESSAGE [back] (%d bytes):\n", zepto_parsing_remaining_bytes( &po ) );
+			while ( zepto_parsing_remaining_bytes( &po ) != 0 )
+			{
+				ZEPTO_DEBUG_PRINTF_2( "0x%02x, ", zepto_parse_uint8( &po ) );
+				ctr++;
+				if ( (ctr & 7) == 0 )
+					ZEPTO_DEBUG_PRINTF_1( "\n" );
+			}
+			ZEPTO_DEBUG_PRINTF_1( "\n\n" );
+		}
+#endif // ALLOW_PRINTING_SASP_INCOMING_MESSAGE
 		ret_code = handler_sagdp_receive_hlp( &currt, &wait_for, NULL, MEMORY_HANDLE_MAIN_LOOP/*, &sagdp_data*/ );
 		if ( ret_code == SAGDP_RET_NEED_NONCE )
 		{
@@ -512,7 +562,7 @@ alt_entry:
 				// TODO: process reset
 				sagdp_init();
 //				bool start_now = tester_get_rand_val() % 3;
-				bool start_now = true;
+//				bool start_now = true;
 //				wake_time_to_start_new_chain = start_now ? getTime() : getTime() + tester_get_rand_val() % 8;
 				wake_time_to_start_new_chain = getTime();
 				wait_for_incoming_chain_with_timer = true;
@@ -531,6 +581,22 @@ alt_entry:
 
 		// SASP
 saspsend:
+#ifdef ALLOW_PRINTING_SASP_INCOMING_MESSAGE
+		{
+			parser_obj po;
+			int ctr = 0;
+			zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
+			ZEPTO_DEBUG_PRINTF_2( "SASP_INCOMING_MESSAGE [back] (%d bytes):\n", zepto_parsing_remaining_bytes( &po ) );
+			while ( zepto_parsing_remaining_bytes( &po ) != 0 )
+			{
+				ZEPTO_DEBUG_PRINTF_2( "0x%02x, ", zepto_parse_uint8( &po ) );
+				ctr++;
+				if ( (ctr & 7) == 0 )
+					ZEPTO_DEBUG_PRINTF_1( "\n" );
+			}
+			ZEPTO_DEBUG_PRINTF_1( "\n\n" );
+		}
+#endif // ALLOW_PRINTING_SASP_INCOMING_MESSAGE
 		ret_code = handler_sasp_send( AES_ENCRYPTION_KEY, nonce, MEMORY_HANDLE_MAIN_LOOP/*, &sasp_data*/ );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		ZEPTO_DEBUG_PRINTF_4( "SASP2:  ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
@@ -556,7 +622,7 @@ saspsend:
 saoudp_send:
 #ifdef ALLOW_PRINTING_SASP_OUTGOING_MESSAGE
 		{
-			parser_obj* po;
+			parser_obj po;
 			int ctr = 0;
 			zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
 			ZEPTO_DEBUG_PRINTF_2( "SASP_OUTGOING_MESSAGE (%d bytes):\n", zepto_parsing_remaining_bytes( &po ) );
@@ -572,14 +638,15 @@ saoudp_send:
 #endif // ALLOW_PRINTING_SASP_OUTGOING_MESSAGE
 #ifdef TEST_RAM_CONSUMPTION
 		{
-			parser_obj* po;
+			parser_obj po;
 			zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
-			bool OK = true;
+			test_byte = true;
 			for ( j=0; j<sizeof(OUTGOING_TEST_PACKET); j++ )
 			{
-				OK = OK && zepto_parsing_remaining_bytes( &po ) != 0 && ZEPTO_PROG_CONSTANT_READ_BYTE( OUTGOING_TEST_PACKET + j ) == zepto_parse_uint8( &po );
+				test_byte = test_byte && zepto_parsing_remaining_bytes( &po ) != 0 && ZEPTO_PROG_CONSTANT_READ_BYTE( OUTGOING_TEST_PACKET + j ) == zepto_parse_uint8( &po );
 			}
-			ZEPTO_DEBUG_PRINTF_2( "Testing output: %s\n\n", OK ? "OK" : "FAILED" );
+			ZEPTO_DEBUG_PRINTF_2( "Testing output: %s\n\n", test_byte ? "OK" : "FAILED" );
+			test_byte ++;
 			return 0;
 		}
 #endif // TEST_RAM_CONSUMPTION
@@ -602,7 +669,6 @@ saoudp_send:
 			}
 		}
 
-sendmsg:
 			ret_code = send_message( MEMORY_HANDLE_MAIN_LOOP );
 			if (ret_code != COMMLAYER_RET_OK )
 			{

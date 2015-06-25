@@ -24,6 +24,12 @@ Copyright (C) 2015 OLogN Technologies AG
 #include <string.h> // for memmove()
 #include "../hal/hal_platform.h"
 
+// compiler-specific: disabling certain warnings
+#ifdef _MSC_VER
+#pragma warning (disable: 4996) // "The POSIX name for this item is deprecated. Instead, use the ISO C++ conformant name <...>"
+#else
+#endif
+
 // ZEPTO_VM LEVELS
 #define ZEPTO_VM_ONE 1
 #define ZEPTO_VM_TINY 2
@@ -37,8 +43,6 @@ Copyright (C) 2015 OLogN Technologies AG
 #ifdef ZEPTO_VM_ONE
 #define ZEPTO_VM_USE_SIMPLE_FRAME
 #endif
-
-#define SA_DEBUG
 
 #define SA_LITTLE_ENDIAN 0
 #define SA_BIG_ENDIAN 1

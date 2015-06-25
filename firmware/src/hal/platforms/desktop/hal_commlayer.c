@@ -58,9 +58,13 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #endif // _MSC_VER
 
-const char* inet_addr_as_string = "127.0.0.1";
+#ifdef _MSC_VER
+SOCKET sock;
+#else
 int sock;
+#endif
 struct sockaddr_in sa_self, sa_other;
+const char* inet_addr_as_string = "127.0.0.1";
 
 #ifdef USED_AS_MASTER
 uint16_t self_port_num = 7667;
@@ -527,7 +531,7 @@ uint8_t wait_for_communication_event( unsigned int timeout )
 #endif
 #else
     FD_SET(sock, &rfds);
-	fd_cnt = sock + 1;
+	fd_cnt = (int)(sock + 1);
 #endif
 
     /* Wait */
@@ -553,6 +557,7 @@ uint8_t wait_for_communication_event( unsigned int timeout )
 	}
     else if (retval)
 	{
+#ifdef USED_AS_MASTER
 		if ( FD_ISSET(sock, &rfds) )
 		{
 /*			uint8_t ret_code = try_get_message( mem_h );
@@ -561,7 +566,6 @@ uint8_t wait_for_communication_event( unsigned int timeout )
 			ZEPTO_DEBUG_ASSERT( ret_code == COMMLAYER_RET_OK );*/
 			return COMMLAYER_RET_FROM_DEV;
 		}
-#ifdef USED_AS_MASTER
 		else
 		{
 //			ZEPTO_DEBUG_ASSERT( rfds.fd_array[0] == sock_with_cl );
@@ -572,6 +576,8 @@ uint8_t wait_for_communication_event( unsigned int timeout )
 			ZEPTO_DEBUG_ASSERT( ret_code == COMMLAYER_RET_OK );*/
 			return COMMLAYER_RET_FROM_CENTRAL_UNIT;
 		}
+#else // USED_AS_MASTER
+			return COMMLAYER_RET_FROM_DEV;
 #endif // USED_AS_MASTER
 	}
     else

@@ -96,7 +96,8 @@ if ( buff[2] >= 4 )
 	ZEPTO_DEBUG_PRINTF_2( "Buff[2] = %x\n", buff[2] );
 }
 		ZEPTO_DEBUG_ASSERT( buff[2] < 4 ); // to stay within uint16_max
-		ret = 16512 + ( (uint16_t)(buff[0] & 0x7F) | ( (((uint16_t)(buff[1])) &0x7F ) << 7) ) | ( ((uint16_t)(buff[2])) << 14);
+//		ret = 16512 + ( (uint16_t)(buff[0] & 0x7F) | ( (((uint16_t)(buff[1])) &0x7F ) << 7) ) | ( ((uint16_t)(buff[2])) << 14);
+		ret = 16512 + ( ( (uint16_t)(buff[0] & 0x7F) ) | ( ( ((uint16_t)(buff[1])) &0x7F ) << 7 ) | ( ((uint16_t)(buff[2])) << 14 ) );
 	}
 	return ret;
 }
@@ -113,7 +114,8 @@ uint16_t zepto_mem_man_parse_encoded_uint16_no_size_checks_backward( uint8_t* bu
 	{
 		ZEPTO_DEBUG_ASSERT( (*(buff-2) & 0x80) == 0 );
 		ZEPTO_DEBUG_ASSERT( *(buff-2) < 4 ); // to stay within uint16_max
-		ret = 16512 + ( (uint16_t)(*buff & 0x7F) | ( (((uint16_t)(*(buff-1))) &0x7F ) << 7) ) | ( ((uint16_t)(*(buff-2))) << 14);
+//		ret = 16512 + ( (uint16_t)(*buff & 0x7F) | ( (((uint16_t)(*(buff-1))) &0x7F ) << 7) ) | ( ((uint16_t)(*(buff-2))) << 14);
+		ret = 16512 + ( ( (uint16_t)(*buff & 0x7F) ) | ( ( ((uint16_t)(*(buff-1))) &0x7F ) << 7 ) | ( ((uint16_t)(*(buff-2))) << 14 ) );
 	}
 	return ret;
 }
@@ -1430,7 +1432,9 @@ void zepto_parser_decode_uint_core( uint8_t** packed_num_bytes, uint8_t* bytes_o
 	ZEPTO_DEBUG_ASSERT( target_size != 0 );
 	ZEPTO_DEBUG_ASSERT( target_size <= 8 ); // TODO: implement and test for larger sizes
 	memset( bytes_out, 0, target_size );
+#ifdef SA_DEBUG
 	uint8_t* bytes_out_start = bytes_out;
+#endif
 	uint16_t interm = (**packed_num_bytes) & 0x7F;
 	if ( (**packed_num_bytes & 0x80) == 0 )
 	{

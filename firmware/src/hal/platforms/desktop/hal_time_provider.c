@@ -16,6 +16,7 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 #include "../../hal_time_provider.h"
+#include "../../hal_commlayer.h"
 
 
 #ifdef _MSC_VER

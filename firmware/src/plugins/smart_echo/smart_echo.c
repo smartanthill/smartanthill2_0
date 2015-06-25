@@ -34,7 +34,7 @@ uint8_t smart_echo_plugin_handler_init( const void* plugin_config, void* plugin_
 
 uint8_t smart_echo_plugin_handler_continue( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply )
 {
-	const SmartEchoPluginConfig* pc = (SmartEchoPluginConfig*) plugin_config;
+//	const SmartEchoPluginConfig* pc = (SmartEchoPluginConfig*) plugin_config;
 	SmartEchoPluginState* ps = (SmartEchoPluginState*)plugin_state;
 	uint8_t varln = 6 - ps->self_id % 7; // 0:6
 
@@ -53,13 +53,15 @@ uint8_t smart_echo_plugin_handler_continue( const void* plugin_config, void* plu
 	tail[ varln ] = '>';
 	tail[ varln + 1 ] = 0;
 	zepto_write_block( reply, (uint8_t*)tail, varln + 1 );
-	uint16_t msg_size = 11+varln+1;
 
 	// print outgoing packet
+#ifdef SA_DEBUG
+	uint16_t msg_size = 11+varln+1;
 	ZEPTO_DEBUG_PRINTF_5( "Yocto: Packet sent    : [%d bytes]  [%d][0x%04x][0x%04x]",  msg_size, ps->first_byte, ps->chain_id[0], ps->chain_id[1] );
 	ZEPTO_DEBUG_PRINTF_5( "[0x%04x][0x%04x][0x%04x]%s\n", ps->chain_ini_size, ps->reply_to_id, ps->self_id, tail );
-
 	ZEPTO_DEBUG_ASSERT( msg_size >= 7 && msg_size <= 22 );
+#endif
+
 
 	INCREMENT_COUNTER( 1, "slave_process(), packet sent" );
 
@@ -71,7 +73,7 @@ uint8_t smart_echo_plugin_handler_continue( const void* plugin_config, void* plu
 
 uint8_t smart_echo_plugin_handler( const void* plugin_config, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply/*, WaitingFor* waiting_for*/, uint8_t first_byte )
 {
-	const SmartEchoPluginConfig* pc = (SmartEchoPluginConfig*) plugin_config;
+//	const SmartEchoPluginConfig* pc = (SmartEchoPluginConfig*) plugin_config;
 	SmartEchoPluginState* ps = (SmartEchoPluginState*)plugin_state;
 
 	if ( ps->state == 0 )

@@ -36,8 +36,6 @@ void sasp_init_at_lifestart( /*SASP_DATA* sasp_data*/ )
 
 void sasp_restore_from_backup( /*SASP_DATA* sasp_data*/ )
 {
-	uint8_t size;
-
 	eeprom_read( EEPROM_SLOT_DATA_SASP_NONCE_LW_ID, sasp_data.nonce_lw );
 	eeprom_read( EEPROM_SLOT_DATA_SASP_NONCE_LS_ID, sasp_data.nonce_ls );
 }
@@ -99,7 +97,7 @@ void SASP_EncryptAndAddAuthenticationData( REQUEST_REPLY_HANDLE mem_h, const uin
 	uint8_t tag[SASP_TAG_SIZE];
 
 	// init parser object
-	parser_obj po, po1;
+	parser_obj po;
 	zepto_parser_init( &po, mem_h );
 
 
@@ -114,15 +112,19 @@ void SASP_EncryptAndAddAuthenticationData( REQUEST_REPLY_HANDLE mem_h, const uin
 		// in actual implementation using the same logic it's a place to write resulting packet encrypted part
 		while ( zepto_parsing_remaining_bytes( &po ) > 16 )
 		{
+#ifdef SA_DEBUG
 			read_ok = zepto_parse_read_block( &po, block, SASP_ENC_BLOCK_SIZE );
 			ZEPTO_DEBUG_ASSERT( read_ok );
+#else
+			zepto_parse_read_block( &po, block, SASP_ENC_BLOCK_SIZE );
+#endif
 			eax_128_process_nonterminating_block_encr( key, ctr, block, block, msg_cbc_val );
 			zepto_write_block( mem_h, block, SASP_ENC_BLOCK_SIZE );
 		}
 		uint16_t remaining_sz = zepto_parsing_remaining_bytes( &po );
 		read_ok = zepto_parse_read_block( &po, block, remaining_sz );
 		ZEPTO_DEBUG_ASSERT( read_ok );
-		eax_128_process_terminating_block_encr( key, ctr, block, remaining_sz, block, msg_cbc_val );
+		eax_128_process_terminating_block_encr( key, ctr, block, (uint8_t)remaining_sz, block, msg_cbc_val );
 		zepto_write_block( mem_h, block, remaining_sz );
 
 		// finalize
@@ -221,11 +223,9 @@ bool SASP_is_for_sasp( REQUEST_REPLY_HANDLE mem_h )
 	return for_sasp;
 }
 
-#ifdef _DEBUG
+#ifdef SA_DEBUG
 void DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( MEMORY_HANDLE mem_h, const uint8_t* key, const sa_uint48_t nonce )
 {
-	uint8_t header[6];
-
 	parser_obj po, po1;
 	zepto_parser_init( &po, mem_h );
 	uint16_t inisz = zepto_parsing_remaining_bytes( &po );
@@ -283,7 +283,7 @@ uint8_t handler_sasp_send( const uint8_t* key, const sa_uint48_t packet_id, MEMO
 {
 	ZEPTO_DEBUG_ASSERT( sa_uint48_compare( packet_id, sasp_data.nonce_ls ) >= 0 );
 
-#ifdef _DEBUG
+#ifdef SA_DEBUG
 //	DEBUG_SASP_EncryptAndAddAuthenticationDataChecked( mem_h, key, packet_id );
 	SASP_EncryptAndAddAuthenticationData( mem_h, key, packet_id );
 #else
@@ -329,9 +329,9 @@ uint8_t handler_sasp_receive( const uint8_t* key, uint8_t* pid, MEMORY_HANDLE me
 		sa_uint48_t new_nls;
 		zepto_parser_decode_encoded_uint_as_sa_uint48( &po1, new_nls );
 
+		uint8_t* nls = sasp_data.nonce_ls;
 #ifdef SA_DEBUG
 		ZEPTO_DEBUG_PRINTF_1( "handler_sasp_receive(): packet for SASP received...\n" );
-		uint8_t* nls = sasp_data.nonce_ls;
 		ZEPTO_DEBUG_PRINTF_7( "   current  NLS: %02x %02x %02x %02x %02x %02x\n", nls[0], nls[1], nls[2], nls[3], nls[4], nls[5] );
 		ZEPTO_DEBUG_PRINTF_7( "   proposed NLS: %02x %02x %02x %02x %02x %02x\n", new_nls[0], new_nls[1], new_nls[2], new_nls[3], new_nls[4], new_nls[5] );
 #endif
@@ -392,7 +392,7 @@ uint8_t handler_sasp_get_packet_id( sa_uint48_t buffOut, int buffOutSize/*, SASP
 	return SASP_RET_NONCE;
 }
 
-uint8_t handler_sasp_save_state( /*SASP_DATA* sasp_data*/ )
+void handler_sasp_save_state( /*SASP_DATA* sasp_data*/ )
 {
 	eeprom_write( EEPROM_SLOT_DATA_SASP_NONCE_LW_ID, sasp_data.nonce_lw );
 	eeprom_write( EEPROM_SLOT_DATA_SASP_NONCE_LS_ID, sasp_data.nonce_ls );

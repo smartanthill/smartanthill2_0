@@ -31,7 +31,13 @@ Copyright (C) 2015 OLogN Technologies AG
 #define ZEPTO_PROG_CONSTANT_LOCATION ZEPTO_PROGMEM
 #define ZEPTO_PROG_CONSTANT_READ_BYTE(x) pgm_read_byte(x)
 #define ZEPTO_PROG_CONSTANT_READ_PTR(x) ((void*)(pgm_read_ptr_near(x)))
-#define ZEPTO_MEMCPY_FROM_PROGMEM memcpy_PF
+//#define ZEPTO_MEMCPY_FROM_PROGMEM( dest, src, len ) memcpy_PF( dest, (uint_farptr_t)(src), len )
+#define ZEPTO_MEMCPY_FROM_PROGMEM( dest, src, len )\
+{ /*saves 12 bytes of code and allows getting rid of type-cast-related warning*/\
+	uint16_t i; \
+	for ( i=0; i<len; i++ )\
+	dest[i] = pgm_read_byte( ((uint8_t*)src) + i ); \
+}
 #endif // ZEPTO_PROGMEM_IN_USE
 
 #endif // __HAL_PLATFORM_VOID_MAIN_H__

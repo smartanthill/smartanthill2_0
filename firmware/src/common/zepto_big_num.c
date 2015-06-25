@@ -44,7 +44,7 @@ void zepto_bignum_add_product_and_do_modular_part( uint8_t* accum, uint8_t* extr
 			carry += (uint8_t)pr1;
 			carry += (uint8_t)pr2;
 			carry += accum[i];
-			accum[i-1] = carry;
+			accum[i-1] = (uint8_t)carry;
 			carry >>= 8;
 			carry += (pr1 >> 8);
 			carry += (pr2 >> 8);
@@ -59,16 +59,16 @@ void zepto_bignum_add_product_and_do_modular_part( uint8_t* accum, uint8_t* extr
 			pr1 = ((uint16_t)bytefactor) * bignum[i];
 			carry += (uint8_t)pr1;
 			carry += accum[i];
-			accum[i-1] = carry;
+			accum[i-1] = (uint8_t)carry;
 			carry >>= 8;
 			carry += pr1 >> 8;
 		}
 	}
 	carry += *extra;
-	accum[M_BYTE_SIZE-1] = carry;
+	accum[M_BYTE_SIZE-1] = (uint8_t)carry;
 	carry >>= 8;
 	ZEPTO_DEBUG_ASSERT( carry <= 1 );
-	*extra = carry;
+	*extra = (uint8_t)carry;
 }
 
 FORCE_INLINE
