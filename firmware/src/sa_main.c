@@ -109,7 +109,7 @@ bool sa_main_init()
 //    memset( AES_ENCRYPTION_KEY, 0xab, 16 );
 	sasp_init_at_lifestart(); // TODO: replace by more extensive restore-from-backup-etc
 	sagdp_init();
-	void zepto_vm_init();
+	zepto_vm_init();
 
 	ZEPTO_DEBUG_PRINTF_1("\nAwaiting client connection... \n" );
 	if (!communication_initialize())

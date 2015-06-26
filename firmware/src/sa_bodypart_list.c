@@ -33,7 +33,7 @@ SmartEchoPluginConfig SmartEchoPluginConfig_struct =
 SmartEchoPluginState SmartEchoPluginState_struct;
 
 
-const bodypart_item bodyparts[ BODYPARTS_MAX ] ZEPTO_PROG_CONSTANT_LOCATION =
+const bodypart_item bodyparts[ BODYPARTS_MAX ] =
 {
 	{ smart_echo_plugin_handler_init, smart_echo_plugin_handler, &SmartEchoPluginConfig_struct, &SmartEchoPluginState_struct },
 };
