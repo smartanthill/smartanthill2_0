@@ -18,11 +18,15 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __HAL_PLATFORM_WIRING_MAIN_H__
 #define __HAL_PLATFORM_WIRING_MAIN_H__
 
-#if !defined ENERGIA
+#include <Arduino.h>
+#include "hal_time_conversions.h"
+
+#if defined __AVR
 #include <avr/pgmspace.h>
 #include "stdint.h"
 #define ZEPTO_PROGMEM      __attribute__ ((progmem))
 #define ZEPTO_MEMCPY_FROM_PROGMEM memcpy_PF
+#define ZEPTO_PROG_CONSTANT_READ_PTR(x) ((void*)(pgm_read_ptr_near(x)))
 #else
 #define ZEPTO_PROGMEM
 #define ZEPTO_MEMCPY_FROM_PROGMEM( dest, src, len )\
@@ -33,11 +37,7 @@ Copyright (C) 2015 OLogN Technologies AG
 }
 #endif
 
-#include <Arduino.h>
-#include "hal_time_conversions.h"
-
 #define ZEPTO_PROGMEM_IN_USE
-
 #define ZEPTO_PROG_CONSTANT_LOCATION ZEPTO_PROGMEM
 #define ZEPTO_PROG_CONSTANT_READ_BYTE(x) pgm_read_byte(x)
 
