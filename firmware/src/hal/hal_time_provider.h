@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 void sa_get_time( sa_time_val* t ); // PLATFORM-SPECIFIC IMPLEMENTATION
-unsigned short getTime();
+uint32_t getTime();
 
 #ifdef __cplusplus
 }

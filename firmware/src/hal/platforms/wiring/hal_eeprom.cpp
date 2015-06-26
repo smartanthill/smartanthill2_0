@@ -74,11 +74,5 @@ bool hal_eeprom_read( uint8_t* data, uint16_t size, uint16_t address)
 
 void hal_eeprom_flush()
 {
-#if defined ENERGIA
-    Flash.erase(flash);
-#else
-	for (uint32_t i = 0; i < EEPROM.length(); i++ ) {
-         EEPROM.write(i, 0);
-    }
-#endif
+
 }
