@@ -25,7 +25,7 @@ void sa_get_time(sa_time_val* t)
     t->low_t = (uint16_t)sys_t;
 }
 
-unsigned short getTime()
+uint32_t getTime()
 {
     return millis();
 }
@@ -44,7 +44,8 @@ void just_sleep( sa_time_val* timeval )
     uint32_t timeout = timeval->high_t;
     timeout <<= 16;
     timeout += timeval->low_t;
-    wait_for_timeout( timeout);
+    wait_for_timeout(timeout);
+    // TODO: add implementation
 }
 
 void keep_transmitter_on( bool keep_on )

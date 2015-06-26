@@ -30,9 +30,9 @@ void sa_get_time( sa_time_val* t )
 	t->low_t = (unsigned short)sys_t;
 }
 
-unsigned short getTime()
+uint32_t getTime()
 {
-	return (unsigned short)( GetTickCount() / 200 );
+	return (uint32_t)( GetTickCount() / 200 );
 }
 
 void mcu_sleep( uint16_t sec, uint8_t transmitter_state_on_exit )
@@ -105,9 +105,9 @@ void just_sleep( sa_time_val* timeval )
 
 
 // TODO: get rid of it
-unsigned short getTime()
+uint32_t getTime()
 {
-	return (unsigned short)( getTick() / 200 );
+	return (uint32_t)( getTick() / 200 );
 }
 
 #endif

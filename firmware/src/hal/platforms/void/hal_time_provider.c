@@ -21,7 +21,7 @@ void sa_get_time(sa_time_val* t)
 {
 }
 
-unsigned short getTime()
+uint32_t getTime()
 {
     return 0;
 }
