@@ -16,40 +16,25 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 
+// NOTE:
+//
+// This code has been used within CommStack when for preliminary processing of received reply 
+// before sending to Central Unit for passing to Control Program
+// and should not be used in the context of Central Unit project
+//
+// Use proper files instead
+
+#ifdef USED_AS_MASTER_CORE
+#error This file is not intended for Central Unit (USED_AS_MASTER_CORE defined)
+#endif // USED_AS_MASTER_CORE
+
+
 #include "saccp_protocol_client_side.h"
 #include "../../firmware/src/common/sagdp_protocol.h" // for packet status in chain
 #include "../../firmware/src/common/sa_uint48.h"
 #include "../../firmware/src/common/saccp_protocol_constants.h"
 
 
-
-#include "sa_test_control_prog.h"
-
-
-#ifdef MASTER_ENABLE_ALT_TEST_MODE
-
-void saccp_control_program_prepare_program( MEMORY_HANDLE mem_h, void* control_prog_state )
-{
-	// TODO: process
-	zepto_write_block( mem_h, (const uint8_t*)"first message with a new design", 32 );
-	zepto_parser_encode_and_prepend_uint16( mem_h, 32 ); // data size
-	zepto_parser_encode_and_prepend_uint16( mem_h, 0 ); // body part ID
-	zepto_write_prepend_byte( mem_h, ZEPTOVM_OP_EXEC );
-}
-
-uint8_t handler_sacpp_start_new_chain( MEMORY_HANDLE mem_h, void* control_prog_state )
-{
-	default_test_control_program_start_new( control_prog_state, mem_h );
-	return SACCP_RET_PASS_LOWER;
-}
-
-uint8_t handler_sacpp_continue_chain( MEMORY_HANDLE mem_h, void* control_prog_state )
-{
-	default_test_control_program_accept_reply_continue( control_prog_state, mem_h );
-	return SACCP_RET_PASS_LOWER;
-}
-
-#else // MASTER_ENABLE_ALT_TEST_MODE
 
 uint8_t handler_saccp_prepare_to_send( MEMORY_HANDLE mem_h )
 {
@@ -63,18 +48,11 @@ uint8_t handler_saccp_prepare_to_send( MEMORY_HANDLE mem_h )
 	zepto_convert_part_of_request_to_response( mem_h, &po1, &po );
 	uint8_t hdr = SACCP_NEW_PROGRAM; //TODO: we may want to add extra headers
 	zepto_write_prepend_byte( mem_h, hdr );
-//	zepto_write_prepend_byte( mem_h, SAGDP_P_STATUS_FIRST );
 	zepto_write_prepend_byte( mem_h, first_byte );
 	return SACCP_RET_PASS_LOWER;
 }
 
-#endif // MASTER_ENABLE_ALT_TEST_MODE
-
-#ifdef MASTER_ENABLE_ALT_TEST_MODE
-uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, void* control_prog_state )
-#else // MASTER_ENABLE_ALT_TEST_MODE
 uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h )
-#endif // MASTER_ENABLE_ALT_TEST_MODE
 {
 	parser_obj po;
 	zepto_parser_init( &po, mem_h );
@@ -125,15 +103,10 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h )
 						parser_obj po1;
 						zepto_parser_init_by_parser( &po1, &po );
 						zepto_parse_skip_block( &po, frame_sz );
-#ifdef MASTER_ENABLE_ALT_TEST_MODE
-						// we are in the scope of central unit; process in-place
-						default_test_control_program_accept_reply( control_prog_state, first_byte & SAGDP_P_STATUS_MASK, &po1, frame_sz );
-#else // MASTER_ENABLE_ALT_TEST_MODE
 						// we are in the scope of commstack; prepare for sending to central unit
 						ZEPTO_DEBUG_ASSERT( zepto_parsing_remaining_bytes( &po ) == 0 ); // multi-frame responses are not yet implemented
 						zepto_convert_part_of_request_to_response( mem_h, &po1, &po );
 						return SACCP_RET_PASS_TO_CENTRAL_UNIT;
-#endif // MASTER_ENABLE_ALT_TEST_MODE
 					}
 					else
 					{
@@ -142,11 +115,7 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h )
 				}
 				while ( zepto_parsing_remaining_bytes( &po ) );
 			}
-#ifdef MASTER_ENABLE_ALT_TEST_MODE
-			return (first_byte & SAGDP_P_STATUS_MASK) == SAGDP_P_STATUS_TERMINATING ? SACCP_RET_CHAIN_DONE : SACCP_RET_CHAIN_CONTINUED;
-#else // MASTER_ENABLE_ALT_TEST_MODE
 			return SACCP_RET_FAILED;
-#endif // MASTER_ENABLE_ALT_TEST_MODE
 			break;
 		}
 		case SACCP_REPLY_EXCEPTION:

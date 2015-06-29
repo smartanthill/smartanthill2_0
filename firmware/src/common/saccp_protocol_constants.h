@@ -102,4 +102,9 @@ Copyright (C) 2015 OLogN Technologies AG
 #define ZEPTOVM_TRANSMITTER_ONOFF_ON 1
 
 
+// frame type descriptor
+#define FRAME_TYPE_DESCRIPTOR_REGULAR 0
+#define FRAME_TYPE_DESCRIPTOR_EXCEPTION ((uint8_t)0xFF)
+
+
 #endif

@@ -79,9 +79,9 @@ uint8_t smart_echo_plugin_handler( const void* plugin_config, void* plugin_state
 	if ( ps->state == 0 )
 	{
 		uint16_t msg_size = zepto_parsing_remaining_bytes( command ); // all these bytes + (potentially) {padding_size + padding} will be written
-//		ps->first_byte = zepto_parse_uint8( command );
-		ps->first_byte = first_byte;
-		if ( ( ps->first_byte & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) == SAGDP_P_STATUS_ERROR_MSG )
+		ps->first_byte = zepto_parse_uint8( command );
+//		ps->first_byte = first_byte;
+		if ( ( first_byte & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) == SAGDP_P_STATUS_ERROR_MSG )
 		{
 			ZEPTO_DEBUG_PRINTF_1( "slave_process(): ERROR MESSAGE RECEIVED IN YOCTO\n" );
 			ZEPTO_DEBUG_ASSERT(0);

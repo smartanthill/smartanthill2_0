@@ -331,7 +331,8 @@ saoudp_in:
 		goto wait_for_comm_event;
 #else
 
-		// 4. pass to CACCP a new packet
+		// 4. pass to SACCP a new packet
+#if 0 // we cannot do any essential processing here in comm stack...
 		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP/*, sasp_nonce_type chain_id*/ ); //master_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		ZEPTO_DEBUG_PRINTF_4( "SACCP1: ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
@@ -358,17 +359,30 @@ saoudp_in:
 				break;
 			}
 		}
+
+#else	// ...instead we just send whatever we have received  to the Central Unit.
+		// Note: we may need to add some data (such as chain ID) or to somehow restructure the packet data; 
+		//       in this case this is a right place to do that
+
+		ret_code = send_to_central_unit( MEMORY_HANDLE_MAIN_LOOP );
+		// TODO: check ret_code
+		goto wait_for_comm_event;
+
+#endif // 0
+
 #endif			
 
 
 
 
-client_received:
-		// 4. CACCP (prepare packet)
+	client_received:
+#if 0 // this functionality is trivial and will be done on a Central Unit side
+		// 4. SACCP (prepare packet)
 		ret_code = handler_saccp_prepare_to_send( MEMORY_HANDLE_MAIN_LOOP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		ZEPTO_DEBUG_PRINTF_4( "SACCP2: ret: %d; rq_size: %d, rsp_size: %d\n", ret_code, ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
 		// TODO: analyze and process ret_code
+#endif
 
 		// 5. SAGDP
 		ZEPTO_DEBUG_PRINTF_3( "@client_received: rq_size: %d, rsp_size: %d\n", ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );

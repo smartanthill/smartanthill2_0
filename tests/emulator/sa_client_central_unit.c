@@ -26,6 +26,8 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "sa_test_control_prog.h"
 #include "test_generator.h"
 #include "../../firmware/src/common/zepto_mem_mngmt.h"
+#include "saccp_protocol_client_side_cu.h"
+
 #include <stdio.h>
 
 
@@ -64,10 +66,12 @@ int main_loop()
 #ifdef MASTER_ENABLE_ALT_TEST_MODE
 
 #if MODEL_IN_EFFECT == 2
-	DefaultTestingControlProgramState control_prog_state;
-	default_test_control_program_init( &control_prog_state );
+	extern DefaultTestingControlProgramState DefaultTestingControlProgramState_struct;
+	default_test_control_program_init( &DefaultTestingControlProgramState_struct );
 #endif
-	ret_code = default_test_control_program_start_new( &control_prog_state, MEMORY_HANDLE_MAIN_LOOP );
+	ret_code = default_test_control_program_start_new( &DefaultTestingControlProgramState_struct, MEMORY_HANDLE_MAIN_LOOP );
+	zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+	handler_saccp_prepare_to_send( MEMORY_HANDLE_MAIN_LOOP );
 	zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 /*	parser_obj po;
 	zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
@@ -129,32 +133,33 @@ wait_for_comm_event:
 		}
 
 /*start_new_chain:
-		ret_code = default_test_control_program_start_new( &control_prog_state, MEMORY_HANDLE_MAIN_LOOP );
+		ret_code = default_test_control_program_start_new( &DefaultTestingControlProgramState_struct, MEMORY_HANDLE_MAIN_LOOP );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		goto send_command;*/
 
 		// 4. Process received command (yoctovm)
 #ifdef MASTER_ENABLE_ALT_TEST_MODE
 	process_reply:
-#if 0
-		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL, &control_prog_state ); //master_process( &wait_to_continue_processing, MEMORY_HANDLE_MAIN_LOOP );
+#if 1
+		// do reply preprocessing
+		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL, &DefaultTestingControlProgramState_struct );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-#endif
-		ret_code = default_test_control_program_accept_reply( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL, &control_prog_state );
+#else
+		ret_code = default_test_control_program_accept_reply( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL, &DefaultTestingControlProgramState_struct );
 		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 		switch ( ret_code )
 		{
 			case CONTROL_PROG_OK:
 			{
-//				ret_code = handler_sacpp_start_new_chain( MEMORY_HANDLE_MAIN_LOOP, &control_prog_state );
-				ret_code = default_test_control_program_start_new( &control_prog_state, MEMORY_HANDLE_MAIN_LOOP );
+//				ret_code = handler_sacpp_start_new_chain( MEMORY_HANDLE_MAIN_LOOP, &DefaultTestingControlProgramState_struct );
+				ret_code = default_test_control_program_start_new( &DefaultTestingControlProgramState_struct, MEMORY_HANDLE_MAIN_LOOP );
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 				break;
 			}
 			case CONTROL_PROG_CONTINUE:
 			{
-//				ret_code = handler_sacpp_continue_chain( MEMORY_HANDLE_MAIN_LOOP, &control_prog_state );
-				ret_code = default_test_control_program_accept_reply_continue( &control_prog_state, MEMORY_HANDLE_MAIN_LOOP );
+//				ret_code = handler_sacpp_continue_chain( MEMORY_HANDLE_MAIN_LOOP, &DefaultTestingControlProgramState_struct );
+				ret_code = default_test_control_program_accept_reply_continue( &DefaultTestingControlProgramState_struct, MEMORY_HANDLE_MAIN_LOOP );
 				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
 				break;
 			}
@@ -166,6 +171,7 @@ wait_for_comm_event:
 				break;
 			}
 		}
+#endif
 #else // MASTER_ENABLE_ALT_TEST_MODE
 		// so far just print received packet and exit
 		uint8_t buff[128];

@@ -23,6 +23,8 @@ Copyright (C) 2015 OLogN Technologies AG
 #include "test_generator.h"
 #include <stdio.h> // for sprintf() in fake implementation
 
+DefaultTestingControlProgramState DefaultTestingControlProgramState_struct;
+
 #define CHAIN_MAX_SIZE 9
 //#define MANUAL_TEST_DATA_ENTERING
 
@@ -73,7 +75,7 @@ uint8_t default_test_control_program_start_new( void* control_prog_state, MEMORY
 	ps->last_sent_id = ps->self_id;
 
 	// prepare outgoing packet
-//	zepto_write_uint8( reply, ps->first_byte );
+	zepto_write_uint8( reply, ps->first_byte );
 	zepto_parser_encode_and_append_uint16( reply, ps->chain_id[0] );
 	zepto_parser_encode_and_append_uint16( reply, ps->chain_id[1] );
 	zepto_parser_encode_and_append_uint16( reply, ps->chain_ini_size );
@@ -131,7 +133,7 @@ uint8_t default_test_control_program_accept_reply_continue( void* control_prog_s
 
 	zepto_response_to_request( reply );
 
-//	zepto_write_uint8( reply, ps->first_byte );
+	zepto_write_uint8( reply, ps->first_byte );
 	zepto_parser_encode_and_append_uint16( reply, ps->chain_id[0] );
 	zepto_parser_encode_and_append_uint16( reply, ps->chain_id[1] );
 	zepto_parser_encode_and_append_uint16( reply, ps->chain_ini_size );
@@ -168,7 +170,8 @@ uint8_t default_test_control_program_accept_reply_continue( void* control_prog_s
 		// need to add explicit exit command to specify packet status-in-chain of the reply
 		zepto_write_uint8( reply, ZEPTOVM_OP_EXIT );
 		zepto_write_uint8( reply, (uint8_t)SAGDP_P_STATUS_INTERMEDIATE ); // TODO: if padding is required, add necessary data here
-		reply_sz = zepto_writer_get_response_size( reply );
+//		reply_sz = zepto_writer_get_response_size( reply );
+		zepto_write_prepend_byte( reply, SAGDP_P_STATUS_INTERMEDIATE );
 	}
 	else
 	{
@@ -176,18 +179,19 @@ uint8_t default_test_control_program_accept_reply_continue( void* control_prog_s
 		// need to add explicit exit command to specify packet status-in-chain of the reply
 		zepto_write_uint8( reply, ZEPTOVM_OP_EXIT );
 		zepto_write_uint8( reply, (uint8_t)SAGDP_P_STATUS_TERMINATING ); // TODO: if padding is required, add necessary data here
-		reply_sz = zepto_writer_get_response_size( reply );
+//		reply_sz = zepto_writer_get_response_size( reply );
+		zepto_write_prepend_byte( reply, SAGDP_P_STATUS_TERMINATING );
 	}
 /*	uint8_t hdr = SACCP_NEW_PROGRAM; //TODO: we may want to add extra headers
 	zepto_write_prepend_byte( reply, hdr );*/
-	zepto_write_prepend_byte( reply, SAGDP_P_STATUS_INTERMEDIATE );
+//	zepto_write_prepend_byte( reply, SAGDP_P_STATUS_INTERMEDIATE );
 
 
 	// return status
 	return ps->first_byte == SAGDP_P_STATUS_TERMINATING ? CONTROL_PROG_PASS_LOWER_THEN_IDLE : CONTROL_PROG_PASS_LOWER; 
 }
 
-uint8_t _default_test_control_program_accept_reply( void* control_prog_state, uint8_t packet_status, parser_obj* received, uint16_t msg_size )
+uint8_t _default_test_control_program_accept_reply( void* control_prog_state, uint8_t packet_status, parser_obj* received )
 {
 	// by now master_continue() does the same as yocto_process
 //	*wait_to_process_time = 0;
@@ -196,9 +200,10 @@ uint8_t _default_test_control_program_accept_reply( void* control_prog_state, ui
 
 	INCREMENT_COUNTER( 4, "master_continue(), packet received" );
 
-//	uint16_t msg_size = zepto_parsing_remaining_bytes( received ); // all these bytes + (potentially) {padding_size + padding} will be written
+	uint16_t msg_size = zepto_parsing_remaining_bytes( received ); // just all bytes to the end...
+	uint8_t first_byte = zepto_parse_uint8( received );
 	ps->first_byte = packet_status;
-//	ps->first_byte = zepto_parse_uint8( received );
+	ZEPTO_DEBUG_ASSERT( (packet_status & 7) == (first_byte & 7) );
 //	ps->first_byte = zepto_parse_uint8( received );
 	if ( ( ps->first_byte & ( SAGDP_P_STATUS_FIRST | SAGDP_P_STATUS_TERMINATING ) ) == SAGDP_P_STATUS_ERROR_MSG )
 	{
@@ -218,11 +223,13 @@ uint8_t _default_test_control_program_accept_reply( void* control_prog_state, ui
 //	uint16_t tail_sz = zepto_parsing_remaining_bytes( received );
 	uint8_t tail_sz = zepto_parse_uint8( received );
 	zepto_parse_read_block( received, (uint8_t*)tail, tail_sz );
+	msg_size -= zepto_parsing_remaining_bytes( received ); // ...minus bytes still remaining
 	tail[ tail_sz ] = 0;
 
 	// print packet
 //	PRINTF( "Yocto: Packet received: [%d bytes]  [%d][0x%04x][0x%04x][0x%04x][0x%04x][0x%04x]%s\n", msg_size, ps->first_byte, ps->chain_id[0], ps->chain_id[1], ps->chain_ini_size, ps->reply_to_id, ps->self_id, tail );
 	ZEPTO_DEBUG_PRINTF_5( "Zepto-Master: Packet received    : [%d bytes]  [%d][0x%04x][0x%04x]",  msg_size, ps->first_byte, ps->chain_id[0], ps->chain_id[1] );
+//	ZEPTO_DEBUG_PRINTF_4( "Zepto-Master: Packet received    : [?? bytes]  [%d][0x%04x][0x%04x]",  ps->first_byte, ps->chain_id[0], ps->chain_id[1] );
 	ZEPTO_DEBUG_PRINTF_5( "[0x%04x][0x%04x][0x%04x]%s\n", ps->chain_ini_size, ps->reply_to_id, ps->self_id, tail );
 
 	// test and analyze
@@ -296,7 +303,7 @@ uint8_t default_test_control_program_accept_reply( MEMORY_HANDLE mem_h, sasp_non
 	zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
 	uint8_t first_byte = zepto_parse_uint8( &po );
 	uint16_t frame_sz = zepto_parsing_remaining_bytes( &po );
-	return _default_test_control_program_accept_reply( control_prog_state, first_byte & 7/*SAGDP_P_STATUS_MASK*/, &po, frame_sz );
+	return _default_test_control_program_accept_reply( control_prog_state, first_byte & 7/*SAGDP_P_STATUS_MASK*/, &po );
 }
 
 

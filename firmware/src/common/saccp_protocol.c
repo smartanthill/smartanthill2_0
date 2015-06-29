@@ -78,8 +78,10 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte, waiting_for* wf 
 
 				//+++ TODO: rethink memory management
 #ifdef ZEPTO_VM_USE_SIMPLE_FRAME
-				zepto_write_uint8( mem_h, 0 ); // start of a "regular" plugin frame
-				(( plugin_handler_fn)( ZEPTO_PROG_CONSTANT_READ_PTR( &(bodyparts[body_part].ph_fn) ) ) )( (void*)(ZEPTO_PROG_CONSTANT_READ_PTR(&(bodyparts[body_part].ph_config))), (void*)(ZEPTO_PROG_CONSTANT_READ_PTR(&(bodyparts[body_part].ph_state))), &po, mem_h/*, WaitingFor* waiting_for*/, first_byte );
+				zepto_write_uint8( mem_h, FRAME_TYPE_DESCRIPTOR_REGULAR ); // start of a "regular" plugin frame
+				zepto_parser_init_by_parser( &po1, &po );
+				zepto_parse_skip_block( &po, data_sz );
+				(( plugin_handler_fn)( ZEPTO_PROG_CONSTANT_READ_PTR( &(bodyparts[body_part].ph_fn) ) ) )( (void*)(ZEPTO_PROG_CONSTANT_READ_PTR(&(bodyparts[body_part].ph_config))), (void*)(ZEPTO_PROG_CONSTANT_READ_PTR(&(bodyparts[body_part].ph_state))), &po1, mem_h/*, WaitingFor* waiting_for*/, first_byte );
 #else // ZEPTO_VM_USE_SIMPLE_FRAME
 				zepto_parser_init_by_parser( &po1, &po );
 //				zepto_parse_skip_block( &po, zepto_parsing_remaining_bytes( &po ) );
@@ -116,7 +118,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte, waiting_for* wf 
 				// (for the sake of quick progress of mainstream development currently we assume that the value of body_part is within single +/- decimal digit)
 #ifdef ZEPTO_VM_USE_SIMPLE_FRAME
 				MEMORY_HANDLE reply_handle = mem_h;
-				zepto_write_uint8( reply_handle, 0 ); // regular frame start
+				zepto_write_uint8( reply_handle, FRAME_TYPE_DESCRIPTOR_REGULAR ); // regular frame start
 #else
 				MEMORY_HANDLE reply_handle = MEMORY_HANDLE_DEFAULT_PLUGIN;
 				zepto_parser_free_memory( reply_handle );
@@ -184,7 +186,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte, waiting_for* wf 
 				// TODO: ensure that 'reply_body_size' is within the remaining part of request
 #ifdef ZEPTO_VM_USE_SIMPLE_FRAME
 				MEMORY_HANDLE reply_handle = mem_h;
-				zepto_write_uint8( reply_handle, 0 ); // regular frame start
+				zepto_write_uint8( reply_handle, FRAME_TYPE_DESCRIPTOR_REGULAR ); // regular frame start
 				zepto_parser_init_by_parser( &po1, &po );
 				zepto_parse_skip_block( &po, reply_body_size );
 				zepto_append_part_of_request_to_response( mem_h, &po1, &po );
@@ -302,7 +304,7 @@ void handler_zepto_vm( MEMORY_HANDLE mem_h, uint8_t first_byte, waiting_for* wf 
 			}
 			default:
 			{
-				ZEPTO_DEBUG_ASSERT( NULL == "Error: unexpected value of packet type\n" );
+				ZEPTO_DEBUG_ASSERT( NULL == "Error: unexpected value of command type\n" );
 			}
 		}
 	}
@@ -355,6 +357,7 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, wa
 	zepto_parser_init( &po, mem_h );
 
 	uint8_t first_byte = zepto_parse_uint8( &po );
+	ZEPTO_DEBUG_PRINTF_2( "handler_saccp_receive(): first_byte = %d\n", first_byte );
 	uint8_t packet_head_byte = zepto_parse_uint8( &po );
 	uint8_t packet_type = packet_head_byte & 0x7; // TODO: use bit field processing instead
 
@@ -423,7 +426,7 @@ uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, wa
 			zepto_response_to_request( mem_h );
 
 			handler_zepto_vm( mem_h, first_byte, wf ); // TODO: it can be implemented as an additional layer
-			return SACCP_RET_PASS_LOWER;
+			return ( (first_byte & SAGDP_P_STATUS_MASK) ==  SAGDP_P_STATUS_TERMINATING) ? SACCP_RET_DONE : SACCP_RET_PASS_LOWER;
 			break;
 		}
 		case SACCP_REPEAT_OLD_PROGRAM:

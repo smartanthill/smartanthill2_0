@@ -271,11 +271,6 @@ wait_for_comm_event:
 				goto alt_entry;
 				break;
 			}
-/*trystart_over:
-			ret_code = try_get_message( MEMORY_HANDLE_MAIN_LOOP );
-			zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-			INCREMENT_COUNTER_IF( 92, "MAIN LOOP, packet received [2]", ret_code == COMMLAYER_RET_OK );
-			ZEPTO_DEBUG_ASSERT( ret_code != COMMLAYER_RET_OK || ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ) != 0 );*/
 		}
 		if ( ret_code != COMMLAYER_RET_OK )
 		{
@@ -502,6 +497,12 @@ saoudp_rec:
 					ZEPTO_DEBUG_ASSERT( ret_code == SACCP_RET_PASS_LOWER );
 				}
 				// regular processing will be done below in the next block
+				break;
+			}
+			case SACCP_RET_DONE:
+			{
+				zepto_parser_free_memory( MEMORY_HANDLE_MAIN_LOOP );
+				goto start_over;
 				break;
 			}
 		}

@@ -48,6 +48,7 @@ uint8_t default_test_control_program_init( void* control_prog_state );
 uint8_t default_test_control_program_accept_reply_continue( void* control_prog_state, MEMORY_HANDLE reply );
 uint8_t default_test_control_program_start_new( void* control_prog_state, MEMORY_HANDLE reply );
 uint8_t default_test_control_program_accept_reply( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, void* control_prog_state );
+uint8_t _default_test_control_program_accept_reply( void* control_prog_state, uint8_t packet_status, parser_obj* received );
 
 #endif // __SA_TEST_CONTROL_PROG_H__
 

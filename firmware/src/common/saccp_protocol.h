@@ -29,8 +29,9 @@ Copyright (C) 2015 OLogN Technologies AG
 
 // RET codes
 #define SACCP_RET_FAILED 0 // any failure
-#define SACCP_RET_PASS_LOWER 1 // packet must be sent to a communication peer
-#define SACCP_RET_WAIT 2 // processing is not over; WaitingFor describes details
+#define SACCP_RET_DONE 1 // any failure
+#define SACCP_RET_PASS_LOWER 2 // packet must be sent to a communication peer
+#define SACCP_RET_WAIT 3 // processing is not over; WaitingFor describes details
 
 void zepto_vm_init();
 
