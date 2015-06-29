@@ -25,9 +25,9 @@ Copyright (C) 2015 OLogN Technologies AG
 
 uint8_t hal_wait_for( waiting_for* wf )
 {
-    if (wf->wait_packet)
+    for (;;)
     {
-        while (Serial.available())
+        if (wf->wait_packet && Serial.available())
         {
             if (Serial.read() == START_OF_PACKET)
             {
