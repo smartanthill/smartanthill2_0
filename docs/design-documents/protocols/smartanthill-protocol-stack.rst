@@ -27,7 +27,7 @@
 SmartAnthill 2.0 Protocol Stack
 ===============================
 
-:Version:   v0.2.11a
+:Version:   v0.3
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -43,15 +43,12 @@ In SmartAnthill Protocol Stack, there are three distinct actors:
 
 * **SmartAnthill Client**. Whoever needs to control SmartAnthill Device(s). SmartAnthill Clients are usually implemented by SmartAnthill Central Controllers, though this is not strictly required. 
 * **SmartAnthill Router**. SmartAnthill Router allows to control SmartAnthill Devices connected to it. Performs conversion between SAoIP and SADLP-\* protocols (see below).
-* **SmartAnthill Device**. Physical device (containing sensor(s) and/or actuator(s)), which implements at least some parts of SmartAnthill protocol stack. SmartAnthill Devices can be further separated into:
-
-  + **SmartAnthill Simple Device**. SmartAnthill Device which is not powerful enough to run it's own SAoIP/IP stack. MUST be connected via SmartAnthill Router.
-  + **SmartAnthill IP-enabled Device**. SmartAnthill Device which is enabled to run it's own SAoIP/IP stack. MAY be connected without SmartAnthill Router directly to Intranet/Internet. Note that implementing TCP is not strictly required for SmartAnthill IP-enabled Devices.
+* **SmartAnthill Device**. Physical device (containing sensor(s) and/or actuator(s)), which implements at least some parts of SmartAnthill protocol stack. Every SmartAnthill Device runs it's own IP/SAoIP stack (but not necessarily TCP stack).
 
 Addressing
 ----------
 
-In SmartAnthill, each SmartAnthill Device (whether Simple Device or IP-enabled device) is assigned it's own unique *SmartAnthill Address*, which is a triplet (IPv6-address:SAoIP-subprotocol:port-number). It allows to have either one IP address per device, or to have multiple devices per IP address as necessary and/or convenient. Currently supported SAoIP-subprotocols (also known as "SAoIP flavours") are: UDP, TCP, TLSoTCP (with port-number being UDP port number for UDP subprotocol, and TCP port number for TCP and TLSoTCP subprotocols). For further details, please refer to :ref:`saoip` document. For *SmartAnthill Simple Devices*, this SA 'triplet' address is translated into L2 bus-specific address by SmartAnthill Router.
+In SmartAnthill, each SmartAnthill Device is assigned it's own IPv6 address (usually generated pseudo-randomly as specified in RFC4193). Currently the only supported SAoIP subprotocol (also known as "SAoIP flavour") is SAoUDP; for further details, please refer to :ref:`saoip` document. When transferring SAoUDP packets over SAMP, IPv6 and UDP headers MUST be compressed (as described in :ref:`saoip` document; techniques described there are similar to those of 6LoWPAN, but are more specific to SmartAnthill tasks, and are more efficient for our purposes as a result). 
 
 
 Relation between SmartAnthill protocol stack and OSI/ISO network model
@@ -60,41 +57,39 @@ Relation between SmartAnthill protocol stack and OSI/ISO network model
 .. note::
     For more detailed information please scroll table below by horizontal
 
-+--------+--------------+------------------+-----------------------+----------------------+------------------------+----------------------------+------------------------+
-| Layer  | OSI-Model    | SmartAnthill     |     Function          | Implementation       | Implementation         | Implementation             | Implementation         |
-|        |              | Protocol Stack   |                       | on Clients           | on IP-enabled Devices  | on Routers                 | on Simple Devices      |
-|        |              |                  |                       |                      |                        +---------------+------------+                        |
-|        |              |                  |                       |                      |                        | IP side       | SA side    |                        |
-+========+==============+==================+=======================+======================+========================+===============+============+========================+
-| 7      | Application  | Zepto VM         | Device Control        | Control Program      | Zepto VM               | --                         | Zepto VM               |
-+--------+--------------+------------------+-----------------------+----------------------+------------------------+----------------------------+------------------------+
-| 6      | Presentation | SACCP            | Command/Reply         | SACCP                | SACCP                  | --                         | SACCP                  |
-|        |              |                  | Handling              |                      |                        |                            |                        |
-+--------+--------------+------------------+-----------------------+----------------------+------------------------+----------------------------+------------------------+
-| 5      | Session      | SAGDP            | Guaranteed            | SAGDP ("Master")     | SAGDP ("Slave")        | --                         | SAGDP ("Slave")        |
-|        |              |                  | Delivery              |                      |                        |                            |                        |
-|        |              +------------------+-----------------------+----------------------+------------------------+----------------------------+------------------------+
-|        |              | SASP             | Encryption and        | SASP                 | SASP                   | SASP (optional)            | SASP                   |
-|        |              |                  | Authentication        |                      |                        |                            |                        |
-+--------+--------------+------------------+-----------------------+----------------------+------------------------+---------------+------------+------------------------+
-| 4      | Transport    | SAoIP [1]_       | Transport over IP     | SAoIP                | SAoIP                  | SAoIP         | --         | --                     |
-|        |              |                  | Networks              |                      |                        |               |            |                        |
-|        |              +------------------+-----------------------+----------------------+------------------------+---------------+            |                        |
-|        |              | TCP or UDP       | As usual for TCP/UDP  | TCP or UDP           | TCP or UDP             | TCP or UDP    |            |                        |
-|        |              |                  |                       |                      |                        |               |            |                        |
-+--------+--------------+------------------+-----------------------+----------------------+------------------------+---------------+            |                        |
-| 3      | Network      | IP               | As usual for IP       | IP                   | IP                     | IP            |            |                        |
-|        |              |                  |                       |                      |                        |               |            |                        |
-+--------+--------------+------------------+-----------------------+----------------------+------------------------+---------------+------------+------------------------+
-| 2      | Datalink     | SADLP-\*         | Intra-bus addressing, | -- (standard network | -- (standard network   | -- (std netwk | SADLP-*    | SADLP-*                |
-|        |              |                  | Fragmentation         | capabilities)        | capabilities)          | capabilities) |            |                        |
-|        |              |                  | (if applicable)       |                      |                        |               |            |                        |
-+--------+--------------+------------------+-----------------------+----------------------+------------------------+---------------+------------+------------------------+
-| 1      | Physical     | Physical         |                       | -- (standard network | -- (standard network   | -- (std netwk | Physical   | Physical               |
-|        |              |                  |                       | capabilities)        | capabilities)          | capabilities) |            |                        |
-+--------+--------------+------------------+-----------------------+----------------------+------------------------+---------------+------------+------------------------+
-
-.. [1] For Simple SmartAnthill Devices, SAoIP is translated into SADLP-\* by the SmartAnthill Router (the one which directly controls the SmartAnthill Device). It can (and SHOULD) be done in a completely transparent manner, so that SmartAnthill Client SHOULD be able to communicate with SmartAnthill Device in exactly the same manner regardless of SmartAnthill Device being IP-enabled Device or Simple Device.
++--------+--------------+------------------+-----------------------+----------------------+----------------------------+------------------------+
+| Layer  | OSI-Model    | SmartAnthill     |     Function          | Implementation       | Implementation             | Implementation         |
+|        |              | Protocol Stack   |                       | on Clients           | on Routers                 | on Devices             |
+|        |              |                  |                       |                      +---------------+------------+                        |
+|        |              |                  |                       |                      | IP side       | SA side    |                        |
++========+==============+==================+=======================+======================+===============+============+========================+
+| 7      | Application  | Zepto VM         | Device Control        | Control Program      | --                         | Zepto VM               |
++--------+--------------+------------------+-----------------------+----------------------+----------------------------+------------------------+
+| 6      | Presentation | SACCP            | Command/Reply         | SACCP                | --                         | SACCP                  |
+|        |              |                  | Handling              |                      |                            |                        |
++--------+--------------+------------------+-----------------------+----------------------+----------------------------+------------------------+
+| 5      | Session      | SAGDP            | Guaranteed            | SAGDP ("Master")     | --                         | SAGDP ("Slave")        |
+|        |              |                  | Delivery              |                      |                            |                        |
+|        |              +------------------+-----------------------+----------------------+----------------------------+------------------------+
+|        |              | SASP             | Encryption and        | SASP                 | SASP (optional)            | SASP                   |
+|        |              |                  | Authentication        |                      |                            |                        |
++--------+--------------+------------------+-----------------------+----------------------+---------------+------------+------------------------+
+| 4      | Transport    | SAoIP            | Transport over IP     | SAoIP                | SAoIP         |SAoUDP+UDP  | SAoUDP+UDP             |
+|        |              |                  | Networks              |                      |               |(compressed)| (compressed)           |
+|        |              +------------------+-----------------------+----------------------+---------------+            |                        |
+|        |              | UDP              | As usual for UDP      | UDP                  | UDP           |            |                        |
+|        |              |                  |                       |                      |               |            |                        |
++--------+--------------+------------------+-----------------------+----------------------+---------------+------------+------------------------+
+| 3      | Network      | SAMP or IP       | Mesh for SAMP,        | IP                   | IP            | SAMP       | SAMP                   |
+|        |              |                  | As usual for IP       |                      |               |            |                        |
++--------+--------------+------------------+-----------------------+----------------------+---------------+------------+------------------------+
+| 2      | Datalink     | SADLP-\*         | Intra-bus addressing, | -- (standard network | -- (std netwk | SADLP-\*   | SADLP-\*               |
+|        |              |                  | Fragmentation         | capabilities)        | capabilities) |            |                        |
+|        |              |                  | (if applicable)       |                      |               |            |                        |
++--------+--------------+------------------+-----------------------+----------------------+---------------+------------+------------------------+
+| 1      | Physical     | Physical         |                       | -- (standard network | -- (std netwk | Physical   | Physical               |
+|        |              |                  |                       | capabilities)        | capabilities) |            |                        |
++--------+--------------+------------------+-----------------------+----------------------+---------------+------------+------------------------+
 
 SmartAnthill protocol stack consists of the following protocols:
 
@@ -106,7 +101,9 @@ SmartAnthill protocol stack consists of the following protocols:
 
 * **SASP** – SmartAnthill Security Protocol. Due to several considerations (including resource constraints) SmartAnthill protocol stack implements security on a layer right below SAGDP, so SASP essentially belongs to Layer 5 of OSI/ISO network model.
 
-* **SAoIP** – SmartAnthill over IP Protocol. Lies right on top of TLS, TCP or UDP. SAoIP is not implemented on SmartAnthill Simple Devices, and all the SAoIP headers are stripped (and replaced with L2 headers) by SmartAnthill Router before passing the data to SmartAnthill Simple Device.
+* **SAoIP** – SmartAnthill over IP Protocol. Currently only SAoUDP is supported, in the future support for SAoTCP MIGHT be added, but it won't be mandatory for Devices.
+
+* **SAMP** - SmartAnthill Mesh Protocol. EXPERIMENTAL. Aims to provide heterogeneous mesh network with an explicit "storm" control within applicable collision domains.
 
 * **SADLP-\*** – SmartAnthill DataLink Protocol family. Belongs to Layer 2 of OSI/ISO network model. SADLP-\* is specific to an underlying transfer technology (so for CAN bus SADLP-CAN is used, for IEEE 802.15.4 SADLP-IEEE802.15.4 is used). SADLP-\* handles fragmentation if necessary and provides non-guaranteed packet transfer.
 
