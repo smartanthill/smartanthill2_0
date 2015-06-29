@@ -1,0 +1,73 @@
+..  Copyright (c) 2015, OLogN Technologies AG. All rights reserved.
+    Redistribution and use of this file in source (.rst) and compiled
+    (.html, .pdf, etc.) forms, with or without modification, are permitted
+    provided that the following conditions are met:
+        * Redistributions in source form must retain the above copyright
+          notice, this list of conditions and the following disclaimer.
+        * Redistributions in compiled form must reproduce the above copyright
+          notice, this list of conditions and the following disclaimer in the
+          documentation and/or other materials provided with the distribution.
+        * Neither the name of the OLogN Technologies AG nor the names of its
+          contributors may be used to endorse or promote products derived from
+          this software without specific prior written permission.
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    ARE DISCLAIMED. IN NO EVENT SHALL OLogN Technologies AG BE LIABLE FOR ANY
+    DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+    DAMAGE SUCH DAMAGE
+
+.. _sadlp-802-15-4:
+
+SmartAnthill DLP for IEEE 802.15.4 (SADLP-802.15.4)
+===================================================
+
+:Version:   v0.1
+
+*NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
+
+SADLP-802.15.4 provides L2 datalink over IEEE 802.15.4, suitable for use by SmartAnthill protocol stack in general, and by SAMP (see :ref:`samp` for details) in particular.
+
+All references to IEEE 802.15.4 standard in this document, marked as [802.15.4], refer to IEEE Std 802.15.4(tm)‐2011, 
+"IEEE Standard for Local and metropolitan area networks—Part 15.4: Low-Rate Wireless Personal Area Networks (LR-WPANs)" (which can be obtained at http://standards.ieee.org/getieee802/download/802.15.4-2011.pdf ).
+
+***NB: to be taken with a grain of salt. If there are any issues with implementing it - let's discuss.***
+
+*NB2: current version of SADLP-802-15-4 is very basic, and doesn't utilize some potentially useful features of IEEE 802.15.4; this is intended to be corrected in the future versions of SADLP-802-15-4. Such features include: uni-cast packets where applicable, security and ACK at 802.15.4 level.*
+
+IEEE 802.15.4 MAC Frames
+------------------------
+
+Each of SADLP-802-15-4 upper-layer-protocol packets (usually SAMP packets) is transmitted as 802.15.4 MAC frame (as described in [802.15.4] 5.2.1) with the following field values:
+
+* Frame Control Field: 
+
+  + Frame Type = 'Data Frame'
+  + Security Enabled = false
+  + Frame Pending = <depending on more data available; when required so by [802.15.4] 5.2.1.1.3, shall be set to zero>
+  + Acknowledgment Request = false
+  + PAN ID Compression = false
+  + Destination Addressing Mode = 0b10 ('16-bit')
+  + Frame Version = 0x01 ('post-2003 802.15.4')
+  + Source Addressing Mode = 0b00 ('not present')
+
+* Sequence Number Field: current value of macDSN, as specified in [802.15.4] 5.2.2.2.1
+* Destination PAN Identifier: 0xffff
+* Destination Address: 0xffff
+* Source PAN Identifier/Source Address: not present
+* Auxiliary Security Header: not present
+* Frame Payload: SADLP payload (TODO: exactly or some massaging is needed?)
+* FCS: 16-bit ITU-T CRC, as specified in [802.15.4]
+
+That is, current version of the SADLP-802-15-4 sends all the data as unacknowledged (acknowledgement is handled by SAMP) insecure (security is provided by SASP) broadcast IEEE 802.15.4 data frame. 
+
+Mapping to specific APIs
+------------------------
+
+Mapping to specific APIs implementing IEEE 802.15.4, is beyond the scope of this document. Any implementation which produces MAC frames with the fields above, should be ok.
+

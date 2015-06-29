@@ -35,6 +35,7 @@ Protocols
     saoip
     samp
     sadlp-rf
+    sadlp-802-15-4
     sascrambling
     sarng
     sapairing
