@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.1.5
+:Version:   v0.1.5a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -229,17 +229,20 @@ In some cases, as a prerequisite for Device to be able to perform pairing, RNG n
 The procedure of Entropy Gathering is performed as follows:
 
 Phase 1 (OPTIONAL, used only if Device ID needs to be generated, hardware-assisted Fortuna PRNG is used, and Fortuna doesn't have enough entropy):
+
 * Device sends non-zero ENTROPY-NEEDED-SIZE and DEVICE-ID-FLAG not set
 * Client replies with Pairing-Entropy-Provided request, sent as a broadcast (SHOULD be restricted to those Retransmitting Nodes which may reach the Device)
 * this is repeated until Device has sufficient entropy to generate Device ID (this is the same as for regular "pairing", as described in :ref:`sarng` document)
 * NB: during Phase 1, packets from Client to Device are sent as a SAMP From-Santa packets (see :ref:`samp`) which do not distinguish between target Devices, so there is a chance that more than one Device obtains the same packet. However, these same packets will (with an overwhelming probability) lead to different data within Fortuna PRNGs, which will allow to distinguish these (originally potentially indistinguishable) Devices.
 
 Phase 2:
+
 * Device sends non-zero ENTROPY-NEEDED-SIZE, DEVICE-ID-FLAG set, and all Device ID-related fields.
 * Client replies with Pairing-Entropy-Provided request
 * NB: starting from Phase 2, all the packets from Client to Device are sent as SAMP Unicast packets (see :ref:`samp`) and are addressed to specific Device (using Device ID from Phase 2).
 
 Phase 3:
+
 * Device sends non-zero ENTROPY-NEEDED-SIZE, and DEVICE-ID-FLAG not set
 * Client replies with Pairing-Entropy-Provided request
 * Device processes received entropy as described in :ref:`sarng` document
