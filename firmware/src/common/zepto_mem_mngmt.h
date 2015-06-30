@@ -76,10 +76,18 @@ bool zepto_parse_skip_block( parser_obj* po, uint16_t size );
 bool zepto_is_parsing_done( parser_obj* po );
 uint16_t zepto_parsing_remaining_bytes( parser_obj* po );
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // writing functions
 void zepto_write_uint8( REQUEST_REPLY_HANDLE mem_h, uint8_t val );
 //void zepto_write_encoded_uint16( REQUEST_REPLY_HANDLE mem_h, uint16_t val );
 void zepto_write_block( REQUEST_REPLY_HANDLE mem_h, const uint8_t* block, uint16_t size );
+
+#ifdef __cplusplus
+}
+#endif
 
 // extended writing functions
 void zepto_response_to_request( MEMORY_HANDLE mem_h );

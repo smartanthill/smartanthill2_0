@@ -45,17 +45,14 @@ uint8_t wait_for_timeout( uint32_t timeout)
     return 0;
 }
 
-uint8_t try_get_message( MEMORY_HANDLE mem_h )
+uint8_t hal_get_packet_bytes( MEMORY_HANDLE mem_h )
 {
-    // do cleanup
-    memory_object_response_to_request( mem_h );
-    memory_object_response_to_request( mem_h );
-    uint8_t* buff = memory_object_append( mem_h, MAX_PACKET_SIZE );
+    uint8_t buffer[ MAX_PACKET_SIZE ];
 
     uint8_t i, byte, marker_detected = 0;
     uint32_t timeout = 2000; // in ms
     uint32_t start_reading  = getTime();
-    while ((start_reading + timeout) > getTime())
+    while ((start_reading + timeout) > getTime() && i < MAX_PACKET_SIZE)
     {
         if (!Serial.available())
             continue;
@@ -69,9 +66,8 @@ uint8_t try_get_message( MEMORY_HANDLE mem_h )
         else if (byte == END_OF_TRANSMISSION)
         {
             ZEPTO_DEBUG_ASSERT( i && i <= MAX_PACKET_SIZE );
-            memory_object_response_to_request( mem_h );
-            memory_object_cut_and_make_response( mem_h, 0, i );
-            return COMMLAYER_RET_OK;
+            zepto_write_block( mem_h, buffer, i );
+            return HAL_GET_PACKET_BYTES_DONE;
         }
         else if (marker_detected)
         {
@@ -87,19 +83,18 @@ uint8_t try_get_message( MEMORY_HANDLE mem_h )
                     value = 0xFF;
                     break;
                 default:
-                    ZEPTO_DEBUG_ASSERT(0);
-                    break;
+                    return HAL_GET_PACKET_BYTES_FAILED;
             }
-            buff[i++] = value;
+            buffer[i++] = value;
             marker_detected = false;
         }
         else
         {
-            buff[i++] = byte;
+            buffer[i++] = byte;
         }
     }
 
-    return COMMLAYER_RET_FAILED;
+    return HAL_GET_PACKET_BYTES_FAILED;
 }
 
 bool communication_initialize()

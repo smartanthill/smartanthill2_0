@@ -44,7 +44,6 @@ extern "C" {
 bool communication_initialize();
 void communication_terminate();
 uint8_t send_message( MEMORY_HANDLE mem_h );
-//uint8_t try_get_message( MEMORY_HANDLE mem_h );
 uint8_t hal_get_packet_bytes( MEMORY_HANDLE mem_h );
 void keep_transmitter_on( bool keep_on );
 
