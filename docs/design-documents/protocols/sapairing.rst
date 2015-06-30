@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.1.4b
+:Version:   v0.1.5
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -155,9 +155,9 @@ where where OTA-PROTOCOL-VERSION-NUMBER-\* are Encoded-Unsigned-Int<max=2> field
 
 Pairing-Pre-Request is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SACCP-OTA-PAIRING-REQUEST message being 0x0.
 
-Pairing-Pre-Response: **\| ENTROPY-NEEDED-SIZE \| OPTIONAL-DEVICE-RANDOM \| OPTIONAL-DEVICE-OTA-AND-SASP-CAPABILITIES \|**
+Pairing-Pre-Response: **\| FLAG-AND-ENTROPY-NEEDED-SIZE \| OPTIONAL-DEVICE-RANDOM \| OPTIONAL-DEVICE-BUS-TYPE \| OPTIONAL-DEVICE-INTRABUS-ID-SIZE \| OPTIONAL-DEVICE-INTRABUS-ID \| OPTIONAL-DEVICE-OTA-AND-SASP-CAPABILITIES \|**
 
-where ENTROPY-NEEDED-SIZE is an Encoded-Unsigned-Int<max=2> field, OPTIONAL-DEVICE-RANDOM is an optional 32-byte field present only if ENTROPY-NEEDED-SIZE=0, and OPTIONAL-DEVICE-OTA-AND-SASP-CAPABILITIES is present only if this Pairing-Pre-Response packet is the first such packet in current "pairing" exchange (format TBD).
+where FLAG-AND-ENTROPY-NEEDED-SIZE is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] being DEVICE-ID-FLAG, and bits[1..] being ENTROPY-NEEDED-SIZE, OPTIONAL-DEVICE-RANDOM is an optional 32-byte field present only if ENTROPY-NEEDED-SIZE=0, OPTIONAL-DEVICE-BUS-TYPE is an Encoded-Unsigned-Int<max=1> field representing a enum of bus types (TBD) and is present only if DEVICE-ID-FLAG is set, OPTIONAL-DEVICE-INTRABUS-ID-SIZE is an Encoded-Unsigned-Int<max=1> field, representing size of OPTIONAL-DEVICE-INTRABUS-ID field in bytes and present only if DEVICE-ID-FLAG is set, OPTIONAL-DEVICE-INTRABUS-ID depends on the bus type and is present only if DEVICE-ID-FLAG is set, and OPTIONAL-DEVICE-OTA-AND-SASP-CAPABILITIES is present only if this Pairing-Pre-Response packet is the first such packet in current "pairing" exchange (format TBD).
 
 Pairing-Pre-Response is sent as a payload for a SACCP SACCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for SACCP-OTA-PAIRING-RESPONSE message being 0x0.
 
@@ -228,10 +228,22 @@ In some cases, as a prerequisite for Device to be able to perform pairing, RNG n
 
 The procedure of Entropy Gathering is performed as follows:
 
-* Device sends non-zero ENTROPY-NEEDED-SIZE
+Phase 1 (OPTIONAL, used only if Device ID needs to be generated, hardware-assisted Fortuna PRNG is used, and Fortuna doesn't have enough entropy):
+* Device sends non-zero ENTROPY-NEEDED-SIZE and DEVICE-ID-FLAG not set
+* Client replies with Pairing-Entropy-Provided request, sent as a broadcast (SHOULD be restricted to those Retransmitting Nodes which may reach the Device)
+* this is repeated until Device has sufficient entropy to generate Device ID (this is the same as for regular "pairing", as described in :ref:`sarng` document)
+* NB: during Phase 1, packets from Client to Device are sent as a SAMP From-Santa packets (see :ref:`samp`) which do not distinguish between target Devices, so there is a chance that more than one Device obtains the same packet. However, these same packets will (with an overwhelming probability) lead to different data within Fortuna PRNGs, which will allow to distinguish these (originally potentially indistinguishable) Devices.
+
+Phase 2:
+* Device sends non-zero ENTROPY-NEEDED-SIZE, DEVICE-ID-FLAG set, and all Device ID-related fields.
+* Client replies with Pairing-Entropy-Provided request
+* NB: starting from Phase 2, all the packets from Client to Device are sent as SAMP Unicast packets (see :ref:`samp`) and are addressed to specific Device (using Device ID from Phase 2).
+
+Phase 3:
+* Device sends non-zero ENTROPY-NEEDED-SIZE, and DEVICE-ID-FLAG not set
 * Client replies with Pairing-Entropy-Provided request
 * Device processes received entropy as described in :ref:`sarng` document
-* the process is repeated until Device has sufficient entropy (as defined in :ref:`sarng` document)
+* the process described in Phase 3 is repeated until Device has sufficient entropy (as defined in :ref:`sarng` document)
 
 It should be noted that number of packets sent and received is IMPORTANT for security purposes, so combining packets contrary to requirements in :ref:`sagdp` is strictly prohibited.
 

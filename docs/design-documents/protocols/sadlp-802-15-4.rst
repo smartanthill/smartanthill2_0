@@ -27,7 +27,7 @@
 SmartAnthill DLP for IEEE 802.15.4 (SADLP-802.15.4)
 ===================================================
 
-:Version:   v0.1a
+:Version:   v0.1b
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -46,6 +46,11 @@ IEEE 802.15.4 Topology, PANs, and Beacons
 Current version of SADLP-802.15.4 uses peer-to-peer topology as defined in [802.15.4]. The node with the shortest SAMP distance from Root Node (TODO: define better) becomes "PAN coordinator" as defined in [802.15.4]. Normally, all the 802.15.4 Devices within one SmartAnthill network represent one single 802.15.4 PAN; however, in some cases (different channel frequencies or different collision domains) 802.15.4 Devices within the same SmartAnthill network MAY belong to different 802.15.4 PANs (therefore using different 802.15.4 PAN IDs, and having different PAN coordinators). PAN ID for this PAN (these PANs where applicable) SHOULD be chosen according to [802.15.4].
 
 Current version of SADLP-802.15.4 doesn't use beacons. I.e. the 802.15.4 PAN is nonbeacon-enabled, as defined in [802.15.4]. 
+
+Non-paired Addressing for IEEE 802.15.4 Buses
+---------------------------------------------
+
+Each IEEE 802.15.4 frequency channel on a Device represents a "wireless bus" in terms of SAMP. For "intra-bus address" as a part "non-paired addressing" (as defined in :ref:`samp`), IEEE 802.15.4 Devices MUST use 64-bit IEEE 802.15.4 extended address as defined in [802.15.4]. 
 
 IEEE 802.15.4 MAC Frames
 ------------------------

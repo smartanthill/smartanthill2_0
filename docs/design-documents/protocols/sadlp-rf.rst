@@ -27,7 +27,7 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.2a
+:Version:   v0.2b
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -43,6 +43,13 @@ Assumptions:
 * We don't have enough resources to run sophisticated error-correction mechanisms such as Reed-Solomon, Viterbi, etc.
 * Transmissions are rare, hence beacons and frequency hopping are not used
 * upper protocol layer may have some use for packets where only a header is provided; hence upper layer provides it's header and it's payload separately
+
+Non-paired Addressing for RF Buses
+----------------------------------
+
+Each RF frequency channel on a Device represents a "wireless bus" in terms of SAMP. For "intra-bus address" as a part "non-paired addressing" (as defined in :ref:`samp`), RF Devices MUST use randomly generated 64-bit ID. 
+
+If Device uses hardware-assisted Fortuna PRNG (as described in :ref:`sarng` document), Device MUST complete Phase 1 of "Entropy Gathering Procedure" (as described in :ref:`sapairing` document) to initialize Fortuna PRNG *before* generating this 64-bit ID. Then, Device should proceed to Phase 2 (providing Device ID), and Phase 3 (entropy gathering for key generation purposes), as described in :ref:`sapairing` document.
 
 SADLP-RF Packet
 ---------------

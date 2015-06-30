@@ -27,7 +27,7 @@
 SmartAnthill SmartAnthill Random Number Generation and Key Generation
 =====================================================================
 
-:Version:   v0.1.5b
+:Version:   v0.1.5c
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -92,8 +92,8 @@ Fortuna Seed File
 [Fortuna] specifies a 64-byte 'seed file' to keep Fortuna state between reboots. SmartAnthill Fortuna implementations MUST implement a 'seed file' (normally in EEPROM), with all atomicity requriements specified in [Fortuna]. If 'seed file' cannot be read on Device start, then Device MUST perform the following (depending on Device 'pairing state' as described in :ref:`sapairing` document):
 
 * if Device is in PRE-PAIRING state, necessary entropy will be gathered during normal "pairing" procedure, so Fortuna may start without seed file.
-* if Device is in PAIRING-MITM-CHECK state, Device MUST switch to PRE-PAIRING state and require "pairing" to be repeated (TODO: analyze Client-side errors and user messages)
-* if Device is in PAIRING-COMPLETED state, Device MUST perform "entropy gathering" SACCP procedure (not to be confused with 'Entropy Gathering' during "pairing"; TODO!: SACCP packets for this purpose). 
+* if Device is in PAIRING-MITM-CHECK state, Device MUST switch to PRE-PAIRING state and require "pairing" to be repeated (TODO: provide appropriate Client-side errors and user messages)
+* if Device is in PAIRING-COMPLETED state, Device MUST use "SACCP Entropy Recovery" procedure as described in :ref:`saccp` document (this procedure is different from "Entropy Gathering" procedure used as a part of "pairing"); in practice, it MAY be sufficient to get a single entropy recovery packet to re-initialize Fortuna (as it is after-pairing, packet is transferred encrypted, so there is no risk for it to be known to adversary; also, if key material will be needed, Fortuna will be fed with additional entropy which is sufficient for such generation, according to :ref:`sapairing`).
 
 Fortuna 'seed file' MUST be written before any MCUSLEEP operation (TODO: what if MCUSLEEP is memory-preserving?), and MUST be written at least every 10 minutes of Device operation.
 

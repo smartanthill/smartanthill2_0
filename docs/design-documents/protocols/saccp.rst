@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.2.14
+:Version:   v0.2.15
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -163,6 +163,12 @@ Currently, only two types of extra headers are supported:
 * END_OF_HEADERS (with no further data)
 * ENABLE_ZEPTOERR, with further data being **\| TRUNCATE-MOST-RECENT-AND-RESERVED \|**, where TRUNCATE-MOST-RECENT-AND-RESERVED is a 1-byte bitfield substrate, where bit [0] is a TRUNCATE-MOST-RECENT flag which specifies that zeptoerr should be truncated at the end if truncation becomes necessary (if this bit is not set, the least recent records are truncated from zeptoerr pseudo-stream), and bits [1..7] are reserved (MUST be zero). By default zeptoerr pseudo-stream is disabled; ENABLE_ZEPTOERR header enables zeptoerr if it is supported by target SmartAnthill Device.
 
+**\| SACCP-ENTROPY-PROVIDED \| ENTROPY \|**
+
+where SACCP-ENTROPY-PROVIDED is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_ENTROPY_PROVIDED 3-bit constant.
+
+SACCP-ENTROPY-PROVIDED command is sent in response to SACCP_ERROR_ENTROPY_RECOVERY_NEEDED error, as a part of "entropy recovery" procedure. In response to SACCP-ENTROPY-PROVIDED, Device response either with another SACCP_ERROR_ENTROPY_RECOVERY_NEEDED, or with SACCP_ERROR_ENTROPY_RECOVERY_COMPLETED. In response to the former Client SHOULD send another SACCP-ENTROPY-PROVIDED command packet, in response to the latter - Client SHOULD repeat original command packet (the one which has failed with SACCP_ERROR_ENTROPY_RECOVERY_NEEDED).
+
 SACCP Reuse Fragments
 '''''''''''''''''''''
 
@@ -179,6 +185,8 @@ where SACCP_REUSE_FRAGMENT_REFERENCE is a 1-byte constant, Fragment-Length is En
 
 SACCP Reply Packets
 ^^^^^^^^^^^^^^^^^^^
+
+Note that even if Device starts new "packet chain", at SACCP level it is still considered as a reply (with OK-FLAGS-SIZE, etc.). It also means that (if there is no "packet chain" pending) Device MAY start a new "packet chain" with SACCP-ERROR-CODE (including SACCP_ERROR_ENTROPY_RECOVERY_NEEDED when necessary).
 
 SACCP reply packets can be one of the following:
 
@@ -207,7 +215,8 @@ ERROR-FLAGS-SIZE is an Encoded-Unsigned-Int<max=2> bitfield substrate, which is 
 where SACCP-ERROR-CODE is an Encoded-Unsigned-Int<max=2> bitfield substrate, which is treated as follows:
 
 * bits [0..2] should be equal to 0x2 (otherwise it is a different type of reply, see above)
-* bits [3..] is an ERROR-CODE, which takes one of the following values: SACCP_ERROR_INVALID_FORMAT, or SACCP_ERROR_OLD_PROGRAM_CHECKSUM_DOESNT_MATCH.
+* bits [3..] is an ERROR-CODE, which takes one of the following values: SACCP_ERROR_INVALID_FORMAT, or SACCP_ERROR_OLD_PROGRAM_CHECKSUM_DOESNT_MATCH, SACCP_ERROR_ENTROPY_RECOVERY_NEEDED (in response to the latter, Client replies with SACCP-ENTROPY-PROVIDED), SACCP_ERROR_ENTROPY_RECOVERY_COMPLETED (only in response to SACCP-ENTROPY-PROVIDED, so Client may repeat original command).
+
 
 Device Pins SHOULD NOT be Addressed Directly within Execution-Layer-Program
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
