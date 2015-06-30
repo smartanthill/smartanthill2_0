@@ -172,6 +172,7 @@ uint8_t default_test_control_program_accept_reply_continue( void* control_prog_s
 		zepto_write_uint8( reply, (uint8_t)SAGDP_P_STATUS_INTERMEDIATE ); // TODO: if padding is required, add necessary data here
 //		reply_sz = zepto_writer_get_response_size( reply );
 		zepto_write_prepend_byte( reply, SAGDP_P_STATUS_INTERMEDIATE );
+		return CONTROL_PROG_PASS_LOWER;
 	}
 	else
 	{
@@ -180,7 +181,16 @@ uint8_t default_test_control_program_accept_reply_continue( void* control_prog_s
 		zepto_write_uint8( reply, ZEPTOVM_OP_EXIT );
 		zepto_write_uint8( reply, (uint8_t)SAGDP_P_STATUS_TERMINATING ); // TODO: if padding is required, add necessary data here
 //		reply_sz = zepto_writer_get_response_size( reply );
-		zepto_write_prepend_byte( reply, SAGDP_P_STATUS_TERMINATING );
+		if (ps->chain_ini_size == ps->self_id + 1)
+		{
+			zepto_write_prepend_byte( reply, SAGDP_P_STATUS_INTERMEDIATE );
+			return CONTROL_PROG_PASS_LOWER;
+		}
+		else
+		{
+			zepto_write_prepend_byte( reply, SAGDP_P_STATUS_TERMINATING );
+			return CONTROL_PROG_PASS_LOWER_THEN_IDLE;
+		}
 	}
 /*	uint8_t hdr = SACCP_NEW_PROGRAM; //TODO: we may want to add extra headers
 	zepto_write_prepend_byte( reply, hdr );*/
@@ -300,7 +310,7 @@ uint8_t _default_test_control_program_accept_reply( void* control_prog_state, ui
 uint8_t default_test_control_program_accept_reply( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, void* control_prog_state )
 {
 	parser_obj po;
-	zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
+	zepto_parser_init( &po, mem_h );
 	uint8_t first_byte = zepto_parse_uint8( &po );
 	uint16_t frame_sz = zepto_parsing_remaining_bytes( &po );
 	return _default_test_control_program_accept_reply( control_prog_state, first_byte & 7/*SAGDP_P_STATUS_MASK*/, &po );

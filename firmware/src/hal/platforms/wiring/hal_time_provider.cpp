@@ -44,7 +44,7 @@ void just_sleep( sa_time_val* timeval )
     uint32_t timeout = timeval->high_t;
     timeout <<= 16;
     timeout += timeval->low_t;
-    wait_for_timeout(timeout);
+    wait_for_timeout( timeout);
     // TODO: add implementation
 }
 

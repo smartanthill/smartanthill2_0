@@ -171,18 +171,21 @@ uint8_t send_message( MEMORY_HANDLE mem_h )
 	return COMMLAYER_RET_OK;
 }
 
-uint8_t try_get_message( MEMORY_HANDLE mem_h )
+uint8_t hal_get_packet_bytes( MEMORY_HANDLE mem_h )
 {
-	// It is assumed here that the system must be able to receive a packet up to MAX_PACKET_SIZE BYTES. Thus we first request this amount of memory, and then release unnecessary part
+	// Implementation notes:
+	// It is assumed in the current implementation that the system is able to receive a whole packet up to MAX_PACKET_SIZE BYTES first and store it in a buffer of a respective size. 
+	// Then bytes of the received packet are appended at once to the response referenced by handle.
+	//
+	// In some other implementations a packet may first be received by parts so that each part is first stored in a relatively small intermediate buffer.
+	// In this case this function appends bytes accumulated in the buffer to the response, cleares the buffer, and starts accumulaation over.
+	// This process ends when the whole packet is written to the response behind the handle
 
 	// do cleanup
-	memory_object_response_to_request( mem_h );
-	memory_object_response_to_request( mem_h );
-	uint8_t* buff = memory_object_append( mem_h, MAX_PACKET_SIZE );
-
+	uint8_t buffer[ MAX_PACKET_SIZE ];
 	socklen_t fromlen = sizeof(sa_other);
-//	int recsize = recvfrom(sock, (char *)buffer_in, sizeof(buffer_in), 0, (struct sockaddr *)&sa_other, &fromlen);
-	uint16_t recsize = recvfrom(sock, (char *)buff, MAX_PACKET_SIZE, 0, (struct sockaddr *)&sa_other, &fromlen);
+	uint16_t recsize = recvfrom(sock, (char *)buffer, MAX_PACKET_SIZE, 0, (struct sockaddr *)&sa_other, &fromlen);
+
 	if (recsize < 0)
 	{
 #ifdef _MSC_VER
@@ -198,16 +201,14 @@ uint8_t try_get_message( MEMORY_HANDLE mem_h )
 		else
 		{
 			ZEPTO_DEBUG_PRINTF_2( "unexpected error %d received while getting message\n", error );
-			return COMMLAYER_RET_FAILED;
+			return HAL_GET_PACKET_BYTES_FAILED;
 		}
 	}
 	else
 	{
 		ZEPTO_DEBUG_ASSERT( recsize && recsize <= MAX_PACKET_SIZE );
-//		zepto_write_block( mem_h, buffer_in, recsize );
-		memory_object_response_to_request( mem_h );
-		memory_object_cut_and_make_response( mem_h, 0, recsize );
-		return COMMLAYER_RET_OK;
+		zepto_write_block( mem_h, buffer, recsize );
+		return HAL_GET_PACKET_BYTES_DONE;
 	}
 
 }

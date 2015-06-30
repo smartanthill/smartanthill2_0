@@ -69,12 +69,12 @@ int main_loop()
 	extern DefaultTestingControlProgramState DefaultTestingControlProgramState_struct;
 	default_test_control_program_init( &DefaultTestingControlProgramState_struct );
 #endif
-	ret_code = default_test_control_program_start_new( &DefaultTestingControlProgramState_struct, MEMORY_HANDLE_MAIN_LOOP );
-	zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-	handler_saccp_prepare_to_send( MEMORY_HANDLE_MAIN_LOOP );
-	zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+	ret_code = default_test_control_program_start_new( &DefaultTestingControlProgramState_struct, MEMORY_HANDLE_MAIN_LOOP_1 );
+	zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP_1 );
+	handler_saccp_prepare_to_send( MEMORY_HANDLE_MAIN_LOOP_1 );
+	zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP_1 );
 /*	parser_obj po;
-	zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
+	zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP_1 );
 	uint8_t bu[40];
 	memset( bu, 0, 40 );
 	zepto_parse_read_block( &po, bu, zepto_parsing_remaining_bytes( &po ) );
@@ -86,8 +86,8 @@ int main_loop()
 	uint8_t buff[128];
 	buff[0] = 1; // first in the chain
 	memcpy( buff+1, buff_base, sizeof(buff_base) );
-	zepto_write_block( MEMORY_HANDLE_MAIN_LOOP, buff, 1+sizeof(buff_base) );
-	zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+	zepto_write_block( MEMORY_HANDLE_MAIN_LOOP_1, buff, 1+sizeof(buff_base) );
+	zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP_1 );
 	// should appear on the other side: Packet received: [8 bytes]  [1][0x0001][0x0001][0x0002][0x0000][0x0001]-->
 	// should come back: 02 01 01 02 01 02 2d 2d 2d 2d 3e
 #endif
@@ -98,19 +98,19 @@ int main_loop()
 	{
 wait_for_comm_event:
 		ret_code = wait_for_communication_event( 200 ); // TODO: recalculation
-//		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+//		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP_1 );
 
 		switch ( ret_code )
 		{
 			case COMMLAYER_RET_FROM_COMMM_STACK:
 			{
 				// regular processing will be done below in the next block
-				ret_code = try_get_message_within_master( MEMORY_HANDLE_MAIN_LOOP );
+				ret_code = try_get_message_within_master( MEMORY_HANDLE_MAIN_LOOP_1 );
 				if ( ret_code == COMMLAYER_RET_FAILED )
 					return 0;
 				ZEPTO_DEBUG_ASSERT( ret_code == COMMLAYER_RET_OK );
-				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
-				ZEPTO_DEBUG_PRINTF_3( "msg received; rq_size: %d, rsp_size: %d\n", ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
+				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP_1 );
+				ZEPTO_DEBUG_PRINTF_3( "msg received; rq_size: %d, rsp_size: %d\n", ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP_1 ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP_1 ) );
 				goto process_reply;
 				break;
 			}
@@ -118,7 +118,7 @@ wait_for_comm_event:
 			{
 				// regular processing will be done below in the next block
 //				ZEPTO_DEBUG_PRINTF_1( "just waiting...\n" );
-				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP_1 );
 				goto wait_for_comm_event;
 				break;
 			}
@@ -133,8 +133,8 @@ wait_for_comm_event:
 		}
 
 /*start_new_chain:
-		ret_code = default_test_control_program_start_new( &DefaultTestingControlProgramState_struct, MEMORY_HANDLE_MAIN_LOOP );
-		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+		ret_code = default_test_control_program_start_new( &DefaultTestingControlProgramState_struct, MEMORY_HANDLE_MAIN_LOOP_1 );
+		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP_1 );
 		goto send_command;*/
 
 		// 4. Process received command (yoctovm)
@@ -142,25 +142,47 @@ wait_for_comm_event:
 	process_reply:
 #if 1
 		// do reply preprocessing
-		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL, &DefaultTestingControlProgramState_struct );
-		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+		ret_code = handler_saccp_receive( MEMORY_HANDLE_MAIN_LOOP_1, /*sasp_nonce_type chain_id*/NULL, &DefaultTestingControlProgramState_struct );
+		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP_1 );
+		switch ( ret_code )
+		{
+			case CONTROL_PROG_PASS_LOWER_THEN_IDLE:
+			{
+				ret_code = default_test_control_program_start_new( &DefaultTestingControlProgramState_struct, MEMORY_HANDLE_MAIN_LOOP_1 );
+				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP_1 );
+				handler_saccp_prepare_to_send( MEMORY_HANDLE_MAIN_LOOP_1 );
+				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP_1 );
+				break;
+			}
+			case CONTROL_PROG_PASS_LOWER:
+			{
+				break;
+			}
+			default:
+			{
+				// unexpected ret_code
+				ZEPTO_DEBUG_PRINTF_2( "Unexpected ret_code %d\n", ret_code );
+				ZEPTO_DEBUG_ASSERT( 0 );
+				break;
+			}
+		}
 #else
-		ret_code = default_test_control_program_accept_reply( MEMORY_HANDLE_MAIN_LOOP, /*sasp_nonce_type chain_id*/NULL, &DefaultTestingControlProgramState_struct );
-		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+		ret_code = default_test_control_program_accept_reply( MEMORY_HANDLE_MAIN_LOOP_1, /*sasp_nonce_type chain_id*/NULL, &DefaultTestingControlProgramState_struct );
+		zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP_1 );
 		switch ( ret_code )
 		{
 			case CONTROL_PROG_OK:
 			{
-//				ret_code = handler_sacpp_start_new_chain( MEMORY_HANDLE_MAIN_LOOP, &DefaultTestingControlProgramState_struct );
-				ret_code = default_test_control_program_start_new( &DefaultTestingControlProgramState_struct, MEMORY_HANDLE_MAIN_LOOP );
-				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+//				ret_code = handler_sacpp_start_new_chain( MEMORY_HANDLE_MAIN_LOOP_1, &DefaultTestingControlProgramState_struct );
+				ret_code = default_test_control_program_start_new( &DefaultTestingControlProgramState_struct, MEMORY_HANDLE_MAIN_LOOP_1 );
+				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP_1 );
 				break;
 			}
 			case CONTROL_PROG_CONTINUE:
 			{
-//				ret_code = handler_sacpp_continue_chain( MEMORY_HANDLE_MAIN_LOOP, &DefaultTestingControlProgramState_struct );
-				ret_code = default_test_control_program_accept_reply_continue( &DefaultTestingControlProgramState_struct, MEMORY_HANDLE_MAIN_LOOP );
-				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP );
+//				ret_code = handler_sacpp_continue_chain( MEMORY_HANDLE_MAIN_LOOP_1, &DefaultTestingControlProgramState_struct );
+				ret_code = default_test_control_program_accept_reply_continue( &DefaultTestingControlProgramState_struct, MEMORY_HANDLE_MAIN_LOOP_1 );
+				zepto_response_to_request( MEMORY_HANDLE_MAIN_LOOP_1 );
 				break;
 			}
 			default:
@@ -178,7 +200,7 @@ wait_for_comm_event:
 		uint16_t i;
 		parser_obj po;
 process_reply:
-		zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP );
+		zepto_parser_init( &po, MEMORY_HANDLE_MAIN_LOOP_1 );
 		uint16_t sz = zepto_parsing_remaining_bytes( &po );
 		zepto_parse_read_block( &po, buff, sz );
 		ZEPTO_DEBUG_PRINTF_1( "block received:\n" );
@@ -189,8 +211,8 @@ process_reply:
 #endif // MASTER_ENABLE_ALT_TEST_MODE
 
 send_command:
-		ZEPTO_DEBUG_PRINTF_3( "=============================================Msg is about to be sent; rq_size: %d, rsp_size: %d\n", ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP ) );
-		send_to_commm_stack( MEMORY_HANDLE_MAIN_LOOP );
+		ZEPTO_DEBUG_PRINTF_3( "=============================================Msg is about to be sent; rq_size: %d, rsp_size: %d\n", ugly_hook_get_request_size( MEMORY_HANDLE_MAIN_LOOP_1 ), ugly_hook_get_response_size( MEMORY_HANDLE_MAIN_LOOP_1 ) );
+		send_to_commm_stack( MEMORY_HANDLE_MAIN_LOOP_1 );
 	}
 
 	communication_terminate();

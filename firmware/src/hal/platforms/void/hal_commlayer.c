@@ -24,7 +24,7 @@ uint8_t hal_wait_for( waiting_for* wf )
 	return 0;
 }
 
-uint8_t try_get_message( MEMORY_HANDLE mem_h )
+uint8_t hal_get_packet_bytes( MEMORY_HANDLE mem_h )
 {
 	ZEPTO_DEBUG_ASSERT(0);
 	return 0;

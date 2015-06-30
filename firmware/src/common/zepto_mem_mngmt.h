@@ -25,25 +25,26 @@ Copyright (C) 2015 OLogN Technologies AG
 #endif
 
 // named memory handles
-#define MEMORY_HANDLE_MAIN_LOOP 0
-#define MEMORY_HANDLE_SAGDP_LSM 1
-#define MEMORY_HANDLE_ADDITIONAL_ANSWER 2
+#define MEMORY_HANDLE_MAIN_LOOP_1 0
+#define MEMORY_HANDLE_MAIN_LOOP_2 1
+#define MEMORY_HANDLE_SAGDP_LSM 2
+#define MEMORY_HANDLE_ADDITIONAL_ANSWER 3
 #if !defined PLAIN_REPLY_FRAME
-#define MEMORY_HANDLE_DEFAULT_PLUGIN 3
+#define MEMORY_HANDLE_DEFAULT_PLUGIN 4
+#ifdef SA_DEBUG
+#define MEMORY_HANDLE_TEST_SUPPORT 5
+#define MEMORY_HANDLE_DBG_TMP 6
+#define MEMORY_HANDLE_MAX 7 // TODO: keep updated!!!
+#else
+#define MEMORY_HANDLE_MAX 5 // TODO: keep updated!!!
+#endif
+#else
 #ifdef SA_DEBUG
 #define MEMORY_HANDLE_TEST_SUPPORT 4
 #define MEMORY_HANDLE_DBG_TMP 5
 #define MEMORY_HANDLE_MAX 6 // TODO: keep updated!!!
 #else
 #define MEMORY_HANDLE_MAX 4 // TODO: keep updated!!!
-#endif
-#else
-#ifdef SA_DEBUG
-#define MEMORY_HANDLE_TEST_SUPPORT 3
-#define MEMORY_HANDLE_DBG_TMP 4
-#define MEMORY_HANDLE_MAX 5 // TODO: keep updated!!!
-#else
-#define MEMORY_HANDLE_MAX 3 // TODO: keep updated!!!
 #endif
 #endif // PLAIN_REPLY_FRAME
 

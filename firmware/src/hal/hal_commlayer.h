@@ -27,6 +27,10 @@ Copyright (C) 2015 OLogN Technologies AG
 #define COMMLAYER_RET_OK 1
 #define COMMLAYER_RET_PENDING 2
 
+#define HAL_GET_PACKET_BYTES_IN_PROGRESS 0
+#define HAL_GET_PACKET_BYTES_FAILED 1
+#define HAL_GET_PACKET_BYTES_DONE 2
+
 #define COMMLAYER_RET_FROM_CENTRAL_UNIT 10
 #define COMMLAYER_RET_FROM_DEV 11
 #define COMMLAYER_RET_TIMEOUT 12
@@ -40,7 +44,8 @@ extern "C" {
 bool communication_initialize();
 void communication_terminate();
 uint8_t send_message( MEMORY_HANDLE mem_h );
-uint8_t try_get_message( MEMORY_HANDLE mem_h );
+//uint8_t try_get_message( MEMORY_HANDLE mem_h );
+uint8_t hal_get_packet_bytes( MEMORY_HANDLE mem_h );
 void keep_transmitter_on( bool keep_on );
 
 //uint8_t wait_for_communication_event( MEMORY_HANDLE mem_h, uint16_t timeout );

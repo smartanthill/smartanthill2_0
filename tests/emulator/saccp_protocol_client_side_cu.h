@@ -84,6 +84,7 @@ uint8_t frame_parser_obj_start_frame( frame_parser_obj* fpo )
 #define SACCP_RET_CHAIN_CONTINUED 3 // control program will be called to prepare a subsequent packet
 
 uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, void* chain_id, DefaultTestingControlProgramState* state );
+uint8_t handler_saccp_prepare_to_send( MEMORY_HANDLE mem_h );
 
 /*
 uint8_t handler_saccp_receive( MEMORY_HANDLE mem_h, sasp_nonce_type chain_id, void* control_prog_state );
