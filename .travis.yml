@@ -36,8 +36,5 @@ env:
 install:
     - python -c "$(curl -fsSL https://raw.githubusercontent.com/platformio/platformio/master/scripts/get-platformio.py)"
 
-    # @TODO temporary solution for < 2.2.0 release
-    - pip install https://github.com/platformio/platformio/archive/develop.zip
-
 script:
     - eval $SA_BASH_CMD
