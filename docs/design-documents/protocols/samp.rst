@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.16a
+:Version:   v0.0.16b
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -156,7 +156,7 @@ Target-Address, Multiple-Target-Addresses, and Multiple-Target-Addresses-With-Ex
 
 Target-Address allows to store either paired-address, or non-paired address. Target-Address is encoded as 
 
-**\| FLAG-AND-NODE-ID \| OPTIONAL-VIA-OR-INTRA-BUS-SIZE-AND-BUS-ID \| ... \| OPTIONAL-VIA-INTRA-BUS-SIZE-AND-BUS-ID \| OPTIONAL-CUSTOM-INTRA-BUS-SIZE \| OPTIONAL-INTRA-BUS-ID \|**
+**\| FLAG-AND-NODE-ID \| OPTIONAL-VIA-OR-INTRA-BUS-SIZE-AND-BUS-ID \| ... \| OPTIONAL-VIA-OR-INTRA-BUS-SIZE-AND-BUS-ID \| OPTIONAL-CUSTOM-INTRA-BUS-SIZE \| OPTIONAL-INTRA-BUS-ID \|**
 
 where FLAG-AND-NODE-ID-OR-BUS-ID is an Encoded-Unsigned-Int<max=2> bitfield substrate, where bit[0] is EXTRA_DATA_FOLLOWS flag, and bits[1..] are NODE-ID.
 
@@ -473,9 +473,9 @@ Whenever Device is in PRE-PAIRING state (see :ref:`sapairing` for details on the
 * Device (after, maybe, performing certain preliminary actions on the channel, as defined in an appropriate SADLP-\* document) sends Pairing-Ready-Pseudo-Response (described in :ref:`sapairing` document), as SAMP To-Santa packet. 
 * In response, Root will send a Pairing-Pre-Request (as a  From-Santa SAMP packet)
 * Device will reply with Pairing-Pre-Response (as a To-Santa SAMP packet, containing DEVICE-INTRABUS-ID)
-* *Up to this point in exchange, all the packets, including optional and not mentioned above Entropy Gathering packets, are always sent as To-Santa / From-Santa broadcast packets*
+* *Up to this point in exchange, all the packets, including optional and not mentioned above Entropy Gathering packets, are always sent as From-Santa packets with Target-Address being ROOT, i.e. broadcast packets / To-Santa packets*
 * *From this point onwards, all the packets are always addressed to specific Device, using non-paired addressing*
-* Root will proceed with Pairing procedure as described in :ref:`sapairing` document, still using SAMP From-Santa/To-Santa packets, but from now on From-Santa packets are addressed to specific Device using non-paired addressing
+* Root will proceed with Pairing procedure as described in :ref:`sapairing` document, still using SAMP From-Santa/To-Santa packets, but from now on From-Santa packets are addressed to specific Device using "non-paired addressing"
 * As soon as Device pairing is completed (and Root sets NODE-ID for the Device), Root SHOULD:
 
   + calculate optimal route to the Device
