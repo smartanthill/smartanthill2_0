@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.1.5a
+:Version:   v0.1.6
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -149,21 +149,27 @@ TODO: errors (Z=1 per NIST SP 800-56B, and derived-key=0 to avoid being caught b
 OtA Pairing Protocol Packets
 ''''''''''''''''''''''''''''
 
+Pairing-Ready-Pseudo-Response: **\ ENTROPY-NEEDED-SIZE \|**
+
+where ENTROPY-NEEDED-SIZE is an Encoded-Unsigned-Int<max=2> field specifying amount of needed entropy.
+
+Pairing-Ready-Pseudo-Response is not really a response, but a request from Device side which initiates pairing sequence. It is sent as a payload for a SACCP-OTA-PAIRING-RESPONSE message (initiating a new "packet chain" in terms of SAGDP), with 2 "additional bits" being 0x0. If ENTROPY-NEEDED-SIZE is not zero, it indicates that Phase 1 of 'Entropy Gathering Procedure' (see below) is necessary before issuing a Pairing-Pre-Request from Client side.
+
 Pairing-Pre-Request: **\| OTA-PROTOCOL-VERSION-NUMBER-MAJOR \| OTA-PROTOCOL-VERSION-NUMBER-MINOR \| CLIENT-RANDOM \| PROJECTED-NODE-ID \| CLIENT-OTA-AND-SASP-CAPABILITIES \|**
 
-where where OTA-PROTOCOL-VERSION-NUMBER-\* are Encoded-Unsigned-Int<max=2> fields, CLIENT-RANDOM is a 16-byte field with crypto-random data, PROJECTED-NODE-ID is an Encoded-Unsigned-Int<max=2> field, containing NODE-ID which Client intends to assign to the Device if pairing is successful, and CLIENT-OTA-AND-SASP-CAPABILITIES TBD. 
+where OTA-PROTOCOL-VERSION-NUMBER-\* are Encoded-Unsigned-Int<max=2> fields, CLIENT-RANDOM is a 16-byte field with crypto-random data, PROJECTED-NODE-ID is an Encoded-Unsigned-Int<max=2> field, containing NODE-ID which Client intends to assign to the Device if pairing is successful, and CLIENT-OTA-AND-SASP-CAPABILITIES TBD. 
 
 Pairing-Pre-Request is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SACCP-OTA-PAIRING-REQUEST message being 0x0.
 
-Pairing-Pre-Response: **\| FLAG-AND-ENTROPY-NEEDED-SIZE \| OPTIONAL-DEVICE-RANDOM \| OPTIONAL-DEVICE-BUS-TYPE \| OPTIONAL-DEVICE-INTRABUS-ID-SIZE \| OPTIONAL-DEVICE-INTRABUS-ID \| OPTIONAL-DEVICE-OTA-AND-SASP-CAPABILITIES \|**
+Pairing-Pre-Response: **\| ENTROPY-NEEDED-SIZE \| OPTIONAL-DEVICE-RANDOM \| OPTIONAL-DEVICE-BUS-TYPE \| OPTIONAL-DEVICE-INTRABUS-ID-SIZE \| OPTIONAL-DEVICE-INTRABUS-ID \| OPTIONAL-DEVICE-OTA-AND-SASP-CAPABILITIES \|**
 
-where FLAG-AND-ENTROPY-NEEDED-SIZE is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] being DEVICE-ID-FLAG, and bits[1..] being ENTROPY-NEEDED-SIZE, OPTIONAL-DEVICE-RANDOM is an optional 32-byte field present only if ENTROPY-NEEDED-SIZE=0, OPTIONAL-DEVICE-BUS-TYPE is an Encoded-Unsigned-Int<max=1> field representing a enum of bus types (TBD) and is present only if DEVICE-ID-FLAG is set, OPTIONAL-DEVICE-INTRABUS-ID-SIZE is an Encoded-Unsigned-Int<max=1> field, representing size of OPTIONAL-DEVICE-INTRABUS-ID field in bytes and present only if DEVICE-ID-FLAG is set, OPTIONAL-DEVICE-INTRABUS-ID depends on the bus type and is present only if DEVICE-ID-FLAG is set, and OPTIONAL-DEVICE-OTA-AND-SASP-CAPABILITIES is present only if this Pairing-Pre-Response packet is the first such packet in current "pairing" exchange (format TBD).
+where ENTROPY-NEEDED-SIZE is an Encoded-Unsigned-Int<max=2> field, OPTIONAL-DEVICE-RANDOM is an optional 32-byte field, OPTIONAL-DEVICE-BUS-TYPE is an Encoded-Unsigned-Int<max=1> field representing a enum of bus types (TBD), OPTIONAL-DEVICE-INTRABUS-ID-SIZE is an Encoded-Unsigned-Int<max=1> field, representing size of OPTIONAL-DEVICE-INTRABUS-ID field in bytes, OPTIONAL-DEVICE-INTRABUS-ID depends on the bus type, and OPTIONAL-DEVICE-OTA-AND-SASP-CAPABILITIES (format TBD); all the OPTIONAL-\* fields are present only if this Pairing-Pre-Response packet is the first such packet in current "pairing" exchange.
 
-Pairing-Pre-Response is sent as a payload for a SACCP SACCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for SACCP-OTA-PAIRING-RESPONSE message being 0x0.
+Pairing-Pre-Response is sent as a payload for a SACCP SACCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for SACCP-OTA-PAIRING-RESPONSE message being 0x1.
 
 NB: to comply with key generation requirements as specified in :ref:`sarng` document, Device MUST request at least amount of entropy which is equal to the `b` parameter size for DH key exchange; however, Device MAY request more entropy (up to 256 extra bytes per pairing attempt, which requests MAY be split into packets as small as 1-byte) - for example, to initialize it's own Fortuna generator. 
 
-If ENTROPY-NEEDED-SIZE is not zero, Client MUST reply with a Pairing-Entropy-Provided-Request.
+If ENTROPY-NEEDED-SIZE is not zero, it means that "Entropy Gathering" Phase 3 is necessary (see below), and that Client MUST reply with a Pairing-Entropy-Provided-Request.
 
 Pairing-Entropy-Provided-Request: **\| ENTROPY \|**
 
@@ -171,7 +177,9 @@ where ENTROPY is an arbitrary-length field with cryptographically safe random da
 
 Pairing-Entropy-Provided-Request is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SACCP-OTA-PAIRING-REQUEST message being 0x1.
 
-In response to Pairing-Entropy-Provided-Request, Device MUST send another Pairing-Pre-Response packet, specifying ENTROPY-NEEDED-SIZE if it still has not enough entropy. 
+Client MAY supply less entropy than it was requested (and SHOULD do it in case if requested data potentially exceeds MTU); in such a case, Device SHOULD request more entropy via replying with an appropriate message with a non-zero ENTROPY-NEEDED-SIZE.
+
+In response to Pairing-Entropy-Provided-Request, Device MUST send another Pairing-Ready-Pseudo-Response or Pairing-Pre-Response packet (depending on the Phase of Entropy Gathering procedure currently in progress), specifying non-zero ENTROPY-NEEDED-SIZE if it still has not enough entropy. 
 
 Pairing-DH-Data-Request: **\| OPTIONAL-KEY-EXCHANGE-TYPE \| DH-REQUEST-PART \|**
 
@@ -201,15 +209,15 @@ where DH-RESPONSE-PART is a field taking the whole packet; length of DH-RESPONSE
 
 Pairing-DH-Data-Response is sent as a payload for a SACCP SACCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for SACCP-OTA-PAIRING-RESPONSE message being 0x2.
 
-Pairing-Ok-Request: **\| OK-A-ENTROPY-CHECKSUM \|**
+Pairing-Ok-Request: **\| OK-A-ENTROPY-CHECKSUM \| NODE-ID \|**
 
-where OK-A-ENTROPY-CHECKSUM is a 16-byte field containing result of SASP-tag(nonce=(varying-part=1,direction=from-client-to-device),authenticated-data=All-Sent-ENTROPY-Combined,key=derived-SASP-key), where nonce is constructed in the same way it is constructed in SASP.
+where OK-A-ENTROPY-CHECKSUM is a 16-byte field containing result of SASP-tag(nonce=(varying-part=1,direction=from-client-to-device),authenticated-data=All-Sent-ENTROPY-Combined,key=derived-SASP-key), where nonce is constructed in the same way it is constructed in SASP, and NODE-ID is an Encoded-Unsigned-Int<max=2> field containing SAMP node ID to be assigned to the Device. NODE-ID is conditional on OK-A-ENTROPY-CHECKSUM check described below, otherwise NODE-ID MUST be ignored.
 
 Pairing-Ok-Request is sent by Client when the last Pairing-DH-Data-Response is received; it is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SACCP-OTA-PAIRING-RESPONSE message being 0x3.
 
 On receiving Pairing-Ok-Request, Device calculated it's own DEVICE-OK-A-ENTROPY-CHECKSUM with derived-SASP-key, compares it to received OK-A-ENTROPY-CHECKSUM. If the check is Ok, then Device calculates OK-B-ENTROPY-CHECKSUM (the same way as OK-A-ENTROPY-CHECKSUM is calculated, but with direction=from-device-to-client), and sends it back as a part of Part-Ok-Response; then Device changes pairing state into Pairing-MITM-Check, sets SASP key to derived-SASP-key for all future communications with Client, and sets next SASP nonce varying-part (including the one stored in persistent storage) to 2.
 
-If DEVICE-OK-A-ENTROPY-CHECKSUM and received OK-A-ENTROPY-CHECKSUM don't match - Device switches back to PRE-PAIRING state and reports TODO error to the Client.
+If DEVICE-OK-A-ENTROPY-CHECKSUM and received OK-A-ENTROPY-CHECKSUM don't match - Device MUST switch back to PRE-PAIRING state and report TODO error to the Client.
 
 Pairing-Ok-Response: **\| OK-B-ENTROPY-CHECKSUM \|**
 
@@ -230,14 +238,14 @@ The procedure of Entropy Gathering is performed as follows:
 
 Phase 1 (OPTIONAL, used only if Device ID needs to be generated, hardware-assisted Fortuna PRNG is used, and Fortuna doesn't have enough entropy):
 
-* Device sends non-zero ENTROPY-NEEDED-SIZE and DEVICE-ID-FLAG not set
+* Device sends Pairing-Ready-Pseudo-Response with non-zero ENTROPY-NEEDED-SIZE
 * Client replies with Pairing-Entropy-Provided request, sent as a broadcast (SHOULD be restricted to those Retransmitting Nodes which may reach the Device)
-* this is repeated until Device has sufficient entropy to generate Device ID (this is the same as for regular "pairing", as described in :ref:`sarng` document)
-* NB: during Phase 1, packets from Client to Device are sent as a SAMP From-Santa packets (see :ref:`samp`) which do not distinguish between target Devices, so there is a chance that more than one Device obtains the same packet. However, these same packets will (with an overwhelming probability) lead to different data within Fortuna PRNGs, which will allow to distinguish these (originally potentially indistinguishable) Devices.
+* this Pairing-Ready-Pseudo-Response - Pairing-Entropy-Provided sequence is repeated until Device has sufficient entropy to generate Device ID (this is the same as for regular "pairing", as described in :ref:`sarng` document)
+* NB: during Phase 1, Pairing-Entropy-Provided packets from Client to Device are sent as a SAMP From-Santa packets (see :ref:`samp`) which do not distinguish between target Devices, so there is a chance that more than one Device obtains the same packet. However, these same packets will (with an overwhelming probability) lead to different states within Fortuna PRNGs on different Devices, which will allow to distinguish these (originally potentially indistinguishable) Devices.
 
 Phase 2:
 
-* Device sends non-zero ENTROPY-NEEDED-SIZE, DEVICE-ID-FLAG set, and all Device ID-related fields.
+* Device sends Pre-Pairing-Response non-zero ENTROPY-NEEDED-SIZE, DEVICE-ID-FLAG set, and all Device ID-related fields.
 * Client replies with Pairing-Entropy-Provided request
 * NB: starting from Phase 2, all the packets from Client to Device are sent as SAMP Unicast packets (see :ref:`samp`) and are addressed to specific Device (using Device ID from Phase 2).
 

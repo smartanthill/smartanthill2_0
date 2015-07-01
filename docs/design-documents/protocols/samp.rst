@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.16
+:Version:   v0.0.16a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -464,6 +464,23 @@ Packet Urgency
 
 From SAMP point of view, all upper-layer-protocol packets can have one of three urgency levels. If the packet has urgency URGENCY_LAZY, it is first sent as a Samp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent with GUARANTEED-DELIVERY). If the packet has urgency URGENCY_QUITE_URGENT, it is first sent as a Samp-Unicast-Data-Packet with GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent as a Samp-\*-Santa-\* packet). If the packet has urgency URGENCY_TRIPLE_GALOP, 
 then it is first sent as a Samp-From-Santa-Data-Packet or Samp-To-Santa-Data-Packet (depending on source being Root or Device). 
+
+Device Discovery and Pairing over SAMP
+--------------------------------------
+
+Whenever Device is in PRE-PAIRING state (see :ref:`sapairing` for details on the PRE-PAIRING state), it scans all available channels; if channel is "eligible" (as defined in an appropriate SADLP-\* document), the following basic exchange occurs:
+
+* Device (after, maybe, performing certain preliminary actions on the channel, as defined in an appropriate SADLP-\* document) sends Pairing-Ready-Pseudo-Response (described in :ref:`sapairing` document), as SAMP To-Santa packet. 
+* In response, Root will send a Pairing-Pre-Request (as a  From-Santa SAMP packet)
+* Device will reply with Pairing-Pre-Response (as a To-Santa SAMP packet, containing DEVICE-INTRABUS-ID)
+* *Up to this point in exchange, all the packets, including optional and not mentioned above Entropy Gathering packets, are always sent as To-Santa / From-Santa broadcast packets*
+* *From this point onwards, all the packets are always addressed to specific Device, using non-paired addressing*
+* Root will proceed with Pairing procedure as described in :ref:`sapairing` document, still using SAMP From-Santa/To-Santa packets, but from now on From-Santa packets are addressed to specific Device using non-paired addressing
+* As soon as Device pairing is completed (and Root sets NODE-ID for the Device), Root SHOULD:
+
+  + calculate optimal route to the Device
+  + change Routing Tables for all the Retransmitting Devices alongside the optimal route (using Samp-Route-Update packets)
+  + as soon as confirmations from all the Retransmitting Devices about route updates are obtained, Root SHOULD start using Device's "paired addressing" for all the communications onwards with the Device.
 
 TODO: Samp-Retransmit (to next-hop Retransmitting Device on RETRANSMIT-ON-NO-RETRANSMIT)
 TODO: define handling for all "partially correct" packets
