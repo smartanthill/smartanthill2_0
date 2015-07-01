@@ -27,11 +27,20 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.2b
+:Version:   v0.3
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
 SADLP-RF provides L2 datalink over simple Radio-Frequency channels which have only an ability to send/receive packets over RF without any addressing. For more complicated RF communications (such as IEEE 802.15.4), different SADLP-\* protocols (such as SADLP-802.15.4 described in :ref:`sadlp-802-15-4`) need to be used.
+
+SADLP-RF PHY Level
+------------------
+
+Frequencies: TODO (with frequency shifts)
+
+Modulation: 2FSK (a.k.a. FSK without further specialization, and BFSK), or GFSK (2FSK and GFSK are generally compatible), with frequency shifts specified above.
+
+Baud rate: 9600 baud (TODO: negotiate?).
 
 SADLP-RF Design
 ---------------
@@ -50,6 +59,27 @@ Non-paired Addressing for RF Buses
 Each RF frequency channel on a Device represents a "wireless bus" in terms of SAMP. For "intra-bus address" as a part "non-paired addressing" (as defined in :ref:`samp`), RF Devices MUST use randomly generated 64-bit ID. 
 
 If Device uses hardware-assisted Fortuna PRNG (as described in :ref:`sarng` document), Device MUST complete Phase 1 of "Entropy Gathering Procedure" (as described in :ref:`sapairing` document) to initialize Fortuna PRNG *before* generating this 64-bit ID. Then, Device should proceed to Phase 2 (providing Device ID), and Phase 3 (entropy gathering for key generation purposes), as described in :ref:`sapairing` document.
+
+Device Discovery and Pairing
+----------------------------
+
+For Devices with OtA Pairing (as described in :ref:`sapairing`), "Device Discovery" procedure described in :ref:`samp` document is used, with the following clarifications:
+
+* SAMP "channel scan" for SADLP-RF is performed as follows:
+
+  - "candidate channel" list consists of all the channels allowed in target area
+  - for each of candidate channels:
+
+    + the first packet as described in SAMP "Device Discovery" procedure is sent by Device
+    + if a reply is received indicating that Root is ready to proceed with "pairing" - "pairing" is continued over this channel
+      
+      - if "pairing" fails, then the next available "candidate channel" is processed. 
+      - to handle the situation when "pairing" succeeds, but Device is connected to wrong Central Controller - Device MUST (a) provide a visual indication that it is "paired", (b) provide a way (such as jumper or button) allowing to drop current "pairing" and continue processing "candidate channels". In the latter case, Device MUST process remaining candidate channels before re-scanning.
+ 
+    + if a reply is received with ERROR-CODE = ERROR_NOT_AWAITING_PAIRING, or if there is no reply within 500 msec, the procedure is repeated for the next candidate channel
+
+  - if the list of "candidate channels" is exhausted without "pairing", the whole "channel scan" is repeated (indefinitely, or with a 5-or-more-minute limit - if the latter, then "not scanning anymore" state MUST be indicated on the Device itself - TODO acceptable ways of doing it, and the scanning MUST be resumed if user initiates "re-pairing" on the Device), starting from an "active scan" as described above
+
 
 SADLP-RF Packet
 ---------------
