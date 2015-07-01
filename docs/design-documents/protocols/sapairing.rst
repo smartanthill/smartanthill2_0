@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.1.6
+:Version:   v0.1.6a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -149,7 +149,7 @@ TODO: errors (Z=1 per NIST SP 800-56B, and derived-key=0 to avoid being caught b
 OtA Pairing Protocol Packets
 ''''''''''''''''''''''''''''
 
-Pairing-Ready-Pseudo-Response: **\ ENTROPY-NEEDED-SIZE \|**
+Pairing-Ready-Pseudo-Response: **|\ ENTROPY-NEEDED-SIZE \|**
 
 where ENTROPY-NEEDED-SIZE is an Encoded-Unsigned-Int<max=2> field specifying amount of needed entropy.
 
