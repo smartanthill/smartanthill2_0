@@ -27,7 +27,7 @@
 SmartAnthill DLP for IEEE 802.15.4 (SADLP-802.15.4)
 ===================================================
 
-:Version:   v0.1b
+:Version:   v0.1.1
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -51,6 +51,27 @@ Non-paired Addressing for IEEE 802.15.4 Buses
 ---------------------------------------------
 
 Each IEEE 802.15.4 frequency channel on a Device represents a "wireless bus" in terms of SAMP. For "intra-bus address" as a part "non-paired addressing" (as defined in :ref:`samp`), IEEE 802.15.4 Devices MUST use 64-bit IEEE 802.15.4 extended address as defined in [802.15.4]. 
+
+Device Discovery and Pairing
+----------------------------
+
+For Devices with OtA Pairing (as described in :ref:`sapairing`), "Device Discovery" procedure described in :ref:`samp` document is used, with the following clarifications:
+
+* SAMP "channel scan" for SADLP-IEEE-802-15-4 is performed as follows:
+
+  - an "active scan" as described in [802.15.4] is performed, and a list of candidate channels is obtained
+  - for each of candidate channels:
+
+    + "Association" is performed as described in [802.15.4]
+    + the first packet as described in SAMP "Device Discovery" procedure is sent by Device
+    + if a reply is received indicating that Root is ready to proceed with "pairing" - "pairing" is continued over this channel
+      
+      - if "pairing" fails, then the next available "candidate channel" is processed. 
+      - to handle the situation when "pairing" succeeds, but Device is connected to wrong Central Controller - Device MUST (a) provide a visual indication that it is "paired", (b) provide a way (such as jumper or button) allowing to drop current "pairing" and continue processing "candidate channels". In the latter case, Device MUST process remaining candidate channels before re-scanning.
+ 
+    + if a reply is received with ERROR-CODE = ERROR_NOT_AWAITING_PAIRING, or if there is no reply within 500 msec, "Disassociation" is performed as described in [802.15.4], and the procedure is repeated for the next candidate channel
+
+  - if the list of "candidate channels" is exhausted without "pairing", the whole "channel scan" is repeated (indefinitely, or with a 5-or-more-minute limit - if the latter, then "not scanning anymore" state MUST be indicated on the Device itself - TODO acceptable ways of doing it, and the scanning MUST be resumed if user initiates "re-pairing" on the Device), starting from an "active scan" as described above
 
 IEEE 802.15.4 MAC Frames
 ------------------------

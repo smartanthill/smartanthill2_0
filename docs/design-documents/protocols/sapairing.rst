@@ -27,7 +27,7 @@
 SmartAnthill Pairing
 ====================
 
-:Version:   v0.1.6a
+:Version:   v0.1.7
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -140,9 +140,14 @@ SmartAnthill OtA Pairing Protocol
 
 All the messages within one pairing procedure form a single "packet chain". That is, "packet chain" for a normal OtA Pairing exchange works as follows:
 
-**Pairing-Pre-Request - Pairing-Pre-Response - Pairing-DH-Data-Request - Pairing-DH-Data-Response - ... - Pairing-DH-Data-Request - Pairing-DH-Data-Response**
+**Pairing-Ready-Pseudo-Response - Pairing-Pre-Request - Pairing-Pre-Response - Pairing-DH-Data-Request - Pairing-DH-Data-Response - ... - Pairing-DH-Data-Request - Pairing-DH-Data-Response**
 
 When both sides receive the last of Pairing-DH-DATA-\* packets (the ones which provide the whole DH data, with size defined according to KEY-EXCHANGE-TYPE field in Pairing-DH-Data-Request), they proceed with calculation of SASP key.
+
+"Awaiting pairing" mode
+'''''''''''''''''''''''
+
+To avoid Device connecting to wrong SmartAnthill Client, SmartAnthill Client MUST NOT proceed with "pairing" in response to Pairing-Ready packets unless SmartAnthill Client is in "awaiting pairing" mode. "Awaiting pairing" mode for Central Controller MUST be user-initiated, and MUST NOT be kept for longer than 1 hour, unless user requests another "awaiting pairing". This is necessary to reduce "paired to wrong Central Controller" encounters (which MUST have a way to be handled separately; one example of such handling is described in :ref:`sadlp-802-15-4` document).
 
 TODO: errors (Z=1 per NIST SP 800-56B, and derived-key=0 to avoid being caught by attacks on misimplementations)!
 
@@ -151,9 +156,11 @@ OtA Pairing Protocol Packets
 
 Pairing-Ready-Pseudo-Response: **|\ ENTROPY-NEEDED-SIZE \|**
 
-where ENTROPY-NEEDED-SIZE is an Encoded-Unsigned-Int<max=2> field specifying amount of needed entropy.
+where ENTROPY-NEEDED-SIZE is an Encoded-Unsigned-Int<max=2> field specifying amount of needed entropy in bytes.
 
 Pairing-Ready-Pseudo-Response is not really a response, but a request from Device side which initiates pairing sequence. It is sent as a payload for a SACCP-OTA-PAIRING-RESPONSE message (initiating a new "packet chain" in terms of SAGDP), with 2 "additional bits" being 0x0. If ENTROPY-NEEDED-SIZE is not zero, it indicates that Phase 1 of 'Entropy Gathering Procedure' (see below) is necessary before issuing a Pairing-Pre-Request from Client side.
+
+If Client is not in "awaiting pairing" mode, it MUST respond with Pairing-Error-Request with ERROR-CODE = ERROR_NOT_AWAITING_PAIRING.
 
 Pairing-Pre-Request: **\| OTA-PROTOCOL-VERSION-NUMBER-MAJOR \| OTA-PROTOCOL-VERSION-NUMBER-MINOR \| CLIENT-RANDOM \| PROJECTED-NODE-ID \| CLIENT-OTA-AND-SASP-CAPABILITIES \|**
 
@@ -171,15 +178,21 @@ NB: to comply with key generation requirements as specified in :ref:`sarng` docu
 
 If ENTROPY-NEEDED-SIZE is not zero, it means that "Entropy Gathering" Phase 3 is necessary (see below), and that Client MUST reply with a Pairing-Entropy-Provided-Request.
 
-Pairing-Entropy-Provided-Request: **\| ENTROPY \|**
+Pairing-Entropy-Provided-Request: **\| ERROR-CODE \| ENTROPY \|**
 
-where ENTROPY is an arbitrary-length field with cryptographically safe random data. 
+where ERROR-CODE is an Encoded-Unsigned-Int<max=2> field, equal to zero, and ENTROPY is an arbitrary-length field with cryptographically safe random data. 
 
-Pairing-Entropy-Provided-Request is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SACCP-OTA-PAIRING-REQUEST message being 0x1.
+Pairing-Entropy-Provided-Request is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SACCP-OTA-PAIRING-REQUEST message being 0x1. Note that "additional bits" for Pairing-Entropy-Provided-Request are the same as for Pairing-Error-Request, and they're distinguished by the value of ERROR-CODE field.
 
 Client MAY supply less entropy than it was requested (and SHOULD do it in case if requested data potentially exceeds MTU); in such a case, Device SHOULD request more entropy via replying with an appropriate message with a non-zero ENTROPY-NEEDED-SIZE.
 
 In response to Pairing-Entropy-Provided-Request, Device MUST send another Pairing-Ready-Pseudo-Response or Pairing-Pre-Response packet (depending on the Phase of Entropy Gathering procedure currently in progress), specifying non-zero ENTROPY-NEEDED-SIZE if it still has not enough entropy. 
+
+Pairing-Error-Request: **\| ERROR-CODE \|**
+
+where ERROR-CODE is an Encoded-Unsigned-Int<max=2> field, never equal to zero. 
+
+Pairing-Error-Request is sent as a payload for a SACCP SACCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SACCP-OTA-PAIRING-REQUEST message being 0x1. Note that "additional bits" for Pairing-Error-Request are the same as for Pairing-Entropy-Provided-Request, and they're distinguished by the value of ERROR-CODE field.
 
 Pairing-DH-Data-Request: **\| OPTIONAL-KEY-EXCHANGE-TYPE \| DH-REQUEST-PART \|**
 
