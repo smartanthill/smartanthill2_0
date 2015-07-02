@@ -23,42 +23,19 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 # DAMAGE
 
+.PHONY: build-firmware build-cs build-cu build-slv astyle
 
-#
-# Project Configuration File
-#
-# A detailed documentation with the EXAMPLES is located here:
-# http://docs.platformio.org/en/latest/projectconf.html
-#
+build-firmware:
+	platformio run --project-dir=firmware
 
-# A sign `#` at the beginning of the line indicates a comment
-# Comment lines are ignored.
+build-cs:
+	cd tests/emulator; ./build_cs
 
-# Simple and base environment
-# [env:mybaseenv]
-# platform = %INSTALLED_PLATFORM_NAME_HERE%
-# framework =
-# board =
-#
-# Automatic targets - enable auto-uploading
-# targets = upload
+build-cu:
+	cd tests/emulator; ./build_cu
 
-[env:uno]
-platform = atmelavr
-framework = arduino
-board = uno
-src_filter = +<*> -<hal/platforms> +<hal/platforms/wiring>
-build_flags = -D SA_PLATFORM_WIRING
+build-slv:
+	cd tests/emulator; ./build_slv
 
-[env:msp430]
-platform = timsp430
-framework = energia
-board = lpmsp430g2553
-src_filter = +<*> -<hal/platforms> +<hal/platforms/wiring>
-build_flags = -D SA_PLATFORM_WIRING
-
-[env:voidavr]
-platform = atmelavr
-board = uno
-src_filter = +<*> -<hal/platforms> +<hal/platforms/void>
-build_flags = -D SA_PLATFORM_VOID
+astyle:
+	astyle --options=.astylerc -rn "firmware/src/*"

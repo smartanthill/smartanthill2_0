@@ -1,0 +1,1 @@
+gcc sa_client_central_unit.c sa_test_control_prog.c ../../firmware/src/test_counters.c test_generator.c ../../firmware/src/common/zepto_mem_mngmt.c ../../firmware/src/hal/platforms/desktop/hal_commlayer.c $SA_EMBEDDED_EXTRA_OPTIONS -DSA_PLATFORM_DESKTOP -DUSED_AS_MASTER -DUSED_AS_MASTER_CORE -DDEBUG_PRINTING -D_DEBUG -o ../cu.bin
