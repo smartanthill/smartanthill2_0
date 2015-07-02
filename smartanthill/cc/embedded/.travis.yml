@@ -23,51 +23,18 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 # DAMAGE
 
+language: python
+python:
+    - "2.7"
 
-#
-# Project Configuration File
-#
-# A detailed documentation with the EXAMPLES is located here:
-# http://docs.platformio.org/en/latest/projectconf.html
-#
+env:
+    - SA_BASH_CMD="platformio --force run --project-dir=firmware"
+    - SA_BASH_CMD="make build-cs" SA_EMBEDDED_EXTRA_OPTIONS="-lrt"
+    - SA_BASH_CMD="make build-cu"
+    - SA_BASH_CMD="make build-slv" SA_EMBEDDED_EXTRA_OPTIONS="-lrt"
 
-# A sign `#` at the beginning of the line indicates a comment
-# Comment lines are ignored.
+install:
+    - python -c "$(curl -fsSL https://raw.githubusercontent.com/platformio/platformio/master/scripts/get-platformio.py)"
 
-# Simple and base environment
-# [env:mybaseenv]
-# platform = %INSTALLED_PLATFORM_NAME_HERE%
-# framework =
-# board =
-#
-# Automatic targets - enable auto-uploading
-# targets = upload
-
-<<<<<<< HEAD
-[env:Arduino_Uno]
-platform = atmelavr
-framework = arduino
-board = uno
-
-[env:TI_LPmsp430g2553]
-=======
-[env:uno]
-platform = atmelavr
-framework = arduino
-board = uno
-src_filter = +<*> -<hal/platforms> +<hal/platforms/wiring>
-build_flags = -D SA_PLATFORM_WIRING
-
-[env:msp430]
->>>>>>> 6f5f4896810317f21e75d7113d28551539e7f61b
-platform = timsp430
-framework = energia
-board = lpmsp430g2553
-src_filter = +<*> -<hal/platforms> +<hal/platforms/wiring>
-build_flags = -D SA_PLATFORM_WIRING
-
-[env:voidavr]
-platform = atmelavr
-board = uno
-src_filter = +<*> -<hal/platforms> +<hal/platforms/void>
-build_flags = -D SA_PLATFORM_VOID
+script:
+    - eval $SA_BASH_CMD
