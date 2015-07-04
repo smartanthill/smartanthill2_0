@@ -1,0 +1,4 @@
+[submodule "smartanthill/cc/embedded"]
+	path = smartanthill/cc/embedded
+	url = https://ivankravets@github.com/smartanthill/smartanthill2_0-embedded.git
+	branch = develop
