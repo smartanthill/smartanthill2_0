@@ -2,3 +2,7 @@
 	path = smartanthill/cc/embedded
 	url = https://ivankravets@github.com/smartanthill/smartanthill2_0-embedded.git
 	branch = develop
+[submodule "smartanthill/dashboard/site"]
+	path = smartanthill/dashboard/site
+	url = https://ivankravets@github.com/smartanthill/smartanthill2_0-dashboard.git
+	branch = develop
