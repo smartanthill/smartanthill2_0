@@ -15,7 +15,7 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 -->
 
-<smartanthill.plugin name="smart-echo" title="Smart Echo" version="1.0">
+<smartanthill.plugin id="smart_echo" name="Smart Echo" version="1.0">
 
     <description>Smart Echo (Test) plugin</description>
 
