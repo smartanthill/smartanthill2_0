@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.16b
+:Version:   v0.0.16c
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -57,7 +57,7 @@ SAMP underlying protocol (normally SADLP-\*), MUST support the following operati
 * bus multi-cast (addressed to a list of the Devices on the bus)
 * bus uni-cast
 
-NB: these operations MAY be implemented using only bus broadcast, without any additional intra-bus addressing information; all SAMP packets have sufficient information to ensure further processing of SAMP packets without underlying protocol addressing information. If some information within SAMP packet becomes redundant given underlying protocol's addressing information, underlying protocol MAY compress SAMP packet when transmitting it, by combining this information.
+NB: these operations MAY be implemented using only bus broadcast, without any additional intra-bus addressing information; all SAMP packets have sufficient information to ensure further processing of SAMP packets without underlying protocol addressing information. If some information within SAMP packet becomes redundant given underlying protocol's addressing information, underlying protocol MAY compress SAMP packet when transmitting it, by re-using underlying-protocol information when compressing SAMP packet; however, as SAMP addresses in normal (post-pairing) communication are usually very short anyway, such compression is not likely to bring substantial benefits.
 
 All SmartAnthill Devices SHOULD, and all SmartAnthill Retransmitting Devices MUST implement some kind of collision avoidance (at least CSMA/CA, a.k.a. "listen before talk with random delay").
 
