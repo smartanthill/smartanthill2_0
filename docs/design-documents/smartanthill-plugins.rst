@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version: v0.3.2
+:Version: v0.3.2a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -214,8 +214,7 @@ Simple SA plugins MAY be written without being a State Machine, for example:
       //waiting for sensor to indicate that data is ready
       zepto_wait_for_pin(pc->ack_pin_number,1);
 
-      uint16_t data = zepto_read_uint16(pc->reply_pin_numbers,4);
-     
+      uint16_t data_read = zepto_read_from_pins(pc->reply_pin_numbers,4);
       zepto_reply_append_byte(reply,data_read);
       return 0;
     }
@@ -264,7 +263,7 @@ Implementation above is not ideal; in fact, it blocks execution at the point of 
           return WAITING_FOR;      
         
         case 1:
-          uint16_t data = zepto_read_uint16(pc->reply_pin_numbers,4);   
+          uint16_t data_read = zepto_read_from_pins(pc->reply_pin_numbers,4);   
           zepto_reply_append_byte(reply,data_read);
           return 0;
 
