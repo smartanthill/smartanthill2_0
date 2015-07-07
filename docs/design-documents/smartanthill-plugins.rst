@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version: v0.3.1
+:Version: v0.3.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -182,72 +182,98 @@ Options
 * ``<option type="uint[n]">``
 * ``<option type="char[n]">``
 
-SmartAnthill Plugin Handler as a State Machine
-----------------------------------------------
+SmartAnthill Plugin Handler Without a State Machine
+---------------------------------------------------
 
-Ideally, SmartAnthill Plugin Handler SHOULD be implemented as state machines, for example:
+Simple SA plugins MAY be written without being a State Machine, for example:
 
 .. code-block:: c
 
     struct MyPluginConfig { //constant structure filled with a configuration
                           //  for specific 'ant body part'
-    byte bodypart_id;//always present
-    byte request_pin_number;//pin to request sensor read
-    byte ack_pin_number;//pin to wait for to see when sensor has provided the data
-    byte reply_pin_numbers[4];//pins to read when ack_pin_number shows that the data is ready
-    };
-
-    struct MyPluginState {
-    byte state; //'0' means 'initial state', '1' means 'requested sensor to perform read'
+      byte bodypart_id;//always present
+      byte request_pin_number;//pin to request sensor read
+      byte ack_pin_number;//pin to wait for to see when sensor has provided the data
+      byte reply_pin_numbers[4];//pins to read when ack_pin_number shows that the data is ready
     };
 
     byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
-    //perform sensor initialization if necessary
-    MyPluginState* ps = (MyPluginState*)plugin_state;
-    ps->state = 0;
+      const MyPluginConfig* pc = (MyPluginConfig*) plugin_config;
+      zepto_set_pin(pc->request_pin_number,0);
     }
 
     //TODO: reinit? (via deinit, or directly, or implicitly)
 
     byte my_plugin_handler(const void* plugin_config, void* plugin_state,
       ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {
-    const MyPluginConfig* pc = (MyPluginConfig*) plugin_config;
-    MyPluginState* ps = (MyPluginState*)plugin_state;
-    if(ps->state == 0) {
-      //request sensor to perform read, using pc->request_pin_number
-      ps->state = 1;
-      //let's assume that sensor will set signal on pin#3 to 1 when the data is ready
+      const MyPluginConfig* pc = (MyPluginConfig*) plugin_config;
 
-      //filling in pins_to_wait to indicate we're waiting for pin #3, and value =1 for it:
-      byte apn = pc->ack_pin_number;
+      //requesting sensor to perform read, using pc->request_pin_number
+      zepto_set_pin(pc->request_pin_number,1);
 
-      //splitting apn into byte number 'idx' and bit number 'shift'
-      byte idx = apn >> 3;
-      byte shift = apn & 0x7;
-      waiting_for->pins_to_wait[idx] |= (1<<shift);
-      waiting_for->pins_values_to_wait[idx] |= (1<<shift);
+      //waiting for sensor to indicate that data is ready
+      zepto_wait_for_pin(pc->ack_pin_number,1);
 
-      return WAITING_FOR;
-    }
-    else {
-      //read pin# pc->ack_pin_number just in case
-      if(ack_pin != 1) {
-        byte apn = pc->ack_pin_number;
-        byte idx = apn >> 3;
-        byte shift = apn & 0x7;
-        waiting_for->pins_to_wait[idx] |= (1<<shift);
-        waiting_for->pins_values_to_wait[idx] |= (1<<shift);
-        return WAITING_FOR;
-      }
-      //read data from sensor using pc->reply_pin_numbers[],
-      //  and append response to "reply buffer" with data using zepto_reply_append_byte(reply,data_read)
+      uint16_t data = zepto_read_uint16(pc->reply_pin_numbers,4);
+     
+      zepto_reply_append_byte(reply,data_read);
       return 0;
     }
 
+
+SmartAnthill Plugin Handler as a State Machine
+----------------------------------------------
+
+Implementation above is not ideal; in fact, it blocks execution at the point of zepto_wait_for_pin() call, which under restrictions of Zepto OS means that nothing else can be processed. Ideally, SmartAnthill Plugin Handler SHOULD be implemented as a state machine; for example, the very same plugin SHOULD be rewritten as follows:
+
+.. code-block:: c
+
+    struct MyPluginConfig { //constant structure filled with a configuration
+                          //  for specific 'ant body part'
+      byte bodypart_id;//always present
+      byte request_pin_number;//pin to request sensor read
+      byte ack_pin_number;//pin to wait for to see when sensor has provided the data
+      byte reply_pin_numbers[4];//pins to read when ack_pin_number shows that the data is ready
+    };
+
+    struct MyPluginState {
+      byte state; //'0' means 'initial state', '1' means 'requested sensor to perform read'
+    };
+
+    byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
+      MyPluginState* ps = (MyPluginState*)plugin_state;
+      const MyPluginConfig* pc = (MyPluginConfig*) plugin_config;
+      zepto_set_pin(pc->request_pin_number,0);
+      ps->state = 0;
+    }
+
+    //TODO: reinit? (via deinit, or directly, or implicitly)
+
+    byte my_plugin_handler(const void* plugin_config, void* plugin_state,
+      ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {
+      const MyPluginConfig* pc = (MyPluginConfig*) plugin_config;
+      MyPluginState* ps = (MyPluginState*)plugin_state;
+
+      switch(ps->state) {
+        case 0:    
+          //requesting sensor to perform read, using pc->request_pin_number
+          zepto_set_pin(pc->request_pin_number,1);
+
+          //waiting for sensor to indicate that data is ready
+          zepto_indicate_waiting_for_pin(waiting_for,pc->ack_pin_number,1);
+          return WAITING_FOR;      
+        
+        case 1:
+          uint16_t data = zepto_read_uint16(pc->reply_pin_numbers,4);   
+          zepto_reply_append_byte(reply,data_read);
+          return 0;
+
+        default:
+          assert(0);
+      }
+    }
+
 Such an approach allows SmartAnthill implementation (such as Zepto VM) to perform proper pausing (with ability for SmartAnthill Client to interrupt processing by sending a new command while it didn't receive an answer to the previous one), when long waits are needed. It also enables parallel processing of the plugins (see PARALLEL instruction of Zepto VM in :ref:`sazeptovm` document for details).
-
-However, for some plugins (simple ones without waiting at all, or if we're too lazy to write proper state machine), we MAY use 'dummy state machine', with *MyPluginState* being NULL and unused, and **plugin_handler()** not taking into account any states at all.
-
 
 Plugin API
 ----------
