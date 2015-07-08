@@ -61,7 +61,7 @@ Plugin Manifest is an XML file, with structure which looks as follows:
 
 .. code-block:: xml
 
-  <smartanthill.plugin name="MyPlugin" title="My Plugin" version="1.0">
+  <smartanthill.plugin id="MyPlugin" name="My Plugin" version="1.0">
 
     <description>Short description of plugin's capabilities</description>
 
