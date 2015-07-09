@@ -13,7 +13,42 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from json import load as json_load
+import collections
+import functools
+import json
+
+
+class memoized(object):
+    '''
+    Decorator. Caches a function's return value each time it is called.
+    If called later with the same arguments, the cached value is returned
+    (not reevaluated).
+    https://wiki.python.org/moin/PythonDecoratorLibrary#Memoize
+    '''
+
+    def __init__(self, func):
+        self.func = func
+        self.cache = {}
+
+    def __call__(self, *args):
+        if not isinstance(args, collections.Hashable):
+            # uncacheable. a list, for instance.
+            # better to not cache than blow up.
+            return self.func(*args)
+        if args in self.cache:
+            return self.cache[args]
+        else:
+            value = self.func(*args)
+            self.cache[args] = value
+            return value
+
+    def __repr__(self):
+        '''Return the function's docstring.'''
+        return self.func.__doc__
+
+    def __get__(self, obj, objtype):
+        '''Support instance methods.'''
+        return functools.partial(self.__call__, obj)
 
 
 def singleton(cls):
@@ -38,7 +73,7 @@ def get_service_named(name):
 
 def load_config(path):
     with open(path) as fp:
-        return json_load(fp)
+        return json.load(fp)
 
 
 def merge_nested_dicts(d1, d2):
@@ -66,8 +101,3 @@ def calc_crc16(dataset):
         crc = crc_table[tbl_idx & 0x0f] ^ (crc >> 4)
 
     return crc & 0xffff
-
-
-def dump(obj):
-    for attr in dir(obj):
-        print "obj.%s = %s" % (attr, getattr(obj, attr))

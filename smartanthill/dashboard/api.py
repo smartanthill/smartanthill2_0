@@ -22,7 +22,6 @@ from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
 from smartanthill.configprocessor import ConfigProcessor
-from smartanthill.device.operation.base import OperationType
 from smartanthill.log import Logger
 from smartanthill.util import get_service_named
 from smartanthill.webrouter import WebRouter
@@ -141,10 +140,18 @@ def upload_device_firmware(request, devid):
     return d
 
 
-@router.add("/operations")
-def get_operations(request):
-    return [{"id": item.value, "name": item.name} for item in
-            OperationType.iterconstants()]
+@router.add("/plugins")
+def get_plugins(request):
+    plugins = []
+    for p in get_service_named("device").get_plugins():
+        plugins.append({
+            "id": p.get_id(),
+            "name": p.get_name(),
+            "description": p.get_description(),
+            "peripheral": p.get_peripheral(),
+            "options": p.get_options()
+        })
+    return plugins
 
 
 @router.add("/serialports")

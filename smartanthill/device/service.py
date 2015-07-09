@@ -14,15 +14,19 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from os import listdir
+from os.path import isfile, join
 
+from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedModule
 from twisted.python.util import sibpath
 
 from smartanthill.device.board.base import BoardBase
 from smartanthill.device.device import Device
+from smartanthill.device.plugin import DevicePlugin
 from smartanthill.exception import (BoardUnknownId, DeviceUnknownBoard,
                                     DeviceUnknownId)
 from smartanthill.service import SAMultiService
+from smartanthill.util import memoized, get_service_named
 
 
 class DeviceService(SAMultiService):
@@ -54,6 +58,7 @@ class DeviceService(SAMultiService):
         return self._devices[id_]
 
     @staticmethod
+    @memoized
     def get_boards():
         boards = {}
         for d in listdir(sibpath(__file__, "board")):
@@ -74,6 +79,24 @@ class DeviceService(SAMultiService):
             return DeviceService.get_boards()[id_]
         except KeyError:
             raise BoardUnknownId(id_)
+
+    @staticmethod
+    @memoized
+    def get_plugins():
+        plugins = []
+        plugins_dirs = (
+            sibpath(
+                __file__,
+                join("..", "cc", "embedded", "firmware", "src", "plugins")
+            ),
+            join(get_service_named("sas").workspace_dir, "plugins")
+        )
+        for plugins_dir in plugins_dirs:
+            for item in FilePath(plugins_dir).listdir():
+                manifest = join(plugins_dir, item, "manifest.xml")
+                if isfile(manifest):
+                    plugins.append(DevicePlugin(manifest))
+        return sorted(plugins, key=lambda item: item.get_id())
 
 
 def makeService(name, options):
