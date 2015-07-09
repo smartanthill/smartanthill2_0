@@ -1,8 +1,8 @@
 [submodule "smartanthill/cc/embedded"]
 	path = smartanthill/cc/embedded
-	url = git@github.com:smartanthill/smartanthill2_0-embedded.git
+	url = https://github.com/smartanthill/smartanthill2_0-embedded.git
 	branch = develop
 [submodule "smartanthill/dashboard/site"]
 	path = smartanthill/dashboard/site
-	url = git@github.com:smartanthill/smartanthill2_0-dashboard.git
+	url = https://github.com/smartanthill/smartanthill2_0-dashboard.git
 	branch = develop
