@@ -39,9 +39,8 @@ class DeviceService(SAMultiService):
         for devid, devoptions in self.options.get("devices", {}).items():
             devid = int(devid)
             assert 0 < devid <= 255
-            assert "boardId" in devoptions
-            assert "network" in devoptions
-
+            assert (set(["boardId", "bodyparts", "connectionUrl"]) <=
+                    set(devoptions.keys()))
             try:
                 self._devices[devid] = Device(devid, devoptions)
             except DeviceUnknownBoard, e:
