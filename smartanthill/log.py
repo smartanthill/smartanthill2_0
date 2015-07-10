@@ -103,5 +103,5 @@ class Console(deque):
         level = data['_salevel'].name if "_salevel" in data else None
         self.append(
             (int(time.time()), data['system'].split("#")[0], level,
-             data['message'])
+             data['message'][0])
         )
