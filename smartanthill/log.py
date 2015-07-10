@@ -14,7 +14,9 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import sys
+import time
 import traceback
+from collections import deque
 
 from twisted.python import log
 from twisted.python.constants import FlagConstant, Flags
@@ -88,18 +90,18 @@ class Logger(object):
             log.msg(*msg, **params)
 
 
-class Console(object):
+class Console(deque):
 
     def __init__(self, buffer_size):
-        self.buffer_size = buffer_size
-        self._messages = []
+        super(Console, self).__init__(maxlen=buffer_size)
         log.addObserver(self.on_emit)
 
     def get_messages(self):
-        return self._messages
+        return list(self)
 
     def on_emit(self, data):
         level = data['_salevel'].name if "_salevel" in data else None
-        self._messages.append(
-            (data['message'], data['system'].split("#")[0], level)
+        self.append(
+            (int(time.time()), data['system'].split("#")[0], level,
+             data['message'])
         )

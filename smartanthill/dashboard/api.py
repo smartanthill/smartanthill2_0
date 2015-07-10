@@ -167,7 +167,11 @@ def get_serialports_route(request):
 
 @router.add("/console")
 def console(request):
-    return get_service_named("sas").console.get_messages()
+    return [{"date": entry[0],
+             "system": entry[1],
+             "level": entry[2],
+             "message": entry[3]}
+            for entry in get_service_named("sas").console.get_messages()]
 
 
 @router.add("/settings", method="GET")
