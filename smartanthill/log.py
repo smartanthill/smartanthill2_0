@@ -101,7 +101,10 @@ class Console(deque):
 
     def on_emit(self, data):
         level = data['_salevel'].name if "_salevel" in data else None
-        self.append(
-            (int(time.time()), data['system'].split("#")[0], level,
-             data['message'][0])
-        )
+        self.append((
+            int(time.time()),
+            data['system'].split("#")[0],
+            level,
+            data['message'][0]
+            if isinstance(data['message'], list) else data['message']
+        ))
