@@ -16,7 +16,7 @@
 import json
 
 from platformio.util import get_serialports
-from twisted.internet.defer import Deferred, maybeDeferred
+from twisted.internet.defer import maybeDeferred
 from twisted.python.failure import Failure
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
