@@ -16,7 +16,7 @@
 import json
 
 from platformio.util import get_serialports
-from twisted.internet.defer import maybeDeferred
+from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.python.failure import Failure
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
@@ -100,10 +100,11 @@ def update_device(request, devid):
     ConfigProcessor().update("services.device.options.devices.%d" % devid,
                              json.loads(request.content.read()))
     sas = get_service_named("sas")
-    sas.stopSubService("network")
-    sas.restartSubService("device")
-    sas.startSubService("network")
-    return get_device_info(request, devid)
+    d = maybeDeferred(sas.stopSubService, "network")
+    d.chainDeferred(sas.restartSubService("device"))
+    d.addCallback(lambda _: sas.startSubService("network"))
+    d.addCallback(lambda _: get_device_info(request, devid))
+    return d
 
 
 @router.add("/devices/<int:devid>$", method="DELETE")
@@ -111,10 +112,10 @@ def delete_device(request, devid):
     assert 0 < devid <= 255
     ConfigProcessor().delete("services.device.options.devices.%d" % devid)
     sas = get_service_named("sas")
-    sas.stopSubService("network")
-    sas.restartSubService("device")
-    sas.startSubService("network")
-    return None
+    d = maybeDeferred(sas.stopSubService, "network")
+    d.chainDeferred(sas.restartSubService("device"))
+    d.addCallback(lambda _: sas.startSubService("network"))
+    return d
 
 
 @router.add("/devices/<int:devid>/buildfw")
