@@ -27,7 +27,7 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.4.1
+:Version:   v0.4.1a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -165,7 +165,7 @@ Converting Data Block into a Sequence of PLAIN16 Blocks
 
 To produce PLAIN16-BLOCK-SEQUENCE from DATA-BLOCK, the following procedure is used:
 
-* PADDED-DATA-BLOCK is formed as `\| DATA-BLOCK \| padding \|`, where padding is random data (using non-key random stream as specified in :ref:`sarng`) with a size, necessary to make the bitsize of PADDED-DATA-BLOCK a multiple of 15. *NB: Within implementation, PADDED-DATA-BLOCK is usually implemented virtually*
+* PADDED-DATA-BLOCK is formed as **\| DATA-BLOCK \| padding \|**, where padding is random data (using non-key random stream as specified in :ref:`sarng`) with a size, necessary to make the bitsize of PADDED-DATA-BLOCK a multiple of 15. *NB: Within implementation, PADDED-DATA-BLOCK is usually implemented virtually*
 * resulting bit sequence (which has bitsize which is a multiple of 15) is split into 15-bit chunks, and each 15-bit chunk is converted into a 16-bit PLAIN16 block
 
 PLAIN16-NO-CORRECTION Packets
@@ -199,7 +199,7 @@ Converting Data Block into a Sequence of HAMM32 Blocks
 
 To produce HAMM32-BLOCK-SEQUENCE from DATA-BLOCK, the following procedure is used:
 
-* PADDED-DATA-BLOCK is formed as `\| DATA-BLOCK \| padding \|`, where padding is random data (using non-key random stream as specified in :ref:`sarng`) with a size, necessary to make the bitsize of PADDED-DATA-BLOCK a multiple of 26. *NB: Within implementation, PADDED-DATA-BLOCK is usually implemented virtually*
+* PADDED-DATA-BLOCK is formed as **\| DATA-BLOCK \| padding \|**, where padding is random data (using non-key random stream as specified in :ref:`sarng`) with a size, necessary to make the bitsize of PADDED-DATA-BLOCK a multiple of 26. *NB: Within implementation, PADDED-DATA-BLOCK is usually implemented virtually*
 * resulting bit sequence (which has bitsize which is a multiple of 26) is split into 26-bit chunks, and each 26-bit chunk is converted into a 32-bit HAMM32 block
 
 HAMMING-32-CORRECTION Packets
