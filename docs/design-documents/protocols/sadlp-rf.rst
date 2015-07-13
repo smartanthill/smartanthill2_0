@@ -27,22 +27,11 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.4
+:Version:   v0.4.1
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
 SADLP-RF provides L2 datalink over simple Radio-Frequency channels which have only an ability to send/receive packets over RF without any addressing. For more complicated RF communications (such as IEEE 802.15.4), different SADLP-\* protocols (such as SADLP-802.15.4 described in :ref:`sadlp-802-15-4`) need to be used.
-
-SADLP-RF PHY Level
-------------------
-
-Frequencies: TODO (with frequency shifts)
-
-Modulation: 2FSK (a.k.a. FSK without further specialization, and BFSK), or GFSK (2FSK and GFSK are generally compatible), with frequency shifts specified above.
-
-Tau (period with the same frequency): 1/9600 sec. *NB: this may or may not correspond to 9600 baud transfer rate.* (TODO: negotiate?).
-
-Line code: preamble (at least TODO 0xAA (TODO:check if it is really 0xAA or 0x55) symbols), followed by 0x2DD4 sync word, followed by "raw" SADLP-RF Packet as described below. While SADLP-RF Packet as described does not provide AC/DC balance, it does (a) strictly guarantee a front at least every 32 tau; (b) given that packets are pre-SCRAMBLED (see :ref:`sascrambling` document), it statistically guarantees "white noise" properties, with much more frequent fronts regardless of data.
 
 SADLP-RF Design
 ---------------
@@ -54,6 +43,24 @@ Assumptions:
 * We don't have enough resources to run sophisticated error-correction mechanisms such as Reed-Solomon, Viterbi, etc.
 * Transmissions are rare, hence beacons and frequency hopping are not used
 * upper protocol layer may have some use for packets where only a header is provided; hence upper layer provides it's header and it's payload separately
+
+SADLP-RF PHY Level
+------------------
+
+Frequencies: TODO (with frequency shifts)
+
+Modulation: 2FSK (a.k.a. FSK without further specialization, and BFSK), or GFSK (2FSK and GFSK are generally compatible), with frequency shifts specified above.
+
+Tau (minimum period with the same frequency during FSK modulation): 1/9600 sec. *NB: this may or may not correspond to 9600 baud transfer rate.* (TODO: rate negotiation?)
+
+Line code: preamble (at least two 0xAA (TODO:check if it is really 0xAA or 0x55) symbols), followed by 0x2DD4 sync word, followed by "raw" SADLP-RF Packet as described below. 
+
+SADLP-RF Packets and Line Codes
+-------------------------------
+
+FSK modulation used by SADLP-RF, does not require AC/DC balance. However, it requires to have at least one edge per N*tau (to keep synchronization). To be usable with a wide range of transmitters/receivers, we aim for strict guarantees of at least one edge per 16*tau (as suggested, for example, for a worst-case in RFM69 manual), and for "white noise" properties for pre-SCRAMBLED packets (see :ref:`sascrambling` document for details on SCRAMBLING). For those SADLP-RF packets which allow for intra-packet de-synchronization detection (in particular, for HAMM32-based packets), one edge per 32*tau is acceptable.
+
+The guarantees above are kept for all SADLP-RF Packets, as described below. As a result, SADLP-RD does not need any additional line codes, and SADLP-RF Packets MUST be transmitted directly over FSK (after preamble and sync word, as described above above).
 
 Non-paired Addressing for RF Buses
 ----------------------------------
@@ -103,7 +110,7 @@ ENCODING-TYPE is an error-correctable field, described by the following table:
 +------------------------+---------------------------------------+-------------------------------+
 | 0xAA                   | RESERVED (MANCHESTER-COMPATIBLE)      | 2                             |
 +------------------------+---------------------------------------+-------------------------------+
-| 0xC3                   | NO-CORRECTION                         | 3                             |
+| 0xC3                   | PLAIN16-NO-CORRECTION                 | 3                             |
 +------------------------+---------------------------------------+-------------------------------+
 | 0xCC                   | HAMMING-32-CORRECTION                 | 4                             |
 +------------------------+---------------------------------------+-------------------------------+
@@ -148,10 +155,29 @@ To check that "Hamming Distance" of bytes a and b is <=1:
   + otherwise, either shift-and-add-if
   + or compare with each of (0,1,2,4,8,16,32,64,128) - if doesn't match any, "Hamming Distance" is > 1
 
-NO-CORRECTION Packets
-^^^^^^^^^^^^^^^^^^^^^
+PLAIN16 Block
+^^^^^^^^^^^^^
 
-For NO-CORRECTION packets, SADLP-RF-DATA has the following format:
+PLAIN16 block is always a 16-bit (2-byte) block. It consists of 15 data bits d0..d15, followed by 16th bit p, where p = ~d15 (inverted d15). p is necessary to provide strict guarantees that there is at least 1 bit change every 16 bits of data stream. On receiving side, p is ignored (though if bit-error counter is enabled, and p it is not equal to ~d15, it SHOULD be counted as a bit-error). 
+
+Converting Data Block into a Sequence of PLAIN16 Blocks
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+To produce PLAIN16-BLOCK-SEQUENCE from DATA-BLOCK, the following procedure is used:
+
+* PADDED-DATA-BLOCK is formed as `\| DATA-BLOCK \| padding \|`, where padding is random data (using non-key random stream as specified in :ref:`sarng`) with a size, necessary to make the bitsize of PADDED-DATA-BLOCK a multiple of 15. *NB: Within implementation, PADDED-DATA-BLOCK is usually implemented virtually*
+* resulting bit sequence (which has bitsize which is a multiple of 15) is split into 15-bit chunks, and each 15-bit chunk is converted into a 16-bit PLAIN16 block
+
+PLAIN16-NO-CORRECTION Packets
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For PLAIN16-NO-CORRECTION packets, SADLP-RF-DATA has the following format:
+
+**\| UPPER-LAYER-PAYLOAD-AND-DATA-PLAIN16 \|**
+
+where PLAIN16-DATA is a conversion of UPPER-LAYER-PAYLOAD-AND-DATA into a sequence of PLAIN16 blocks, where UPPER-LAYER-PAYLOAD-AND-DATA is described below, and conversion is performed as described above.
+
+UPPER-LAYER-PAYLOAD-AND-DATA has the following format:
 
 **\| UPPER-LAYER-HEADER-LENGTH \| UPPER-LAYER-HEADER \| UPPER-LAYER-HEADER-CHECKSUM \| UPPER-LAYER-PAYLOAD-LENGTH \| UPPER-LAYER-PAYLOAD \| UPPER-LAYER-HEADER-AND-PAYLOAD-CHECKSUM \|**
 
@@ -164,12 +190,12 @@ HAMM32 block is always a 32-bit (4-byte) block. It is a Hamming (31,26)-encoded 
 
 **\| p0 \| ~p1 \| ~p2 \| d1 \| ~p4 \| d2 \| d3 \| d4 \| ~p8 \| d5 \| d6 \| d7 \| d8 \| d9 \| d10 \| d11 \| ~p16 \| d12 \| d13 \| d14 \| d15 \| d16 \| d17 \| d18 \| d19 \| d20 \| d21 \| d22 \| d23 \| d24 \| d25 \| d26 \|**
 
-where '~' denotes bit inversion, and p0 is calculated to make the whole 32-bit HAMM32 parity even.
+where '~' denotes bit inversion, and p0 is calculated to make the whole 32-bit HAMM32 parity even (making HAMM32 a SECDED block).
 
 Parity bit inversion is needed to make sure that HAMM32 block can never be all-zeros or all-ones (and simple inversion doesn't change Hamming Distances, so error correction on the receiving side is essentially the same as for non-inverted parity bits). HAMM32 blocks guarantee that there is at least one change-from-zero-to-one-or-vice-versa at least every 32 bits. 
 
-Converting Data Block to a Sequence of HAMM32 Blocks
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Converting Data Block into a Sequence of HAMM32 Blocks
+''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 To produce HAMM32-BLOCK-SEQUENCE from DATA-BLOCK, the following procedure is used:
 
@@ -181,7 +207,7 @@ HAMMING-32-CORRECTION Packets
 
 For HAMMING-32-CORRECTION packets, SADLP-RF-DATA is **\| UPPER-LAYER-HEADER-HAMM32 \| UPPER-LAYER-PAYLOAD-HAMM32 \|**
 
-where UPPER-LAYER-HEADER-HAMM32 is a convertion of UPPER-LAYER-HEADER into a sequence of HAMM32 blocks, and UPPER-LAYER-PAYLOAD-HAMM32 is a convertion of UPPER-LAYER-PAYLOAD into a sequence of HAMM32 blocks. UPPER-LAYER-HEADER and UPPER-LAYER-PAYLOAD are described below, and convertions are performed as described above.
+where UPPER-LAYER-HEADER-HAMM32 is a conversion of UPPER-LAYER-HEADER into a sequence of HAMM32 blocks, and UPPER-LAYER-PAYLOAD-HAMM32 is a conversion of UPPER-LAYER-PAYLOAD into a sequence of HAMM32 blocks. UPPER-LAYER-HEADER and UPPER-LAYER-PAYLOAD are described below, and conversions are performed as described above.
 
 UPPER-LAYER-HEADER has the following format:
 
