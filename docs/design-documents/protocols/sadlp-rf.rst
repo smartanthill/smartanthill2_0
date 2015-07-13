@@ -27,7 +27,7 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.3
+:Version:   v0.4
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -40,7 +40,9 @@ Frequencies: TODO (with frequency shifts)
 
 Modulation: 2FSK (a.k.a. FSK without further specialization, and BFSK), or GFSK (2FSK and GFSK are generally compatible), with frequency shifts specified above.
 
-Baud rate: 9600 baud (TODO: negotiate?).
+Tau (period with the same frequency): 1/9600 sec. *NB: this may or may not correspond to 9600 baud transfer rate.* (TODO: negotiate?).
+
+Line code: preamble (at least TODO 0xAA (TODO:check if it is really 0xAA or 0x55) symbols), followed by 0x2DD4 sync word, followed by "raw" SADLP-RF Packet as described below. While SADLP-RF Packet as described does not provide AC/DC balance, it does (a) strictly guarantee a front at least every 32 tau; (b) given that packets are pre-SCRAMBLED (see :ref:`sascrambling` document), it statistically guarantees "white noise" properties, with much more frequent fronts regardless of data.
 
 SADLP-RF Design
 ---------------
@@ -86,12 +88,68 @@ SADLP-RF Packet
 
 SADLP-RF packet has the following format:
 
-**\| ENCODING-TYPE \| REPEATED-ENCODING-TYPE \| SADLP-RF-DATA \|**
+**\| ENCODING-TYPE \| SADLP-RF-DATA \|**
 
-where ENCODING-TYPE and REPEATED-ENCODING-TYPE are 1-byte fields (transmitted identical), with possible values being NO-CORRECTION, HAMMING-32-CORRECTION, and HAMMING-32-2D-CORRECTION.
+where ENCODING-TYPE is 1-byte fields (see below).
 
-NO-CORRECTION
-^^^^^^^^^^^^^
+ENCODING-TYPE is an error-correctable field, described by the following table:
+
++------------------------+---------------------------------------+-------------------------------+
+| ENCODING-TYPE          | Meaning                               | Value after Hamming Decoding  | 
++------------------------+---------------------------------------+-------------------------------+
+| 0x00                   | RESERVED (NOT RECOMMENDED)            | 0                             |
++------------------------+---------------------------------------+-------------------------------+
+| 0x69                   | RESERVED (MANCHESTER-COMPATIBLE)      | 1                             |
++------------------------+---------------------------------------+-------------------------------+
+| 0xAA                   | RESERVED (MANCHESTER-COMPATIBLE)      | 2                             |
++------------------------+---------------------------------------+-------------------------------+
+| 0xC3                   | NO-CORRECTION                         | 3                             |
++------------------------+---------------------------------------+-------------------------------+
+| 0xCC                   | HAMMING-32-CORRECTION                 | 4                             |
++------------------------+---------------------------------------+-------------------------------+
+| 0xA5                   | RESERVED (MANCHESTER-COMPATIBLE)      | 5                             |
++------------------------+---------------------------------------+-------------------------------+
+| 0x66                   | RESERVED (MANCHESTER-COMPATIBLE)      | 6                             |
++------------------------+---------------------------------------+-------------------------------+
+| 0x0F                   | RESERVED                              | 7                             |
++------------------------+---------------------------------------+-------------------------------+
+| 0xF0                   | RESERVED                              | 8                             |
++------------------------+---------------------------------------+-------------------------------+
+| 0x99                   | RESERVED (MANCHESTER-COMPATIBLE)      | 9                             |
++------------------------+---------------------------------------+-------------------------------+
+| 0x5A                   | RESERVED (MANCHESTER-COMPATIBLE)      | 10                            |
++------------------------+---------------------------------------+-------------------------------+
+| 0x33                   | HAMMING-32-2D-CORRECTION              | 11                            |
++------------------------+---------------------------------------+-------------------------------+
+| 0x3C                   | RESERVED                              | 12                            |
++------------------------+---------------------------------------+-------------------------------+
+| 0x55                   | RESERVED (MANCHESTER-COMPATIBLE)      | 13                            |
++------------------------+---------------------------------------+-------------------------------+
+| 0x96                   | RESERVED (MANCHESTER-COMPATIBLE)      | 14                            |
++------------------------+---------------------------------------+-------------------------------+
+| 0xFF                   | RESERVED (NOT RECOMMENDED)            | 15                            |
++------------------------+---------------------------------------+-------------------------------+
+
+All listed ENCODING-TYPEs have "Hamming Distance" of at least 4 between them. It means that error correction can be applied to ENCODING-TYPE, based on "Hamming Distance", as described below (for error correction to work, "Hamming Distance" must be at least 3).
+
+ENCODING-TYPE can be considered as a Hamming (7.4) code as described in https://en.wikipedia.org/wiki/Hamming_code, with a prepended parity bit to make it SECDED. Note: implementation is not strictly required to perform Hamming decoding; instead, the following procedure MAY be used for error correction of ENCODING-TYPE:
+
+* calculate "Hamming Distance" of received ENCODING-TYPE with one of supported values (NO-CORRECTION, HAMMING-32-CORRECTION, and HAMMING-32-2D-CORRECTION)
+* if "Hamming Distance" is 0 or 1, than we've found the error-corrected ENCODING-TYPE
+* otherwise - repeat the process with another supported value
+* if we're out of supported values - ENCODING-TYPE is beyond repair, and we SHOULD drop the whole packet
+
+To check that "Hamming Distance" of bytes a and b is <=1:
+
+* calculate d = a XOR b
+* calculate number of 1's in d
+
+  + if MCU supports this as an asm operation - it is better to use it
+  + otherwise, either shift-and-add-if
+  + or compare with each of (0,1,2,4,8,16,32,64,128) - if doesn't match any, "Hamming Distance" is > 1
+
+NO-CORRECTION Packets
+^^^^^^^^^^^^^^^^^^^^^
 
 For NO-CORRECTION packets, SADLP-RF-DATA has the following format:
 
@@ -99,20 +157,31 @@ For NO-CORRECTION packets, SADLP-RF-DATA has the following format:
 
 where UPPER-LAYER-HEADER-LENGTH is an Encoded-Unsigned-Int<max=2> field specifying size of UPPER-LAYER-HEADER, UPPER-LAYER-HEADER-CHECKSUM is a 2-byte field containing SACHECKSUM-16 of UPPER-LAYER-HEADER, UPPER-LAYER-PAYLOAD-LENGTH is an Encoded-Unsigned-Int<max=2> field specifying size of UPPER-LAYER-PAYLOAD, and UPPER-LAYER-HEADER-AND-PAYLOAD CHECKSUM is a 2-byte field containing SACHECKSUM-16 of UPPER-LAYER-HEADER concatenated with UPPER-LAYER-PAYLOAD.
 
-HAMMING-32-CORRECTION
-^^^^^^^^^^^^^^^^^^^^^
+HAMM32 block
+^^^^^^^^^^^^
 
-For HAMMING-32-CORRECTION packets, SADLP-RF-DATA is **\| UPPER-LAYER-HEADER-WITH-HAMMING-32 \| UPPER-LAYER-PAYLOAD-WITH-HAMMING-32 \|**
+HAMM32 block is always a 32-bit (4-byte) block. It is a Hamming (31,26)-encoded block where d1..d26 are data bits and p1,p2,p4,p8,p16 are parity bits as described in https://en.wikipedia.org/wiki/Hamming_code, then HAMM32 block is built as follows:
 
-where UPPER-LAYER-HEADER-WITH-HAMMING-32 and UPPER-LAYER-PAYLOAD each is represented by a sequence of 4-byte HAMM32 error-correctable blocks (out of each 4-byte block 26 bits are reconstructed). Each HAMM32 block is a 31-bit Hamming block (as described in https://en.wikipedia.org/wiki/Hamming_code), with prepended total block parity bit p0 (making HAMM32 a 32-bit SECDED code).
+**\| p0 \| ~p1 \| ~p2 \| d1 \| ~p4 \| d2 \| d3 \| d4 \| ~p8 \| d5 \| d6 \| d7 \| d8 \| d9 \| d10 \| d11 \| ~p16 \| d12 \| d13 \| d14 \| d15 \| d16 \| d17 \| d18 \| d19 \| d20 \| d21 \| d22 \| d23 \| d24 \| d25 \| d26 \|**
 
-To produce UPPER-LAYER-HEADER-WITH-HAMMING-32 from UPPER-LAYER-HEADER, the following procedure is used:
+where '~' denotes bit inversion, and p0 is calculated to make the whole 32-bit HAMM32 parity even.
 
-* If UPPER-LAYER-HEADER have size which is not a multiple of 26-bit, it is padded with random data (using non-key random stream as specified in :ref:`sarng`). 
-* resulting bit sequence is split into 26-bit chunks, and each 26-bit chunk is converted into a 32-bit HAMM32 block
-* UPPER-LAYER-HEADER-WITH-HAMMING-32 is a sequence of resulting 32-bit HAMM32 blocks
+Parity bit inversion is needed to make sure that HAMM32 block can never be all-zeros or all-ones (and simple inversion doesn't change Hamming Distances, so error correction on the receiving side is essentially the same as for non-inverted parity bits). HAMM32 blocks guarantee that there is at least one change-from-zero-to-one-or-vice-versa at least every 32 bits. 
 
-To produce UPPER-LAYER-PAYLOAD-WITH-HAMMING-32 from UPPER-LAYER-PAYLOAD, the procedure is exactly the same.
+Converting Data Block to a Sequence of HAMM32 Blocks
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To produce HAMM32-BLOCK-SEQUENCE from DATA-BLOCK, the following procedure is used:
+
+* PADDED-DATA-BLOCK is formed as `\| DATA-BLOCK \| padding \|`, where padding is random data (using non-key random stream as specified in :ref:`sarng`) with a size, necessary to make the bitsize of PADDED-DATA-BLOCK a multiple of 26. *NB: Within implementation, PADDED-DATA-BLOCK is usually implemented virtually*
+* resulting bit sequence (which has bitsize which is a multiple of 26) is split into 26-bit chunks, and each 26-bit chunk is converted into a 32-bit HAMM32 block
+
+HAMMING-32-CORRECTION Packets
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For HAMMING-32-CORRECTION packets, SADLP-RF-DATA is **\| UPPER-LAYER-HEADER-HAMM32 \| UPPER-LAYER-PAYLOAD-HAMM32 \|**
+
+where UPPER-LAYER-HEADER-HAMM32 is a convertion of UPPER-LAYER-HEADER into a sequence of HAMM32 blocks, and UPPER-LAYER-PAYLOAD-HAMM32 is a convertion of UPPER-LAYER-PAYLOAD into a sequence of HAMM32 blocks. UPPER-LAYER-HEADER and UPPER-LAYER-PAYLOAD are described below, and convertions are performed as described above.
 
 UPPER-LAYER-HEADER has the following format:
 
@@ -126,8 +195,8 @@ UPPER-LAYER-PAYLOAD has the following format:
 
 where UPPER-LAYER-PAYLOAD-LENGTH is an Encoded-Unsigned-Int<max=2> field specifying size of UPPER-LAYER-PAYLOAD, and UPPER-LAYER-HEADER-AND-PAYLOAD CHECKSUM is a 2-byte field containing SAHECKSUM-16 of UPPER-LAYER-HEADER concatenated with UPPER-LAYER-PAYLOAD.
 
-HAMMING-32-2D-CORRECTION
-^^^^^^^^^^^^^^^^^^^^^^^^
+HAMMING-32-2D-CORRECTION Packets
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 HAMMING-32-2D-CORRECTION is similar to HAMMING-32-CORRECTION, with the following differences.
 
