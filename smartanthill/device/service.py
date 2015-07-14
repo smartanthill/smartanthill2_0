@@ -16,17 +16,17 @@
 from os import listdir
 from os.path import isfile, join
 
+from smartanthill_zc.api import ZeptoPlugin
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedModule
 from twisted.python.util import sibpath
 
 from smartanthill.device.board.base import BoardBase
 from smartanthill.device.device import Device
-from smartanthill.device.plugin import DevicePlugin
 from smartanthill.exception import (BoardUnknownId, DeviceUnknownBoard,
                                     DeviceUnknownId)
 from smartanthill.service import SAMultiService
-from smartanthill.util import memoized, get_service_named
+from smartanthill.util import get_service_named, memoized
 
 
 class DeviceService(SAMultiService):
@@ -94,7 +94,7 @@ class DeviceService(SAMultiService):
             for item in FilePath(plugins_dir).listdir():
                 manifest = join(plugins_dir, item, "manifest.xml")
                 if isfile(manifest):
-                    plugins.append(DevicePlugin(manifest))
+                    plugins.append(ZeptoPlugin(manifest))
         return sorted(plugins, key=lambda item: item.get_id())
 
 

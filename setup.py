@@ -28,6 +28,7 @@ setup(
     url=__url__,
     license=__license__,
     install_requires=[
+        "smartanthill_zc",
         "platformio",
         "pyserial",
         "twisted"
