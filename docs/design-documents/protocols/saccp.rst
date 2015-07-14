@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.2.16
+:Version:   v0.2.16a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -244,7 +244,7 @@ where EXCEPTION-FLAGS-SIZE is described below, and OPTIONAL-Exception-Data is ex
 
 ERROR-FLAGS-SIZE is an Encoded-Unsigned-Int<max=2> bitfield substrate, which is treated as follows:
 
-* bits [0..2] should be equal to SACCP_EXCEPTION
+* bits [0..2] should be equal to SACCP_ERROR
 * bit [3] is IS-EXCEPTION flag
 
 If IS-EXCEPTION flag is set:
