@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.2.15
+:Version:   v0.2.16
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -100,6 +100,27 @@ SACCP Packets
 
 SACCP packets are divided into SACCP pairing packets, SACCP command packets (from SmartAnthill Client to SmartAnthill Device) and SACCP reply packets (from SmartAnthill Device to SmartAnthill Client).
 
+SACCP Packet Type Constants
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+SACCP Packet Type Constants are 3-bit constants, used to recognize SACCP packet type. 
+
+For SACCP packets coming from Client to Device (a.k.a. "requests"), the following SACCP Packet Type Constants are recognized for:
+
+* SACCP_PAIRING
+* SACCP_OTA_PROGRAMMING
+* SACCP_ROUTING_DATA
+* SACCP_PROGRAM_TO_EXECUTE
+* SACCP_ENTROPY_PROVIDED
+
+For SACCP packets coming from Device to Client (a.k.a. "responses"), the following SACCP Packet Type Constants are recognized for:
+
+* SACCP_PAIRING
+* SACCP_OTA_PROGRAMMING
+* SACCP_ROUTING_DATA
+* SACCP_OK
+* SACCP_ERROR
+
 SACCP Pairing Packets
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -111,47 +132,68 @@ where SACCP-OTA-PAIRING-REQUEST is a 1-byte bitfield substrate, with bits [0..2]
 
 **\| SACCP-OTA-PAIRING-RESPONSE \| OTA-PAIRING-RESPONSE-BODY \|**
 
-where SACCP-OTA-PAIRING-RESPONSE is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits [0..2] equal to 0x7 (otherwise it is a different type of reply, see below), bits [3..4] are "additional bits" passed from Pairing Protocol alongside with OTA-PAIRING-RESPONSE-BODY, bits [5..] are reserved (MUST be zeros), and OTA-PAIRING-RESPONSE-BODY as described in :ref:`sapairing` document. 
+where SACCP-OTA-PAIRING-RESPONSE is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits [0..2] equal to SACCP_PAIRING 3-bit constant, bits [3..4] are "additional bits" passed from Pairing Protocol alongside with OTA-PAIRING-RESPONSE-BODY, bits [5..] are reserved (MUST be zeros), and OTA-PAIRING-RESPONSE-BODY as described in :ref:`sapairing` document. 
 
 SACCP-OTA-PAIRING-REQUEST is sent from Client to Device, and SACCP-OTA-PAIRING-RESPONSE is sent from Device to Client; they form a "packet chain" as described in :ref:`sapairing` document.
 
 SACCP OtA Programming Packets
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-NB: implementing OtA Programming Packets is OPTIONA for SmartAnthill Devices.
+NB: implementing OtA Programming Packets is OPTIONAL for SmartAnthill Devices.
 
 **\| SACCP-OTA-PROGRAMMING-REQUEST \| OTA-PROGRAMMING-REQUEST-BODY \|**
 
-where SACCP-OTA-PROGRAMMING-REQUEST is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_PROGRAMMING 3-bit constant, bits [3..5] are "additional bits" passed from SAOtAPP alongside with OTA-PROGRAMMING-REQUEST-BODY, bits [6..7] reserved (MUST be zeros), and OTA-PROGRAMMING-REQUEST-BODY is described in :ref:`sabootload` document. 
+where SACCP-OTA-PROGRAMMING-REQUEST is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_OTA_PROGRAMMING 3-bit constant, bits [3..5] are "additional bits" passed from SAOtAPP alongside with OTA-PROGRAMMING-REQUEST-BODY, bits [6..7] reserved (MUST be zeros), and OTA-PROGRAMMING-REQUEST-BODY is described in :ref:`sabootload` document. 
 
 **\| SACCP-OTA-PROGRAMMING-RESPONSE \| OTA-PROGRAMMING-RESPONSE-BODY \|**
 
-where SACCP-OTA-PROGRAMMING-RESPONSE is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits [0..2] equal to 0x6 (otherwise it is a different type of reply, see below), bits [3..5] being "additional bits" passed from SAOtAPP alongside with OTA-PROGRAMMING-RESPONSE-BODY, bits [6..] reserved (MUST be zeros), and OTA-PROGRAMMING-RESPONSE-BODY is described in :ref:`sabootload` document. 
+where SACCP-OTA-PROGRAMMING-RESPONSE is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits [0..2] equal to SACCP_OTA_PROGRAMMING 3-bit constant, bits [3..5] being "additional bits" passed from SAOtAPP alongside with OTA-PROGRAMMING-RESPONSE-BODY, bits [6..] reserved (MUST be zeros), and OTA-PROGRAMMING-RESPONSE-BODY is described in :ref:`sabootload` document. 
 
 TODO: blocking all other messages (return TODO error) while OtA Programming Session is in progress (i.e. OtA Programming State being OTA_PROGRAMMING_INPROGRESS).
+
+SACCP Routing-Data Packets
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+NB: implementing Routing-Data Packets is OPTIONAL for SmartAnthill Devices; see :ref:`samp` document for details.
+
+**\| SACCP-ROUTING-DATA-REQUEST \| ROUTING-DATA-REQUEST-BODY \|**
+
+where SACCP-ROUTING-DATA-REQUEST is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_ROUTING_DATA 3-bit constant, bits [3..5] are "additional bits" passed alongside with ROUTING-DATA-REQUEST-BODY, bits [6..7] reserved (MUST be zeros), and ROUTING-DATA-REQUEST-BODY is described in :ref:`samp` document. 
+
+**\| SACCP-ROUTING-DATA-RESPONSE \| ROUTING-DATA-RESPONSE-BODY \|**
+
+where SACCP-ROUTING-DATA-RESPONSE is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits [0..2] equal to SACCP_ROUTING_DATA 3-bit constant, bits [3..5] being "additional bits" passed alongside with ROUTING-DATA-RESPONSE-BODY, bits [6..] reserved (MUST be zeros), and ROUTING-DATA-RESPONSE-BODY is described in :ref:`sabootload` document. 
 
 SACCP Command Packets
 ^^^^^^^^^^^^^^^^^^^^^
 
+**IMPORTANT FORMAT CHANGES**
+
 SACCP command packets can be one of the following:
+
+**\| SACCP-ENTROPY-PROVIDED \| ENTROPY \|**
+
+where SACCP-ENTROPY-PROVIDED is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_ENTROPY_PROVIDED 3-bit constant.
+
+SACCP-ENTROPY-PROVIDED command is sent in response to SACCP_ERROR_ENTROPY_RECOVERY_NEEDED error, as a part of "entropy recovery" procedure. In response to SACCP-ENTROPY-PROVIDED, Device response either with another SACCP_ERROR_ENTROPY_RECOVERY_NEEDED, or with SACCP_ERROR_ENTROPY_RECOVERY_COMPLETED. In response to the former Client SHOULD send another SACCP-ENTROPY-PROVIDED command packet, in response to the latter - Client SHOULD repeat original command packet (the one which has failed with SACCP_ERROR_ENTROPY_RECOVERY_NEEDED).
 
 **\| SACCP-NEW-PROGRAM-AND-EXTRA-HEADERS-FLAG \| OPTIONAL-EXTRA-HEADERS \| Execution-Layer-Program \|**
 
-where SACCP-NEW-PROGRAM-AND-EXTRA-HEADERS-FLAG is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_NEW_PROGRAM 3-bit constant, bit [3] being EXTRA-HEADERS-FLAG specifying if OPTIONAL-EXTRA-HEADERS are present, and bits [4..7] being reserved (MUST consist of zeros, otherwise SACCP returns SACCP_ERROR_INVALID_FORMAT), and Execution-Layer-Program is variable-length program.
+where SACCP-NEW-PROGRAM-AND-EXTRA-HEADERS-FLAG is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_PROGRAM_TO_EXECUTE 3-bit constant, bit [3] being EXTRA-HEADERS-FLAG specifying if OPTIONAL-EXTRA-HEADERS are present, bits [4..5] being 0x0, and bits[6..7] being reserved (MUST consist of zeros, otherwise SACCP returns SACCP_ERROR_INVALID_FORMAT), and Execution-Layer-Program is variable-length program.
 
 NEW_PROGRAM command packet indicates that Execution-Layer-Program (normally - Zepto VM program) is requested to be executed on the SmartAnthill Device.
 
-**\| SACCP-REPEAT-OLD-PROGRAM-AND-EXTRA-HEADERS-FLAG-AND-Checksum-Length \| OPTIONAL-EXTRA-HEADERS \| Checksum \|**
+**\| SACCP-REPEAT-OLD-PROGRAM-AND-EXTRA-HEADERS-FLAG \| OPTIONAL-EXTRA-HEADERS \| Checksum-Length \| Checksum \|**
 
-where SACCP-REPEAT-OLD-PROGRAM-AND-EXTRA-HEADERS-FLAG-AND-Checksum-Length is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_REPEAT_OLD_PROGRAM 3-bit constant, bit [3] being EXTRA-HEADERS-FLAG specifying if OPTIONAL-EXTRA-HEADERS are present, bits [4..7] being Checksum-Length - length of Checksum field (Checksum-Length MUST be >= 4 and MUST be <= 16, if it is not - SACCP returns SACCP_ERROR_INVALID_FORMAT error), Checksum has length of Checksum-Length, and is calculated as SACCP Checksum which is described above.
+where SACCP-REPEAT-OLD-PROGRAM-AND-EXTRA-HEADERS-FLAG is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_PROGRAM_TO_EXECUTE 3-bit constant, bit [3] being EXTRA-HEADERS-FLAG specifying if OPTIONAL-EXTRA-HEADERS are present, bits [4..5] being 0x1, bits[6..7] being reserved (MUST be zeros), Checksum-Length is a 1-byte field, indicating length of Checksum field (Checksum-Length MUST be >= 4 and MUST be <= 16, if it is not - SACCP returns SACCP_ERROR_INVALID_FORMAT error), Checksum has length of Checksum-Length, and is calculated as SACCP Checksum as described above.
 
-OLD_PROGRAM command packet indicates that the Execution-Layer program which is already in memory of SmartAnthill Device, needs to be repeated. Checksum field is used to ensure that perceptions of the "program which is already in memory" are the same for SmartAnthill Client and SmartAnthill Device (inconsistencies are possible is several scenarios, such as two SmartAnthill Clients working with the same SmartAnthill Device, accidental reboot of the SmartAnthill Device, and so on). If Checksum does not match the program within SmartAnthill Device, SACCP returns SACCP_ERROR_OLD_PROGRAM_CHECKSUM_DOESNT_MATCH error.
+SACCP-REPEAT-OLD-PROGRAM command packet indicates that the Execution-Layer program which is already in memory of SmartAnthill Device, needs to be repeated. Checksum field is used to ensure that perceptions of the "program which is already in memory" are the same for SmartAnthill Client and SmartAnthill Device (inconsistencies are possible is several scenarios, such as two SmartAnthill Clients working with the same SmartAnthill Device, accidental reboot of the SmartAnthill Device, and so on). If Checksum does not match the program within SmartAnthill Device, SACCP returns SACCP_ERROR_OLD_PROGRAM_CHECKSUM_DOESNT_MATCH error.
 
-**\| SACCP-REUSE-OLD-PROGRAM-AND-EXTRA-HEADERS-FLAG-AND-Checksum-Length \| OPTIONAL-EXTRA-HEADERS \| Checksum \| Fragments \|** TODO: New-Checksum just in case?
+**\| SACCP-REUSE-OLD-PROGRAM-AND-EXTRA-HEADERS-FLAG \| OPTIONAL-EXTRA-HEADERS \| Checksum-Length \| Checksum \| Fragments \|** TODO: New-Checksum just in case?
 
-where SACCP-REUSE-OLD-PROGRAM-AND-EXTRA-HEADERS-FLAG-AND-Checksum-Length is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_REUSE_OLD_PROGRAM 3-bit constant, bit [3] being EXTRA-HEADERS-FLAG specifying if OPTIONAL-EXTRA-HEADERS are present, bits [4..7] being Checksum-Length, which is similar to that of in REPEAT_OLD_PROGRAM packet, Checksum has length of Checksum-Length, and is calculated as SACCP Checksum which is described above, and Fragments is a sequence of fragments.
+where SACCP-REUSE-OLD-PROGRAM-AND-EXTRA-HEADERS-FLAG is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_PROGRAM_TO_EXECUTE 3-bit constant, bit [3] being EXTRA-HEADERS-FLAG specifying if OPTIONAL-EXTRA-HEADERS are present, bits [4..5] being 0x2, bits[6..7] being reserved (MUST be zeros), Checksum-Length is a 1-byte field, similar to that of in REPEAT-OLD-PROGRAM packet, Checksum has length of Checksum-Length, and is calculated as SACCP Checksum which is described above, and Fragments is a sequence of fragments.
 
-SACCP_REUSE_OLD_PROGRAM is used when existing program is mostly the same, but there are some differences. When processing it, SACCP goes through the fragments, and appends data within (or referred to by) the fragment, to the new program, in a sense "assembling" new program from verbatim fragments, and from reference-to-old-program fragments.
+SACCP-REUSE-OLD-PROGRAM is used when existing program is mostly the same, but there are some differences. When processing it, SACCP goes through the fragments, and appends data within (or referred to by) the fragment, to the new program, in a sense "assembling" new program from verbatim fragments, and from reference-to-old-program fragments.
 
 For all SACCP command packets, OPTIONAL-EXTRA-HEADERS is a list of optional headers; each header starts from an Encoded-Unsigned-Int<max=2> bitfield substrate, which is then interpreted as follows:
 
@@ -162,12 +204,6 @@ Currently, only two types of extra headers are supported:
 
 * END_OF_HEADERS (with no further data)
 * ENABLE_ZEPTOERR, with further data being **\| TRUNCATE-MOST-RECENT-AND-RESERVED \|**, where TRUNCATE-MOST-RECENT-AND-RESERVED is a 1-byte bitfield substrate, where bit [0] is a TRUNCATE-MOST-RECENT flag which specifies that zeptoerr should be truncated at the end if truncation becomes necessary (if this bit is not set, the least recent records are truncated from zeptoerr pseudo-stream), and bits [1..7] are reserved (MUST be zero). By default zeptoerr pseudo-stream is disabled; ENABLE_ZEPTOERR header enables zeptoerr if it is supported by target SmartAnthill Device.
-
-**\| SACCP-ENTROPY-PROVIDED \| ENTROPY \|**
-
-where SACCP-ENTROPY-PROVIDED is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_ENTROPY_PROVIDED 3-bit constant.
-
-SACCP-ENTROPY-PROVIDED command is sent in response to SACCP_ERROR_ENTROPY_RECOVERY_NEEDED error, as a part of "entropy recovery" procedure. In response to SACCP-ENTROPY-PROVIDED, Device response either with another SACCP_ERROR_ENTROPY_RECOVERY_NEEDED, or with SACCP_ERROR_ENTROPY_RECOVERY_COMPLETED. In response to the former Client SHOULD send another SACCP-ENTROPY-PROVIDED command packet, in response to the latter - Client SHOULD repeat original command packet (the one which has failed with SACCP_ERROR_ENTROPY_RECOVERY_NEEDED).
 
 SACCP Reuse Fragments
 '''''''''''''''''''''
@@ -186,36 +222,38 @@ where SACCP_REUSE_FRAGMENT_REFERENCE is a 1-byte constant, Fragment-Length is En
 SACCP Reply Packets
 ^^^^^^^^^^^^^^^^^^^
 
+**POTENTIALLY IMPORTANT FORMAT CHANGES**
+
 Note that even if Device starts new "packet chain", at SACCP level it is still considered as a reply (with OK-FLAGS-SIZE, etc.). It also means that (if there is no "packet chain" pending) Device MAY start a new "packet chain" with SACCP-ERROR-CODE (including SACCP_ERROR_ENTROPY_RECOVERY_NEEDED when necessary).
 
 SACCP reply packets can be one of the following:
 
 **\| OK-FLAGS-SIZE \| Execution-Layer-Reply \|** 
 
-where OK-FLAGS-SIZE field is described below, Execution-Layer-Reply is a variable-length field, OPTIONAL-ZEPTOERR-FLAG is a 1-byte constant, OPTIONAL-ZEPTOERR-DATA-SIZE is an Encoded-Unsigned-Int<max=2> field, and OPTIONAL-ZEPTOERR-DATA is variable-length field.
+where OK-FLAGS-SIZE field is described below, and Execution-Layer-Reply is a variable-length field
 
 OK-FLAGS-SIZE is an Encoded-Unsigned-Int<max=2> bitfield substrate, which is treated as follows:
 
-* bits [0..2] should be equal to 0x0 (otherwise it is a different type of reply, see below)
+* bits [0..2] should be equal to SACCP_OK
 * bit [3] is TRUNCATED-FLAG, an indication that Execution-Layer-Reply has been truncated by SACCP (for example, due to the lack of RAM)
 * bits [4..] is EXECUTION-LAYER-REPLY-SIZE, size of Execution-Layer-Reply field (i.e. size is reported after truncation if there was any)
 
-**\| EXCEPTION-FLAGS-SIZE \| Exception-Data \| OPTIONAL-ZEPTOERR-FLAG \| OPTIONAL-ZEPTOERR-DATA-SIZE \| OPTIONAL-ZEPTOERR-DATA \|**
+**\| EXCEPTION-FLAGS-SIZE \| Exception-Data \|** TODO: ZEPTO-ERR?
 
-where EXCEPTION-FLAGS-SIZE is described below, Exception-Data is exception data as passed by Execution Layer, and OPTIONAL-ZEPTOERR-* fields are similar to that of in SACCP_OK reply.
+where EXCEPTION-FLAGS-SIZE is described below, and OPTIONAL-Exception-Data is exception data as passed by Execution Layer, present only if IS-EXCEPTION flag is set (see below).
 
 ERROR-FLAGS-SIZE is an Encoded-Unsigned-Int<max=2> bitfield substrate, which is treated as follows:
 
-* bits [0..2] should be equal to 0x1 (otherwise it is a different type of reply)
-* bit [3] is TRUNCATED-FLAG, an indication that Exception-Data has been truncated by SACCP (for example, due to the lack of RAM)
-* bits [4..] is EXCEPTION-DATA-SIZE, size of Exception-Data field (i.e. size is reported after truncation if there was any)
+* bits [0..2] should be equal to SACCP_EXCEPTION
+* bit [3] is IS-EXCEPTION flag
 
-**\| SACCP-ERROR-CODE \|**
+If IS-EXCEPTION flag is set:
+* bit [4] is EXCEPTION-TRUNCATED-FLAG, an indication that Exception-Data has been truncated by SACCP (for example, due to the lack of RAM)
+* bits [5..] is EXCEPTION-DATA-SIZE, size of Exception-Data field (i.e. size is reported after truncation if there was any)
+* OPTIONAL-EXCEPTION-DATA field is present
 
-where SACCP-ERROR-CODE is an Encoded-Unsigned-Int<max=2> bitfield substrate, which is treated as follows:
-
-* bits [0..2] should be equal to 0x2 (otherwise it is a different type of reply, see above)
-* bits [3..] is an ERROR-CODE, which takes one of the following values: SACCP_ERROR_INVALID_FORMAT, or SACCP_ERROR_OLD_PROGRAM_CHECKSUM_DOESNT_MATCH, SACCP_ERROR_ENTROPY_RECOVERY_NEEDED (in response to the latter, Client replies with SACCP-ENTROPY-PROVIDED), SACCP_ERROR_ENTROPY_RECOVERY_COMPLETED (only in response to SACCP-ENTROPY-PROVIDED, so Client may repeat original command).
+If IS-EXCEPTION flag is not set:
+* bits [4..] is an ERROR-CODE, which takes one of the following values: SACCP_ERROR_INVALID_FORMAT, or SACCP_ERROR_OLD_PROGRAM_CHECKSUM_DOESNT_MATCH, SACCP_ERROR_ENTROPY_RECOVERY_NEEDED (in response to the latter, Client replies with SACCP-ENTROPY-PROVIDED), SACCP_ERROR_ENTROPY_RECOVERY_COMPLETED (only in response to SACCP-ENTROPY-PROVIDED, so Client may repeat original command).
 
 
 Device Pins SHOULD NOT be Addressed Directly within Execution-Layer-Program
