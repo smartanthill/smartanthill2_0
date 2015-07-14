@@ -105,6 +105,6 @@ class Console(deque):
             int(time.time()),
             data['system'].split("#")[0],
             level,
-            data['message'][0]
-            if isinstance(data['message'], tuple) else data['message']
+            data['message'][0] if isinstance(data['message'], tuple)
+            and len(data['message']) else data['message']
         ))
