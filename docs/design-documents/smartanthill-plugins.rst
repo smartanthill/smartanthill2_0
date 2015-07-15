@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version: v0.3.2a
+:Version: v0.3.3
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -61,22 +61,22 @@ Plugin Manifest is an XML file, with structure which looks as follows:
 
 .. code-block:: xml
 
-  <smartanthill.plugin id="MyPlugin" name="My Plugin" version="1.0">
+  <smartanthill.plugin id="my_plugin" name="My Plugin" version="1.0">
 
     <description>Short description of plugin's capabilities</description>
 
-    <command>
+    <request>
       <field name="abc" type="encoded-int[max=2]" />
-    </command>
+    </request>
 
-    <reply>
+    <response>
       <field name="xyz" type="encoded-int[max=2]" min="0" max="255">
         <meaning type="float">
           <linear-conversion input-point0="0" output-point0="20.0"
                              input-point1="100" output-point1="40.0" />
         </meaning>
       </field>
-    </reply>
+    </response>
 
     <configuration>
       <peripheral>
@@ -89,7 +89,7 @@ Plugin Manifest is an XML file, with structure which looks as follows:
       </peripheral>
       <options>
         <option type="uint[2]" name="delay_blink_ms" default="150" title="Delay between blinks, ms" />
-        <option type="char[30]" name="welcome_to" default="Welcome to SmartAnthill" />
+        <option type="char[30]" name="welcome_to" default="Welcome to SmartAnthill" title="Welcome text" />
       </options>
     </configuration>
 
@@ -189,7 +189,7 @@ Simple SA plugins MAY be written without being a State Machine, for example:
 
 .. code-block:: c
 
-    struct MyPluginConfig { //constant structure filled with a configuration
+    struct my_plugin_plugin_config { //constant structure filled with a configuration
                           //  for specific 'ant body part'
       byte bodypart_id;//always present
       byte request_pin_number;//pin to request sensor read
@@ -198,7 +198,7 @@ Simple SA plugins MAY be written without being a State Machine, for example:
     };
 
     byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
-      const MyPluginConfig* pc = (MyPluginConfig*) plugin_config;
+      const my_plugin_plugin_config* pc = (my_plugin_plugin_config*) plugin_config;
       zepto_set_pin(pc->request_pin_number,0);
     }
 
@@ -206,7 +206,7 @@ Simple SA plugins MAY be written without being a State Machine, for example:
 
     byte my_plugin_handler(const void* plugin_config, void* plugin_state,
       ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {
-      const MyPluginConfig* pc = (MyPluginConfig*) plugin_config;
+      const my_plugin_plugin_config* pc = (my_plugin_plugin_config*) plugin_config;
 
       //requesting sensor to perform read, using pc->request_pin_number
       zepto_set_pin(pc->request_pin_number,1);
@@ -227,7 +227,7 @@ Implementation above is not ideal; in fact, it blocks execution at the point of 
 
 .. code-block:: c
 
-    struct MyPluginConfig { //constant structure filled with a configuration
+    struct my_plugin_plugin_config { //constant structure filled with a configuration
                           //  for specific 'ant body part'
       byte bodypart_id;//always present
       byte request_pin_number;//pin to request sensor read
@@ -235,13 +235,13 @@ Implementation above is not ideal; in fact, it blocks execution at the point of 
       byte reply_pin_numbers[4];//pins to read when ack_pin_number shows that the data is ready
     };
 
-    struct MyPluginState {
+    struct my_plugin_plugin_state {
       byte state; //'0' means 'initial state', '1' means 'requested sensor to perform read'
     };
 
     byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
-      MyPluginState* ps = (MyPluginState*)plugin_state;
-      const MyPluginConfig* pc = (MyPluginConfig*) plugin_config;
+      my_plugin_plugin_state* ps = (my_plugin_plugin_state*)plugin_state;
+      const my_plugin_plugin_config* pc = (my_plugin_plugin_config*) plugin_config;
       zepto_set_pin(pc->request_pin_number,0);
       ps->state = 0;
     }
@@ -250,20 +250,20 @@ Implementation above is not ideal; in fact, it blocks execution at the point of 
 
     byte my_plugin_handler(const void* plugin_config, void* plugin_state,
       ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {
-      const MyPluginConfig* pc = (MyPluginConfig*) plugin_config;
-      MyPluginState* ps = (MyPluginState*)plugin_state;
+      const my_plugin_plugin_config* pc = (my_plugin_plugiConfig*) plugin_config;
+      my_plugin_plugin_state* ps = (my_plugin_plugin_state*)plugin_state;
 
       switch(ps->state) {
-        case 0:    
+        case 0:
           //requesting sensor to perform read, using pc->request_pin_number
           zepto_set_pin(pc->request_pin_number,1);
 
           //waiting for sensor to indicate that data is ready
           zepto_indicate_waiting_for_pin(waiting_for,pc->ack_pin_number,1);
-          return WAITING_FOR;      
-        
+          return WAITING_FOR;
+
         case 1:
-          uint16_t data_read = zepto_read_from_pins(pc->reply_pin_numbers,4);   
+          uint16_t data_read = zepto_read_from_pins(pc->reply_pin_numbers,4);
           zepto_reply_append_byte(reply,data_read);
           return 0;
 
