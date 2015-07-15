@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.16e
+:Version:   v0.0.17
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -39,12 +39,18 @@ SmartAnthill mesh network is a heterogeneous network. In particular, on the way 
 
 SAMP is optimized based on the following assumptions:
 
-* SAMP relies on all communications being between Central Controller and Device (no Device-to-Device communications)
+* SAMP relies on all communications being between Central Controller and Device (no Device-to-Device communications); no other communications are currently supported
 * SAMP aims to optimize "last mile" traffic (between last Retransmitting Device and target Device) while paying less attention to Central-Controller-to-Retransmitting-Device and Retransmitting-Device-to-Retransmitting-Device traffic. This is based on the assumption that the Retransmitting Devices usually have significantly less power restrictions (for example, are mains-powered rather than battery-powered).
 * SAMP combines data with route requests
 * SAMP allows to send "urgent" data packets, which sacrifice traffic and energy consumption for the best possible delivery speed
-* SAMP relies on upper-layer protocol (SAGDP) to send retransmits in case if packet has not been delivered, and to provide SAMP with an information about retransmit number (i.e., original packet having retransmit-number=0, first retransmit having retransmit-number=1, and so on).
-* SAMP relies on upper-layer protocol (SAGDP) to provide information if the Device on the other side is required to have it's transmitter on for upper-layer protocol purposes. For SAGDP, there are states which do guarantee this (in fact, it stands in almost all SAGDP states except for IDLE).
+* SAMP relies on pre-existence of Routing Tables (see below) on all relevant Retransmitting Nodes. Communicating Routing Tables MAY be implemented over the upper-layer protocol such as SACCP
+
+  + This is done because of sensitivity of Routing Tables; with upper-layer protocol, Routing Tables can be communicated securely
+  + It doesn't create a chicken-and-egg problem, as SAMP provides a way to reach any reachable Retransmitting Node without a Routing Table on it; as soon as Retransmitting Node is reachable via SAMP, upper-layer protocol such as SACCP can be used to create/update Routing Table on the Retransmitting Node.
+  + Technically, updating Routing Tables is not a part of SAMP; however, a protocol of updating Routing Tables over SACCP_ROUTING_DATA messages is provided below as an example.
+
+* SAMP relies on upper-layer protocol (such as SAGDP) to send retransmits in case if packet has not been delivered, and to provide SAMP with an information about retransmit number (i.e., original packet having retransmit-number=0, first retransmit having retransmit-number=1, and so on).
+* SAMP relies on upper-layer protocol (such as SAGDP) to provide information if the Device on the other side is required to have it's transmitter on for upper-layer protocol purposes. For SAGDP, there are states which do guarantee this (in fact, it stands in almost all SAGDP states except for IDLE).
 
 SAMP has the following types of actors: Root (normally implemented by Central Controller), Retransmitting Device, and non-Retransmitting Device. All these actors are collectively named Nodes.
 
@@ -100,6 +106,52 @@ All Routing Tables on both Retransmitting and non-Retransmitting Devices are ess
 In addition, on Rentransmitting Devices the following parameters are kept (and updated by Root): MAX-TTL, FORWARD-TO-SANTA-DELAY-UNIT, FORWARD-TO-SANTA-DELAY, NODE-MAX-RANDOM-DELAY-UNIT, and NODE-MAX-RANDOM-DELAY.
 
 TODO: no mobile non-Retransmitting (TODO reporting 'mobile' in pairing CAPABILITIES, plus heuristics), priorities (low->high): non-Retransmitting, Retransmitting.
+
+Broken Routing Tables
+^^^^^^^^^^^^^^^^^^^^^
+
+Despite that Routing Tables are updated only by authenticated upper-layer messages, SAMP does recognize that Routing Tables may become broken during operation. To deal with it, two separate procedures are used. One such procedure is intended for destination Devices (either Retransmitting or non-Retransmitting), and is described within "Unicast" section below. Another procedure is intended for Retransmitting Devices, and is described in "Guaranteed Unicast" section below.
+
+Communicating Routing Table Information over SACCP
+--------------------------------------------------
+
+As described above, SAMP relies on Routing Table information being available on all relevant Retransmitting Nodes. To ensure that this information is transmitted in secure manner, it SHOULD be transmitted by an upper-layer secure (and guaranteed-delivery) protocol such as SACCP. As described above, this doesn't create a chichen-and-egg problem, as each Retransmitting Node can be accessed via SAMP regardless of Routing Tables present (or even badly broken) on the Retransmitting Node in question; and as soon as Retransmitting Node can be accessed via SAMP - upper-layer protocol such as SACCP can be used to update Routing Table on the Retransmitting Node. 
+
+Technically, protocol for communicating Routing Table information is not a part of SAMP. However, in this section we provide an example implementation of such protocol over SACCP_ROUTING_DATA packets.
+
+SACCP_ROUTING_DATA supports the following packets:
+
+Route-Update-Request: **\| FLAGS \| OPTIONAL-EXTRA-HEADERS \| OPTIONAL-ORIGINAL-RT-CHECKSUM \| OPTIONAL-MAX-TTL \| OPTIONAL-FORWARD-TO-SANTA-DELAY-UNIT \| OPTIONAL-FORWARD-TO-SANTA-DELAY \| OPTIONAL-MAX-NODE-RANDOM-DELAY-UNIT \| OPTIONAL-MAX-NODE-RANDOM-DELAY \| MODIFICATIONS-LIST \| RESULTING-RT-CHECKSUM \|**
+
+where FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] being DISCARD-RT-FIRST (indicating that before processing MODIFICATIONS-LIST, the whole Routing Table must be discarded), bit[1] being UPDATE-MAX-TTL flag, bit[2] being UPDATE-FORWARD-TO-SANTA-DELAY flag, bit[3] being UPDATE-MAX-NODE-RANDOM-DELAY flag, and bits[4..] reserved (MUST be zeros); OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above; Target-Address is the Target-Address field; OPTIONAL-ORIGINAL-RT-CHECKSUM is present only if DISCARD-RT-FIRST flag is not set; OPTIONAL-ORIGINAL-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table checksum before the change is applied; if OPTIONAL-ORIGINAL-RT-CHECKSUM doesn't match to that of the Routing Table - it is TODO Routing-Error; OPTIONAL-MAX-TTL is present only if UPDATE-MAX-TTL flag is present, and is a 1-byte field, OPTIONAL-FORWARD-TO-SANTA-DELAY-UNIT and OPTIONAL-FORWARD-TO-SANTA-DELAY are present only if UPDATE-FORWARD-TO-SANTA-DELAY flag is present, and both are Encoded-Signed-Int<max=2> fields, OPTIONAL-MAX-NODE-RANDOM-DELAY-UNIT and OPTIONAL-MAX-NODE-RANDOM-DELAY are present only if UPDATE-MAX-NODE-RANDOM-DELAY flag is present, and both are Encoded-Unsigned-Int<max=2> fields, MODIFICATIONS-LIST described below; RESULTING-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table Checksum after the change has been applied (if RESULTING-RT-CHECKSUM doesn't match - it is TODO Routing-Error). 
+
+Route-Update-Request is always accompanied with SACCP "additional bits" equal to 0x0 (see :ref:`saccp` for details on SACCP_ROUTING_DATA "additional bits").
+
+MODIFICATIONS-LIST consists of entries, where each entry is one of the following: 
+
+* **\| ADD-OR-MODIFY-LINK-ENTRY-AND-LINK-ID \| BUS-ID \| NEXT-HOP-ACKS-AND-INTRA-BUS-ID-PLUS-1 \| OPTIONAL-LINK-DELAY-UNIT \| OPTIONAL-LINK-DELAY \| OPTIONAL-LINK-DELAY-ERROR \|**
+
+  where ADD-OR-MODIFY-LINK-ENTRY-AND-LINK-ID is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] marks the end of MODIFICATIONS-LIST, bits[1..2] equal to a 2-bit constant ADD_OR_MODIFY_LINK_ENTRY, bit[3] being LINK-DELAY-PRESENT flag, and bits[4..] equal to LINK-ID; BUS-ID is an Encoded-Unsigned-Int<max=2> field, NEXT-HOP-ACKS-AND-INTRA-BUS-ID is an Encoded-Unsigned-Int<max=4> bitfield substrate, with bit[0] being a NEXT-HOP-ACKS flag for the Routing Table Entry, and bits[1..] representing INTRA-BUS-ID-PLUS-1 (INTRA-BUS-ID-PLUS-1 == 0 means that INTRA-BUS-ID==NULL, and therefore that the link entry is an incoming link entry; otherwise, `INTRA-BUS-ID = INTRA-BUS-ID-PLUS-1 - 1`); OPTIONAL-LINK-DELAY-UNIT, OPTIONAL-LINK-DELAY, and OPTIONAL-LINK-DELAY-ERROR are present only if LINK-DELAY-PRESENT flag is set, and are Encoded-Unsigned-Int<max=2> fields. NB: by default, link delays are not set by Root, and are set based on device's internal per-bus settings.
+
+* **\| DELETE-LINK-ENTRY-AND-LINK-ID \|**
+
+  where DELETE-LINK-ENTRY-AND-LINK-ID is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] marks the end of MODIFICATIONS-LIST, bits[1..2] equal to a 2-bit constant DELETE_LINK_ENTRY, and bits[3..] equal to LINK-ID.
+
+* **\| ADD-OR-MODIFY-ROUTE-ENTRY-AND-LINK-ID \| TARGET-ID \|**
+
+  where ADD-OR-MODIFY-ROUTE-ENTRY-AND-LINK-ID is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] marks the end of MODIFICATIONS-LIST, bits[1..2] equal to a 2-bit constant ADD_OR_MODIFY_ROUTE_ENTRY, and bits[3..] equal to LINK-ID; TARGET-ID is an Encoded-Unsigned-Int<max=2> field.
+
+* **\| DELETE-ROUTE-ENTRY-AND-TARGET-ID \|**
+
+  where DELETE-ROUTE-ENTRY-AND-TARGET-ID is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] marks the end of MODIFICATIONS-LIST, bits[1..2] equal to a 2-bit constant DELETE_ROUTE_ENTRY, and bits[3..] equal to TARGET-ID. Note that DELETE-ROUTE-ENTRY-AND-TARGET-ID is the only MODIFICATIONS-LIST entry first field which includes TARGET-ID rather than LINK-ID.
+
+Route-Update-Request packets always go from Root to Device. Route-Update-Request MAY be sent either to Retransmitting or to non-Retransmitting Device; however (as with any SACCP packet), if sending it to a non-Retransmitting Device, Root MUST be sure that non-Retransmitting Device has it's transmitter turned on (because upper-layer protocol state guarantees it).
+
+Route-Update-Response: **\| ERROR-CODE \|** TODO: more error info if any
+
+where ERROR-CODE is an Encoded-Unsigned-Int<max=1> field, containing error code. ERROR-CODE = 0 means that Route-Update-Request has been completed successfully.
+
+Route-Update-Response is always accompanied with SACCP "additional bits" equal to 0x0 (see :ref:`saccp` for details on SACCP_ROUTING_DATA "additional bits").
 
 Addressing
 ----------
@@ -198,6 +250,12 @@ Whenever a Uni-Cast packet (the one with a Target-Address field) is received by 
 * if any of VIA fields in the Target-Address is the same as the next hop - remove all such VIA fields from the Target-Address
 * find bus for the next hop and send modified packet (see on TTL and VIA modifications above) over this bus
 
+Processing on Destination and Broken Routing Table
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As described above, SAMP does recognize that Routing Tables may become broken during operation. On a destination Device, whenever Device attempts retransmit #TODO of the message, Device sends it as a Samp-To-Santa message, ignoring local Routing Table completely; TODO: add optional-header with RT-CHECKSUM for Samp-To-Santa messages?
+
+
 Guaranteed Uni-Cast
 ^^^^^^^^^^^^^^^^^^^
 
@@ -224,9 +282,10 @@ If the next hop has NEXT-HOP-ACKS flag set in the Routing Table, after sending t
 * if the packet has anything except for Root as Target-Address (and therefore is coming from Root):
 
   + packet Samp-Routing-Error containing TBD Routing-Error is sent (towards Root)
+  + to deal with potentially broken Routing Table on this Retransmitting Device, this Samp-Routing-Error packet MUST contain TODO optional-header with RT-Checksum
   + the packet which wasn't delivered, doesn't need to be preserved (TODO: identify packet which has been lost within Routing-Error)
 
-If the packet doesn't have LOOP-ACK extra header, next hop doesn't have NEXT-HOP-ACKS flag set in the Routing Table, then Retransmitting Device:
+If the packet doesn't have LOOP-ACK extra header, and next hop doesn't have NEXT-HOP-ACKS flag set in the Routing Table, then Retransmitting Device:
 
 * adds LOOP-ACK extra header (which is described below) to the packet (if it is not already present)
 * sends modified packet using "bus unicast" operation
@@ -297,11 +356,10 @@ Most of SAMP packets have OPTIONAL-EXTRA-HEADERS field. It has a generic structu
   where GENERIC-EXTRA-HEADER-FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-HEADER list, bits[1..2] equal to 2-bit constant GENERIC_EXTRA_HEADER_FLAGS, and further bits interpreted depending on packet type:
 
   + bit[3]. If the packet type is any packet type except for Samp-Unicast-Data-Packet - the bit is MORE-PACKETS-FOLLOW flag. For Samp-Unicast-Data-Packet - RESERVED (MUST be zero)
-  + bit[4]. If the packet type is Samp-Unicast-Data-Packet, Samp-From-Santa-Data-Packet, or Samp-To-Santa-Data-Or-Error-Packet - the bit is IS-PROBE flag. If the packet type is Samp-To-Santa-Data-Or-Error-Packet or Samp-Forward-To-Santa-Data-Or-Error-Packet - the bit is IS_ERROR (indicating that PAYLOAD is in fact Routing-Error). For Samp-Route-Update-Packet - the bit is DISCARD-RT-FIRST (indicating that before processing MODIFICATIONS-LIST, the whole Routing Table must be discarded). For Samp-Ack-Nack-Packet - the bit is IS-LOOP-ACK flag. For other packet types - RESERVED (MUST be zero)
-  + bit[5]. If the packet type is Samp-From-Santa-Data-Packet, the bit is an EXPLICIT-TIME-SCHEDULING flag. If the packet type is Samp-Route-Update-Packet, it is an UPDATE-MAX-TTL flag. For Samp-Ack-Nack-Packet the bit is IS-NACK flag. For other packet types - RESERVED (MUST be zero)
-  + bit[6]. If the packet type is Samp-Route-Update-Packet, the bit is an UPDATE-FORWARD-TO-SANTA-DELAY flag. If the packet type is Samp-From-Santa-Data-Packet - it is a TARGET-COLLECT-LAST-HOPS flag. For other packet types - RESERVED (MUST be zero)
-  + bit[7]. If the packet type is Samp-Route-Update-Packet, the bit is an UPDATE-MAX-NODE-RANDOM-DELAY flag. For other packet types - RESERVED (MUST be zero)
-  + bits [8..] - RESERVED (MUST be zeros)
+  + bit[4]. If the packet type is Samp-Unicast-Data-Packet, Samp-From-Santa-Data-Packet, or Samp-To-Santa-Data-Or-Error-Packet - the bit is IS-PROBE flag. If the packet type is Samp-To-Santa-Data-Or-Error-Packet or Samp-Forward-To-Santa-Data-Or-Error-Packet - the bit is IS_ERROR (indicating that PAYLOAD is in fact Routing-Error). For Samp-Ack-Nack-Packet - the bit is IS-LOOP-ACK flag. For other packet types - RESERVED (MUST be zero)
+  + bit[5]. If the packet type is Samp-From-Santa-Data-Packet, the bit is an EXPLICIT-TIME-SCHEDULING flag. For Samp-Ack-Nack-Packet the bit is IS-NACK flag. For other packet types - RESERVED (MUST be zero)
+  + bit[6]. If the packet type is Samp-From-Santa-Data-Packet - it is a TARGET-COLLECT-LAST-HOPS flag. For other packet types - RESERVED (MUST be zero)
+  + bits [7..] - RESERVED (MUST be zeros)
 
 * **\| GENERIC-EXTRA-HEADER-COLLISION-DOMAIN \| COLLISION-DOMAIN-ID-AND-FLAG \| COLLISION-DOMAIN-T0 \| COLLISION-DOMAIN-T1 \| ... \|**
 
@@ -398,30 +456,6 @@ where SAMP-ROUTING-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfie
 
 On receiving Samp-Routing-Error-Packet, it is processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Guaranteed Uni-Cast' mode.
 
-Samp-Route-Update-Packet: **\| SAMP-ROUTE-UPDATE-PACKET-FLAGS-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| Target-Address \| OPTIONAL-ORIGINAL-RT-CHECKSUM \| OPTIONAL-MAX-TTL \| OPTIONAL-FORWARD-TO-SANTA-DELAY-UNIT \| OPTIONAL-FORWARD-TO-SANTA-DELAY \| OPTIONAL-MAX-NODE-RANDOM-DELAY-UNIT \| OPTIONAL-MAX-NODE-RANDOM-DELAY \| MODIFICATIONS-LIST \| RESULTING-RT-CHECKSUM \|**
-
-where SAMP-ROUTE-UPDATE-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_ROUTE_UPDATE_PACKET, bit[4] being EXTRA-HEADERS-PRESENT, and bits[5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above; Target-Address is the Target-Address field; OPTIONAL-ORIGINAL-RT-CHECKSUM is present only if DISCARD-RT-FIRST flag is not set; OPTIONAL-ORIGINAL-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table checksum before the change is applied; if OPTIONAL-ORIGINAL-RT-CHECKSUM doesn't match to that of the Routing Table - it is TODO Routing-Error; OPTIONAL-MAX-TTL is present only if UPDATE-MAX-TTL flag is present, and is a 1-byte field, OPTIONAL-FORWARD-TO-SANTA-DELAY-UNIT and OPTIONAL-FORWARD-TO-SANTA-DELAY are present only if UPDATE-FORWARD-TO-SANTA-DELAY flag is present, and both are Encoded-Signed-Int<max=2> fields, OPTIONAL-MAX-NODE-RANDOM-DELAY-UNIT and OPTIONAL-MAX-NODE-RANDOM-DELAY are present only if UPDATE-MAX-NODE-RANDOM-DELAY flag is present, and both are Encoded-Unsigned-Int<max=2> fields, MODIFICATIONS-LIST described below; RESULTING-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table Checksum after the change has been applied (if RESULTING-RT-CHECKSUM doesn't match - it is TODO Routing-Error). 
-
-MODIFICATIONS-LIST consists of entries, where each entry is one of the following: 
-
-* **\| ADD-OR-MODIFY-LINK-ENTRY-AND-LINK-ID \| BUS-ID \| NEXT-HOP-ACKS-AND-INTRA-BUS-ID-PLUS-1 \| OPTIONAL-LINK-DELAY-UNIT \| OPTIONAL-LINK-DELAY \| OPTIONAL-LINK-DELAY-ERROR \|**
-
-  where ADD-OR-MODIFY-LINK-ENTRY-AND-LINK-ID is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] marks the end of MODIFICATIONS-LIST, bits[1..2] equal to a 2-bit constant ADD_OR_MODIFY_LINK_ENTRY, bit[3] being LINK-DELAY-PRESENT flag, and bits[4..] equal to LINK-ID; BUS-ID is an Encoded-Unsigned-Int<max=2> field, NEXT-HOP-ACKS-AND-INTRA-BUS-ID is an Encoded-Unsigned-Int<max=4> bitfield substrate, with bit[0] being a NEXT-HOP-ACKS flag for the Routing Table Entry, and bits[1..] representing INTRA-BUS-ID-PLUS-1 (INTRA-BUS-ID-PLUS-1 == 0 means that INTRA-BUS-ID==NULL, and therefore that the link entry is an incoming link entry; otherwise, `INTRA-BUS-ID = INTRA-BUS-ID-PLUS-1 - 1`); OPTIONAL-LINK-DELAY-UNIT, OPTIONAL-LINK-DELAY, and OPTIONAL-LINK-DELAY-ERROR are present only if LINK-DELAY-PRESENT flag is set, and are Encoded-Unsigned-Int<max=2> fields. NB: by default, link delays are not set by Root, and are set based on device's internal per-bus settings.
-
-* **\| DELETE-LINK-ENTRY-AND-LINK-ID \|**
-
-  where DELETE-LINK-ENTRY-AND-LINK-ID is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] marks the end of MODIFICATIONS-LIST, bits[1..2] equal to a 2-bit constant DELETE_LINK_ENTRY, and bits[3..] equal to LINK-ID.
-
-* **\| ADD-OR-MODIFY-ROUTE-ENTRY-AND-LINK-ID \| TARGET-ID \|**
-
-  where ADD-OR-MODIFY-ROUTE-ENTRY-AND-LINK-ID is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] marks the end of MODIFICATIONS-LIST, bits[1..2] equal to a 2-bit constant ADD_OR_MODIFY_ROUTE_ENTRY, and bits[3..] equal to LINK-ID; TARGET-ID is an Encoded-Unsigned-Int<max=2> field.
-
-* **\| DELETE-ROUTE-ENTRY-AND-TARGET-ID \|**
-
-  where DELETE-ROUTE-ENTRY-AND-TARGET-ID is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] marks the end of MODIFICATIONS-LIST, bits[1..2] equal to a 2-bit constant DELETE_ROUTE_ENTRY, and bits[3..] equal to TARGET-ID. Note that DELETE-ROUTE-ENTRY-AND-TARGET-ID is the only MODIFICATIONS-LIST entry first field which includes TARGET-ID rather than LINK-ID.
-
-Samp-Route-Update-Packets always go in one direction - from Root to Device; it's Target-Address MUST NOT be 0; it is processed as described in Uni-Cast processing section above, and is always sent in 'Guaranteed Uni-Cast' mode. Samp-Route-Update-Packet MAY be sent either to Retransmitting or to non-Retransmitting Device; however, if sending it to a non-Retransmitting Device, Root MUST be sure that non-Retransmitting Device has it's transmitter turned on (because upper-layer protocol state guarantees it).
-
 Samp-Ack-Nack-Packet: **\| SAMP-ACK-NACK-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| Target-Address \| ACK-CHESKSUM \|**
 
 where SAMP-ACK-NACK-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_ACK_NACK_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set, LAST-HOP is an id of the transmitting node, Target-Address is described above, and ACK-CHECKSUM is a 2-byte field containing SACHECKSUM-16 of the packet being acknowledged (TODO: specify exactly).
@@ -452,11 +486,9 @@ As described above, type of Samp packet is always defined by bits [0..3] of the 
 +-------------------------------------+--------------------------------------------+--------------------------------------------+
 | 1                                   | SAMP_ROUTING_ERROR_PACKET                  | Samp-Routing-Error-Packet                  |
 +-------------------------------------+--------------------------------------------+--------------------------------------------+
-| 1                                   | SAMP_ROUTE_UPDATE_PACKET                   | Samp-Route-Update-Packet                   |
-+-------------------------------------+--------------------------------------------+--------------------------------------------+
 | 1                                   | SAMP_ACK_NACK_PACKET                       | Samp-Ack-Nack-Packet                       |
 +-------------------------------------+--------------------------------------------+--------------------------------------------+
-| 1                                   | 2 more values                              | RESERVED                                   |
+| 1                                   | 3 more values                              | RESERVED                                   |
 +-------------------------------------+--------------------------------------------+--------------------------------------------+
 
 Packet Urgency
@@ -479,7 +511,7 @@ Whenever Device is in PRE-PAIRING state (see :ref:`sapairing` for details on the
 * As soon as Device pairing is completed (and Root sets NODE-ID for the Device), Root SHOULD:
 
   + calculate optimal route to the Device
-  + change Routing Tables for all the Retransmitting Devices alongside the optimal route (using Samp-Route-Update packets)
+  + change Routing Tables for all the Retransmitting Devices alongside the optimal route (for example, using SACCP_ROUTING_DATA packets as described above)
   + as soon as confirmations from all the Retransmitting Devices about route updates are obtained, Root SHOULD start using Device's "paired addressing" for all the communications onwards with the Device.
 
 TODO: Samp-Retransmit (to next-hop Retransmitting Device on RETRANSMIT-ON-NO-RETRANSMIT)
