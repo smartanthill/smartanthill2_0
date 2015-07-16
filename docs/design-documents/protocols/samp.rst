@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.18
+:Version:   v0.0.18a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -392,7 +392,7 @@ SAMP Combined-Packet
 
 In general, SAMP passes SAMP Combined-Packets over underlying protocol. SAMP Combined-Packet consists of one or more SAMP Packets as described below; all SAMP Packets except for last one in SAMP Combined-Packet, have MORE-PACKETS-FOLLOW flag set (depending on the packet type, this flag is either passed as a part of the first field, or as a part of GENERAL-EXTRA-HEADERS-FLAGS, see details below).
 
-When combining packets, SAMP MUST take into account both MTU "hard restrictions" and MTU "soft restrictions" of the appropriate SADLP-\* protocol.
+When combining packets, SAMP MUST take into account both "MTU Hard Limits" and "MTU Soft Limits" of the appropriate SADLP-\* protocol.
 
 SAMP Packets
 ------------

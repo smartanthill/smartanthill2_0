@@ -27,7 +27,7 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.4.2
+:Version:   v0.4.3
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -61,6 +61,32 @@ SADLP-RF Packets and Line Codes
 FSK modulation used by SADLP-RF, does not require AC/DC balance. However, it requires to have at least one edge per N*tau (to keep synchronization). To be usable with a wide range of transmitters/receivers, we aim for strict guarantees of at least one edge per 16*tau (as suggested, for example, for a worst-case in RFM69 manual), and for "white noise" properties for pre-SCRAMBLED packets (see :ref:`sascrambling` document for details on SCRAMBLING). For those SADLP-RF packets which allow for intra-packet de-synchronization detection (in particular, for HAMM32-based packets), one edge per 32*tau is acceptable.
 
 The guarantees above are kept for all SADLP-RF Packets, as described below. As a result, SADLP-RD does not need any additional line codes, and SADLP-RF Packets MUST be transmitted directly over FSK (after preamble and sync word, as described above above).
+
+SADLP-RF MTU Limits
+-------------------
+
+For RF, too long packets MAY increase chances of the packet being incorrect; this applies (though to the less extent) to the error-corrected packets.
+
+*NB: numbers below are EXTREMELY preliminary, and are subject to change based on real-world experiments*
+
+For ENCODING-TYPE=PLAIN16
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Hard Limit: 128 bytes.
+Soft Limit: 64 bytes.
+
+For ENCODING-TYPE=HAMMING-32-CORRECTION
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Hard Limit: 256 bytes.
+Soft Limit: 128 bytes.
+
+For ENCODING-TYPE=HAMMING-32-2D-CORRECTION
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Hard Limit: 512 bytes.
+Soft Limit: 256 bytes.
+
 
 Non-paired Addressing for RF Buses
 ----------------------------------
