@@ -27,13 +27,15 @@
 SmartAnthill SCRAMBLING procedure
 =================================
 
-:Version:   v0.5.3
+:Version:   v0.5.3a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
 SmartAnthill SCRAMBLING procedure aims to provide some extra protection when data is transmitted in open (in particular, over wireless or over the Internet). **SCRAMBLING procedure does not provide security guarantees** in a strict sense, but might hide certain details (such as source/destination addresses) and does help against certain classes of DoS attacks. Because of the lack of security guarantees, SCRAMBLING procedure SHOULD NOT be used as a sole encryption protocol (using it over SASP is fine).
 
 SCRAMBLING procedure requires both sides to share one AES-128 key. **SCRAMBLING key MUST be separate and independent from any other key in the system, in particular, from SASP keys.**
+
+Within SmartAnthill protocol stack, to allow for arbitrary moving Devices, SCRAMBLING key is the same for the whole SmartAnthill PAN. *This is unlike SASP keys, which are unique per-device.*
 
 SCRAMBLING procedure is intended to be used as the outermost packet wrapper which is possible for an underlying protocol. Within SmartAnthill Protocol Stack, SCRAMBLING procedure is OPTIONALLY used by SAoIP protocol as described in :ref:`saoip` document. In addition, SADLP-\* protocols, especially those working over wireless L1 protocols, SHOULD use SCRAMBLING procedure to hide as much information as possible. 
 
