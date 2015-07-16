@@ -39,7 +39,10 @@ class Logger(object):
         self.system = system
 
         if not level:
-            level = ConfigProcessor().get("logger.level")
+            try:
+                level = ConfigProcessor().get("logger.level")
+            except TypeError:
+                level = Level.DEBUG
 
         self.set_level(level)
 
@@ -105,6 +108,6 @@ class Console(deque):
             int(time.time()),
             data['system'].split("#")[0],
             level,
-            data['message'][0] if isinstance(data['message'], tuple)
-            and len(data['message']) else data['message']
+            data['message'][0] if isinstance(data['message'], tuple) and
+            len(data['message']) else data['message']
         ))
