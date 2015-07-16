@@ -76,7 +76,7 @@ class Device(object):
         ]))
         return self.run_program(program)
 
-    def run_program(self, program):
+    def run_program(self, program):  # pylint: disable=R0201
         return succeed(program)
         # assert isinstance(type_, ValueConstant)
         # if type_ in self.operations:
