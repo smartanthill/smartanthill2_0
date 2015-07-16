@@ -31,7 +31,9 @@ setup(
         # "smartanthill_zc",
         "platformio>=2.2.0",
         "pyserial",
-        "twisted>=14.1"
+        "twisted>=14.1",
+        "txws",
+        "six",  # required by txws but not listed in it's requirements
     ],
     packages=find_packages()+["twisted.plugins"],
     package_data={"smartanthill": ["*.json"]},

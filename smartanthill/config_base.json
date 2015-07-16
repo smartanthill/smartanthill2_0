@@ -43,6 +43,14 @@
         {
           "enabled": true,
           "port": 8131
+        },
+        "websocket": {
+          "enabled": true,
+          "port": 8132
+        },
+        "socket": {
+          "enabled": true,
+          "port": 8133
         }
       }
     },
