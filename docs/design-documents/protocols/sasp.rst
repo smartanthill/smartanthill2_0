@@ -27,7 +27,7 @@
 SmartAnthill Security Protocol (SASP)
 =====================================
 
-:Version:   v0.2.1
+:Version:   v0.2.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -88,11 +88,11 @@ where:
 2. Security choices
 -------------------
 
-The core of SASP is packet encryption/decryption and authentication. These processes are based on GCM algorithm (see [GCM]_). Design choices with respect the above-mentioned algorithm are:
+The core of SASP is packet encryption/decryption and authentication. These processes are based on EAX algorithm (see [EAX]_). Design choices with respect the above-mentioned algorithm are:
 
   * Encryption method: AES-256
   * Tag size: 128 bit
-  * GCM Nonce size: 49 bit, in particular:
+  * EAX Nonce size: 49 bit, in particular:
      
      * Nonce Varying Part: 47 bit [1]_
      * Destination Flag: 1 bit
@@ -113,24 +113,24 @@ To reduce the amount of data transferred, Peer-Distinguishing Flag is not actual
 2.1 SASP Nonces
 ^^^^^^^^^^^^^^^
 
-In SASP, nonce varying part is always increased, and never goes back. This is a critical requirement for SASP to be secure (both to guarantee nonce being unique, which is required for GCM to be secure, and to avoid replay attacks).
+In SASP, nonce varying part is always increased, and never goes back. This is a critical requirement for SASP to be secure (both to guarantee nonce being unique, which is required for EAX to be secure, and to avoid replay attacks).
 
 
 3. Security Guarantees
 ----------------------
 
-Security of SASP relies on security of GCM, which is proven as long as underlying cipher (AES128) is secure, and as long as nonces are unique per key. 
+Security of SASP relies on security of EAX, which is proven as long as underlying cipher (AES128) is secure, and as long as nonces are unique per key. 
 
 Within SASP, keys MUST be unique for each communication pair, and uniqueness of nonces for the pair is guaranteed by:
 
 * Peer-Distinguishing Flag
 * for packets sent by each peer, by "Nonce to use for Sending" (NFS)
 
-GCM as such doesn't guarantee protection from replay attacks, however as nonces are unique, replay attack is not possible as long as SASP drops packets with repeated nonces. SASP does drop packets with repeated nonces, with the following exception:
+EAX as such doesn't guarantee protection from replay attacks, however as nonces are unique, replay attack is not possible as long as SASP drops packets with repeated nonces. SASP does drop packets with repeated nonces, with the following exception:
 
 * Error "Old Nonce" Message. For 'Error "Old Nonce" Message, SASP does not check the nonce (this is necessary to avoid potential deadlocks). However, replay attack based on these messages is not possible, because SASP does not allow NLW to decrease, and therefore all replay packets will be ignored by SASP.
 
-Therefore, SASP is secure (because of GCM and AES128 being secure) and also provides protection from replay attacks.
+Therefore, SASP is secure (because of EAX and AES128 being secure) and also provides protection from replay attacks.
 
 4. Scenarios
 ------------
@@ -335,7 +335,7 @@ For SASP security, it is critical that nonces are never re-used and are always i
 
 Basic secure implementation is rather simple:
 
-* Whenever a new packet is sent, an update value of NSF MUST be **saved and committed in in persistent storage**; this commit MUST be performed **before** the packet is actually sent over the air. This is necessary to keep GCM security guarantees.
+* Whenever a new packet is sent, an update value of NSF MUST be **saved and committed in in persistent storage**; this commit MUST be performed **before** the packet is actually sent over the air. This is necessary to keep EAX security guarantees.
 * Whenever a packet with status "new" is received, an updated value of NLW MUST be **saved and committed in persistent storage**; this commit MUST be performed **before** further message processing. This is necessary to avoid using an obsolete value of NLW in case of "dirty" reboot (and thus to avoid a potential for replay attacks). 
 
 10.1.2 Optimized Implementation
@@ -377,5 +377,5 @@ Whenever an entity-implementing-SASP (such as "SmartAnthill Central Controller")
 References
 ----------
 
-.. [GCM] http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-spec.pdf
+.. [EAX] http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/eax/eax-spec.pdf
 
