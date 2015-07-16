@@ -27,7 +27,7 @@
 SmartAnthill SCRAMBLING procedure
 =================================
 
-:Version:   v0.5.2
+:Version:   v0.5.3
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -46,7 +46,8 @@ SCRAMBLING procedure is a procedure of taking an input packet of arbitrary size,
 
 SCRAMBLING procedure requires both sides to share one secret AES-128 key. **SCRAMBLING key MUST be independent from any other key in the system, in particular, from SASP key.**
 
-For SCRAMBLING procedure to be efficient (in secure sense), caller SHOULD guarantee that there is a 15-byte block within input packet, where such block is at least statistically unique, and the same block is statistically indistinguishable from white noise. Offset to such a block within the packet is an input *unique-block-offset* parameter for SCRAMBLING procedure. In practice, 15 bytes of SASP tag are used for this purpose.
+
+For SCRAMBLING procedure to be efficient (in secure sense), caller SHOULD guarantee that there is a 16-byte block within input packet, where such block is at least statistically unique, and the same block is statistically indistinguishable from white noise. Offset to such a block within the packet is an input *unique-block-offset* parameter for SCRAMBLING procedure. In practice, SASP tag can be used for this purpose.
 
 SCRAMBLING procedure
 --------------------
@@ -58,9 +59,9 @@ Input of SCRAMBLING procedure is a pre-SCRAMBLING packet, and *unique-block-offs
 
 **\| unencrypted-pre-SCRAMBLING-Data \| encrypted-pre-unique-pre-SCRAMBLING-Data \| encrypted-unique-block \| encrypted-post-unique-pre-SCRAMBLING-Data \|**
 
-where encrypted-unique-block is always 15 bytes in size, and it's offset from the beginning is specified by *unique-block-offset* input parameter, and any of encrypted-pre-unique-pre-SCRAMBLING-Data and encrypted-post-unique-pre-SCRAMBLING-Data can have 0 size.
+where encrypted-unique-block is always 16 bytes in size, and it's offset from the beginning is specified by *unique-block-offset* input parameter, and any of encrypted-pre-unique-pre-SCRAMBLING-Data and encrypted-post-unique-pre-SCRAMBLING-Data can have 0 size.
 
-*unique-block-offset+15* MUST be within pre-SCRAMBLING-Data.
+*unique-block-offset+16* MUST be within pre-SCRAMBLING-Data.
 
 Procedure
 ^^^^^^^^^
@@ -69,7 +70,7 @@ SCRAMBLING procedure works as follows:
 
 1. Form SCRAMBLING-Header according to formatting schema (Default schema is described below, but SADLP-* implementations are allowed to define their own schemas if necessary).
 
-SCRAMBLING-Header, regardless of formatting schema, MUST specify Scrambled-Size and Forced-Padding-Size parameters. Scrambled-Size is a number of 16-byte blocks which were scrambled; *16\*Scrambled-Size* MUST be >= size of SCRAMBLING-Header. For security purposes, sender MAY scramble more bytes (and respectively specify Scrambled-Size) than strictly necessary. However, sender MUST NOT specify Scrambled-Size so that *16\*Scrambled-Size* is more than `sizeof(SCRAMBLING-Header)+sizeof(encrypted-pre-unique-pre-SCRAMBLING-Data)+sizeof(encrypted-post-unique-pre-SCRAMBLING-Data)+15`; otherwise, receiver MUST treat it as a malformed packet. 
+SCRAMBLING-Header, regardless of formatting schema, MUST specify Scrambled-Size and Forced-Padding-Size parameters. Scrambled-Size is a number of 16-byte blocks which were scrambled; *16\*Scrambled-Size* MUST be >= size of SCRAMBLING-Header. For security purposes, sender MAY scramble more bytes (and respectively specify Scrambled-Size) than strictly necessary. However, sender MUST NOT specify Scrambled-Size so that *16\*Scrambled-Size* is more than `sizeof(SCRAMBLING-Header)+sizeof(encrypted-pre-unique-pre-SCRAMBLING-Data)+sizeof(encrypted-post-unique-pre-SCRAMBLING-Data)+16`; otherwise, receiver MUST treat it as a malformed packet. 
 
 2. Form pre-SCRAMBLED packet which has the following format:
 
@@ -85,7 +86,7 @@ If *16\*Scrambled-Size* goes beyond encrypted-post-unique-pre-SCRAMBLING-DATA, r
 Default SCRAMBLING-Header Schema
 ''''''''''''''''''''''''''''''''
 
-Default SCRAMBLING-Header Schema assumes that the size of encrypted-post-unique-pre-SCRAMBLING-Data is always zero (and that therefore *unique-block-offset* parameter is always equal to `pre_SCRAMBLING_packet_size-15`). This occurs when (a) SASP tag is located at the very end of the SASP packet (which is always the case for SASP as described in :ref:`sasp` document), and (b) all protocols below SASP add only headers, and not trailers (which is usually, but not strictly necessarily, the case for DLP protocols).
+Default SCRAMBLING-Header Schema assumes that the size of encrypted-post-unique-pre-SCRAMBLING-Data is always zero (and that therefore *unique-block-offset* parameter is always equal to `pre_SCRAMBLING_packet_size-16`). This occurs when (a) SASP tag is located at the very end of the SASP packet (which is always the case for SASP as described in :ref:`sasp` document), and (b) all protocols below SASP add only headers, and not trailers (which is usually, but not strictly necessarily, the case for DLP protocols).
 
 If the size of encrypted-post-unique-pre-SCRAMBLING-Data is always zero, it means that there is no need to send *unique-block-offset* over the wire, as it can always be calculated on receiving side. Therefore, Default SCRAMBLING-Header Schema is defined as follows:
 
@@ -100,8 +101,10 @@ DESCRAMBLING
 
 Processing of a SCRAMBLED packet ("DESCRAMBLING") is performed in reverse order compared to SCRAMBLING procedure. 
 
-"Streamed" SCRAMBLING
----------------------
+"Streamed" SCRAMBLING (ON HOLD)
+-------------------------------
+
+*NB: "Streamed" SCRAMBLING is not currently used; MAY be reinstated when/if SAoTCP is reinstated*
 
 There are cases, where SCRAMBLED data is intended to be sent over stream (such as TCP stream), other than in individual datagrams. In such cases, "Streamed" SCRAMBLING may be used. "Streamed" SCRAMBLING differs from SCRAMBLING procedure above in the following details:
 
