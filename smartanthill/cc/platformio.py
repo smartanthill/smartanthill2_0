@@ -20,7 +20,6 @@ from shutil import copytree, rmtree
 
 from smartanthill_zc.api import ZeptoBodyPart
 from twisted.internet import utils
-from twisted.internet.defer import Deferred
 from twisted.python.filepath import FilePath
 from twisted.python.util import sibpath
 
@@ -111,22 +110,19 @@ class PlatformIOBuilder(object):
         assert isinstance(project, PlatformIOProject)
         self.project = project
         self.log = Logger("PlatformIO")
-
         self._options = options
-        self._defer = Deferred()
 
     def run(self):
         d = utils.getProcessOutputAndValue(
             "platformio", args=(
-                "--force",
-                "run",
+                "--force", "run",
                 "-vv",
                 "--project-dir", self.project.get_project_dir()
             ),
             env=environ
         )
         d.addBoth(self.on_result)
-        return self._defer
+        return d
 
     def on_result(self, result):
         output = "\n".join(result[0:2])
@@ -134,11 +130,10 @@ class PlatformIOBuilder(object):
         # 3-rd item in tuple is "return code" (index=2)
         if result[2] != 0:
             self.log.error(output)
-            return self._defer.errback(Exception(output))
-        else:
-            self.log.info(output)
+            raise Exception(output)
 
-        self._defer.callback(self.get_firmware_data())
+        self.log.info(output)
+        return self.get_firmware_data()
 
     def get_firmware_data(self):
         env_path = FilePath(self.project.get_env_dir())
@@ -163,15 +158,12 @@ class PlatformIOUploader(object):
         assert isinstance(project, PlatformIOProject)
         self.project = project
         self.log = Logger("PlatformIO")
-
         self._options = options
-        self._defer = Deferred()
 
     def run(self):
         d = utils.getProcessOutputAndValue(
             "platformio", args=(
-                "--force",
-                "run",
+                "--force", "run",
                 "--project-dir", self.project.get_project_dir(),
                 "--target", "uploadlazy",
                 "--upload-port", self._options.get("upload_port")
@@ -179,7 +171,7 @@ class PlatformIOUploader(object):
             env=environ
         )
         d.addBoth(self.on_result)
-        return self._defer
+        return d
 
     def on_result(self, result):
         output = "\n".join(result[0:2])
@@ -187,11 +179,10 @@ class PlatformIOUploader(object):
         # 3-rd item in tuple is "return code" (index=2)
         if result[2] != 0:
             self.log.error(output)
-            return self._defer.errback(Exception(output))
-        else:
-            self.log.info(output)
+            raise Exception(output)
 
-        self._defer.callback({"result": "Please restart device"})
+        self.log.info(output)
+        return {"result": "Please restart device"}
 
 
 def build_firmware(project_dir, platformio_conf, bodyparts, zepto_conf=None):
@@ -226,8 +217,6 @@ def build_firmware(project_dir, platformio_conf, bodyparts, zepto_conf=None):
 
 def upload_firmware(project_dir, platformio_conf, data):
     assert set(["version", "files", "uploadport"]) <= set(data.keys())
-
-    # @TODO install platform just with UPLOADER
 
     pio = PlatformIOProject(project_dir, platformio_conf, clone_embedded=False)
     env_dir = pio.get_env_dir()
