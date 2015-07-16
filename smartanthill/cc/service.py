@@ -19,26 +19,26 @@ from tempfile import mkdtemp
 
 from twisted.application.internet import TCPServer  # pylint: disable=E0611
 from twisted.application.service import MultiService
-from twisted.internet.defer import maybeDeferred
 from twisted.python import log, usage
 from twisted.python.failure import Failure
-from twisted.python.filepath import FilePath
 from twisted.web import server
 from twisted.web._responses import BAD_REQUEST, INTERNAL_SERVER_ERROR
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
 from smartanthill import __version__
-from smartanthill.cc.compiler import PlatformIOBuilder
+from smartanthill.cc import platformio
+from smartanthill.device.board.base import BoardFactory
+from smartanthill.device.device import Device
+from smartanthill.exception import DeviceUnknownPlugin
 
 
 class WebCloud(Resource):
 
     isLeaf = True
 
-    def __init__(self, pioenvs_dir):
+    def __init__(self):
         Resource.__init__(self)
-        self.pioenvs_dir = pioenvs_dir
 
     def render_OPTIONS(self, request):  # pylint: disable=R0201
         """ Preflighted request """
@@ -54,26 +54,32 @@ class WebCloud(Resource):
         try:
             data = json.loads(request.content.read())
             log.msg(str(data))
-            assert "pioenv" in data
-            assert "defines" in data
+            assert set(["boardId", "bodyparts"]) <= set(data.keys())
 
-            pb = PlatformIOBuilder(self.pioenvs_dir, data['pioenv'])
-            for k, v in data['defines'].items():
-                pb.append_define(k, v)
-
-            d = maybeDeferred(pb.run)
-            d.addBoth(self.delayed_render, request)
+            # from smartanthill.device.device import Device
+            project_dir = mkdtemp()
+            d = platformio.build_firmware(
+                project_dir,
+                BoardFactory.newBoard(data['boardId']).get_platformio_conf(),
+                Device.bodypartsToObjects(data['bodyparts'])
+            )
+            d.addBoth(self.delayed_render, request, project_dir)
             return NOT_DONE_YET
-        except:
+        except (AssertionError, ValueError, DeviceUnknownPlugin) as e:
+            result = ("<html><body>The request cannot be fulfilled due to bad "
+                      "syntax.</body></html>")
+            if isinstance(e, DeviceUnknownPlugin):
+                result = str(e)
             request.setResponseCode(BAD_REQUEST)
-            return ("<html><body>The request cannot be fulfilled due to bad "
-                    "syntax.</body></html>")
+            return result
 
-    def delayed_render(self, result, request):  # pylint: disable=R0201
+    def delayed_render(self, result, request,  # pylint: disable=R0201
+                       project_dir):
+        rmtree(project_dir)
         if isinstance(result, Failure):
             log.err(str(result.value))
             request.setResponseCode(INTERNAL_SERVER_ERROR)
-            request.write(str(result.value))
+            request.write(str(result.getErrorMessage()))
         else:
             request.setHeader("Content-Type", "application/json")
             request.write(json.dumps(result))
@@ -87,39 +93,20 @@ class SmartAnthillCC(MultiService):
         self.options = options
 
     def startService(self):
-        swc = server.Site(WebCloud(self.options['pioenvsdir']))
+        swc = server.Site(WebCloud())
         TCPServer(self.options['port'], swc).setServiceParent(self)
         MultiService.startService(self)
 
     def stopService(self):
-        rmtree(self.options['pioenvsdir'])
         MultiService.stopService(self)
 
 
 class Options(usage.Options):
     optParameters = [
-        ["port", "p", 8130, "TCP Server port"],
-        ["pioenvsdir", None, None, "The temporary path to PlatformIO ENVs "
-         "directory"]
+        ["port", "p", 8130, "TCP Server port"]
     ]
 
-    compData = usage.Completions(
-        optActions={"pioenvsdir": usage.CompleteDirs()})
-
     longdesc = "SmartAnthill Cloud Compiler (version %s)" % __version__
-
-    def postOptions(self):
-        if not self['pioenvsdir']:
-            self['pioenvsdir'] = mkdtemp()
-
-        pioenvsdir_path = FilePath(self['pioenvsdir'])
-        if not pioenvsdir_path.exists() or not pioenvsdir_path.isdir():
-            raise usage.UsageError("The path to PlatformIO ENVs directory"
-                                   " is invalid")
-        elif pioenvsdir_path.getPermissions().user.shorthand() != 'rwx':
-            raise usage.UsageError("You don't have 'read/write/execute'"
-                                   " permissions to PlatformIO ENVs directory")
-        self['pioenvsdir'] = pioenvsdir_path.path
 
 
 def makeService(options):

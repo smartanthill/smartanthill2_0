@@ -30,10 +30,6 @@ class ConfigKeyError(SABaseException, KeyError):
     MESSAGE = "Invalid config data path '%s'"
 
 
-class NotImplemnetedYet(SABaseException):
-    pass
-
-
 class LiteMQACKFailed(SABaseException):
     pass
 
@@ -85,6 +81,11 @@ class DeviceNotResponding(SABaseException):
 class OperArgInvalid(SABaseException):
 
     MESSAGE = "%s%s: Invalid value '%s'"
+
+
+class DeviceUnknownPlugin(SABaseException):
+
+    MESSAGE = "Unknown plugin with ID '%s'"
 
 
 class APIUnknownRequest(SABaseException):

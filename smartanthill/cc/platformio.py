@@ -13,64 +13,87 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from base64 import b64encode
-from os import environ
-from os.path import getsize, isdir, isfile, join
+import base64
+from os import environ, makedirs
+from os.path import dirname, exists, isdir, join
+from shutil import copytree, rmtree
 
-from platformio.util import get_pioenvs_dir
+from smartanthill_zc.api import ZeptoBodyPart
 from twisted.internet import utils
 from twisted.internet.defer import Deferred
-from twisted.python import log
+from twisted.python.filepath import FilePath
 from twisted.python.util import sibpath
 
 from smartanthill import FIRMWARE_VERSION
+from smartanthill.cc import srcgen
+from smartanthill.log import Logger
 
 
-class PlatformIOBuilder(object):
+class PlatformIOProject(object):
 
-    def __init__(self, pioenvs_dir, env_name):
-        self.pioenvs_dir = pioenvs_dir
-        self.env_name = env_name
+    ENV_NAME = "smartanthill"
 
-        self._defer = Deferred()
+    def __init__(self, project_dir, project_conf, clone_embedded=True):
+        self.project_dir = project_dir
+        self.project_conf = project_conf
+
+        # clone SmartAnthill Embedded Project
+        if clone_embedded:
+            self._clone_project(
+                sibpath(__file__, join("embedded", "firmware")))
+
         self._defines = []
-
-        self.append_define("VERSION_MAJOR", FIRMWARE_VERSION[0])
-        self.append_define("VERSION_MINOR", FIRMWARE_VERSION[1])
-
-    def get_env_dir(self):
-        return join(get_pioenvs_dir(), self.env_name)
-
-    def get_firmware_path(self):
-        if not isdir(self.get_env_dir()):
-            return None
-        for ext in ["bin", "hex"]:
-            firm_path = join(self.get_env_dir(), "firmware." + ext)
-            if isfile(firm_path):
-                return firm_path
-        return None
+        self.append_define("SMARTANTHILL", "%02d%02d%02d" % FIRMWARE_VERSION)
 
     def append_define(self, name, value=None):
         self._defines.append((name, value))
 
-    def run(self):
-        newenvs = dict(
-            PLATFORMIO_ENVS_DIR=self.pioenvs_dir,
-            PLATFORMIO_SRCBUILD_FLAGS=self._get_srcbuild_flags()
-        )
+    def get_project_dir(self):
+        return self.project_dir
 
-        d = utils.getProcessOutputAndValue(
-            "platformio", args=(
-                "--force",
-                "run",
-                "--environment", self.env_name,
-                "--project-dir", sibpath(__file__,
-                                         join("embedded", "firmware"))
-            ),
-            env=environ.update(newenvs)
-        )
-        d.addBoth(self._on_run_callback)
-        return self._defer
+    def get_env_dir(self):
+        return join(self.project_dir, ".pioenvs", self.ENV_NAME)
+
+    def get_src_dir(self):
+        return join(self.project_dir, "src")
+
+    def src_exists(self, path):
+        return exists(join(self.get_src_dir(), path))
+
+    def add_src_content(self, path, content):
+        dst_path = join(self.get_src_dir(), path)
+        if not isdir(dirname(dst_path)):
+            makedirs(dirname(dst_path))
+        with open(dst_path, "w") as f:
+            f.write(content)
+
+    def run(self, target, options=None):
+        self._generate_platformio_ini()
+
+        if target == "upload":
+            return PlatformIOUploader(self, options).run()
+        else:
+            return PlatformIOBuilder(self, options).run()
+
+    def _clone_project(self, dir_path):
+        if isdir(self.project_dir):
+            rmtree(self.project_dir)
+        copytree(dir_path, self.project_dir)
+
+    def _generate_platformio_ini(self):
+        options = self.project_conf.copy()
+
+        if "build_flags" not in options:
+            options['build_flags'] = ""
+
+        options['build_flags'] += " " + self._get_srcbuild_flags()
+
+        ini_content = ["[env:%s]" % self.ENV_NAME]
+        ini_content.extend(["%s = %s" % (k, v)
+                            for k, v in options.iteritems()])
+
+        with open(join(self.project_dir, "platformio.ini"), "w") as f:
+            f.write("\n".join(ini_content))
 
     def _get_srcbuild_flags(self):
         flags = []
@@ -81,18 +104,138 @@ class PlatformIOBuilder(object):
                 flags.append("-D%s" % d[0])
         return " ".join(flags)
 
-    def _on_run_callback(self, result):
-        log.msg(result)
 
-        fw_path = self.get_firmware_path()
-        # result[2] is return code
-        if result[2] != 0 or not fw_path or not isfile(fw_path):
-            return self._defer.errback(Exception(result))
+class PlatformIOBuilder(object):
 
-        data = dict(
-            version=".".join([str(s) for s in FIRMWARE_VERSION]),
-            size=getsize(fw_path),
-            type=fw_path[-3:],
-            firmware=b64encode(open(fw_path).read())
+    def __init__(self, project, options):
+        assert isinstance(project, PlatformIOProject)
+        self.project = project
+        self.log = Logger("PlatformIO")
+
+        self._options = options
+        self._defer = Deferred()
+
+    def run(self):
+        d = utils.getProcessOutputAndValue(
+            "platformio", args=(
+                "--force",
+                "run",
+                "-vv",
+                "--project-dir", self.project.get_project_dir()
+            ),
+            env=environ
         )
-        self._defer.callback(data)
+        d.addBoth(self.on_result)
+        return self._defer
+
+    def on_result(self, result):
+        output = "\n".join(result[0:2])
+
+        # 3-rd item in tuple is "return code" (index=2)
+        if result[2] != 0:
+            self.log.error(output)
+            return self._defer.errback(Exception(output))
+        else:
+            self.log.info(output)
+
+        self._defer.callback(self.get_firmware_data())
+
+    def get_firmware_data(self):
+        env_path = FilePath(self.project.get_env_dir())
+        assert env_path.isdir()
+
+        data = {
+            "version": ".".join([str(s) for s in FIRMWARE_VERSION]),
+            "files": []
+        }
+        for ext in ["bin", "hex"]:
+            for path in env_path.globChildren("firmware*.%s" % ext):
+                data['files'].append({
+                    "name": path.basename(),
+                    "content": base64.b64encode(path.getContent())
+                })
+        return data
+
+
+class PlatformIOUploader(object):
+
+    def __init__(self, project, options):
+        assert isinstance(project, PlatformIOProject)
+        self.project = project
+        self.log = Logger("PlatformIO")
+
+        self._options = options
+        self._defer = Deferred()
+
+    def run(self):
+        d = utils.getProcessOutputAndValue(
+            "platformio", args=(
+                "--force",
+                "run",
+                "--project-dir", self.project.get_project_dir(),
+                "--target", "uploadlazy",
+                "--upload-port", self._options.get("upload_port")
+            ),
+            env=environ
+        )
+        d.addBoth(self.on_result)
+        return self._defer
+
+    def on_result(self, result):
+        output = "\n".join(result[0:2])
+
+        # 3-rd item in tuple is "return code" (index=2)
+        if result[2] != 0:
+            self.log.error(output)
+            return self._defer.errback(Exception(output))
+        else:
+            self.log.info(output)
+
+        self._defer.callback({"result": "Please restart device"})
+
+
+def build_firmware(project_dir, platformio_conf, bodyparts, zepto_conf=None):
+    assert (set(["platform", "board", "src_filter", "build_flags"]) <=
+            set(platformio_conf.keys()))
+    assert bodyparts and isinstance(bodyparts[0], ZeptoBodyPart)
+
+    if not zepto_conf:
+        zepto_conf = dict(AES_ENCRYPTION_KEY=range(0, 16))
+
+    pio = PlatformIOProject(project_dir, platformio_conf)
+    pio.add_src_content(
+        "sa_bodypart_list.h", srcgen.BodyPartListH(bodyparts).generate()
+    )
+    pio.add_src_content(
+        "sa_bodypart_list.c", srcgen.BodyPartListC(bodyparts).generate()
+    )
+    pio.add_src_content(
+        "zepto_config.h", srcgen.ZeptoConfigH(zepto_conf).generate()
+    )
+
+    # copy user's plugins
+    for item in bodyparts:
+        if pio.src_exists(join("plugins", item.plugin.get_id())):
+            continue
+        copytree(
+            item.plugin.get_source_dir(),
+            join(pio.get_src_dir(), join("plugins", item.plugin.get_id())))
+
+    return pio.run(target="build")
+
+
+def upload_firmware(project_dir, platformio_conf, data):
+    assert set(["version", "files", "uploadport"]) <= set(data.keys())
+
+    # @TODO install platform just with UPLOADER
+
+    pio = PlatformIOProject(project_dir, platformio_conf, clone_embedded=False)
+    env_dir = pio.get_env_dir()
+    if not isdir(env_dir):
+        makedirs(env_dir)
+
+    for item in data['files']:
+        with open(join(env_dir, item['name']), "wb") as f:
+            f.write(base64.b64decode(item['content']))
+
+    return pio.run("upload", {"upload_port": data['uploadport']})

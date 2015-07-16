@@ -13,18 +13,16 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from base64 import b64decode
-from os import environ, makedirs
-from os.path import dirname, isdir, join
-from shutil import copyfile, rmtree
+from shutil import rmtree
 from tempfile import mkdtemp
 
-from twisted.internet import utils
-from twisted.python.util import sibpath
+from smartanthill_zc.api import ZeptoBodyPart
 
+from smartanthill.cc import platformio
 from smartanthill.device.board.base import BoardFactory
-# from smartanthill.exception import DeviceUnknownOperation
+from smartanthill.exception import DeviceUnknownPlugin
 from smartanthill.log import Logger
+from smartanthill.util import memoized
 
 
 class Device(object):
@@ -34,6 +32,31 @@ class Device(object):
         self.id_ = id_
         self.options = options
         self.board = BoardFactory.newBoard(options['boardId'])
+
+    @staticmethod
+    def bodypartsToObjects(bodyparts_raw):
+        from smartanthill.device.service import DeviceService
+
+        def _get_plugin(id_):
+            for item in DeviceService.get_plugins():
+                if item.get_id() == id_:
+                    return item
+            raise DeviceUnknownPlugin(id_)
+
+        bodyparts = []
+        for id_, item in enumerate(bodyparts_raw):
+            bodyparts.append(ZeptoBodyPart(
+                _get_plugin(item['pluginId']),
+                id_,
+                item['name'],
+                item.get("peripheral", None),
+                item.get("options", None)
+            ))
+        return bodyparts
+
+    @memoized
+    def get_bodyparts(self):
+        return self.bodypartsToObjects(self.options.get("bodyparts", []))
 
     def get_name(self):
         return self.options.get(
@@ -47,41 +70,29 @@ class Device(object):
         # raise DeviceUnknownOperation(type_.name, self.id_)
 
     def build_firmware(self):
-        pass
+        def _on_result(result, project_dir):
+            rmtree(project_dir)
+            return result
 
-    def upload_firmware(self, firmware):
-        tmp_dir = mkdtemp()
-        platformioini_path = sibpath(
-            dirname(__file__),
-            join("cc", "embedded", "firmware", "platformio.ini")
+        project_dir = mkdtemp()
+        d = platformio.build_firmware(
+            project_dir,
+            self.board.get_platformio_conf(),
+            self.get_bodyparts()
         )
+        d.addBoth(_on_result, project_dir)
+        return d
 
-        # prepare temporary PlatformIO project
-        pioenv_dir = join(tmp_dir, ".pioenvs", self.board.get_id())
-        if not isdir(pioenv_dir):
-            makedirs(pioenv_dir)
-        copyfile(platformioini_path, join(tmp_dir, "platformio.ini"))
-        with open(join(pioenv_dir, "firmware.%s" % firmware['type']),
-                  "w") as f:
-            f.write(b64decode(firmware['firmware']))
+    def upload_firmware(self, data):
+        def _on_result(result, project_dir):
+            rmtree(project_dir)
+            return result
 
-        defer = utils.getProcessOutputAndValue(
-            "platformio",
-            args=("run", "-e", self.board.get_id(), "-t", "uploadlazy",
-                  "--upload-port", firmware['uploadport']),
-            env=environ,
-            path=tmp_dir
+        project_dir = mkdtemp()
+        d = platformio.upload_firmware(
+            project_dir,
+            self.board.get_platformio_conf(),
+            data
         )
-        defer.addBoth(self._on_uploadfw_output, tmp_dir)
-        return defer
-
-    def _on_uploadfw_output(self, result, tmp_dir):
-        self.log.debug(result)
-        rmtree(tmp_dir)
-
-        if result[2] != 0:  # result[2] is return code
-            raise Exception(result)
-
-        return {
-            "result": "Please restart device."
-        }
+        d.addBoth(_on_result, project_dir)
+        return d

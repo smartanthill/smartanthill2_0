@@ -83,13 +83,18 @@ class DeviceService(SAMultiService):
     @memoized
     def get_plugins():
         plugins = []
-        plugins_dirs = (
+        plugins_dirs = [
             sibpath(
                 __file__,
-                join("..", "cc", "embedded", "firmware", "src", "plugins")
-            ),
-            join(get_service_named("sas").workspace_dir, "plugins")
-        )
+                join("..", "cc", "embedded", "firmware", "src", "plugins"))
+        ]
+
+        try:
+            plugins_dirs.append(
+                join(get_service_named("sas").workspace_dir, "plugins"))
+        except TypeError:
+            pass
+
         for plugins_dir in plugins_dirs:
             for item in FilePath(plugins_dir).listdir():
                 manifest = join(plugins_dir, item, "manifest.xml")

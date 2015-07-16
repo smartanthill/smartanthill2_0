@@ -18,6 +18,7 @@ import json
 from platformio.util import get_serialports
 from twisted.internet.defer import maybeDeferred
 from twisted.python.failure import Failure
+from twisted.web._responses import INTERNAL_SERVER_ERROR
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
@@ -205,7 +206,7 @@ class REST(Resource):
         request.setHeader("Access-Control-Allow-Origin", "*")
         if isinstance(result, Failure):
             self.log.error(result)
-            request.setResponseCode(500)
+            request.setResponseCode(INTERNAL_SERVER_ERROR)
             request.write(str(result.getErrorMessage()))
         elif result:
             request.setHeader("Content-Type", "application/json")
