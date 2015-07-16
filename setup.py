@@ -29,9 +29,9 @@ setup(
     license=__license__,
     install_requires=[
         # "smartanthill_zc",
-        "platformio",
+        "platformio>=2.2.0",
         "pyserial",
-        "twisted"
+        "twisted>=14.1"
     ],
     packages=find_packages()+["twisted.plugins"],
     package_data={"smartanthill": ["*.json"]},
