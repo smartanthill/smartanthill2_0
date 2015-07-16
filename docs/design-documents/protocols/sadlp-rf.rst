@@ -27,7 +27,7 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.4.1a
+:Version:   v0.4.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -42,7 +42,7 @@ Assumptions:
 * error correction level is to be specified by an upper protocol layer for each packet separately (for example, retransmits may use higher error correction levels)
 * We don't have enough resources to run sophisticated error-correction mechanisms such as Reed-Solomon, Viterbi, etc.
 * Transmissions are rare, hence beacons and frequency hopping are not used
-* upper protocol layer may have some use for packets where only a header is provided; hence upper layer provides it's header and it's payload separately
+* upper protocol layer may have some use for packets where only a header is correct; hence, packets with only first portion of the packet being correctable, SHOULD still be passed to upper protocol layer (non-correctable "tail" of the packet MAY be truncated)
 
 SADLP-RF PHY Level
 ------------------
@@ -173,15 +173,9 @@ PLAIN16-NO-CORRECTION Packets
 
 For PLAIN16-NO-CORRECTION packets, SADLP-RF-DATA has the following format:
 
-**\| UPPER-LAYER-PAYLOAD-AND-DATA-PLAIN16 \|**
+**\| UPPER-LAYER-PAYLOAD-PLAIN16 \|**
 
-where PLAIN16-DATA is a conversion of UPPER-LAYER-PAYLOAD-AND-DATA into a sequence of PLAIN16 blocks, where UPPER-LAYER-PAYLOAD-AND-DATA is described below, and conversion is performed as described above.
-
-UPPER-LAYER-PAYLOAD-AND-DATA has the following format:
-
-**\| UPPER-LAYER-HEADER-LENGTH \| UPPER-LAYER-HEADER \| UPPER-LAYER-HEADER-CHECKSUM \| UPPER-LAYER-PAYLOAD-LENGTH \| UPPER-LAYER-PAYLOAD \| UPPER-LAYER-HEADER-AND-PAYLOAD-CHECKSUM \|**
-
-where UPPER-LAYER-HEADER-LENGTH is an Encoded-Unsigned-Int<max=2> field specifying size of UPPER-LAYER-HEADER, UPPER-LAYER-HEADER-CHECKSUM is a 2-byte field containing SACHECKSUM-16 of UPPER-LAYER-HEADER, UPPER-LAYER-PAYLOAD-LENGTH is an Encoded-Unsigned-Int<max=2> field specifying size of UPPER-LAYER-PAYLOAD, and UPPER-LAYER-HEADER-AND-PAYLOAD CHECKSUM is a 2-byte field containing SACHECKSUM-16 of UPPER-LAYER-HEADER concatenated with UPPER-LAYER-PAYLOAD.
+where PLAIN16-DATA is a conversion of UPPER-LAYER-PAYLOAD into a sequence of PLAIN16 blocks, with UPPER-LAYER-PAYLOAD being payload from upper layer, and conversion is performed as described above.
 
 HAMM32 block
 ^^^^^^^^^^^^
@@ -205,28 +199,16 @@ To produce HAMM32-BLOCK-SEQUENCE from DATA-BLOCK, the following procedure is use
 HAMMING-32-CORRECTION Packets
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For HAMMING-32-CORRECTION packets, SADLP-RF-DATA is **\| UPPER-LAYER-HEADER-HAMM32 \| UPPER-LAYER-PAYLOAD-HAMM32 \|**
+For HAMMING-32-CORRECTION packets, SADLP-RF-DATA is **\| UPPER-LAYER-PAYLOAD-HAMM32 \|**
 
-where UPPER-LAYER-HEADER-HAMM32 is a conversion of UPPER-LAYER-HEADER into a sequence of HAMM32 blocks, and UPPER-LAYER-PAYLOAD-HAMM32 is a conversion of UPPER-LAYER-PAYLOAD into a sequence of HAMM32 blocks. UPPER-LAYER-HEADER and UPPER-LAYER-PAYLOAD are described below, and conversions are performed as described above.
-
-UPPER-LAYER-HEADER has the following format:
-
-**\| UPPER-LAYER-HEADER-LENGTH \| UPPER-LAYER-HEADER \| UPPER-LAYER-HEADER-CHECKSUM \|**
-
-where UPPER-LAYER-HEADER-LENGTH is an Encoded-Unsigned-Int<max=2> field specifying size of UPPER-LAYER-HEADER, and UPPER-LAYER-HEADER-CHECKSUM is a 2-byte field containing SACHECKSUM-16  of UPPER-LAYER-HEADER.
-
-UPPER-LAYER-PAYLOAD has the following format:
-
-**\| UPPER-LAYER-PAYLOAD-LENGTH \| UPPER-LAYER-PAYLOAD \| UPPER-LAYER-HEADER-AND-PAYLOAD-CHECKSUM \|**
-
-where UPPER-LAYER-PAYLOAD-LENGTH is an Encoded-Unsigned-Int<max=2> field specifying size of UPPER-LAYER-PAYLOAD, and UPPER-LAYER-HEADER-AND-PAYLOAD CHECKSUM is a 2-byte field containing SAHECKSUM-16 of UPPER-LAYER-HEADER concatenated with UPPER-LAYER-PAYLOAD.
+where UPPER-LAYER-PAYLOAD-HAMM32 is a conversion of UPPER-LAYER-PAYLOAD into a sequence of HAMM32 blocks, with UPPER-LAYER-PAYLOAD being payload from upper layer, and conversion is performed as described above.
 
 HAMMING-32-2D-CORRECTION Packets
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-HAMMING-32-2D-CORRECTION is similar to HAMMING-32-CORRECTION, with the following differences.
+HAMMING-32-2D-CORRECTION is similar to HAMMING-32-CORRECTION, with an additional field of 2D-HAMM32 being added.
 
-Both UPPER-LAYER-HEADER-WITH-HAMMING-32 and UPPER-LAYER-PAYLOAD-WITH-HAMMING-32 have 26 additional Hamming checksums added at the end; each Hamming checksum #i consists of N parity bits of Hamming code, calculated over all bits #i in 26-bit data bits within HAMM32 blocks. Number N is a number of Hamming bits necessary to provide error correction for NN=NUMBER-OF-HAMM32-BLOCKS. Hamming checksums are encoded as a bitstream, without intermediate padding, but padded at the end to a byte boundary with random (non-key-stream) data.
+2D-HAMM32 consists of 26 additional Hamming checksums; each Hamming checksum #i consists of N parity bits of Hamming code, calculated over all bits #i in 26-bit data bits within HAMM32 blocks forming UPPER-LAYER-PAYLOAD-HAMM32. Number N is a number of Hamming bits necessary to provide error correction for NN=NUMBER-OF-HAMM32-BLOCKS. Hamming checksums are encoded as a bitstream, without intermediate padding, but padded at the end to a byte boundary with random (non-key-stream) data.
 
-For example, if original block is 50 bytes long, then it will be split into 16 26-bit blocks, which will be encoded as 16 HAMM32 blocks; then, for HAMMING-32-2D-CORRECTION, additional 26 Hamming checksums (5 bits each, as for NN=16 N=5) will be added. Therefore, original 50 bytes will be encoded as 4*16+17=81 byte (62% overhead).
+For example, if original block is 50 bytes long, then it will be split into 16 26-bit blocks, which will be encoded as 16 HAMM32 blocks (to foem UPPER-LAYER-PAYLOAD-HAMM32); then, for HAMMING-32-2D-CORRECTION, additional 26 Hamming checksums (5 bits each, as for NN=16 N=5) will be added. Therefore, original 50 bytes will be encoded as 4*16+17=81 byte (62% overhead).
 

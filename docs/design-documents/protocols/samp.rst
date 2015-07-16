@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.17
+:Version:   v0.0.18
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -67,12 +67,12 @@ NB: these operations MAY be implemented using only bus broadcast, without any ad
 
 All SmartAnthill Devices SHOULD, and all SmartAnthill Retransmitting Devices MUST implement some kind of collision avoidance (at least CSMA/CA, a.k.a. "listen before talk with random delay").
 
-Underlying Protocol Checksums
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SCRAMBLING and Underlying Protocol Error Correction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When passing a packet to it's underlying protocol, SAMP MUST pass information which part of SAMP packet is SAMP header. Underlying protocol SHOULD provide separate checksums (and maybe separate error correction mechanisms) for SAMP-header and the-rest-of-SAMP-packet. In general, after applying error-correction: for SAMP-header 16-bit checksum of reasonable quality (such as CRC-16 or some kind of crypto-checksum truncated to 16 bits) is sufficient; for the-rest-of-SAMP-packet (or for the whole packet) an additional checksum MAY be applied (to ensure fast between-hop retransmit in case of error, opposed to waiting for SASP end-to-end checksum to be verified). In addition, underlying protocol MAY use "stronger" error correction for header than for the-rest-of-SAMP-packet.
+SAMP packets are usually SCRAMBLED, and after SCRAMBLING are transmitted over some of SADLP-\* protocols. 
 
-Underlying Protocol MUST report partially correct packets (those with SAMP-header checksum correct but the-rest-of-SAMP-packet incorrect); SAMP SHOULD use such headers in "promiscuous mode" operations, and in some other cases labeled as "partially correct packet".
+SADLP-\* protocols SHOULD allow for gradual error correction, starting from the beginning of the packet. Even if the packet cannot be error-corrected completely, information in the first part of the header MAY be of value, and SHOULD be passed to upper layers. SCRAMBLING procedure SHOULD allow for partial descrambling (to the extent possible), and SHOULD return partially descrambled packets back to SAMP. It will allow SAMP to get "partially correct" packets, which are to be used as described below, to improve certain SAMP characteristics. SAMP uses headers of "partially correct" packets in "promiscuous mode" operations, and in some other cases referred to as "partially correct packet".
 
 Promiscuous Mode Operations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -161,6 +161,16 @@ SAMP supports two ways of addressing devices: non-paired and paired.
 Non-paired addressing is used for temporary addressing Devices which are not "paired" with SmartAnthill Central Controller (yet). Non-paired addressing is used ONLY during "Pairing" process, as described in :ref:`sapairing` document. As soon as "pairing" is completed, Device obtains it's own SAMP-NODE-ID (TODO: add to pairing document), and all further communications with Device is performed using  "paired" addressing. Non-paired addressing is a triplet (NODE-ID,BUS-ID,INTRA-BUS-ID).
 
 Paired addressing is used for addressing Devices which has already been "paired". It is always one single item SAMP-NODE-ID. Root always has SAMP-NODE-ID=0. 
+
+SAMP Checksums
+--------------
+
+To validate integrity of SAMP headers, and of the whole SAMP packets, SAMP-CHECKSUM is used. 
+
+SAMP-CHECKSUM is defined as a Fletcher-16 checksum, as described in https://en.wikipedia.org/wiki/Fletcher%27s_checksum (using modulo 255), stored using "SmartAnthill Endianness".
+
+Whenever the packet has both header and body, SAMP uses two SAMP-CHECKSUMs: first checksum (referred to as HEADER-CHECKSUM) encompasses only header (i.e. everything before the first checksum), second SAMP-CHECKSUM (referred to as FULL-CHECKSUM) is located at the very end and encompasses header+first_checksum+body (i.e. everything before the second checksum).
+
 
 DELAYs and DELAY-UNITs
 ----------------------
@@ -382,12 +392,14 @@ SAMP Combined-Packet
 
 In general, SAMP passes SAMP Combined-Packets over underlying protocol. SAMP Combined-Packet consists of one or more SAMP Packets as described below; all SAMP Packets except for last one in SAMP Combined-Packet, have MORE-PACKETS-FOLLOW flag set (depending on the packet type, this flag is either passed as a part of the first field, or as a part of GENERAL-EXTRA-HEADERS-FLAGS, see details below).
 
+When combining packets, SAMP MUST take into account both MTU "hard restrictions" and MTU "soft restrictions" of the appropriate SADLP-\* protocol.
+
 SAMP Packets
 ------------
 
-Samp-Unicast-Data-Packet: **\| SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| Target-Address \| OPTIONAL-PAYLOAD-SIZE \| PAYLOAD \|**
+Samp-Unicast-Data-Packet: **\| SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| Target-Address \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
-where SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] equal to 0, bit[1] being GUARANTEED-DELIVERY flag, bit [2] being BACKWARD-GUARANTEED-DELIVERY, bit [3] being EXTRA-HEADERS-PRESENT, bit[4] being MORE-PACKETS-FOLLOW, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set and is described above; LAST-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of currently transmitting node, Target-Address is described above, OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field, and PAYLOAD is a payload to be passed to the upper-layer protocol.
+where SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] equal to 0, bit[1] being GUARANTEED-DELIVERY flag, bit [2] being BACKWARD-GUARANTEED-DELIVERY, bit [3] being EXTRA-HEADERS-PRESENT, bit[4] being MORE-PACKETS-FOLLOW, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set and is described above; LAST-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of currently transmitting node, Target-Address is described above, OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field, HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details), PAYLOAD is a payload to be passed to the upper-layer protocol, and FULL-CHECKSUM is a full-packet SAMP-CHECKSUM.
 
 If Target-Address is Root (i.e. =0), it MUST NOT contain VIA fields within; in addition, if Target-Address is Root (i.e. =0), the packet MUST NOT have BACKWARD-GUARANTEED-DELIVERY flag set.
 
@@ -399,9 +411,9 @@ When target Device receives the packet, and sends reply back, it MUST set GUARAN
 
 If Retransmitting Device receives a "partially correct" Samp-Unicast-Data-Packet, addressed to itself, and it has NACK-PREV-HOP flag set for the source link within Routing Table, it MUST send a Samp-Nack-Packet back to the source of packet.
 
-Samp-From-Santa-Data-Packet: **\| SAMP-FROM-SANTA-DATA-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| REQUEST-ID \| OPTIONAL-DELAY-UNIT \| MULTIPLE-RETRANSMITTING-ADDRESSES \| BROADCAST-BUS-TYPE-LIST \| Target-Address \| OPTIONAL-TARGET-REPLY-DELAY \| OPTIONAL-PAYLOAD-SIZE \| PAYLOAD \|**
+Samp-From-Santa-Data-Packet: **\| SAMP-FROM-SANTA-DATA-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| REQUEST-ID \| OPTIONAL-DELAY-UNIT \| MULTIPLE-RETRANSMITTING-ADDRESSES \| BROADCAST-BUS-TYPE-LIST \| Target-Address \| OPTIONAL-TARGET-REPLY-DELAY \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
-where SAMP-FROM-SANTA-DATA-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_FROM_SANTA_DATA_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits[5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above, LAST-HOP is an Encoded-Unsigned-Int<max=2> representing node id of the last sender, REQUEST-ID is an Encoded-Unsigned-Int<max=4> field, OPTIONAL-DELAY-UNIT is present only if EXPLICIT-TIME-SCHEDULING flag is present, and is an Encoded-Signed-Int<max=2> field, which specifies units for subsequent DELAY fields (as described below), MULTIPLE-RETRANSMITTING-ADDRESSES is a Multiple-Target-Addresses-With-Extra-Data field described above (with Extra-Data being either empty if EXPLICIT-TIME-SCHEDULING flag is not present, or otherwise Encoded-Unsigned-Int<max=2> DELAY field, using OPTIONAL-DELAY-UNIT field for delay calculations), BROADCAST-BUS-TYPE-LIST is a zero-terminated list of `BUS-TYPE+1` values (enum values for BUS-TYPE TBD), Target-Address is described above, OPTIONAL-TARGET-REPLY-DELAY has the same type as DELAY fields (and is absent if EXPLICIT-TIME-SCHEDULING flag is not present), and represents delay for the target Device (also using OPTIONAL-DELAY-UNIT field for delay calculations); OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; PAYLOAD is a payload to be passed to the upper-layer protocol.
+where SAMP-FROM-SANTA-DATA-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_FROM_SANTA_DATA_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits[5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above, LAST-HOP is an Encoded-Unsigned-Int<max=2> representing node id of the last sender, REQUEST-ID is an Encoded-Unsigned-Int<max=4> field, OPTIONAL-DELAY-UNIT is present only if EXPLICIT-TIME-SCHEDULING flag is present, and is an Encoded-Signed-Int<max=2> field, which specifies units for subsequent DELAY fields (as described below), MULTIPLE-RETRANSMITTING-ADDRESSES is a Multiple-Target-Addresses-With-Extra-Data field described above (with Extra-Data being either empty if EXPLICIT-TIME-SCHEDULING flag is not present, or otherwise Encoded-Unsigned-Int<max=2> DELAY field, using OPTIONAL-DELAY-UNIT field for delay calculations), BROADCAST-BUS-TYPE-LIST is a zero-terminated list of `BUS-TYPE+1` values (enum values for BUS-TYPE TBD), Target-Address is described above, OPTIONAL-TARGET-REPLY-DELAY has the same type as DELAY fields (and is absent if EXPLICIT-TIME-SCHEDULING flag is not present), and represents delay for the target Device (also using OPTIONAL-DELAY-UNIT field for delay calculations); OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details), PAYLOAD is a payload to be passed to the upper-layer protocol, and FULL-CHECKSUM is a full-packet SAMP-CHECKSUM.
 
 Samp-From-Santa-Data-Packet is a packet sent by Root, which is intended to find destination which is 'somewhere around', but exact location is unknown. When Root needs to pass data to a Node for which it has no valid route, Root sends SAMP-FROM-SANTA-DATA-PACKET (or multiple packets), to each of Retransmitting Devices, in hope to find target Device and to pass the packet. 
 
@@ -430,9 +442,9 @@ On target Device, Samp-From-Santa-Data-Packet waits until reply payload is ready
 
 If IS-PROBE flag is set, then PAYLOAD is treated differently. When destination receives Samp-From-Santa-Data-Packet with IS-PROBE flag set, destination doesn't pass PAYLOAD to upper-layer protocol. Instead, destination processes the packet in the same way as described for the processing of Samp-Unicast-Data-Packet with IS-PROBE flag set. A special case of Samp-From-Santa-Data-Packet with IS-PROBE set is when Target-Address is Root (=0). Such packets (a.k.a. 'discovery' packets) are ignored by Root, but are replied to only by Devices which are not paired yet (i.e. have no node id). All such 'discovery' packets with Target-Address=0 MUST have IS-PROBE flag set.
 
-Samp-To-Santa-Data-Or-Error-Packet: **\| SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-NO-TTL \| OPTIONAL-EXTRA-HEADERS \| OPTIONAL-PAYLOAD-SIZE \| PAYLOAD \|**
+Samp-To-Santa-Data-Or-Error-Packet: **\| SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-NO-TTL \| OPTIONAL-EXTRA-HEADERS \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
-where SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-NO-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_TO_SANTA_DATA_OR_ERROR_PACKET, bit[5] being EXTRA-HEADERS-PRESENT, and bits [5..] reserved (MUST be zero); OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above. Note that Samp-To-Santa-Data-Or-Error-Packet doesn't contain TTL (as it is never retransmitted 'as is'); OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; PAYLOAD is either data or error data depending on IS_ERROR flag; if IS_ERROR flag is set - PAYLOAD format is the same as the body (after OPTIONAL-EXTRA-HEADERS) of Samp-Routing-Error-Packet.
+where SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-NO-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_TO_SANTA_DATA_OR_ERROR_PACKET, bit[5] being EXTRA-HEADERS-PRESENT, and bits [5..] reserved (MUST be zero); OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above. Note that Samp-To-Santa-Data-Or-Error-Packet doesn't contain TTL (as it is never retransmitted 'as is'); OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details); PAYLOAD is either data or error data depending on IS_ERROR flag; if IS_ERROR flag is set - PAYLOAD format is the same as the body (after OPTIONAL-EXTRA-HEADERS) of Samp-Routing-Error-Packet; FULL-CHECKSUM is a full-packet SAMP-CHECKSUM.
 
 Samp-To-Santa-Data-Or-Error-Packet is a packet intended from Device (either Retransmitting or non-Retransmitting) to Root. It is broadcasted by Device in several cases: 
 
@@ -444,21 +456,21 @@ In any case, if Samp-To-Santa-Data-Or-Error-Packet is sent in response to a Samp
 
 On receiving Samp-To-Santa-Data-Or-Error-Packet, Retransmitting Device sends a Samp-Forward-To-Santa-Data-Or-Error-Packet towards Root, in 'Guaranteed Uni-Cast' mode. To avoid congestion at this point, each Retransmitting Device delays according for FORWARD-TO-SANTA-DELAY (using FORWARD-TO-SANTA-DELAY-UNIT for calculations), where FORWARD-TO-SANTA-DELAY and FORWARD-TO-SANTA-DELAY-UNIT are the values which are locally stored on Retransmitting Device.
 
-Samp-Forward-To-Santa-Data-Or-Error-Packet: **\| SAMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| OPTIONAL-PAYLOAD-SIZE \| PAYLOAD \|**
+Samp-Forward-To-Santa-Data-Or-Error-Packet: **\| SAMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
-where SAMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_FORWARD_TO_SANTA_DATA_OR_ERROR_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above; OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; PAYLOAD is data being forwarded (copied from PAYLOAD of Samp-To-Santa-Data-Or-Error-Packet).
+where SAMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_FORWARD_TO_SANTA_DATA_OR_ERROR_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above; OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details); PAYLOAD is data being forwarded (copied from PAYLOAD of Samp-To-Santa-Data-Or-Error-Packet); FULL-CHECKSUM is a full-packet SAMP-CHECKSUM.
 
 Samp-Forward-To-Santa-Data-Or-Error-Packet is sent by Retransmitting Device when it receives Samp-To-Santa-Data-Or-Error-Packet (with TTL=MAX_TTL-1 to account for original Samp-To-Santa-Data-Or-Error-Packet). On receiving Samp-Forward-To-Santa-Data-Or-Error-Packet by a Retransmitting Device, it is  processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Guaranteed Uni-Cast' mode.
 
-Samp-Routing-Error-Packet: **\| SAMP-ROUTING-ERROR-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| ERROR-CODE \| TODO (incl. OPTIONAL-PAYLOAD-SIZE if applicable) \|**
+Samp-Routing-Error-Packet: **\| SAMP-ROUTING-ERROR-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| ERROR-CODE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
-where SAMP-ROUTING-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_ROUTING_ERROR_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above.
+where SAMP-ROUTING-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_ROUTING_ERROR_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above, ERROR-CODE is an Encoded-Unsigned-Int<max=1> field, HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details), PAYLOAD is TODO, and FULL-CHECKSUM is a full-packet SAMP-CHECKSUM.
 
 On receiving Samp-Routing-Error-Packet, it is processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Guaranteed Uni-Cast' mode.
 
-Samp-Ack-Nack-Packet: **\| SAMP-ACK-NACK-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| Target-Address \| ACK-CHESKSUM \|**
+Samp-Ack-Nack-Packet: **\| SAMP-ACK-NACK-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| Target-Address \| ACK-CHESKSUM \| HEADER-CHECKSUM \|**
 
-where SAMP-ACK-NACK-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_ACK_NACK_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set, LAST-HOP is an id of the transmitting node, Target-Address is described above, and ACK-CHECKSUM is a 2-byte field containing SACHECKSUM-16 of the packet being acknowledged (TODO: specify exactly).
+where SAMP-ACK-NACK-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_ACK_NACK_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set, LAST-HOP is an id of the transmitting node, Target-Address is described above, ACK-CHECKSUM is copied from FULL-CHECKSUM of the packet being acknowledged (with an exception for NACK generated due to "partially correct" packet, see below), and HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details).
 
 Samp-Ack-Nack-Packet with IS-LOOP-ACK flag is generated either by destination, or by the node which has found that the next hop already has NEXT-HOP-ACKS flag (see details in 'Guaranteed Uni-Cast' section above); generating node always specifies itself as a target. Samp-Ack-Nack-Packet with IS-LOOP-ACK flag MUST NOT have IS-NACK flag.
 
@@ -466,7 +478,7 @@ If Samp-Ack-Nack-Packet has IS-LOOP-ACK flag, it is processed as specified in 'U
 
 Samp-Ack-Nack-Packet without IS-LOOP-ACK flag and without IS-NACK flag, is generated as a response to an incoming Samp-Unicast-Data-Packet with GUARANTEED-DELIVERY flag (TODO: anything else?). It is not retransmitted, but taken as an acknowledgement that the packet has been received.
 
-Samp-Ack-Nack-Packet without IS-LOOP-ACK flag and with IS-NACK flag, is generated as a response to a "partially correct" packet (regardless of type and GUARANTEED-DELIVERY flag); it's ACK-CHECKSUM represents header checksum only. It is not retransmitted, but is taken as an indication to quick retransmit the last packet sent.
+Samp-Ack-Nack-Packet without IS-LOOP-ACK flag and with IS-NACK flag, is generated as a response to a "partially correct" packet (regardless of type and GUARANTEED-DELIVERY flag); in this case, it's ACK-CHECKSUM represents only HEADER-CHECKSUM of the original packet. Such Samp-Ack-Nack-Packet is not retransmitted itself, but is taken as an indication to perform quick retransmit of the last packet sent.
 
 Type of Samp packet
 ^^^^^^^^^^^^^^^^^^^
