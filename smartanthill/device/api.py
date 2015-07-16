@@ -13,32 +13,26 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from twisted.python.reflect import namedObject
-
-from smartanthill.api.handler import APIHandlerBase
-from smartanthill.device.arg import DeviceIDArg
-from smartanthill.device.operation.base import OperationType
+from smartanthill.api.handler import APIHandlerBase, APIPermission
 from smartanthill.util import get_service_named
-
-
-class APIDeviceHandlerBase(APIHandlerBase):  # pylint: disable=W0223
-
-    @staticmethod
-    def launch_operation(devid, type_, data=None):
-        arg = DeviceIDArg()
-        arg.set_value(devid)
-        devid = arg.get_value()
-        device = get_service_named("device")
-        return device.get_device(devid).launch_operation(type_, data)
 
 
 def get_handlers():
     handlers = []
-    for c in OperationType.iterconstants():
-        try:
-            handler = namedObject(
-                "smartanthill.device.operation.%s.APIHandler" % c.name.lower())
-            handlers.append(handler)
-        except AttributeError:
-            continue
+    device_service = get_service_named("device")
+    for device in device_service.get_devices().values():
+        for bodypart in device.get_bodyparts():
+            required_params = \
+                [field['name']
+                 for field in bodypart.plugin.get_request_fields()]
+
+            class _BodyPartAPIHandler(APIHandlerBase):
+                PERMISSION = APIPermission.GET
+                KEY = "device.%s.%s" % (device.id_, bodypart.get_name())
+                REQUIRED_PARAMS = required_params
+
+                def handle(self, data):
+                    return 'It works!'
+
+            handlers.append(_BodyPartAPIHandler)
     return handlers

@@ -35,7 +35,8 @@ class APIHandlerBase(object):
         self.request_key = request_key
 
     def match(self):
-        return self.action & self.PERMISSION and self.request_key == self.KEY
+        return self.action & self.PERMISSION \
+            and self.request_key == self.KEY.lower()
 
     def check_params(self, params):
         if not self.REQUIRED_PARAMS:
