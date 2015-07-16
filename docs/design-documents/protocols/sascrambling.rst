@@ -27,7 +27,7 @@
 SmartAnthill SCRAMBLING procedure
 =================================
 
-:Version:   v0.5.4
+:Version:   v0.5.5
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -49,10 +49,28 @@ SCRAMBLING procedure is a procedure of taking an input packet of arbitrary size,
 SCRAMBLING procedure requires both sides to share one secret AES-128 key. **SCRAMBLING key MUST be independent from any other key in the system, in particular, from SASP key.**
 
 
-For SCRAMBLING procedure to be efficient (in secure sense), caller SHOULD guarantee that there is a 16-byte block within input packet, where such block is at least statistically unique, and the same block is statistically indistinguishable from white noise. Offset to such a block within the packet is an input *unique-block-offset* parameter for SCRAMBLING procedure. In practice, SASP tag can be used for this purpose.
+For SCRAMBLING procedure to be efficient (in secure sense), caller SHOULD guarantee that there is a 12-byte block within input packet, where such block is at least statistically unique, and the same block is statistically indistinguishable from white noise. Offset to such a block within the packet is an input *unique-block-offset* parameter for SCRAMBLING procedure. In practice, SASP tag can be used for this purpose.
 
 SCRAMBLING procedure
 --------------------
+
+OPTIONAL Salted-SCRAMBLING
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For some of the SADLP-\* protocols, desirable properties MAY include such things as AC/DC balance, or a (weaker) requirement to have at least one switch between different bits per N bits in bitstream. These requirements MAY be satisfied statistically (with the idea behind being similar to 64/66b protocol). 
+
+SADLP-\* protocols MAY specify Salted-SCRAMBLING procedure, which enables such statistical properties. Given that SCRAMBLING procedure uses industrial-grade encryption, normally, one-byte "salt" is sufficient to ensure that at least one of the packets will have desirable properties. 
+
+When Salted-SCRAMBLING is used, "Salt" field MUST be populated by random data:
+
+  + this random data MUST come from non-keystream RNG, see :ref:`sarng` for details
+  + if non-keystream RNG is not completely initialized yet at the moment when Salted-Default SCRAMBLING needs to be used, then:
+
+    - No data from not-initialized (or partially-initialized) RNG can ever be used
+    - Instead, Salted-SCRAMBLING procedure MUST use incremented counter; this counter SHOULD be pre-initialized with 0x33 on each system start.
+    - as soon as non-keystream RNG is completely initialized, it MUST be used instead of the incremented counter.
+
+**If Salted-SCRAMBLING is used, then for ANY retransmit (this MUST include SAMP retransmits and SAGDP retransmits), new value of "Salt" MUST be generated as described above, and the packet MUST be re-SCRAMBLED.** This is necessary to ensure that if violation of desirable properties has occurred, it will be statistically healed on the next run.
 
 Input
 ^^^^^
@@ -61,9 +79,9 @@ Input of SCRAMBLING procedure is a pre-SCRAMBLING packet, and *unique-block-offs
 
 **\| unencrypted-pre-SCRAMBLING-Data \| encrypted-pre-unique-pre-SCRAMBLING-Data \| encrypted-unique-block \| encrypted-post-unique-pre-SCRAMBLING-Data \|**
 
-where encrypted-unique-block is always 16 bytes in size, and it's offset from the beginning is specified by *unique-block-offset* input parameter, and any of encrypted-pre-unique-pre-SCRAMBLING-Data and encrypted-post-unique-pre-SCRAMBLING-Data can have 0 size.
+where encrypted-unique-block is always 12 bytes in size, and it's offset from the beginning is specified by *unique-block-offset* input parameter, and any of encrypted-pre-unique-pre-SCRAMBLING-Data and encrypted-post-unique-pre-SCRAMBLING-Data can have 0 size.
 
-*unique-block-offset+16* MUST be within pre-SCRAMBLING-Data.
+*unique-block-offset+12* MUST be within pre-SCRAMBLING-Data.
 
 Procedure
 ^^^^^^^^^
@@ -72,15 +90,15 @@ SCRAMBLING procedure works as follows:
 
 1. Form SCRAMBLING-Header according to formatting schema (Default schema is described below, but SADLP-* implementations are allowed to define their own schemas if necessary).
 
-SCRAMBLING-Header, regardless of formatting schema, MUST specify Scrambled-Size and Forced-Padding-Size parameters. Scrambled-Size is a number of 16-byte blocks which were scrambled; *16\*Scrambled-Size* MUST be >= size of SCRAMBLING-Header. For security purposes, sender MAY scramble more bytes (and respectively specify Scrambled-Size) than strictly necessary. However, sender MUST NOT specify Scrambled-Size so that *16\*Scrambled-Size* is more than `sizeof(SCRAMBLING-Header)+sizeof(encrypted-pre-unique-pre-SCRAMBLING-Data)+sizeof(encrypted-post-unique-pre-SCRAMBLING-Data)+16`; otherwise, receiver MUST treat it as a malformed packet. 
+SCRAMBLING-Header, regardless of formatting schema, MUST specify Scrambled-Size and Forced-Padding-Size parameters. Scrambled-Size is a number of 16-byte blocks which were scrambled; *16\*Scrambled-Size* MUST be >= size of SCRAMBLING-Header. For security purposes, sender MAY scramble more bytes (and respectively specify Scrambled-Size) than strictly necessary. However, sender MUST NOT specify Scrambled-Size so that *16\*Scrambled-Size* is more than `sizeof(SCRAMBLING-Header)+sizeof(encrypted-pre-unique-pre-SCRAMBLING-Data)+sizeof(encrypted-post-unique-pre-SCRAMBLING-Data)+15`; otherwise, receiver MUST treat it as a malformed packet. 
 
 2. Form pre-SCRAMBLED packet which has the following format:
 
-**\| encrypted-unique-block \| SCRAMBLED-Header \| encrypted-pre-unique-pre-SCRAMBLING-Data \| encrypted-post-unique-pre-SCRAMBLING-Data \| Optional-Forced-Padding \|**
+**\| encrypted-unique-block \| OPTIONAL-SALT \| SCRAMBLED-Header \| encrypted-pre-unique-pre-SCRAMBLING-Data \| encrypted-post-unique-pre-SCRAMBLING-Data \| Optional-Forced-Padding \|**
 
-where Optional-Forced-Padding is optional forced padding, which has size of Forced-Padding-Size parameter from SCRAMBLING-Header. Forced-Padding, if present, MUST be generated using SmartAnthill Non-Key Random Stream (which is described in :ref:`sarng`).
+where OPTIONAL-SALT is a 1-byte field, present only if Salted-SCRAMBLING is specified by the protocol which uses SCRAMBLING procedure (if non-Salted-SCRAMBLING is specified, SALT is presumed to be equal to 0), Optional-Forced-Padding is optional forced padding, which has size of Forced-Padding-Size parameter from SCRAMBLING-Header. Forced-Padding, if present, MUST be generated using SmartAnthill Non-Key Random Stream (which is described in :ref:`sarng`).
 
-3. Encrypt a portion of pre-SCRAMBLED packet, starting from SCRAMBLED-HEADER, and with length of Scrambled-Size*16 (as specified in SCRAMBLING-Header), using AES-128 in CTR mode, using SCRAMBLING key, and using `encrypted-unique-block` as initial counter for CTR. CTR mode, combined with statistical-uniqueness requirement for unique-block, ensures that SCRAMBLED data is indistinguishable from white noise for a potential attacker. NB: size of `encrypted-unique-block` is always 16 bytes=128 bit, or one AES block. NB2: this construct restrict the size of unencrypted-pre-SCRAMBLING-Data to 16*256=4096 bytes; it is orders of magnitude larger than any practical headers may reasonably require. 
+3. Encrypt a portion of pre-SCRAMBLED packet, starting from SCRAMBLED-HEADER, and with length of Scrambled-Size*16 (as specified in SCRAMBLING-Header), using AES-128 in CTR mode, using SCRAMBLING key, and using `( encrypted-unique-block << 32 ) | ( SALT << 24 )` as initial counter for CTR. CTR mode, combined with statistical-uniqueness requirement for unique-block, ensures that SCRAMBLED data is indistinguishable from white noise for a potential attacker. NB: size of `( encrypted-unique-block << 32 ) | ( SALT << 24 )` is 128 bit, or one AES-128 block. NB2: technically, this construct restricts the size of data being SCRAMBLED, to 16*2^24~=256 Mbytes; it is many orders of magnitude larger than any practical packets may reasonably contain. 
 
 If *16\*Scrambled-Size* goes beyond encrypted-post-unique-pre-SCRAMBLING-DATA, remaining SCRAMBLING bytes are ignored; due to requirement on Scrambled-Size stated above, number of such ignored bytes cannot exceed 15.
 
@@ -88,7 +106,7 @@ If *16\*Scrambled-Size* goes beyond encrypted-post-unique-pre-SCRAMBLING-DATA, r
 Default SCRAMBLING-Header Schema
 ''''''''''''''''''''''''''''''''
 
-Default SCRAMBLING-Header Schema assumes that the size of encrypted-post-unique-pre-SCRAMBLING-Data is always zero (and that therefore *unique-block-offset* parameter is always equal to `pre_SCRAMBLING_packet_size-16`). This occurs when (a) SASP tag is located at the very end of the SASP packet (which is always the case for SASP as described in :ref:`sasp` document), and (b) all protocols below SASP add only headers, and not trailers (which is usually, but not strictly necessarily, the case for DLP protocols).
+Default SCRAMBLING-Header Schema assumes that the size of encrypted-post-unique-pre-SCRAMBLING-Data is always zero (and that therefore *unique-block-offset* parameter is always equal to `pre_SCRAMBLING_packet_size-12`). This occurs when (a) SASP tag is located at the very end of the SASP packet (which is always the case for SASP as described in :ref:`sasp` document), and (b) all protocols below SASP and above the protocol which uses SCRAMBLING procedure add only headers, and not trailers.
 
 If the size of encrypted-post-unique-pre-SCRAMBLING-Data is always zero, it means that there is no need to send *unique-block-offset* over the wire, as it can always be calculated on receiving side. Therefore, Default SCRAMBLING-Header Schema is defined as follows:
 
@@ -117,7 +135,6 @@ where Whole-Packet-Size is an Encoded-Unsigned-Int<max=2> field, representing th
 As even Whole-Packet-Size is scrambled, the whole stream looks as a white noise (NB: some information can be still extracted by attacker from timing and division of the stream into packets). 
 
 To ensure proper error recovery, receiving side of "Streamed"-SCRAMBLED stream MUST forcibly break an underlying stream (such as TCP connection) as soon as any of the de-SCRAMBLING operations for packets received over this underlying connection fail (this includes size field exceeding it's "max=" size).
-
 
 TODO: forced-padding (incl. random-size padding)
 

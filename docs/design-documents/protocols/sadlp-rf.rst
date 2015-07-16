@@ -27,7 +27,7 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.4.3
+:Version:   v0.4.4
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -55,12 +55,47 @@ Tau (minimum period with the same frequency during FSK modulation): 1/9600 sec. 
 
 Line code: preamble (at least two 0xAA (TODO:check if it is really 0xAA or 0x55) symbols), followed by 0x2DD4 sync word, followed by "raw" SADLP-RF Packet as described below. 
 
-SADLP-RF Packets and Line Codes
--------------------------------
+SADLP-RF Packets, SCRAMBLING, and Line Codes
+--------------------------------------------
 
-FSK modulation used by SADLP-RF, does not require AC/DC balance. However, it requires to have at least one edge per N*tau (to keep synchronization). To be usable with a wide range of transmitters/receivers, we aim for strict guarantees of at least one edge per 16*tau (as suggested, for example, for a worst-case in RFM69 manual), and for "white noise" properties for pre-SCRAMBLED packets (see :ref:`sascrambling` document for details on SCRAMBLING). For those SADLP-RF packets which allow for intra-packet de-synchronization detection (in particular, for HAMM32-based packets), one edge per 32*tau is acceptable.
+FSK modulation used by SADLP-RF, does not require AC/DC balance. However, it requires to have at least one edge per N*tau (to keep synchronization). For example, for a popular RFM69 module, it is recommended to have at least one edge per 16*tau. SADLP-RF approach in this field is two fold: 
 
-The guarantees above are kept for all SADLP-RF Packets, as described below. As a result, SADLP-RD does not need any additional line codes, and SADLP-RF Packets MUST be transmitted directly over FSK (after preamble and sync word, as described above above).
+* first, there are strict guarantees on absolute minimum number of edges; however, these absolute-minimum guarantees MAY be lower than recommended 16 bytes. 
+* second, SADLP-RF protocol uses "Salted-SCRAMBLING" procedure as defined in :ref:`sascrambling`. If by any chance Salted-SCRAMBLING does violate 16*tau requirement and the packet is lost (which is extremely unlikely to start with), "Salt" will be changed on the next retransmit and all the bits will be reshuffled, which leads to very-low probability of exceeding 16*tau for the retransmit. 
+
+Statistical data (TODO: double-check): 
+
++--------------------------+-----------------------------------------------------+
+| Run length               | Probability to occur in 2600-bit (325-byte) packet  |
++==========================+=====================================================+
+| 17                       | 1.87%                                               |
++--------------------------+-----------------------------------------------------+
+| 18                       | 0.92%                                               |
++--------------------------+-----------------------------------------------------+
+| 19                       | 0.42%                                               |
++--------------------------+-----------------------------------------------------+
+| 20                       | 0.22%                                               |
++--------------------------+-----------------------------------------------------+
+| 21                       | 0.11%                                               |
++--------------------------+-----------------------------------------------------+
+| 22                       | 0.05%                                               |
++--------------------------+-----------------------------------------------------+
+| 23                       | 0.03%                                               |
++--------------------------+-----------------------------------------------------+
+| 24                       | 0.015%                                              |
++--------------------------+-----------------------------------------------------+
+| 25                       | 0.006%                                              |
++--------------------------+-----------------------------------------------------+
+| 26                       | 0.003%                                              |
++--------------------------+-----------------------------------------------------+
+| 27                       | 0.002%                                              |
++--------------------------+-----------------------------------------------------+
+| 28+                      | 0.001%                                              |
++--------------------------+-----------------------------------------------------+
+
+As run-length of 17 is very unlikely to be fatal, and as probability of longer run-lengths is decreased exponentially, we hope that described statistical approach will be acceptable in practice.
+
+As a result, SADLP-RF does not need any additional line codes, and SADLP-RF Packets MUST be transmitted directly over FSK (after preamble and sync word, as described above).
 
 SADLP-RF MTU Limits
 -------------------
@@ -199,9 +234,11 @@ PLAIN16-NO-CORRECTION Packets
 
 For PLAIN16-NO-CORRECTION packets, SADLP-RF-DATA has the following format:
 
-**\| UPPER-LAYER-PAYLOAD-PLAIN16 \|**
+**\| SALTED-SCRAMBLED-UPPER-LAYER-PAYLOAD-PLAIN16 \|**
 
-where PLAIN16-DATA is a conversion of UPPER-LAYER-PAYLOAD into a sequence of PLAIN16 blocks, with UPPER-LAYER-PAYLOAD being payload from upper layer, and conversion is performed as described above.
+where SALTED-SCRAMBLED-UPPER-LAYER-PAYLOAD-PLAIN16 is a conversion of SALTED-SCRAMBLED-UPPER-LAYER-PAYLOAD into a sequence of PLAIN16 blocks, with SALTED-SCRAMBLED-UPPER-LAYER-PAYLOAD obtained by applying Salted-SCRAMBLED procedure (as described in :ref:`sascrambling` document) to payload from upper layer, and conversion is performed as described above.
+
+In the absolutely worst case for PLAIN16-NO-CORRECTION packets, maximum distance between edges is always <= 15. 
 
 HAMM32 block
 ^^^^^^^^^^^^
@@ -225,9 +262,11 @@ To produce HAMM32-BLOCK-SEQUENCE from DATA-BLOCK, the following procedure is use
 HAMMING-32-CORRECTION Packets
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For HAMMING-32-CORRECTION packets, SADLP-RF-DATA is **\| UPPER-LAYER-PAYLOAD-HAMM32 \|**
+For HAMMING-32-CORRECTION packets, SADLP-RF-DATA is **\| SALTED-SCRAMBLED-UPPER-LAYER-PAYLOAD-HAMM32 \|**
 
-where UPPER-LAYER-PAYLOAD-HAMM32 is a conversion of UPPER-LAYER-PAYLOAD into a sequence of HAMM32 blocks, with UPPER-LAYER-PAYLOAD being payload from upper layer, and conversion is performed as described above.
+where SALTED-SCRAMBLED-UPPER-LAYER-PAYLOAD-HAMM32 is a conversion of SALTED-SCRAMBLED-UPPER-LAYER-PAYLOAD into a sequence of HAMM32 blocks, with SALTED-SCRAMBLED-UPPER-LAYER-PAYLOAD obtained by applying Salted-SCRAMBLED procedure (as described in :ref:`sascrambling` document) to payload from upper layer, and conversion is performed as described above.
+
+In the absolutely worst case for HAMMING-32-CORRECTION packets, maximum distance between edges is always <= 39. However, given Salted-SCRAMBLING, it is statistically MUCH better than that.
 
 HAMMING-32-2D-CORRECTION Packets
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
