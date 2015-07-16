@@ -27,12 +27,15 @@ def get_handlers():
                  for field in bodypart.plugin.get_request_fields()]
 
             class _BodyPartAPIHandler(APIHandlerBase):
+                _device = device
+                _bodypart_name = bodypart.get_name()
+
                 PERMISSION = APIPermission.GET
-                KEY = "device.%s.%s" % (device.id_, bodypart.get_name())
+                KEY = "device.%s.%s" % (_device.id_, _bodypart_name)
                 REQUIRED_PARAMS = required_params
 
                 def handle(self, data):
-                    return 'It works!'
-
+                    return self._device.execute_bodypart(
+                        self._bodypart_name, data)
             handlers.append(_BodyPartAPIHandler)
     return handlers
