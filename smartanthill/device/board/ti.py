@@ -13,10 +13,20 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+# pylint: disable=W0223
+
 from smartanthill.device.board.base import BoardBase
 
 
 class BoardTIMSP430G2Base(BoardBase):
+
+    PLATFORMIO_CONF = dict(
+        platform="msp430",
+        framework="energia",
+        src_filter="+<*> -<hal/platforms> +<hal/platforms/wiring>",
+        build_flags="-D SA_PLATFORM_WIRING"
+    )
+
     VENDOR = "Texas Instruments"
 
     PINS = range(2, 16) + [18, 19]
@@ -72,46 +82,10 @@ class BoardTIMSP430G2Base(BoardBase):
                                    INTERNAL2V5=3))
 
 
-class Board_TI_LPmsp430g2231(BoardTIMSP430G2Base):
-
-    NAME = "TI LaunchPad MSP430 (msp430g2231)"
-
-    def __init__(self):
-        self.PINS_ALIAS['MOSI'] = 14
-        self.PINS_ALIAS['MISO'] = 15
-
-
-class Board_TI_LPmsp430g2452(BoardTIMSP430G2Base):
-
-    NAME = "TI LaunchPad MSP430 (msp430g2452)"
-
-    PWM_PINS = (4, 14)
-
-    def __init__(self):
-        self.PINS_ALIAS['MOSI'] = 14
-        self.PINS_ALIAS['MISO'] = 15
-
-
 class Board_TI_LPmsp430g2553(BoardTIMSP430G2Base):
 
     NAME = "TI LaunchPad MSP430 (msp430g2553)"
 
-
-class Board_TI_FPmsp430fr5739(BoardTIMSP430G2Base):
-
-    NAME = "TI FraunchPad MSP430 (msp430fr5739)"
-
-
-class Board_TI_LPmsp430f5529(BoardTIMSP430G2Base):
-
-    NAME = "TI LaunchPad MSP430 (msp430f5529, 16MHz)"
-
-
-class Board_TI_LPmsp430f5529_25(BoardTIMSP430G2Base):
-
-    NAME = "TI LaunchPad MSP430 (msp430f5529, 25MHz)"
-
-
-class Board_TI_LPmsp430fr5969(BoardTIMSP430G2Base):
-
-    NAME = "TI LaunchPad MSP430 (msp430fr5969)"
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "lpmsp430g2553"})
+        return self.PLATFORMIO_CONF

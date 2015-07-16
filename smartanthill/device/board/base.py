@@ -16,9 +16,7 @@
 from twisted.python.reflect import namedObject
 
 from smartanthill import __docsurl__
-from smartanthill.device.operation.base import (OperationType,
-                                                get_operation_class)
-from smartanthill.exception import BoardUnknownOperation, DeviceUnknownBoard
+from smartanthill.exception import DeviceUnknownBoard
 
 
 class BoardFactory(object):  # pylint: disable=R0903
@@ -46,17 +44,6 @@ class BoardBase(object):
     PINS = None
     ANALOG_PINS = None
     PWM_PINS = None
-
-    OPERATIONS = [
-        OperationType.PING,
-        OperationType.LIST_OPERATIONS,
-        OperationType.CONFIGURE_PIN_MODE,
-        OperationType.READ_DIGITAL_PIN,
-        OperationType.WRITE_DIGITAL_PIN,
-        OperationType.READ_ANALOG_PIN,
-        OperationType.WRITE_ANALOG_PIN,
-        OperationType.CONFIGURE_ANALOG_REFERENCE
-    ]
 
     def get_id(self):
         return self.__class__.__name__.replace("Board_", "")
@@ -100,10 +87,5 @@ class BoardBase(object):
     def get_pinanalogrefarg_params(self):
         raise NotImplementedError
 
-    def launch_operation(self, devid, type_, data):
-        try:
-            assert type_ in self.OPERATIONS
-            operclass = get_operation_class(type_)
-        except:
-            raise BoardUnknownOperation(type_.name, self.get_name())
-        return operclass(self, data).launch(devid)
+    def get_platformio_conf(self):
+        raise NotImplementedError

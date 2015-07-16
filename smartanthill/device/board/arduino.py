@@ -13,10 +13,19 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+# pylint: disable=W0223
+
 from smartanthill.device.board.base import BoardBase
 
 
 class BoardArduinoBase(BoardBase):
+
+    PLATFORMIO_CONF = dict(
+        platform="atmelavr",
+        framework="arduino",
+        src_filter="+<*> -<hal/platforms> +<hal/platforms/wiring>",
+        build_flags="-D SA_PLATFORM_WIRING"
+    )
 
     VENDOR = "Arduino"
 
@@ -48,21 +57,23 @@ class BoardArduinoBase(BoardBase):
         return ((0, 1, 2), dict(DEFAULT=0, EXTERNAL=1, INTERNAL=2))
 
 
-class Board_Arduino_DiecimilaATmega168(BoardArduinoBase):
-
-    NAME = "Arduino Duemilanove or Diecimila (ATmega168)"
-    ANALOG_PINS = range(14, 20)
-
-
 class Board_Arduino_DiecimilaATmega328(BoardArduinoBase):
 
     NAME = "Arduino Duemilanove or Diecimila (ATmega328)"
     ANALOG_PINS = range(14, 20)
 
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "diecimilaatmega328"})
+        return self.PLATFORMIO_CONF
+
 
 class Board_Arduino_Fio(BoardArduinoBase):
 
     NAME = "Arduino Fio"
+
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "fio"})
+        return self.PLATFORMIO_CONF
 
 
 class Board_Arduino_Leonardo(BoardArduinoBase):
@@ -88,20 +99,9 @@ class Board_Arduino_Leonardo(BoardArduinoBase):
     PWM_PINS = (3, 5, 6, 9, 10, 11, 13)
     EXTINT_PINS = (0, 1, 2, 3, 7)
 
-
-class Board_Arduino_LilyPadUSB(BoardArduinoBase):
-
-    NAME = "Arduino LilyPad USB"
-
-
-class Board_Arduino_LilyPadATmega168(BoardArduinoBase):
-
-    NAME = "Arduino LilyPad (ATmega168)"
-
-
-class Board_Arduino_LilyPadATmega328(BoardArduinoBase):
-
-    NAME = "Arduino LilyPad (ATmega328)"
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "leonardo"})
+        return self.PLATFORMIO_CONF
 
 
 class BoardArduinoMegaBase(BoardArduinoBase):
@@ -134,15 +134,18 @@ class Board_Arduino_MegaATmega1280(BoardArduinoMegaBase):
 
     NAME = "Arduino Mega (ATmega1280)"
 
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "megaatmega1280"})
+        return self.PLATFORMIO_CONF
+
 
 class Board_Arduino_MegaATmega2560(BoardArduinoMegaBase):
 
     NAME = "Arduino Mega (ATmega2560)"
 
-
-class Board_Arduino_MegaADK(BoardArduinoMegaBase):
-
-    NAME = "Arduino Mega ADK"
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "megaatmega2560"})
+        return self.PLATFORMIO_CONF
 
 
 class Board_Arduino_Micro(BoardArduinoBase):
@@ -168,48 +171,88 @@ class Board_Arduino_Micro(BoardArduinoBase):
     PWM_PINS = (3, 5, 6, 9, 10, 11, 13)
     EXTINT_PINS = (0, 1, 2, 3)
 
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "micro"})
+        return self.PLATFORMIO_CONF
+
 
 class Board_Arduino_MiniATmega168(BoardArduinoBase):
 
     NAME = "Arduino Mini (ATmega168)"
+
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "miniatmega168"})
+        return self.PLATFORMIO_CONF
 
 
 class Board_Arduino_MiniATmega328(BoardArduinoBase):
 
     NAME = "Arduino Mini (ATmega328)"
 
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "miniatmega328"})
+        return self.PLATFORMIO_CONF
+
 
 class Board_Arduino_NanoATmega168(BoardArduinoBase):
 
     NAME = "Arduino Nano (ATmega168)"
+
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "nanoatmega168"})
+        return self.PLATFORMIO_CONF
 
 
 class Board_Arduino_NanoATmega328(BoardArduinoBase):
 
     NAME = "Arduino Nano (ATmega328)"
 
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "nanoatmega328"})
+        return self.PLATFORMIO_CONF
+
 
 class Board_Arduino_Pro8MHzATmega168(BoardArduinoBase):
 
     NAME = "Arduino Pro or Pro Mini (ATmega168, 3.3V, 8MHz)"
+
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "pro8MHzatmega168"})
+        return self.PLATFORMIO_CONF
 
 
 class Board_Arduino_Pro16MHzATmega168(BoardArduinoBase):
 
     NAME = "Arduino Pro or Pro Mini (ATmega168, 5V, 16MHz)"
 
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "pro16MHzatmega168"})
+        return self.PLATFORMIO_CONF
+
 
 class Board_Arduino_Pro8MHzATmega328(BoardArduinoBase):
 
     NAME = "Arduino Pro or Pro Mini (ATmega328, 3.3V, 8MHz)"
+
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "pro8MHzatmega328"})
+        return self.PLATFORMIO_CONF
 
 
 class Board_Arduino_Pro16MHzATmega328(BoardArduinoBase):
 
     NAME = "Arduino Pro or Pro Mini (ATmega328, 5V, 16MHz)"
 
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "pro16MHzatmega328"})
+        return self.PLATFORMIO_CONF
+
 
 class Board_Arduino_Uno(BoardArduinoBase):
 
     NAME = "Arduino Uno"
     ANALOG_PINS = range(14, 20)
+
+    def get_platformio_conf(self):
+        self.PLATFORMIO_CONF.update({"board": "uno"})
+        return self.PLATFORMIO_CONF
