@@ -56,7 +56,20 @@ class REST(Resource):
         Resource.__init__(self)
         self._restservice = restservice
 
+    def _preflight_request(self, request):  # pylint: disable=R0201
+        """ Preflighted request """
+        request.setHeader("Access-Control-Allow-Origin", "*")
+        request.setHeader("Access-Control-Allow-Methods",
+                          "GET, POST, PUT, DELETE, OPTIONS")
+        request.setHeader("Access-Control-Allow-Headers",
+                          "Content-Type, Access-Control-Allow-Headers")
+        return ""
+
     def render(self, request):
+        if request.method == "OPTIONS":
+            return self._preflight_request(request)
+
+        request.setHeader("Access-Control-Allow-Origin", "*")
         try:
             action = REST.METHOD_TO_ACTION[request.method]
             request_key = request.path[1:].replace("/", ".")
@@ -84,7 +97,6 @@ class REST(Resource):
         if isinstance(result, Failure):
             self._restservice.log.error(result)
 
-        request.setHeader("Access-Control-Allow-Origin", "*")
         if request.path.endswith(".json"):
             request.setHeader("content-type", "application/json")
             request.write(self.result_to_json(result))
