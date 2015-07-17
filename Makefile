@@ -1,4 +1,4 @@
-.PHONY: all docs firmware clean test clean
+.PHONY: all docs firmware clean test clean build
 
 all: docs
 
@@ -37,5 +37,9 @@ py-clean:
 	find . -name '*.pyc' -exec rm -f {} +
 	find . -name '*.pyo' -exec rm -f {} +
 	rm twisted/plugins/dropin.cache
+
+build:
+	make dashboard-build
+	python setup.py sdist
 
 clean: docs-clean py-clean dashboard-clean
