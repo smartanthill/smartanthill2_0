@@ -29,7 +29,7 @@ setup(
     license=__license__,
     install_requires=[
         # "smartanthill_zc",
-        "platformio>=2.2.0",
+        "platformio>=2.2.1",
         "pyserial",
         "twisted>=14.1",
         "txws",
