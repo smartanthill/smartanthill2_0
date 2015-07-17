@@ -32,7 +32,7 @@ class APIHandlerBase(object):
 
     def __init__(self, action, request_key):
         self.action = action
-        self.request_key = request_key
+        self.request_key = request_key.lower()
 
     def match(self):
         return self.action & self.PERMISSION \

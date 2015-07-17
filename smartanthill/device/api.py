@@ -31,7 +31,7 @@ def get_handlers():
                 _bodypart_name = bodypart.get_name()
 
                 PERMISSION = APIPermission.GET
-                KEY = "device.%s.%s" % (_device.id_, _bodypart_name)
+                KEY = ("device.%s.%s" % (_device.id_, _bodypart_name)).lower()
                 REQUIRED_PARAMS = required_params
 
                 def handle(self, data):

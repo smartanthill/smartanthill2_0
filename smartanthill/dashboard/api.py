@@ -151,7 +151,8 @@ def get_plugins(request):
             "name": p.get_name(),
             "description": p.get_description(),
             "peripheral": p.get_peripheral(),
-            "options": p.get_options()
+            "options": p.get_options(),
+            "request_fields": p.get_request_fields(),
         })
     return plugins
 

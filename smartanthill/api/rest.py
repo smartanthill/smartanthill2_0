@@ -84,6 +84,7 @@ class REST(Resource):
         if isinstance(result, Failure):
             self._restservice.log.error(result)
 
+        request.setHeader("Access-Control-Allow-Origin", "*")
         if request.path.endswith(".json"):
             request.setHeader("content-type", "application/json")
             request.write(self.result_to_json(result))
