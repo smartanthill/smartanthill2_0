@@ -3,8 +3,8 @@
   {
     "level": "INFO"
   },
-  
-  "ccurl": "",
+
+  "ccurl": "http://cc.smartanthill.org",
 
   "services":
   {
