@@ -1,0 +1,3 @@
+include smartanthill/*.json
+recursive-include smartanthill/cc/embedded/firmware *
+recursive-include smartanthill/dashboard/site/dist *

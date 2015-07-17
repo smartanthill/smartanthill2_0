@@ -36,7 +36,7 @@ setup(
         "six",  # required by txws but not listed in it's requirements
     ],
     packages=find_packages()+["twisted.plugins"],
-    package_data={"smartanthill": ["*.json"]},
+    include_package_data=True,
     entry_points={
         "console_scripts": [
             "smartanthill = smartanthill.__main__:main"
