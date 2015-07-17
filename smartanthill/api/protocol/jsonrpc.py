@@ -110,6 +110,4 @@ class JSONRPCAPIFactory(Factory):
         self._service = service
 
     def buildProtocol(self, addr):
-        p = JSONRPCAPIProtocol(self._service)
-        p.factory = self
-        return p
+        return JSONRPCAPIProtocol(self._service)
