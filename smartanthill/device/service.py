@@ -14,7 +14,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from os import listdir
-from os.path import isfile, join
+from os.path import isdir, isfile, join
 
 from smartanthill_zc.api import ZeptoPlugin
 from twisted.python.filepath import FilePath
@@ -96,6 +96,8 @@ class DeviceService(SAMultiService):
             pass
 
         for plugins_dir in plugins_dirs:
+            if not isdir(plugins_dir):
+                continue
             for item in FilePath(plugins_dir).listdir():
                 manifest = join(plugins_dir, item, "manifest.xml")
                 if isfile(manifest):

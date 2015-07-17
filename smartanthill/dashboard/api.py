@@ -162,7 +162,11 @@ def get_serialports_route(request):
     data = get_serialports()
     for item in data:
         for k in ["hwid", "description"]:
-            if item[k] == "n/a":
+            try:
+                item[k] = item[k].encode("utf8")
+                if item[k] == "n/a":
+                    item[k] = None
+            except UnicodeDecodeError:
                 item[k] = None
     return data
 
