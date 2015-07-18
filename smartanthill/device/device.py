@@ -16,7 +16,7 @@
 from shutil import rmtree
 from tempfile import mkdtemp
 
-from smartanthill_zc.api import ZeptoBodyPart
+from smartanthill_zc.api import ZeptoBodyPart, ZeptoProgram
 from twisted.internet.defer import succeed
 
 from smartanthill.cc import platformio
@@ -71,13 +71,14 @@ class Device(object):
         assert isinstance(bodypart, ZeptoBodyPart)
 
         program = "return %s(%s);" % (name, ", ".join([
-            request_fields.get(f['name'])
-            for f in bodypart.plugin.get_request_fields()
+            f['name'] for f in bodypart.plugin.get_request_fields()
         ]))
-        return self.run_program(program)
+        return self.run_program(program, request_fields)
 
-    def run_program(self, program):  # pylint: disable=R0201
-        return succeed(program)
+    def run_program(self, program, parameters=None):  # pylint: disable=R0201
+        zp = ZeptoProgram(program, self.get_bodyparts())
+        opcode = zp.compile(parameters)
+        return succeed(program + str(opcode))
         # assert isinstance(type_, ValueConstant)
         # if type_ in self.operations:
         #     return self.board.launch_operation(self.id_, type_, data)
