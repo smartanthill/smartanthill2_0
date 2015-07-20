@@ -21,6 +21,7 @@ from twisted.application.internet import TCPServer  # pylint: disable=E0611
 from twisted.application.service import MultiService
 from twisted.python import log, usage
 from twisted.python.failure import Failure
+from twisted.python.filepath import FilePath
 from twisted.web import server
 from twisted.web._responses import BAD_REQUEST, INTERNAL_SERVER_ERROR
 from twisted.web.resource import Resource
@@ -37,8 +38,9 @@ class WebCloud(Resource):
 
     isLeaf = True
 
-    def __init__(self):
+    def __init__(self, project_dir):
         Resource.__init__(self)
+        self.project_dir = project_dir
 
     def render_OPTIONS(self, request):  # pylint: disable=R0201
         """ Preflighted request """
@@ -56,14 +58,13 @@ class WebCloud(Resource):
             log.msg(str(data))
             assert set(["boardId", "bodyparts"]) <= set(data.keys())
 
-            # from smartanthill.device.device import Device
-            project_dir = mkdtemp()
             d = platformio.build_firmware(
-                project_dir,
+                self.project_dir,
                 BoardFactory.newBoard(data['boardId']).get_platformio_conf(),
-                Device.bodypartsToObjects(data['bodyparts'])
+                Device.bodypartsToObjects(data['bodyparts']),
+                disable_auto_clean=True
             )
-            d.addBoth(self.delayed_render, request, project_dir)
+            d.addBoth(self.delayed_render, request)
             return NOT_DONE_YET
         except (AssertionError, ValueError, DeviceUnknownPlugin) as e:
             result = ("<html><body>The request cannot be fulfilled due to bad "
@@ -73,9 +74,7 @@ class WebCloud(Resource):
             request.setResponseCode(BAD_REQUEST)
             return result
 
-    def delayed_render(self, result, request,  # pylint: disable=R0201
-                       project_dir):
-        rmtree(project_dir)
+    def delayed_render(self, result, request):
         if isinstance(result, Failure):
             log.err(str(result.value))
             request.setResponseCode(INTERNAL_SERVER_ERROR)
@@ -93,20 +92,40 @@ class SmartAnthillCC(MultiService):
         self.options = options
 
     def startService(self):
-        swc = server.Site(WebCloud())
+        log.msg("PlatformIO Project directory %s" %
+                self.options['project_dir'])
+        swc = server.Site(WebCloud(self.options['project_dir']))
         TCPServer(self.options['port'], swc).setServiceParent(self)
         MultiService.startService(self)
 
     def stopService(self):
+        rmtree(self.options['project_dir'])
         MultiService.stopService(self)
 
 
 class Options(usage.Options):
     optParameters = [
-        ["port", "p", 8130, "TCP Server port"]
+        ["port", "p", 8130, "TCP Server port"],
+        ["project_dir", "d", None, "Future PlatformIO Project directory"]
     ]
 
+    compData = usage.Completions(
+        optActions={"project_dir": usage.CompleteDirs()})
+
     longdesc = "SmartAnthill Cloud Compiler (version %s)" % __version__
+
+    def postOptions(self):
+        if not self['project_dir']:
+            self['project_dir'] = mkdtemp()
+
+        project_dir = FilePath(self['project_dir'])
+        if not project_dir.exists() or not project_dir.isdir():
+            raise usage.UsageError("The path to future project directory"
+                                   " is invalid")
+        elif project_dir.getPermissions().user.shorthand() != 'rwx':
+            raise usage.UsageError("You don't have 'read/write/execute'"
+                                   " permissions to future project directory")
+        self['project_dir'] = project_dir.path
 
 
 def makeService(options):

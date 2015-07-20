@@ -14,8 +14,9 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import base64
-from os import environ, makedirs
-from os.path import dirname, exists, isdir, join
+from hashlib import sha1
+from os import environ, listdir, makedirs
+from os.path import dirname, exists, isdir, isfile, join
 from shutil import copytree, rmtree
 
 from smartanthill_zc.api import ZeptoBodyPart
@@ -31,8 +32,6 @@ from smartanthill.util import where_is_program
 
 class PlatformIOProject(object):
 
-    ENV_NAME = "smartanthill"
-
     def __init__(self, project_dir, project_conf, clone_embedded=True):
         self.project_dir = project_dir
         self.project_conf = project_conf
@@ -42,6 +41,7 @@ class PlatformIOProject(object):
             self._clone_project(
                 sibpath(__file__, join("embedded", "firmware")))
 
+        self._env_name = self._generate_env_name()
         self._defines = []
         self.append_define("SMARTANTHILL", "%02d%02d%02d" % FIRMWARE_VERSION)
 
@@ -51,8 +51,11 @@ class PlatformIOProject(object):
     def get_project_dir(self):
         return self.project_dir
 
+    def get_env_name(self):
+        return self._env_name
+
     def get_env_dir(self):
-        return join(self.project_dir, ".pioenvs", self.ENV_NAME)
+        return join(self.project_dir, ".pioenvs", self._env_name)
 
     def get_src_dir(self):
         return join(self.project_dir, "src")
@@ -76,24 +79,37 @@ class PlatformIOProject(object):
             return PlatformIOBuilder(self, options).run()
 
     def _clone_project(self, dir_path):
+        # cache existing project
+        if set(listdir(dir_path)) <= set(listdir(self.project_dir)):
+            return
         if isdir(self.project_dir):
             rmtree(self.project_dir)
         copytree(dir_path, self.project_dir)
 
+    def _generate_env_name(self):
+        data = ["%s_%s" % (k, v) for k, v in self.project_conf.iteritems()]
+        shasum = sha1(",".join(sorted(data))).hexdigest()
+        return "%s_%s" % (self.project_conf['board'], shasum[:10])
+
     def _generate_platformio_ini(self):
+        project_conf = join(self.project_dir, "platformio.ini")
         options = self.project_conf.copy()
+        env_group = "[env:%s]" % self._env_name
+
+        if isfile(project_conf) and env_group in open(project_conf).read():
+            return
 
         if "build_flags" not in options:
             options['build_flags'] = ""
 
         options['build_flags'] += " " + self._get_srcbuild_flags()
 
-        ini_content = ["[env:%s]" % self.ENV_NAME]
+        ini_content = [env_group]
         ini_content.extend(["%s = %s" % (k, v)
                             for k, v in options.iteritems()])
 
-        with open(join(self.project_dir, "platformio.ini"), "w") as f:
-            f.write("\n".join(ini_content))
+        with open(project_conf, "a") as f:
+            f.write("\n%s\n" % "\n".join(ini_content))
 
     def _get_srcbuild_flags(self):
         flags = []
@@ -118,8 +134,10 @@ class PlatformIOBuilder(object):
             where_is_program("platformio"), args=[
                 "--force", "run",
                 "-vv",
+                "--environment", self.project.get_env_name(),
                 "--project-dir", self.project.get_project_dir()
-            ),
+            ] + (["--disable-auto-clean"]
+                 if self._options.get("disable-auto-clean", False) else []),
             env=environ
         )
         d.addBoth(self.on_result)
@@ -167,7 +185,8 @@ class PlatformIOUploader(object):
                 "--force", "run",
                 "--project-dir", self.project.get_project_dir(),
                 "--target", "uploadlazy",
-                "--upload-port", self._options.get("upload_port")
+                "--upload-port", self._options.get("upload_port"),
+                "--disable-auto-clean"
             ),
             env=environ
         )
@@ -186,7 +205,8 @@ class PlatformIOUploader(object):
         return {"result": "Please restart device"}
 
 
-def build_firmware(project_dir, platformio_conf, bodyparts, zepto_conf=None):
+def build_firmware(project_dir, platformio_conf, bodyparts,
+                   zepto_conf=None, disable_auto_clean=False):
     assert (set(["platform", "board", "src_filter", "build_flags"]) <=
             set(platformio_conf.keys()))
     assert bodyparts and isinstance(bodyparts[0], ZeptoBodyPart)
@@ -213,7 +233,8 @@ def build_firmware(project_dir, platformio_conf, bodyparts, zepto_conf=None):
             item.plugin.get_source_dir(),
             join(pio.get_src_dir(), join("plugins", item.plugin.get_id())))
 
-    return pio.run(target="build")
+    return pio.run(
+        target="build", options={"disable-auto-clean": disable_auto_clean})
 
 
 def upload_firmware(project_dir, platformio_conf, data):
