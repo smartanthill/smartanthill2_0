@@ -27,7 +27,7 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.4.5
+:Version:   v0.4.6
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -160,6 +160,7 @@ For Devices with Zero Pairing, the following procedure is used:
 * From Zero Pairing, Device gets pre-programmed list of frequencies for "reduced scan", based on SmartAnthill known-frequency; these frequencies SHOULD be expressed in terms which are convenient for the Device to be used; in particular, they SHOULD be recalculated into prefered-Device's form, and SHOULD be expressed as (start,end,increment). These frequencies MUST be calculated to cover range from `SA-frequency - 2e-4 * SA-frequency` to `SA-frequency + 2e-4 * SA-frequency`, with a step of `SA-deviation / 2`. Zero Pairing DOES NOT set field 'preferred-frequency' for the Device.
 * When Device is turned on for the first time after being programmed with Zero Pairing, it has no preferred-frequency in EEPROM, so it:
 
+  - sets power to -6dB (TODO!: increase if there is no result/very-bad-results at all)
   - takes one of the frequencies from the list of frequencies obtained from Zero Pairing
   - performs SAMP PHY quality measurement (as described in :ref:`samp` document), with the following clarifications:
 
@@ -170,29 +171,34 @@ For Devices with Zero Pairing, the following procedure is used:
     + for each packet received, `weight = 2^24 >> number-of-erroneous-bits`, is added to frequency-quality
   
   - repeats the process for another frequency from the list
-  - the frequency with the largest `frequency-quality` becomes preferred-frequency (up until the Frequency-Fine-Tuning described below).
+  - the frequency with the largest `frequency-quality` becomes first preferred-frequency (up until the Frequency-Fine-Tuning described below).
   - from this point on, Device uses this preferred-frequency
   - Device sends a Fine-Tune-Best-Frequency packet to Central Controller, with all the data gathered from the measurements above
   - Device receives a Fine-Tune-Best-Frequency reply, double-checks it for sanity (TODO: what if insane?), writes received preferred-frequency to EEPROM, and starts to use preferred-frequency for all the subsequent communications
   - Device sends a PHY-Data-Ready-Response (sic!), and receives PHY-Data-Ready-Request (sic!). From this point on, Device is ready to work within the SmartAnthill PAN.
 
-Device Discovery and Pairing
-----------------------------
+Device OtA Discovery and Pairing
+--------------------------------
 
 For Devices with OtA Pairing (as described in :ref:`sapairing`), "Device Discovery" procedure described in :ref:`samp` document is used, with the following clarifications:
 
 * SAMP "channel scan" for SADLP-RF is performed as follows:
 
-  - "candidate channel" list consists of all the channels allowed in target area
+  - Device sets power to -6dB (TODO!: increase if there is no result/very-bad-results at all)
+  - "candidate channel" list consists of all the frequencies in the range allowed in target area, with a step of `SA-deviation / 2`.
   - for each of candidate channels:
 
-    + the first packet as described in SAMP "Device Discovery" procedure is sent by Device
-    + if a reply is received indicating that Root is ready to proceed with "pairing" - "pairing" is continued over this channel
+    + Device performs SAMP PHY quality measurement procedure (with SADLP-RF refinements described in after-Zero-Pairing section), using the range from `SA-frequency - 2e-4 * SA-frequency` to `SA-frequency + 2e-4 * SA-frequency` with a step of `SA-Deviation / 2`. During this measurement, Device SHOULD use data from measurements-which-have-already-been-performed-within-this-channel-scan (effectively using cached measurement data for known frequencies). *NB: if following this specification as described (and be careful with potential rounding errors during calculations), it means that only one frequency scan with a step of `SA-Deviation / 2` is performed; i.e. for each new "candidate channel" only one new measurement is performed, and all the other data is taken from the cache.*.
+
+      - if preferred-frequency can be found (with at least 2^20 - TODO - weight), then: 
+
+        * the first packet as described in SAMP "Device Discovery" procedure is sent by Device
+        * if a reply is received indicating that Root is ready to proceed with "pairing" - "pairing" is continued over this channel; after pairing is completed - Device performs Fine-Tune-Best-Frequency process and PHY-Data-Ready acknowledgement as described in after-Zero-Pairing section above.
       
-      - if "pairing" fails, then the next available "candidate channel" is processed. 
-      - to handle the situation when "pairing" succeeds, but Device is connected to wrong Central Controller - Device MUST (a) provide a visual indication that it is "paired", (b) provide a way (such as jumper or button) allowing to drop current "pairing" and continue processing "candidate channels". In the latter case, Device MUST process remaining candidate channels before re-scanning.
+        * if "pairing" fails, then the next available "candidate channel" is processed. 
+        * to handle the situation when "pairing" succeeds, but Device is connected to wrong Central Controller - Device MUST (a) provide a visual indication that it is "paired", (b) provide a way (such as jumper or button) allowing to drop current "pairing" and continue processing "candidate channels". In the latter case, Device MUST process remaining candidate channels before re-scanning.
  
-    + if a reply is received with ERROR-CODE = ERROR_NOT_AWAITING_PAIRING, or if there is no reply within 500 msec, the procedure is repeated for the next candidate channel
+        * if a reply is received with ERROR-CODE = ERROR_NOT_AWAITING_PAIRING, or if there is no reply within 500 msec, the Device proceeds to the next candidate channel
 
   - if the list of "candidate channels" is exhausted without "pairing", the whole "channel scan" is repeated (indefinitely, or with a 5-or-more-minute limit - if the latter, then "not scanning anymore" state MUST be indicated on the Device itself - TODO acceptable ways of doing it, and the scanning MUST be resumed if user initiates "re-pairing" on the Device), starting from an "active scan" as described above
 
