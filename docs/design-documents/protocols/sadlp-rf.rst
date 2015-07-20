@@ -52,15 +52,31 @@ Modulation: 2FSK (a.k.a. FSK without further specialization, and BFSK), or GFSK 
 Frequency ranges:
 
 +--------------------------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+
-| From                           | To                             | Tau (*)                        | SA-Deviation                   | Receiver filter bandwidth      |
+| From                           | To                             | Tau (\*)                       | SA-Deviation                   | Receiver filter bandwidth      |
 |                                |                                |                                |                                | (non-normative)                |
 +================================+================================+================================+================================+================================+
-| 433.075 MHz                    | 434.775 MHz                    | 1/38400 sec                    | 38400 Hz                       | 4*38400 = 153600 Hz            |
+| 433.075 MHz                    | 434.775 MHz                    | 1/38400 sec                    | 38400 Hz (\*\*)                | 4*38400 = 153600 Hz            |
 +--------------------------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+
 
-(*) Tau is minimum period with the same frequency during FSK modulation. *NB: tau of 1/38400 sec usually, but not necessarily, corresponds to 38400 baud transfer rate as used in RF Module APIs.* (TODO: rate negotiation?)
+(\*) Tau is minimum period with the same frequency during FSK modulation. *NB: tau of 1/38400 sec usually, but not necessarily, corresponds to 38400 baud transfer rate as used in RF Module APIs.* (TODO: rate negotiation?)
+(\*\*) SA-Deviation uses deviation which is twice-wider than theoretically necessary for MSK, to account for not-so-perfect hardware.
 
-Line code: preamble (at least two 0xAA (TODO:check if it is really 0xAA or 0x55) symbols), followed by 0x2DD4 sync word, followed by "raw" SADLP-RF Packet as described below. 
+Line code: preamble (at least two 0xAA (TODO:check if it is really 0xAA or 0x55) symbols), followed by symbols 0x0F, 0xCC (sync word), followed by "raw" SADLP-RF Packet as described below. 
+
+CSMA/CA: enabled (if available)
+
+Typical transceiver chips settings
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Transceiver chips are often providing additional features, which MUST be disabled for SADLP-RF to work properly:
+
+* **CRC: off** *Rationale: SADLP-RF uses forward error correction, which allows to improve reliability and reduce power consumption significantly and CRC would disable this ability*
+* **Manchester encoding: off** *Rationale: SADLP-RF uses it's own line code which allows for higher bit rates than Manchester*
+* **Encryption: off** *Rationale: SADLP-RF relies on encryption being performed on higher levels; enabling AES at L2 would defeat such features as forward error correction*
+
+In addition, the following settings SHOULD be used (if supported by transceiver chip):
+
+* **Number of mismatched bits allowed for sync word: 1**
+* **CSMA/CA: enabled**
 
 SADLP-RF Packets, SCRAMBLING, and Line Codes
 --------------------------------------------
