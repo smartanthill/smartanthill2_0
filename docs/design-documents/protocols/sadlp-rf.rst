@@ -27,7 +27,7 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.4.6
+:Version:   v0.4.7
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -47,11 +47,18 @@ Assumptions:
 SADLP-RF PHY Level
 ------------------
 
-Frequencies: TODO (with frequency shifts)
+Modulation: 2FSK (a.k.a. FSK without further specialization, and BFSK), or GFSK (2FSK and GFSK are generally compatible), with frequency deviation specified above.
 
-Modulation: 2FSK (a.k.a. FSK without further specialization, and BFSK), or GFSK (2FSK and GFSK are generally compatible), with frequency shifts specified above.
+Frequency ranges:
 
-Tau (minimum period with the same frequency during FSK modulation): 1/9600 sec. *NB: this may or may not correspond to 9600 baud transfer rate.* (TODO: rate negotiation?)
++--------------------------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+
+| From                           | To                             | Tau (*)                        | SA-Deviation                   | Receiver filter bandwidth      |
+|                                |                                |                                |                                | (non-normative)                |
++================================+================================+================================+================================+================================+
+| 433.075 MHz                    | 434.775 MHz                    | 1/38400 sec                    | 38400 Hz                       | 4*38400 = 153600 Hz            |
++--------------------------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+
+
+(*) Tau is minimum period with the same frequency during FSK modulation. *NB: tau of 1/38400 sec usually, but not necessarily, corresponds to 38400 baud transfer rate as used in RF Module APIs.* (TODO: rate negotiation?)
 
 Line code: preamble (at least two 0xAA (TODO:check if it is really 0xAA or 0x55) symbols), followed by 0x2DD4 sync word, followed by "raw" SADLP-RF Packet as described below. 
 
