@@ -15,7 +15,6 @@
 
 from twisted.python.reflect import namedObject
 
-from smartanthill import __docsurl__
 from smartanthill.exception import DeviceUnknownBoard
 
 
@@ -38,7 +37,6 @@ class BoardBase(object):
 
     VENDOR = None
     NAME = None
-    INFO_URL = __docsurl__
 
     PINS_ALIAS = None
     PINS = None
@@ -53,9 +51,6 @@ class BoardBase(object):
 
     def get_vendor(self):
         return self.VENDOR
-
-    def get_info_url(self):
-        return self.INFO_URL
 
     def get_pins(self):
         return self.PINS
@@ -89,3 +84,7 @@ class BoardBase(object):
 
     def get_platformio_conf(self):
         raise NotImplementedError
+
+    def get_info_url(self):
+        return ("http://platformio.org/#!/boards?filter%%5Btype%%5D=%s" %
+                self.get_platformio_conf().get("board"))
