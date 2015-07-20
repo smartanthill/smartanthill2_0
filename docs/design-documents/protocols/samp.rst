@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.18a
+:Version:   v0.0.18b
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -101,7 +101,7 @@ Routing Tables SHOULD be stored in a 'canonical' way (Links list ordered from lo
 
 On non-Retransmitting Devices, Routing Table is rudimentary: it contains only one Link (LINK-ID=0,BUS-ID,INTRA-BUS-ID,...) and only one Route (TARGET-ID=0,LINK-ID=0). Moreover, on non-Retransmitting Devices Routing Table is OPTIONAL; if non-Retransmitting Device does not keep Routing Table - it MUST be reflected in a TODO CAPABILITIES flag during "pairing"; in this case Root MUST send requests to such devices specifying TODO header extension (which contains BUS-ID,INTRA-BUS-ID for the first hop back from target Device).
 
-All Routing Tables on both Retransmitting and non-Retransmitting Devices are essentially copies of "Master Routing Tables" which are kept on Root. It is a responsibility of Root to maintain Routing Tables for all the Devices (both Retransmitting and non-Retransmitting); it is up to Root which entries to store in each Routing Table. In some cases, Routing Table might need to be truncated; in this case, it is responsibility of Root to use VIA field in Target-Address (see below) to ensure that the packet can be routed given the Routing Tables present. In any case, Routing Table MUST be able to contain at least one entry, with TARGET-ID=0 (Root). This guarantees that path to Root can always be found without VIA field.
+All Routing Tables on both Retransmitting and non-Retransmitting Devices are essentially (usually partial) replicas of "Master Routing Tables" which are kept on Root. It is a responsibility of Root to maintain Routing Tables for all the Devices (both Retransmitting and non-Retransmitting); it is up to Root which entries to store in each Routing Table. In some cases, Routing Table might need to be truncated; in this case, it is responsibility of Root to use VIA field in Target-Address (see below) to ensure that the packet can be routed given the Routing Tables present. In any case, Routing Table MUST be able to contain at least one entry, with TARGET-ID=0 (Root). This guarantees that path to Root can always be found without VIA field.
 
 In addition, on Rentransmitting Devices the following parameters are kept (and updated by Root): MAX-TTL, FORWARD-TO-SANTA-DELAY-UNIT, FORWARD-TO-SANTA-DELAY, NODE-MAX-RANDOM-DELAY-UNIT, and NODE-MAX-RANDOM-DELAY.
 
@@ -514,17 +514,18 @@ Device Discovery and Pairing over SAMP
 
 Whenever Device is in PRE-PAIRING state (see :ref:`sapairing` for details on the PRE-PAIRING state), it scans all available channels; if channel is "eligible" (as defined in an appropriate SADLP-\* document), the following basic exchange occurs:
 
-* Device (after, maybe, performing certain preliminary actions on the channel, as defined in an appropriate SADLP-\* document) sends Pairing-Ready-Pseudo-Response (described in :ref:`sapairing` document), as SAMP To-Santa packet. 
-* In response, Root will send a Pairing-Pre-Request (as a  From-Santa SAMP packet)
-* Device will reply with Pairing-Pre-Response (as a To-Santa SAMP packet, containing DEVICE-INTRABUS-ID)
-* *Up to this point in exchange, all the packets, including optional and not mentioned above Entropy Gathering packets, are always sent as From-Santa packets with Target-Address being ROOT, i.e. broadcast packets / To-Santa packets*
-* *From this point onwards, all the packets are always addressed to specific Device, using non-paired addressing*
+* Device (after, maybe, performing certain preliminary actions on the channel, as defined in an appropriate SADLP-\* document) sends Pairing-Ready-Pseudo-Response (described in :ref:`sapairing` document), as a SACCP packet, addressed to Root. When SACCP packet reaches SAMP level (still on Device side), SAMP doesn't have a route to Root, so it sends it as a SAMP To-Santa packet. 
+* In response, Root will send a Pairing-Pre-Request (as it has no route to Device, it will be sent as a  From-Santa SAMP packet)
+* Device will reply with Pairing-Pre-Response (which will be sent a To-Santa SAMP packet, containing DEVICE-INTRABUS-ID)
+* *Up to this point in exchange, all the packets from Root to Device at SAMP level, including optional and not mentioned above Entropy Gathering packets, are always sent as From-Santa packets with Target-Address being ROOT, i.e. broadcast packets. Packets from Device to Root are sent as To-Santa packets.*
+* *From this point onwards, all the packets from Root to Device at SAMP level are always addressed to specific Device, using non-paired addressing. Packets from Device to Root are still sent as To-Santa packets.*
 * Root will proceed with Pairing procedure as described in :ref:`sapairing` document, still using SAMP From-Santa/To-Santa packets, but from now on From-Santa packets are addressed to specific Device using "non-paired addressing"
 * As soon as Device pairing is completed (and Root sets NODE-ID for the Device), Root SHOULD:
 
   + calculate optimal route to the Device
   + change Routing Tables for all the Retransmitting Devices alongside the optimal route (for example, using SACCP_ROUTING_DATA packets as described above)
   + as soon as confirmations from all the Retransmitting Devices about route updates are obtained, Root SHOULD start using Device's "paired addressing" for all the communications onwards with the Device.
+  + change Routing Table on the Device, indicating optimal route to the Root. From this point on, Device will start using usual Unicast packets when communicating with Root (unless there are reasons to use other SAMP packets, for example, on multiple retransmits or for packets marked URGENT).
 
 TODO: Samp-Retransmit (to next-hop Retransmitting Device on RETRANSMIT-ON-NO-RETRANSMIT)
 TODO: define handling for all "partially correct" packets
