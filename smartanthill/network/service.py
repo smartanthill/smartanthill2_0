@@ -135,18 +135,15 @@ class RouterService(SAMultiService):
     def startService(self):
         connection = self.options['connection']
         try:
-            if connection.get_type() == "serial":
-                _kwargs = connection.params
+            if connection.get_protocol() == "serial":
+                _kwargs = connection.get_options()
+                _kwargs[
+                    'deviceNameOrPortNumber'] = connection.get_address()
                 _kwargs['protocol'] = self._protocol
                 _kwargs['reactor'] = reactor
-
-                # rename port's argument
-                if "port" in _kwargs:
-                    _kwargs['deviceNameOrPortNumber'] = _kwargs['port']
-                    del _kwargs['port']
-
                 self._router_device = SerialPort(**_kwargs)
-        except:
+        except OSError as e:
+            self.log.error(str(e))
             self.log.error(NetworkRouterConnectFailure(self.options))
             self._reconnect_nums += 1
             self._reconnect_callid = reactor.callLater(
@@ -189,15 +186,14 @@ class RouterService(SAMultiService):
 class ConnectionInfo(object):
 
     def __init__(self, uri):
-        assert ":" in uri
+        assert "://" in uri
         self.uri = uri
-        parts = uri.split(":")
-        self.type_ = parts[0]
-        self.params = dict()
 
-        for part in parts[1:]:
-            key, value = part.split("=")
-            self.params[key] = value
+        self._protocol = None
+        self._address = None
+        self._options = {}
+
+        self._parse_uri(uri)
 
     def __repr__(self):
         return "ConnectionInfo: %s" % self.uri
@@ -205,8 +201,32 @@ class ConnectionInfo(object):
     def get_uri(self):
         return self.uri
 
-    def get_type(self):
-        return self.type_
+    def get_protocol(self):
+        return self._protocol
+
+    def get_address(self):
+        return self._address
+
+    def get_options(self):
+        return self._options
+
+    def _parse_uri(self, uri):
+        protoend_pos = uri.index("://")
+        options_pos = uri.find("?")
+
+        self._protocol = uri[:uri.index("://")]
+
+        if options_pos != -1:
+            self._address = uri[protoend_pos+3:options_pos]
+        else:
+            self._address = uri[protoend_pos+3:]
+
+        if options_pos != -1:
+            for option in uri[options_pos+1:].split("&"):
+                key, value = option.split("=")
+                self._options[key] = value
+
+        print self._protocol, self._address, self._options
 
 
 class NetworkService(SAMultiService):
@@ -224,12 +244,11 @@ class NetworkService(SAMultiService):
 
         devices = get_service_named("device").get_devices()
         for devid, devobj in devices.iteritems():
-            netopts = devobj.options.get("network", {})
-            rconn = netopts.get("router", None)
-            if not rconn:
+            connectionUri = devobj.options.get("connectionUri", None)
+            if not connectionUri:
                 continue
 
-            _options = {"connection": ConnectionInfo(rconn),
+            _options = {"connection": ConnectionInfo(connectionUri),
                         "deviceids": [devid]}
             RouterService("network.router.%d" % devid,
                           _options).setServiceParent(self)

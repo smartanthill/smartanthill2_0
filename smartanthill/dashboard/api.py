@@ -89,7 +89,7 @@ def get_device_info(request, devid):
         "id": devid,
         "boardId": device.board.get_id(),
         "name": device.get_name(),
-        "connectionUrl": device.options.get("connectionUrl"),
+        "connectionUri": device.options.get("connectionUri"),
         "bodyparts": device.options.get("bodyparts")
     }
     return data
