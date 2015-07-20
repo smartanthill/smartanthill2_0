@@ -13,8 +13,8 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+import sys
 from os.path import expanduser, join
-from sys import argv as sys_argv
 
 from twisted.application.service import MultiService
 from twisted.internet import defer
@@ -127,9 +127,9 @@ class Options(usage.Options):
     compData = usage.Completions(
         optActions={"workspace": usage.CompleteDirs()})
 
-    longdesc = "%s (version %s)" % (__description__, __version__)
+    longdesc = "SmartAnthill: %s (version %s)" % (__description__, __version__)
 
-    allowed_defconf_opts = ("logger.level",)
+    allowed_defconf_opts = ("logger.level", "ccurl")
 
     def __init__(self):
         self._gather_baseparams(get_baseconf())
@@ -146,6 +146,10 @@ class Options(usage.Options):
                     continue
                 self.optParameters.append([argname, None, v, None, type(v)])
 
+    def opt_version(self):
+        print self.longdesc
+        sys.exit(0)
+
     def postOptions(self):
         workspace_dir = FilePath(self['workspace'])
         if not workspace_dir.exists():
@@ -157,10 +161,10 @@ class Options(usage.Options):
 
 
 def makeService(options):
-    user_options = dict((p[0], options[p[0]]) for p in options.optParameters)
-    cmdopts = frozenset([v.split("=")[0][2:] for v in sys_argv
-                         if v[:2] == "--" and "=" in v])
-    for k in cmdopts.intersection(frozenset(user_options.keys())):
-        user_options[k] = options[k]
-
-    return SmartAnthillService("sas", user_options)
+    user_options = [
+        v.split("=")[0][2:] for v in sys.argv if v[:2] == "--" and "=" in v]
+    result_options = dict(
+        (p[0], options[p[0]]) for p in options.optParameters
+        if (p[0] not in options.allowed_defconf_opts or p[0] in user_options)
+    )
+    return SmartAnthillService("sas", result_options)
