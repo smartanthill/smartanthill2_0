@@ -27,7 +27,7 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.4.7
+:Version:   v0.4.7a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -59,6 +59,7 @@ Frequency ranges:
 +--------------------------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+
 
 (\*) Tau is minimum period with the same frequency during FSK modulation. *NB: tau of 1/38400 sec usually, but not necessarily, corresponds to 38400 baud transfer rate as used in RF Module APIs.* (TODO: rate negotiation?)
+
 (\*\*) SA-Deviation uses deviation which is twice-wider than theoretically necessary for MSK, to account for not-so-perfect hardware.
 
 Line code: preamble (at least two 0xAA (TODO:check if it is really 0xAA or 0x55) symbols), followed by symbols 0x0F, 0xCC (sync word), followed by "raw" SADLP-RF Packet as described below. 
