@@ -13,9 +13,15 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+from __future__ import absolute_import
+
 import collections
 import functools
 import json
+from os import getenv
+from os.path import isfile, join
+
+from platformio.util import exec_command, get_systype
 
 
 class memoized(object):
@@ -83,6 +89,26 @@ def merge_nested_dicts(d1, d2):
         elif isinstance(v1, dict):
             merge_nested_dicts(v1, d2[k1])
     return d2
+
+
+def where_is_program(program):
+    # try OS's built-in commands
+    try:
+        result = exec_command(
+            ["where" if "windows" in get_systype() else "which", program])
+        if result['returncode'] == 0 and isfile(result['out'].strip()):
+            return result['out'].strip()
+    except OSError:
+        pass
+
+    # look up in $PATH
+    for bin_dir in getenv("PATH", "").split(";"):
+        if isfile(join(bin_dir, program)):
+            return join(bin_dir, program)
+        elif isfile(join(bin_dir, "%s.exe" % program)):
+            return join(bin_dir, "%s.exe" % program)
+
+    return program
 
 
 def calc_crc16(dataset):

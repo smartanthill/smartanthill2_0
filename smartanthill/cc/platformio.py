@@ -26,6 +26,7 @@ from twisted.python.util import sibpath
 from smartanthill import FIRMWARE_VERSION
 from smartanthill.cc import srcgen
 from smartanthill.log import Logger
+from smartanthill.util import where_is_program
 
 
 class PlatformIOProject(object):
@@ -114,7 +115,7 @@ class PlatformIOBuilder(object):
 
     def run(self):
         d = utils.getProcessOutputAndValue(
-            "platformio", args=(
+            where_is_program("platformio"), args=[
                 "--force", "run",
                 "-vv",
                 "--project-dir", self.project.get_project_dir()
@@ -162,7 +163,7 @@ class PlatformIOUploader(object):
 
     def run(self):
         d = utils.getProcessOutputAndValue(
-            "platformio", args=(
+            where_is_program("platformio"), args=(
                 "--force", "run",
                 "--project-dir", self.project.get_project_dir(),
                 "--target", "uploadlazy",
