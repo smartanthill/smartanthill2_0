@@ -27,7 +27,7 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.4.4a
+:Version:   v0.4.5
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -129,6 +129,52 @@ Non-paired Addressing for RF Buses
 Each RF frequency channel on a Device represents a "wireless bus" in terms of SAMP. For "intra-bus address" as a part "non-paired addressing" (as defined in :ref:`samp`), RF Devices MUST use randomly generated 64-bit ID. 
 
 If Device uses hardware-assisted Fortuna PRNG (as described in :ref:`sarng` document), Device MUST complete Phase 1 of "Entropy Gathering Procedure" (as described in :ref:`sapairing` document) to initialize Fortuna PRNG *before* generating this 64-bit ID. Then, Device should proceed to Phase 2 (providing Device ID), and Phase 3 (entropy gathering for key generation purposes), as described in :ref:`sapairing` document.
+
+PHY-Data-Request and PHY-Data-Response
+--------------------------------------
+
+As described in :ref:`samp` document, SACCP PHY-AND-ROUTING-DATA packets support PHY-Data-Request and PHY-Data-Response packets. For SADLP-RF, they're used as described below.
+
+ID-OF-SADLP for SADLP-RF
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+For SADLP-RF, ID-OF-SADLP is 0x0.
+
+PHY-Data Packets for SADLP-RF
+-----------------------------
+SADLP-RF uses the following PHY-Data Packets:
+
+Fine-Tune-Best-Frequency, going over PHY-Data-Response (sic!) and having SADLP-DEPENDENT-PAYLOAD of: **\| FREQUENCY-SCHEMA \| FREQUENCY \| FREQUENCY-WEIGHT \| FREQUENCY2 \| FREQUENCY-WEIGHT \| ... \|**
+where FREQUENCY-SCHEMA is an Encoded-Unsigned-Int<max=1> (currently only LINEAR schema is supported), FREQUENCY is an Encoded-Unsigned-Int<max=2> field, FREQUENCY-WEIGHT is an Encoded-Unsigned-Int<max=2>.
+
+Fine-Tune-Best-Frequency-Reply, going over PHY-Data-Request (sic!) and having SADLP-DEPENDENT-PAYLOAD of: **\| FREQUENCY \|**
+where FREQUENCY is an Encoded-Unsigned-Int<max=2> field.
+
+On receiving Fine-Tune-Best-Frequency, Central Controller calculates a "best fit" frequency for the reported graph of FREQUENCY-WEIGHT as a function of FREQUENCY. One example of such calculation would be to look for the best fit between a obtained graph and a theoretical gaussian graph; while such a calculation is "too heavy" for the MCU, it can be made on Central Controller easily.
+
+Device after-Zero-Pairing
+-------------------------
+
+For Devices with Zero Pairing, the following procedure is used: 
+
+* From Zero Pairing, Device gets pre-programmed list of frequencies for "reduced scan", based on SmartAnthill known-frequency; these frequencies SHOULD be expressed in terms which are convenient for the Device to be used; in particular, they SHOULD be recalculated into prefered-Device's form, and SHOULD be expressed as (start,end,increment). These frequencies MUST be calculated to cover range from `SA-frequency - 2e-4 * SA-frequency` to `SA-frequency + 2e-4 * SA-frequency`, with a step of `SA-deviation / 2`. Zero Pairing DOES NOT set field 'preferred-frequency' for the Device.
+* When Device is turned on for the first time after being programmed with Zero Pairing, it has no preferred-frequency in EEPROM, so it:
+
+  - takes one of the frequencies from the list of frequencies obtained from Zero Pairing
+  - performs SAMP PHY quality measurement (as described in :ref:`samp` document), with the following clarifications:
+
+    + `frequency-quality` variable is set to 0
+    + measurement is performed over 5 packets sent
+    + for each packet sent, there can be multiple packets received (as described in :ref:`samp`)
+    + for each packet received, number-of-erroneous-bits (based on data from Hamming decoder) is calculated (if applicable). 
+    + for each packet received, `weight = 2^24 >> number-of-erroneous-bits`, is added to frequency-quality
+  
+  - repeats the process for another frequency from the list
+  - the frequency with the largest `frequency-quality` becomes preferred-frequency (up until the Frequency-Fine-Tuning described below).
+  - from this point on, Device uses this preferred-frequency
+  - Device sends a Fine-Tune-Best-Frequency packet to Central Controller, with all the data gathered from the measurements above
+  - Device receives a Fine-Tune-Best-Frequency reply, double-checks it for sanity (TODO: what if insane?), writes received preferred-frequency to EEPROM, and starts to use preferred-frequency for all the subsequent communications
+  - Device sends a PHY-Data-Ready-Response (sic!), and receives PHY-Data-Ready-Request (sic!). From this point on, Device is ready to work within the SmartAnthill PAN.
 
 Device Discovery and Pairing
 ----------------------------

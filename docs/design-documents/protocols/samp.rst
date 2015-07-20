@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.18b
+:Version:   v0.0.19
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -47,7 +47,7 @@ SAMP is optimized based on the following assumptions:
 
   + This is done because of sensitivity of Routing Tables; with upper-layer protocol, Routing Tables can be communicated securely
   + It doesn't create a chicken-and-egg problem, as SAMP provides a way to reach any reachable Retransmitting Node without a Routing Table on it; as soon as Retransmitting Node is reachable via SAMP, upper-layer protocol such as SACCP can be used to create/update Routing Table on the Retransmitting Node.
-  + Technically, updating Routing Tables is not a part of SAMP; however, a protocol of updating Routing Tables over SACCP_ROUTING_DATA messages is provided below as an example.
+  + Technically, updating Routing Tables is not a part of SAMP; however, a protocol of updating Routing Tables over SACCP_PHY_AND_ROUTING_DATA messages is provided below as an example.
 
 * SAMP relies on upper-layer protocol (such as SAGDP) to send retransmits in case if packet has not been delivered, and to provide SAMP with an information about retransmit number (i.e., original packet having retransmit-number=0, first retransmit having retransmit-number=1, and so on).
 * SAMP relies on upper-layer protocol (such as SAGDP) to provide information if the Device on the other side is required to have it's transmitter on for upper-layer protocol purposes. For SAGDP, there are states which do guarantee this (in fact, it stands in almost all SAGDP states except for IDLE).
@@ -103,7 +103,7 @@ On non-Retransmitting Devices, Routing Table is rudimentary: it contains only on
 
 All Routing Tables on both Retransmitting and non-Retransmitting Devices are essentially (usually partial) replicas of "Master Routing Tables" which are kept on Root. It is a responsibility of Root to maintain Routing Tables for all the Devices (both Retransmitting and non-Retransmitting); it is up to Root which entries to store in each Routing Table. In some cases, Routing Table might need to be truncated; in this case, it is responsibility of Root to use VIA field in Target-Address (see below) to ensure that the packet can be routed given the Routing Tables present. In any case, Routing Table MUST be able to contain at least one entry, with TARGET-ID=0 (Root). This guarantees that path to Root can always be found without VIA field.
 
-In addition, on Rentransmitting Devices the following parameters are kept (and updated by Root): MAX-TTL, FORWARD-TO-SANTA-DELAY-UNIT, FORWARD-TO-SANTA-DELAY, NODE-MAX-RANDOM-DELAY-UNIT, and NODE-MAX-RANDOM-DELAY.
+In addition, on Rentransmitting Devices the following parameters are kept (and updated by Root): MAX-TTL, FORWARD-TO-SANTA-DELAY-UNIT, FORWARD-TO-SANTA-DELAY, MAX-FORWARD-TO-SANTA-DELAY (using same units as FORWARD-TO-SANTA-DELAY), NODE-MAX-RANDOM-DELAY-UNIT, and NODE-MAX-RANDOM-DELAY. MAX-FORWARD-TO-SANTA-DELAY indicates maximum "forward to santa" delay for all Retransmitting Devices in the PAN.
 
 TODO: no mobile non-Retransmitting (TODO reporting 'mobile' in pairing CAPABILITIES, plus heuristics), priorities (low->high): non-Retransmitting, Retransmitting.
 
@@ -117,15 +117,15 @@ Communicating Routing Table Information over SACCP
 
 As described above, SAMP relies on Routing Table information being available on all relevant Retransmitting Nodes. To ensure that this information is transmitted in secure manner, it SHOULD be transmitted by an upper-layer secure (and guaranteed-delivery) protocol such as SACCP. As described above, this doesn't create a chichen-and-egg problem, as each Retransmitting Node can be accessed via SAMP regardless of Routing Tables present (or even badly broken) on the Retransmitting Node in question; and as soon as Retransmitting Node can be accessed via SAMP - upper-layer protocol such as SACCP can be used to update Routing Table on the Retransmitting Node. 
 
-Technically, protocol for communicating Routing Table information is not a part of SAMP. However, in this section we provide an example implementation of such protocol over SACCP_ROUTING_DATA packets.
+Technically, protocol for communicating Routing Table information is not a part of SAMP. However, in this section we provide an example implementation of such protocol over SACCP_PHY_AND_ROUTING_DATA packets.
 
-SACCP_ROUTING_DATA supports the following packets:
+SACCP_PHY_AND_ROUTING_DATA supports the following packets:
 
-Route-Update-Request: **\| FLAGS \| OPTIONAL-EXTRA-HEADERS \| OPTIONAL-ORIGINAL-RT-CHECKSUM \| OPTIONAL-MAX-TTL \| OPTIONAL-FORWARD-TO-SANTA-DELAY-UNIT \| OPTIONAL-FORWARD-TO-SANTA-DELAY \| OPTIONAL-MAX-NODE-RANDOM-DELAY-UNIT \| OPTIONAL-MAX-NODE-RANDOM-DELAY \| MODIFICATIONS-LIST \| RESULTING-RT-CHECKSUM \|**
+Route-Update-Request: **\| FLAGS \| OPTIONAL-EXTRA-HEADERS \| OPTIONAL-ORIGINAL-RT-CHECKSUM \| OPTIONAL-MAX-TTL \| OPTIONAL-FORWARD-TO-SANTA-DELAY-UNIT \| OPTIONAL-FORWARD-TO-SANTA-DELAY \| OPTIONAL-MAX-FORWARD-TO-SANTA-DELAY \| OPTIONAL-MAX-NODE-RANDOM-DELAY-UNIT \| OPTIONAL-MAX-NODE-RANDOM-DELAY \| MODIFICATIONS-LIST \| RESULTING-RT-CHECKSUM \|**
 
-where FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] being DISCARD-RT-FIRST (indicating that before processing MODIFICATIONS-LIST, the whole Routing Table must be discarded), bit[1] being UPDATE-MAX-TTL flag, bit[2] being UPDATE-FORWARD-TO-SANTA-DELAY flag, bit[3] being UPDATE-MAX-NODE-RANDOM-DELAY flag, and bits[4..] reserved (MUST be zeros); OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above; Target-Address is the Target-Address field; OPTIONAL-ORIGINAL-RT-CHECKSUM is present only if DISCARD-RT-FIRST flag is not set; OPTIONAL-ORIGINAL-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table checksum before the change is applied; if OPTIONAL-ORIGINAL-RT-CHECKSUM doesn't match to that of the Routing Table - it is TODO Routing-Error; OPTIONAL-MAX-TTL is present only if UPDATE-MAX-TTL flag is present, and is a 1-byte field, OPTIONAL-FORWARD-TO-SANTA-DELAY-UNIT and OPTIONAL-FORWARD-TO-SANTA-DELAY are present only if UPDATE-FORWARD-TO-SANTA-DELAY flag is present, and both are Encoded-Signed-Int<max=2> fields, OPTIONAL-MAX-NODE-RANDOM-DELAY-UNIT and OPTIONAL-MAX-NODE-RANDOM-DELAY are present only if UPDATE-MAX-NODE-RANDOM-DELAY flag is present, and both are Encoded-Unsigned-Int<max=2> fields, MODIFICATIONS-LIST described below; RESULTING-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table Checksum after the change has been applied (if RESULTING-RT-CHECKSUM doesn't match - it is TODO Routing-Error). 
+where FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] being DISCARD-RT-FIRST (indicating that before processing MODIFICATIONS-LIST, the whole Routing Table must be discarded), bit[1] being UPDATE-MAX-TTL flag, bit[2] being UPDATE-FORWARD-TO-SANTA-DELAY flag, bit[3] being UPDATE-MAX-NODE-RANDOM-DELAY flag, and bits[4..] reserved (MUST be zeros); OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above; Target-Address is the Target-Address field; OPTIONAL-ORIGINAL-RT-CHECKSUM is present only if DISCARD-RT-FIRST flag is not set; OPTIONAL-ORIGINAL-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table checksum before the change is applied; if OPTIONAL-ORIGINAL-RT-CHECKSUM doesn't match to that of the Routing Table - it is TODO Routing-Error; OPTIONAL-MAX-TTL is present only if UPDATE-MAX-TTL flag is present, and is a 1-byte field, OPTIONAL-FORWARD-TO-SANTA-DELAY-UNIT, OPTIONAL-FORWARD-TO-SANTA-DELAY, and OPTIONAL-MAX-FORWARD-TO-SANTA-DELAY are present only if UPDATE-FORWARD-TO-SANTA-DELAY flag is present, and all are Encoded-Signed-Int<max=2> fields, OPTIONAL-MAX-NODE-RANDOM-DELAY-UNIT and OPTIONAL-MAX-NODE-RANDOM-DELAY are present only if UPDATE-MAX-NODE-RANDOM-DELAY flag is present, and both are Encoded-Unsigned-Int<max=2> fields, MODIFICATIONS-LIST described below; RESULTING-RT-CHECKSUM is a Routing-Table-Checksum, specifying Routing Table Checksum after the change has been applied (if RESULTING-RT-CHECKSUM doesn't match - it is TODO Routing-Error). 
 
-Route-Update-Request is always accompanied with SACCP "additional bits" equal to 0x0 (see :ref:`saccp` for details on SACCP_ROUTING_DATA "additional bits").
+Route-Update-Request is always accompanied with SACCP "additional bits" equal to 0x0 (see :ref:`saccp` for details on SACCP_PHY_AND_ROUTING_DATA "additional bits").
 
 MODIFICATIONS-LIST consists of entries, where each entry is one of the following: 
 
@@ -151,7 +151,33 @@ Route-Update-Response: **\| ERROR-CODE \|** TODO: more error info if any
 
 where ERROR-CODE is an Encoded-Unsigned-Int<max=1> field, containing error code. ERROR-CODE = 0 means that Route-Update-Request has been completed successfully.
 
-Route-Update-Response is always accompanied with SACCP "additional bits" equal to 0x0 (see :ref:`saccp` for details on SACCP_ROUTING_DATA "additional bits").
+Route-Update-Response is always accompanied with SACCP "additional bits" equal to 0x0 (see :ref:`saccp` for details on SACCP_PHY_AND_ROUTING_DATA "additional bits").
+
+Communicating PHY Information over SACCP
+----------------------------------------
+
+Some of SADLP-\* protocols (as described in corresponding SADLP-\* document) MAY need to communicate information to Central Controller (for example, to calculate optimums using quite complicated methods).
+
+This is done via the following packets:
+
+PHY-Data-Request: **\| ID-OF-SADLP \| SADLP-DEPENDENT-PAYLOAD \|**
+where ID-OF-SADLP is an Encoded-Unsigned-Int<max=2> field, specified in respective SADLP-\* document. TODO: list of all IDs in one place to avoid potential for collisions.
+
+PHY-Data-Request is always accompanied with SACCP "additional bits" equal to 0x1 (see :ref:`saccp` for details on SACCP_PHY_AND_ROUTING_DATA "additional bits").
+
+PHY-Data-Response: **\| SADLP-DEPENDENT-PAYLOAD \|**
+
+PHY-Data-Response is always accompanied with SACCP "additional bits" equal to 0x1 (see :ref:`saccp` for details on SACCP_PHY_AND_ROUTING_DATA "additional bits").
+
+PHY-Data-Ready-Request: **\|** (empty)
+
+PHY-Data-Ready-Request is always accompanied with SACCP "additional bits" equal to 0x2 (see :ref:`saccp` for details on SACCP_PHY_AND_ROUTING_DATA "additional bits").
+
+PHY-Data-Ready-Response: **\|** (empty)
+
+PHY-Data-Ready-Response is always accompanied with SACCP "additional bits" equal to 0x2 (see :ref:`saccp` for details on SACCP_PHY_AND_ROUTING_DATA "additional bits").
+
+To indicate that PHY-level tuning is completed, Device sends PHY-Data-Ready-Response (sic!); this happens at the point specified in respective SADLP-\* document. In response, Root sends PHY-Data-Ready-Request (sic!). 
 
 Addressing
 ----------
@@ -366,10 +392,11 @@ Most of SAMP packets have OPTIONAL-EXTRA-HEADERS field. It has a generic structu
   where GENERIC-EXTRA-HEADER-FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-HEADER list, bits[1..2] equal to 2-bit constant GENERIC_EXTRA_HEADER_FLAGS, and further bits interpreted depending on packet type:
 
   + bit[3]. If the packet type is any packet type except for Samp-Unicast-Data-Packet - the bit is MORE-PACKETS-FOLLOW flag. For Samp-Unicast-Data-Packet - RESERVED (MUST be zero)
-  + bit[4]. If the packet type is Samp-Unicast-Data-Packet, Samp-From-Santa-Data-Packet, or Samp-To-Santa-Data-Or-Error-Packet - the bit is IS-PROBE flag. If the packet type is Samp-To-Santa-Data-Or-Error-Packet or Samp-Forward-To-Santa-Data-Or-Error-Packet - the bit is IS_ERROR (indicating that PAYLOAD is in fact Routing-Error). For Samp-Ack-Nack-Packet - the bit is IS-LOOP-ACK flag. For other packet types - RESERVED (MUST be zero)
-  + bit[5]. If the packet type is Samp-From-Santa-Data-Packet, the bit is an EXPLICIT-TIME-SCHEDULING flag. For Samp-Ack-Nack-Packet the bit is IS-NACK flag. For other packet types - RESERVED (MUST be zero)
-  + bit[6]. If the packet type is Samp-From-Santa-Data-Packet - it is a TARGET-COLLECT-LAST-HOPS flag. For other packet types - RESERVED (MUST be zero)
-  + bits [7..] - RESERVED (MUST be zeros)
+  + bit[4]. If the packet type is Samp-To-Santa-Data-Or-Error-Packet or Samp-Forward-To-Santa-Data-Or-Error-Packet - the bit is IS-ERROR (indicating that PAYLOAD is in fact Routing-Error). If the packet type is Samp-From-Santa-Data-Packet - it is a TARGET-COLLECT-LAST-HOPS flag. For Samp-To-Santa-Data-Or-Error-Packet the bit is IS-LOCAL-ECHO flag. For Samp-Ack-Nack-Packet the bit is IS-NACK flag. For other packet types - RESERVED (MUST be zero)
+  + bit[5]. If the packet type is Samp-From-Santa-Data-Packet, the bit is an EXPLICIT-TIME-SCHEDULING flag. For Samp-Ack-Nack-Packet - the bit is IS-LOOP-ACK flag. For other packet types - RESERVED (MUST be zero)
+  + bit[6]. RESERVED (MUST be zero)
+  + bit[7]. If the packet type is Samp-Unicast-Data-Packet, Samp-From-Santa-Data-Packet, Samp-To-Santa-Data-Or-Error-Packet, or Samp-Forward-To-Santa-Data-Packet - the bit is IS-PROBE flag. For Samp-Ack-Nack packet - the bit is DELAYS-PRESENT. For other packet types - RESERVED (MUST be zero)
+  + bits [8..] - RESERVED (MUST be zeros)
 
 * **\| GENERIC-EXTRA-HEADER-COLLISION-DOMAIN \| COLLISION-DOMAIN-ID-AND-FLAG \| COLLISION-DOMAIN-T0 \| COLLISION-DOMAIN-T1 \| ... \|**
 
@@ -397,9 +424,11 @@ When combining packets, SAMP MUST take into account both "MTU Hard Limits" and "
 SAMP Packets
 ------------
 
-Samp-Unicast-Data-Packet: **\| SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| Target-Address \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
+Samp-Unicast-Data-Packet: **\| SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| NEXT-HOP \| LAST-HOP \| Target-Address \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
-where SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] equal to 0, bit[1] being GUARANTEED-DELIVERY flag, bit [2] being BACKWARD-GUARANTEED-DELIVERY, bit [3] being EXTRA-HEADERS-PRESENT, bit[4] being MORE-PACKETS-FOLLOW, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set and is described above; LAST-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of currently transmitting node, Target-Address is described above, OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field, HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details), PAYLOAD is a payload to be passed to the upper-layer protocol, and FULL-CHECKSUM is a full-packet SAMP-CHECKSUM.
+where SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] equal to 0, bit[1] being GUARANTEED-DELIVERY flag, bit [2] being BACKWARD-GUARANTEED-DELIVERY, bit [3] being EXTRA-HEADERS-PRESENT, bit[4] being MORE-PACKETS-FOLLOW, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set and is described above; NEXT-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of the next-hop node (based on info from Routing Table), LAST-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of currently transmitting node, Target-Address is described above, OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field, HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details), PAYLOAD is a payload to be passed to the upper-layer protocol, and FULL-CHECKSUM is a full-packet SAMP-CHECKSUM.
+
+If NEXT-HOP field doesn't match ID of the receiving Device - the packet is ignored.
 
 If Target-Address is Root (i.e. =0), it MUST NOT contain VIA fields within; in addition, if Target-Address is Root (i.e. =0), the packet MUST NOT have BACKWARD-GUARANTEED-DELIVERY flag set.
 
@@ -446,6 +475,8 @@ Samp-To-Santa-Data-Or-Error-Packet: **\| SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-NO-T
 
 where SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-NO-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_TO_SANTA_DATA_OR_ERROR_PACKET, bit[5] being EXTRA-HEADERS-PRESENT, and bits [5..] reserved (MUST be zero); OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above. Note that Samp-To-Santa-Data-Or-Error-Packet doesn't contain TTL (as it is never retransmitted 'as is'); OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details); PAYLOAD is either data or error data depending on IS_ERROR flag; if IS_ERROR flag is set - PAYLOAD format is the same as the body (after OPTIONAL-EXTRA-HEADERS) of Samp-Routing-Error-Packet; FULL-CHECKSUM is a full-packet SAMP-CHECKSUM.
 
+If IS-LOCAL-ECHO flag is set, the packet is ignored, except for Retransmitting Devices sending Samp-Ack-Nack-Packet back to LAST-HOP. To avoid "packet storms", these ACKs MUST be sent using FORWARD-TO-SANTA-DELAY (using FORWARD-TO-SANTA-DELAY-UNIT for calculations). In addition, these ACKs SHOULD contain DELAY-UNIT, DELAY-PASSED, and DELAY-LEFT fields, with DELAY-UNIT being FORWARD-TO-SANTA-DELAY-UNIT, DELAY-PASSED being FORWARD-TO-SANTA-DELAY, and DELAY-LEFT calculated as `MAX-FORWARD-TO-SANTA-DELAY - FORWARD-TO-SANTA-DELAY`. TODO: add RETRANSMITTING-DEVICE-QUALITY?
+
 Samp-To-Santa-Data-Or-Error-Packet is a packet intended from Device (either Retransmitting or non-Retransmitting) to Root. It is broadcasted by Device in several cases: 
 
 * when the message is marked as Urgent by upper-layer protocol
@@ -456,9 +487,11 @@ In any case, if Samp-To-Santa-Data-Or-Error-Packet is sent in response to a Samp
 
 On receiving Samp-To-Santa-Data-Or-Error-Packet, Retransmitting Device sends a Samp-Forward-To-Santa-Data-Or-Error-Packet towards Root, in 'Guaranteed Uni-Cast' mode. To avoid congestion at this point, each Retransmitting Device delays according for FORWARD-TO-SANTA-DELAY (using FORWARD-TO-SANTA-DELAY-UNIT for calculations), where FORWARD-TO-SANTA-DELAY and FORWARD-TO-SANTA-DELAY-UNIT are the values which are locally stored on Retransmitting Device.
 
-Samp-Forward-To-Santa-Data-Or-Error-Packet: **\| SAMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
+Samp-Forward-To-Santa-Data-Or-Error-Packet: **\| SAMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| NEXT-HOP \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
-where SAMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_FORWARD_TO_SANTA_DATA_OR_ERROR_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above; OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details); PAYLOAD is data being forwarded (copied from PAYLOAD of Samp-To-Santa-Data-Or-Error-Packet); FULL-CHECKSUM is a full-packet SAMP-CHECKSUM.
+where SAMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_FORWARD_TO_SANTA_DATA_OR_ERROR_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above; NEXT-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of the next-hop node (based on info from Routing Table), OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details); PAYLOAD is data being forwarded (copied from PAYLOAD of Samp-To-Santa-Data-Or-Error-Packet); FULL-CHECKSUM is a full-packet SAMP-CHECKSUM.
+
+If NEXT-HOP field doesn't match ID of the receiving Device - the packet is ignored.
 
 Samp-Forward-To-Santa-Data-Or-Error-Packet is sent by Retransmitting Device when it receives Samp-To-Santa-Data-Or-Error-Packet (with TTL=MAX_TTL-1 to account for original Samp-To-Santa-Data-Or-Error-Packet). On receiving Samp-Forward-To-Santa-Data-Or-Error-Packet by a Retransmitting Device, it is  processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Guaranteed Uni-Cast' mode.
 
@@ -468,15 +501,15 @@ where SAMP-ROUTING-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfie
 
 On receiving Samp-Routing-Error-Packet, it is processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Guaranteed Uni-Cast' mode.
 
-Samp-Ack-Nack-Packet: **\| SAMP-ACK-NACK-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| Target-Address \| ACK-CHESKSUM \| HEADER-CHECKSUM \|**
+Samp-Ack-Nack-Packet: **\| SAMP-ACK-NACK-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| Target-Address \| ACK-CHESKSUM \| HEADER-CHECKSUM \| OPTIONAL-DELAY-UNIT \| OPTIONAL-DELAY-PASSED \| OPTIONAL-DELAY-LEFT \|**
 
-where SAMP-ACK-NACK-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_ACK_NACK_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set, LAST-HOP is an id of the transmitting node, Target-Address is described above, ACK-CHECKSUM is copied from FULL-CHECKSUM of the packet being acknowledged (with an exception for NACK generated due to "partially correct" packet, see below), and HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details).
+where SAMP-ACK-NACK-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_ACK_NACK_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set, LAST-HOP is an id of the transmitting node, Target-Address is described above, ACK-CHECKSUM is copied from FULL-CHECKSUM of the packet being acknowledged (with an exception for NACK generated due to "partially correct" packet, see below), and HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details); OPTIONAL-DELAY-UNIT, OPTIONAL-DELAY-PASSED, and OPTIONAL-DELAY-LEFT fields are all Encoded-Unsigned-Int<max=2> fields, all present only if DELAYS-PRESENT flag is set (which is set only in response to packets with IS-LOCAL-ECHO flag set, see above).
 
 Samp-Ack-Nack-Packet with IS-LOOP-ACK flag is generated either by destination, or by the node which has found that the next hop already has NEXT-HOP-ACKS flag (see details in 'Guaranteed Uni-Cast' section above); generating node always specifies itself as a target. Samp-Ack-Nack-Packet with IS-LOOP-ACK flag MUST NOT have IS-NACK flag.
 
 If Samp-Ack-Nack-Packet has IS-LOOP-ACK flag, it is processed as specified in 'Uni-cast processing' section above; Samp-Loop-Ack packet is never sent using 'Guaranteed uni-cast' delivery. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
 
-Samp-Ack-Nack-Packet without IS-LOOP-ACK flag and without IS-NACK flag, is generated as a response to an incoming Samp-Unicast-Data-Packet with GUARANTEED-DELIVERY flag (TODO: anything else?). It is not retransmitted, but taken as an acknowledgement that the packet has been received.
+Samp-Ack-Nack-Packet without IS-LOOP-ACK flag and without IS-NACK flag, is generated as a response to an incoming Samp-Unicast-Data-Packet with GUARANTEED-DELIVERY flag, or in response to a packet with IS-LOCAL-ECHO flag (TODO: anything else?). It is not retransmitted, but taken as an acknowledgement that the packet has been received.
 
 Samp-Ack-Nack-Packet without IS-LOOP-ACK flag and with IS-NACK flag, is generated as a response to a "partially correct" packet (regardless of type and GUARANTEED-DELIVERY flag); in this case, it's ACK-CHECKSUM represents only HEADER-CHECKSUM of the original packet. Such Samp-Ack-Nack-Packet is not retransmitted itself, but is taken as an indication to perform quick retransmit of the last packet sent.
 
@@ -509,6 +542,19 @@ Packet Urgency
 From SAMP point of view, all upper-layer-protocol packets can have one of three urgency levels. If the packet has urgency URGENCY_LAZY, it is first sent as a Samp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent with GUARANTEED-DELIVERY). If the packet has urgency URGENCY_QUITE_URGENT, it is first sent as a Samp-Unicast-Data-Packet with GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent as a Samp-\*-Santa-\* packet). If the packet has urgency URGENCY_TRIPLE_GALOP, 
 then it is first sent as a Samp-From-Santa-Data-Packet or Samp-To-Santa-Data-Packet (depending on source being Root or Device). 
 
+PHY quality measurement over SAMP
+---------------------------------
+
+Certain SADLP-\* protocols need to measure connection quality. This can be made using the following procedure:
+
+* Device sends Samp-To-Santa packet with IS-LOCAL-ECHO flag
+* Device waits for any Samp-Ack-Nack packet, validly acknowledging receipt of IS-LOCAL-ECHO packet, OR for 100 milliseconds, whichever comes first
+* If a valid Samp-Ack-Nack packet is received - Device waits only for DELAY-LEFT specified in the packet from the moment of receiving the packet (more strictly: if multiple packets are received, it is maximum of the DELAY-LEFT-received-since-receiving-each-packet + 10ms (safety margin)).
+* While waiting, all the valid Samp-Ack-Nack packets are accounted for (to be used as described in respective SADLP-\* document)
+* when wait expires, Device repeats the whole process above; 5 repetitions are usually made to gather required statistics.
+
+This "quality measurement" procedure MAY be performed ONLY if respective SADLP-\* document specifies using it, and ONLY under circumstances specified there.
+
 Device Discovery and Pairing over SAMP
 --------------------------------------
 
@@ -523,10 +569,11 @@ Whenever Device is in PRE-PAIRING state (see :ref:`sapairing` for details on the
 * As soon as Device pairing is completed (and Root sets NODE-ID for the Device), Root SHOULD:
 
   + calculate optimal route to the Device
-  + change Routing Tables for all the Retransmitting Devices alongside the optimal route (for example, using SACCP_ROUTING_DATA packets as described above)
+  + change Routing Tables for all the Retransmitting Devices alongside the optimal route (for example, using SACCP_PHY_AND_ROUTING_DATA packets as described above)
   + as soon as confirmations from all the Retransmitting Devices about route updates are obtained, Root SHOULD start using Device's "paired addressing" for all the communications onwards with the Device.
   + change Routing Table on the Device, indicating optimal route to the Root. From this point on, Device will start using usual Unicast packets when communicating with Root (unless there are reasons to use other SAMP packets, for example, on multiple retransmits or for packets marked URGENT).
 
+TODO: merge of To-Santa into Unicast (with NEXT-HOP being -1)?
 TODO: Samp-Retransmit (to next-hop Retransmitting Device on RETRANSMIT-ON-NO-RETRANSMIT)
 TODO: define handling for all "partially correct" packets
 TODO: what exactly is "header" for the purposes of "partially correct" packets? Is "sub-header" worth the trouble?
