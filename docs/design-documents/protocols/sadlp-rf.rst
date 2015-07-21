@@ -27,7 +27,7 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.4.4a
+:Version:   v0.4.7a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -47,13 +47,37 @@ Assumptions:
 SADLP-RF PHY Level
 ------------------
 
-Frequencies: TODO (with frequency shifts)
+Modulation: 2FSK (a.k.a. FSK without further specialization, and BFSK), or GFSK (2FSK and GFSK are generally compatible), with frequency deviation specified above.
 
-Modulation: 2FSK (a.k.a. FSK without further specialization, and BFSK), or GFSK (2FSK and GFSK are generally compatible), with frequency shifts specified above.
+Frequency ranges:
 
-Tau (minimum period with the same frequency during FSK modulation): 1/9600 sec. *NB: this may or may not correspond to 9600 baud transfer rate.* (TODO: rate negotiation?)
++--------------------------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+
+| From                           | To                             | Tau (\*)                       | SA-Deviation                   | Receiver filter bandwidth      |
+|                                |                                |                                |                                | (non-normative)                |
++================================+================================+================================+================================+================================+
+| 433.075 MHz                    | 434.775 MHz                    | 1/38400 sec                    | 38400 Hz (\*\*)                | 4*38400 = 153600 Hz            |
++--------------------------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+
 
-Line code: preamble (at least two 0xAA (TODO:check if it is really 0xAA or 0x55) symbols), followed by 0x2DD4 sync word, followed by "raw" SADLP-RF Packet as described below. 
+(\*) Tau is minimum period with the same frequency during FSK modulation. *NB: tau of 1/38400 sec usually, but not necessarily, corresponds to 38400 baud transfer rate as used in RF Module APIs.* (TODO: rate negotiation?)
+
+(\*\*) SA-Deviation uses deviation which is twice-wider than theoretically necessary for MSK, to account for not-so-perfect hardware.
+
+Line code: preamble (at least two 0xAA (TODO:check if it is really 0xAA or 0x55) symbols), followed by symbols 0x0F, 0xCC (sync word), followed by "raw" SADLP-RF Packet as described below. 
+
+CSMA/CA: enabled (if available)
+
+Typical transceiver chips settings
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Transceiver chips are often providing additional features, which MUST be disabled for SADLP-RF to work properly:
+
+* **CRC: off** *Rationale: SADLP-RF uses forward error correction, which allows to improve reliability and reduce power consumption significantly and CRC would disable this ability*
+* **Manchester encoding: off** *Rationale: SADLP-RF uses it's own line code which allows for higher bit rates than Manchester*
+* **Encryption: off** *Rationale: SADLP-RF relies on encryption being performed on higher levels; enabling AES at L2 would defeat such features as forward error correction*
+
+In addition, the following settings SHOULD be used (if supported by transceiver chip):
+
+* **Number of mismatched bits allowed for sync word: 1**
+* **CSMA/CA: enabled**
 
 SADLP-RF Packets, SCRAMBLING, and Line Codes
 --------------------------------------------
@@ -130,23 +154,75 @@ Each RF frequency channel on a Device represents a "wireless bus" in terms of SA
 
 If Device uses hardware-assisted Fortuna PRNG (as described in :ref:`sarng` document), Device MUST complete Phase 1 of "Entropy Gathering Procedure" (as described in :ref:`sapairing` document) to initialize Fortuna PRNG *before* generating this 64-bit ID. Then, Device should proceed to Phase 2 (providing Device ID), and Phase 3 (entropy gathering for key generation purposes), as described in :ref:`sapairing` document.
 
-Device Discovery and Pairing
-----------------------------
+PHY-Data-Request and PHY-Data-Response
+--------------------------------------
+
+As described in :ref:`samp` document, SACCP PHY-AND-ROUTING-DATA packets support PHY-Data-Request and PHY-Data-Response packets. For SADLP-RF, they're used as described below.
+
+ID-OF-SADLP for SADLP-RF
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+For SADLP-RF, ID-OF-SADLP is 0x0.
+
+PHY-Data Packets for SADLP-RF
+-----------------------------
+SADLP-RF uses the following PHY-Data Packets:
+
+Fine-Tune-Best-Frequency, going over PHY-Data-Response (sic!) and having SADLP-DEPENDENT-PAYLOAD of: **\| FREQUENCY-SCHEMA \| FREQUENCY \| FREQUENCY-WEIGHT \| FREQUENCY2 \| FREQUENCY-WEIGHT \| ... \|**
+where FREQUENCY-SCHEMA is an Encoded-Unsigned-Int<max=1> (currently only LINEAR schema is supported), FREQUENCY is an Encoded-Unsigned-Int<max=2> field, FREQUENCY-WEIGHT is an Encoded-Unsigned-Int<max=2>.
+
+Fine-Tune-Best-Frequency-Reply, going over PHY-Data-Request (sic!) and having SADLP-DEPENDENT-PAYLOAD of: **\| FREQUENCY \|**
+where FREQUENCY is an Encoded-Unsigned-Int<max=2> field.
+
+On receiving Fine-Tune-Best-Frequency, Central Controller calculates a "best fit" frequency for the reported graph of FREQUENCY-WEIGHT as a function of FREQUENCY. One example of such calculation would be to look for the best fit between a obtained graph and a theoretical gaussian graph; while such a calculation is "too heavy" for the MCU, it can be made on Central Controller easily.
+
+Device after-Zero-Pairing
+-------------------------
+
+For Devices with Zero Pairing, the following procedure is used: 
+
+* From Zero Pairing, Device gets pre-programmed list of frequencies for "reduced scan", based on SmartAnthill known-frequency; these frequencies SHOULD be expressed in terms which are convenient for the Device to be used; in particular, they SHOULD be recalculated into prefered-Device's form, and SHOULD be expressed as (start,end,increment). These frequencies MUST be calculated to cover range from `SA-frequency - 2e-4 * SA-frequency` to `SA-frequency + 2e-4 * SA-frequency`, with a step of `SA-deviation / 2`. Zero Pairing DOES NOT set field 'preferred-frequency' for the Device.
+* When Device is turned on for the first time after being programmed with Zero Pairing, it has no preferred-frequency in EEPROM, so it:
+
+  - sets power to -6dB (TODO!: increase if there is no result/very-bad-results at all)
+  - takes one of the frequencies from the list of frequencies obtained from Zero Pairing
+  - performs SAMP PHY quality measurement (as described in :ref:`samp` document), with the following clarifications:
+
+    + `frequency-quality` variable is set to 0
+    + measurement is performed over 5 packets sent
+    + for each packet sent, there can be multiple packets received (as described in :ref:`samp`)
+    + for each packet received, number-of-erroneous-bits (based on data from Hamming decoder) is calculated (if applicable). 
+    + for each packet received, `weight = 2^24 >> number-of-erroneous-bits`, is added to frequency-quality
+  
+  - repeats the process for another frequency from the list
+  - the frequency with the largest `frequency-quality` becomes first preferred-frequency (up until the Frequency-Fine-Tuning described below).
+  - from this point on, Device uses this preferred-frequency
+  - Device sends a Fine-Tune-Best-Frequency packet to Central Controller, with all the data gathered from the measurements above
+  - Device receives a Fine-Tune-Best-Frequency reply, double-checks it for sanity (TODO: what if insane?), writes received preferred-frequency to EEPROM, and starts to use preferred-frequency for all the subsequent communications
+  - Device sends a PHY-Data-Ready-Response (sic!), and receives PHY-Data-Ready-Request (sic!). From this point on, Device is ready to work within the SmartAnthill PAN.
+
+Device OtA Discovery and Pairing
+--------------------------------
 
 For Devices with OtA Pairing (as described in :ref:`sapairing`), "Device Discovery" procedure described in :ref:`samp` document is used, with the following clarifications:
 
 * SAMP "channel scan" for SADLP-RF is performed as follows:
 
-  - "candidate channel" list consists of all the channels allowed in target area
+  - Device sets power to -6dB (TODO!: increase if there is no result/very-bad-results at all)
+  - "candidate channel" list consists of all the frequencies in the range allowed in target area, with a step of `SA-deviation / 2`.
   - for each of candidate channels:
 
-    + the first packet as described in SAMP "Device Discovery" procedure is sent by Device
-    + if a reply is received indicating that Root is ready to proceed with "pairing" - "pairing" is continued over this channel
+    + Device performs SAMP PHY quality measurement procedure (with SADLP-RF refinements described in after-Zero-Pairing section), using the range from `SA-frequency - 2e-4 * SA-frequency` to `SA-frequency + 2e-4 * SA-frequency` with a step of `SA-Deviation / 2`. During this measurement, Device SHOULD use data from measurements-which-have-already-been-performed-within-this-channel-scan (effectively using cached measurement data for known frequencies). *NB: if following this specification as described (and be careful with potential rounding errors during calculations), it means that only one frequency scan with a step of `SA-Deviation / 2` is performed; i.e. for each new "candidate channel" only one new measurement is performed, and all the other data is taken from the cache.*.
+
+      - if preferred-frequency can be found (with at least 2^20 - TODO - weight), then: 
+
+        * the first packet as described in SAMP "Device Discovery" procedure is sent by Device
+        * if a reply is received indicating that Root is ready to proceed with "pairing" - "pairing" is continued over this channel; after pairing is completed - Device performs Fine-Tune-Best-Frequency process and PHY-Data-Ready acknowledgement as described in after-Zero-Pairing section above.
       
-      - if "pairing" fails, then the next available "candidate channel" is processed. 
-      - to handle the situation when "pairing" succeeds, but Device is connected to wrong Central Controller - Device MUST (a) provide a visual indication that it is "paired", (b) provide a way (such as jumper or button) allowing to drop current "pairing" and continue processing "candidate channels". In the latter case, Device MUST process remaining candidate channels before re-scanning.
+        * if "pairing" fails, then the next available "candidate channel" is processed. 
+        * to handle the situation when "pairing" succeeds, but Device is connected to wrong Central Controller - Device MUST (a) provide a visual indication that it is "paired", (b) provide a way (such as jumper or button) allowing to drop current "pairing" and continue processing "candidate channels". In the latter case, Device MUST process remaining candidate channels before re-scanning.
  
-    + if a reply is received with ERROR-CODE = ERROR_NOT_AWAITING_PAIRING, or if there is no reply within 500 msec, the procedure is repeated for the next candidate channel
+        * if a reply is received with ERROR-CODE = ERROR_NOT_AWAITING_PAIRING, or if there is no reply within 500 msec, the Device proceeds to the next candidate channel
 
   - if the list of "candidate channels" is exhausted without "pairing", the whole "channel scan" is repeated (indefinitely, or with a 5-or-more-minute limit - if the latter, then "not scanning anymore" state MUST be indicated on the Device itself - TODO acceptable ways of doing it, and the scanning MUST be resumed if user initiates "re-pairing" on the Device), starting from an "active scan" as described above
 

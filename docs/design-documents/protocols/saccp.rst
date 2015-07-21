@@ -27,7 +27,7 @@
 SmartAnthill Command&Control Protocol (SACCP)
 =============================================
 
-:Version:   v0.2.17
+:Version:   v0.2.17a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -109,7 +109,7 @@ For SACCP packets coming from Client to Device (a.k.a. "requests"), the followin
 
 * SACCP_PAIRING
 * SACCP_OTA_PROGRAMMING
-* SACCP_ROUTING_DATA
+* SACCP_PHY_AND_ROUTING_DATA
 * SACCP_PROGRAM_TO_EXECUTE
 * SACCP_ENTROPY_PROVIDED
 
@@ -117,7 +117,7 @@ For SACCP packets coming from Device to Client (a.k.a. "responses"), the followi
 
 * SACCP_PAIRING
 * SACCP_OTA_PROGRAMMING
-* SACCP_ROUTING_DATA
+* SACCP_PHY_AND_ROUTING_DATA
 * SACCP_OK
 * SACCP_ERROR
 
@@ -151,18 +151,16 @@ where SACCP-OTA-PROGRAMMING-RESPONSE is an Encoded-Unsigned-Int<max=2> bitfield 
 
 TODO: blocking all other messages (return TODO error) while OtA Programming Session is in progress (i.e. OtA Programming State being OTA_PROGRAMMING_INPROGRESS).
 
-SACCP Routing-Data Packets
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SACCP PHY-and-Routing-Data Packets
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-NB: implementing Routing-Data Packets is OPTIONAL for SmartAnthill Devices; see :ref:`samp` document for details.
+**\| SACCP-PHY-AND-ROUTING-DATA-REQUEST \| PHY-AND-ROUTING-DATA-REQUEST-BODY \|**
 
-**\| SACCP-ROUTING-DATA-REQUEST \| ROUTING-DATA-REQUEST-BODY \|**
+where SACCP-PHY-AND-ROUTING-DATA-REQUEST is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_PHY_AND_ROUTING_DATA 3-bit constant, bits [3..5] are "additional bits" passed alongside with PHY-AND-ROUTING-DATA-REQUEST-BODY, bits [6..7] reserved (MUST be zeros), and PHY-AND-ROUTING-DATA-REQUEST-BODY is described in :ref:`samp` document. 
 
-where SACCP-ROUTING-DATA-REQUEST is a 1-byte bitfield substrate, with bits [0..2] equal to SACCP_ROUTING_DATA 3-bit constant, bits [3..5] are "additional bits" passed alongside with ROUTING-DATA-REQUEST-BODY, bits [6..7] reserved (MUST be zeros), and ROUTING-DATA-REQUEST-BODY is described in :ref:`samp` document. 
+**\| SACCP-PHY-AND-ROUTING-DATA-RESPONSE \| PHY-AND-ROUTING-DATA-RESPONSE-BODY \|**
 
-**\| SACCP-ROUTING-DATA-RESPONSE \| ROUTING-DATA-RESPONSE-BODY \|**
-
-where SACCP-ROUTING-DATA-RESPONSE is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits [0..2] equal to SACCP_ROUTING_DATA 3-bit constant, bits [3..5] being "additional bits" passed alongside with ROUTING-DATA-RESPONSE-BODY, bits [6..] reserved (MUST be zeros), and ROUTING-DATA-RESPONSE-BODY is described in :ref:`sabootload` document. 
+where SACCP-PHY-AND-ROUTING-DATA-RESPONSE is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bits [0..2] equal to SACCP_PHY_AND_ROUTING_DATA 3-bit constant, bits [3..5] being "additional bits" passed alongside with PHY-AND-ROUTING-DATA-RESPONSE-BODY, bits [6..] reserved (MUST be zeros), and PHY-AND-ROUTING-DATA-RESPONSE-BODY is described in :ref:`sabootload` document. 
 
 SACCP Command Packets
 ^^^^^^^^^^^^^^^^^^^^^
