@@ -16,6 +16,7 @@
 import json
 
 from platformio.util import get_serialports
+from twisted.internet import reactor, task
 from twisted.internet.defer import maybeDeferred
 from twisted.python.failure import Failure
 from twisted.web._responses import INTERNAL_SERVER_ERROR
@@ -131,8 +132,10 @@ def upload_device_firmware(request, devid):
     assert 0 < devid <= 255
 
     def _on_upload_result(result):
-        get_service_named("sas").startSubService("network")
-        return result
+        def _on_device_restart(result):
+            get_service_named("sas").startSubService("network")
+            return result
+        return task.deferLater(reactor, 1, _on_device_restart, result)
 
     get_service_named("sas").stopSubService("network")
     device = get_service_named("device").get_device(devid)
