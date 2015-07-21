@@ -70,7 +70,7 @@ class Device(object):
                 break
         assert isinstance(bodypart, ZeptoBodyPart)
 
-        program = "return %s(%s);" % (name, ", ".join([
+        program = "return %s.Execute(%s);" % (name, ", ".join([
             f['name'] for f in bodypart.plugin.get_request_fields()
         ]))
         return self.run_program(program, request_fields)
