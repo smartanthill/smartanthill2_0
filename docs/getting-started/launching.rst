@@ -68,3 +68,11 @@ The whole list of usage options for ``twistd`` is accessible via
 .. code-block:: bash
 
     twistd smartanthill
+
+Dashboard (GUI)
+---------------
+
+SmartAnthill Dashboard is accessible by default on
+`http://localhost:8138 <http://localhost:8138>`_.
+
+However, you can change TCP/IP port later using ``Dashboard > Settings`` page.
