@@ -74,7 +74,7 @@ class WebCloud(Resource):
             request.setResponseCode(BAD_REQUEST)
             return result
 
-    def delayed_render(self, result, request):
+    def delayed_render(self, result, request):  # pylint: disable=R0201
         if isinstance(result, Failure):
             log.err(str(result.value))
             request.setResponseCode(INTERNAL_SERVER_ERROR)
