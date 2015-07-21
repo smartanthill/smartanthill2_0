@@ -97,7 +97,6 @@ just for installation):
     # run it
     python get-smartanthill.py
 
-
 On *Windows OS* it may look like:
 
 .. code-block:: bash
@@ -108,6 +107,9 @@ On *Windows OS* it may look like:
     # run it
     C:\Python27\python.exe get-smartanthill.py
 
+.. warning::
+    **Windows Users**: Don't forget to download and install the latest
+    `Python for Windows extensions (PyWin32) <http://sourceforge.net/projects/pywin32/files/pywin32/>`_.
 
 Full Guide
 ----------
@@ -118,7 +120,7 @@ Full Guide
 
     $ python --version
 
-*Windows OS Users* only:
+**Windows Users** only:
 
     1. `Download Python 2.7 <https://www.python.org/downloads/>`_ and install it.
     2. Download and install the latest
