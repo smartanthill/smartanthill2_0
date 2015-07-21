@@ -14,13 +14,14 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import os
+import subprocess
 import sys
-from subprocess import check_output
+from platform import system
 from tempfile import NamedTemporaryFile
 
 
 CURINTERPRETER_PATH = os.path.normpath(sys.executable)
-IS_WINDOWS = sys.platform.startswith("win")
+IS_WINDOWS = system().lower() == "windows"
 
 
 def fix_winpython_pathenv():
@@ -63,8 +64,21 @@ def fix_winpython_pathenv():
     return True
 
 
+def exec_command(*args, **kwargs):
+    kwargs['stdout'] = subprocess.PIPE
+    kwargs['stderr'] = subprocess.PIPE
+    kwargs['shell'] = IS_WINDOWS
+
+    p = subprocess.Popen(*args, **kwargs)
+    out, err = p.communicate()
+
+    if p.returncode != 0:
+        raise Exception("\n".join([out, err]))
+    return out
+
+
 def exec_python_cmd(args):
-    return check_output([CURINTERPRETER_PATH] + args, shell=IS_WINDOWS).strip()
+    return exec_command([CURINTERPRETER_PATH] + args).strip()
 
 
 def install_pip():
@@ -85,17 +99,24 @@ def install_pip():
 
 
 def install_pypi_packages(packages):
-    for p in packages:
-        print (exec_python_cmd(["-m", "pip", "install", "-U"] + p.split()))
+    for pipargs in packages:
+        print (exec_python_cmd([
+            "-m", "pip.__main__" if sys.version_info < (2, 7, 0) else "pip",
+            "install", "-U"] + pipargs))
 
 
 def main():
     steps = [
         ("Fixing Windows %PATH% Environment", fix_winpython_pathenv, []),
         ("Installing Python Package Manager", install_pip, []),
-        ("Installing SmartAnthill and dependencies", install_pypi_packages,
-         (["-e git://github.com/ivankravets/smartanthill.git"
-           "@develop#egg=smartanthill", "--egg scons"],)),
+        ("Installing SmartAnthill and dependencies", install_pypi_packages, [[
+            ["setuptools"],
+            ["http://cc.smartanthill.org/package/smartanthill.latest.tar.gz"],
+            ["https://github.com/platformio/platformio/archive/develop.zip"],
+            ["https://github.com/smartanthill/smartanthill-zepto-compiler/"
+             "archive/develop.zip"],
+            ["--egg", "http://dl.platformio.org/scons.zip"]
+        ]])
     ]
 
     if not IS_WINDOWS:
@@ -103,32 +124,45 @@ def main():
 
     is_error = False
     for s in steps:
+        if is_error:
+            break
         print ("\n==> %s ..." % s[0])
         try:
             s[1](*s[2])
             print ("[SUCCESS]")
         except Exception, e:
             is_error = True
-            print (e)
+            print (str(e))
             print ("[FAILURE]")
+            if "Permission denied" in str(e) and not IS_WINDOWS:
+                print ("""
+-----------------
+Permission denied
+-----------------
+
+You need the `sudo` permission to install Python packages. Try
+
+$ sudo python get-smartanthill.py
+""")
 
     if is_error:
         print ("The installation process has been FAILED!\n"
                "Please report about this problem here\n"
-               "< https://github.com/ivankravets/smartanthill/issues >")
+               "< https://github.com/smartanthill/smartanthill2_0/issues >")
         return
     else:
         print ("\n ==> Installation process has been "
                "successfully FINISHED! <==\n")
 
-    try:
-        print (check_output("smartanthill --help", shell=IS_WINDOWS))
-    except:
-        try:
-            print (exec_python_cmd(["-m", "smartanthill", "--help"]))
-        finally:
-            print ("\n Please RESTART your Terminal Application and run "
-                   "`smartanthill --help` command.")
+    print ("""
+
+----------------------------------------
+Please RESTART your Terminal Application
+----------------------------------------
+
+Then run `smartanthill` command.
+
+""")
 
 
 if __name__ == "__main__":
