@@ -1,5 +1,5 @@
-smartanthill_zc
-platformio==2.2.0
+https://github.com/smartanthill/smartanthill-zepto-compiler/archive/develop.zip
+platformio==2.2.1
 twisted==15.2.1
 pyserial==2.7
 txWS==0.9.1
