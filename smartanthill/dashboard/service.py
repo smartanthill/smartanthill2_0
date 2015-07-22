@@ -25,7 +25,7 @@ from smartanthill.log import Logger
 from smartanthill.service import SAMultiService
 
 
-class DashboardSite(server.Site):
+class DashboardSiteFactory(server.Site):
 
     def _openLogFile(self, path):
         log = Logger("dashboard.http")
@@ -48,7 +48,8 @@ class DashboardService(SAMultiService):
         root.putChild("api", REST())
         TCPServer(
             self.options['port'],
-            DashboardSite(root, logPath="/dev/null")).setServiceParent(self)
+            DashboardSiteFactory(root, logPath="/dev/null")
+        ).setServiceParent(self)
 
         SAMultiService.startService(self)
 

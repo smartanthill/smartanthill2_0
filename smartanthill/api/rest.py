@@ -28,7 +28,7 @@ from smartanthill.log import Logger
 from smartanthill.service import SAMultiService
 
 
-class RESTSite(server.Site):
+class RESTSiteFactory(server.Site):
 
     def _openLogFile(self, path):
         log = Logger("api.rest.http")
@@ -129,7 +129,8 @@ class APIRestService(SAMultiService):
     def startService(self):
         TCPServer(
             self.options['port'],
-            RESTSite(REST(self), logPath="/dev/null")).setServiceParent(self)
+            RESTSiteFactory(REST(self), logPath="/dev/null")
+        ).setServiceParent(self)
         SAMultiService.startService(self)
 
 
