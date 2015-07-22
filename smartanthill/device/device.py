@@ -17,12 +17,13 @@ from shutil import rmtree
 from tempfile import mkdtemp
 
 from smartanthill_zc.api import ZeptoBodyPart, ZeptoProgram
-from twisted.internet.defer import succeed
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from smartanthill.cc import platformio
 from smartanthill.device.board.base import BoardFactory
 from smartanthill.exception import DeviceUnknownPlugin
 from smartanthill.log import Logger
+from smartanthill.network.zvd import ZeroVirtualDevice
 from smartanthill.util import memoized
 
 
@@ -75,14 +76,15 @@ class Device(object):
         ]))
         return self.run_program(program, request_fields)
 
-    def run_program(self, program, parameters=None):  # pylint: disable=R0201
+    @inlineCallbacks
+    def run_program(self, program, parameters=None):
         zp = ZeptoProgram(program, self.get_bodyparts())
         opcode = zp.compile(parameters)
-        return succeed(program + str(opcode))
-        # assert isinstance(type_, ValueConstant)
-        # if type_ in self.operations:
-        #     return self.board.launch_operation(self.id_, type_, data)
-        # raise DeviceUnknownOperation(type_.name, self.id_)
+
+        zvd = ZeroVirtualDevice()
+        response = yield zvd.request(self.id_, opcode)
+
+        returnValue(zp.process_response(response))
 
     def build_firmware(self):
         def _on_result(result, project_dir):
