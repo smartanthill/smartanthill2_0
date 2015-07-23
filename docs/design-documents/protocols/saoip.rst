@@ -27,7 +27,7 @@
 SmartAnthill-over-IP Protocol (SAoIP) and SmartAnthill Router
 =============================================================
 
-:Version:   v0.3
+:Version:   v0.3a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -86,7 +86,7 @@ When SAoUDP packet is transferred over SAMP, it MUST be combined with UDP/IP pac
 
 **\| FOREIGN-IP-TYPE-AND-SOME-DATA \| OPTIONAL-FOREIGN-IP-DATA \| PAYLOAD \|**
 
-where FOREIGN-IP-TYPE-AND-SOME-DATA is a Encoded-Unsigned-Int<max=2> bitfield substrate, described in detail below, OPTIONAL-FOREIGN-IP-DATA presence and length is defined by FOREIGN-IP-TYPE-AND-SOME-DATA (see below), and PAYLOAD is a payload of the upper protocol layer (usually SASP). Note that for over-SASP communications, payload is not SCRAMBLED (scrambling will be performed at SADLP-\* level).
+where FOREIGN-IP-TYPE-AND-SOME-DATA is a Encoded-Unsigned-Int<max=2> bitfield substrate, described in detail below, OPTIONAL-FOREIGN-IP-DATA presence and length is defined by FOREIGN-IP-TYPE-AND-SOME-DATA (see below), and PAYLOAD is a payload of the upper protocol layer (usually SASP). Note that for over-SASP communications, SCRAMBLING procedure is not applied within SAoUDP (SCRAMBLING will be performed at SADLP-\* level).
 
 "Foreign" address is either a source address (for packets travelling from Central Controller to Device), or destination address (for packets travelling from Device to Central Controller). Another address (non-"foreign" one) can always be derived from SAMP headers and is never transferred at this level.
 
