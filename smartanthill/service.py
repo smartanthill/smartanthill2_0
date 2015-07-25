@@ -64,7 +64,7 @@ class SAMultiService(MultiService):
         for service in reversed(list(self)):
             _d = maybeDeferred(self.removeService, service)
             if not isinstance(service, MultiService):
-                _d._suppressAlreadyCalled = True
+                _d._suppressAlreadyCalled = True  # pylint: disable=W0212
             d.chainDeferred(_d)
         d.addCallback(_on_stop)
         return d
@@ -103,12 +103,12 @@ class SmartAnthillService(SAMultiService):
     def startEnabledSubServices(self, skip=None):
         self.startSubServices(
             [name for name, _ in self._get_ordered_service_names()
-             if name not in (skip or [])])
+             if name not in (skip or [])])  # pylint: disable=C0325
 
     def stopEnabledSubServices(self, skip=None):
         return self.stopSubServices(
             [name for name, _ in reversed(self._get_ordered_service_names())
-             if name not in (skip or [])])
+             if name not in (skip or [])])  # pylint: disable=C0325
 
     def startSubServices(self, names):
         if not isinstance(names, list):
