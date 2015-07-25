@@ -206,21 +206,16 @@ def update_settings(request):
     sas = get_service_named("sas")
     data = json.loads(request.content.read())
 
-    def _do_update(result):
+    def _do_update(_):
         ConfigProcessor().load_data(data)
         sas.log.set_level(ConfigProcessor().get("logger.level"))
-        sas.startEnabledSubServices()
-        return True
 
-    def _delayed_restart():
-        d = sas.stopEnabledSubServices()
-        d.addCallback(_do_update)
-        d.callback(None)
-        return d
-
-    reactor.callLater(1, _delayed_restart)
-
-    return data
+    d = sas.stopEnabledSubServices(skip=["dashboard"])
+    d.addCallback(_do_update)
+    d.addCallback(lambda _: sas.startEnabledSubServices(skip=["dashboard"]))
+    d.addCallback(lambda _: get_settings(request))
+    d.callback(None)
+    return d
 
 
 class REST(Resource):

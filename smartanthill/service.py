@@ -100,13 +100,19 @@ class SmartAnthillService(SAMultiService):
     def stopService(self):
         return SAMultiService.stopService(self).callback(None)
 
-    def startEnabledSubServices(self):
+    def startEnabledSubServices(self, skip=None):
+        if skip is None:
+            skip = []
         self.startSubServices(
-            [name for name, _ in self._get_ordered_service_names()])
+            [name for name, _ in self._get_ordered_service_names()
+             if name not in skip])
 
-    def stopEnabledSubServices(self):
+    def stopEnabledSubServices(self, skip=None):
+        if skip is None:
+            skip = []
         return self.stopSubServices(
-            [name for name, _ in reversed(self._get_ordered_service_names())])
+            [name for name, _ in reversed(self._get_ordered_service_names())
+             if name not in skip])
 
     def startSubServices(self, names):
         if not isinstance(names, list):
