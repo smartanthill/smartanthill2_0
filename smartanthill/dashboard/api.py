@@ -108,16 +108,16 @@ def update_device(request, devid):
     def _do_update(result):
         new_config = json.loads(request.content.read())
         ConfigProcessor().update(DEVICE_CONFIG_KEY_FORMAT % devid, new_config)
+        new_device_config_dir = DEVICE_CONFIG_DIR_FORMAT % devid
         previous_id = new_config['prevId']
         if previous_id != devid:
             ConfigProcessor().delete(DEVICE_CONFIG_KEY_FORMAT % previous_id)
             old_device_config_dir = DEVICE_CONFIG_DIR_FORMAT % previous_id
             if os.path.exists(old_device_config_dir)\
                     and os.path.isdir(old_device_config_dir):
-                rmtree(old_device_config_dir)
-        device_config_dir = DEVICE_CONFIG_DIR_FORMAT % devid
-        if not os.path.exists(device_config_dir):
-            os.makedirs(device_config_dir)
+                os.rename(old_device_config_dir, new_device_config_dir)
+        if not os.path.exists(new_device_config_dir):
+            os.makedirs(new_device_config_dir)
 
         return True
 
@@ -135,7 +135,11 @@ def delete_device(request, devid):
     assert 0 < devid <= 255
 
     def _do_delete(result):
-        ConfigProcessor().delete("services.device.options.devices.%d" % devid)
+        ConfigProcessor().delete(DEVICE_CONFIG_KEY_FORMAT % devid)
+        device_config_dir = DEVICE_CONFIG_DIR_FORMAT % devid
+        if os.path.exists(device_config_dir)\
+                and os.path.isdir(device_config_dir):
+            rmtree(device_config_dir)
         return True
 
     sas = get_service_named("sas")
