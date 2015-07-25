@@ -16,8 +16,8 @@
 import sys
 from os.path import expanduser, join
 
-from twisted.application.service import MultiService
-from twisted.internet import defer
+from twisted.application.service import MultiService, Service
+from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.python import usage
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedModule
@@ -41,18 +41,32 @@ class SAMultiService(MultiService):
 
     def startService(self):
         MultiService.startService(self)
-
-        infomsg = "Service has been started"
-        self.log.info(infomsg + " with options '%s'" % self.options)
+        self.log.info(
+            "Service has been started with options '%s'" % self.options)
 
         self._started = True
         for callback in self._onstarted:
             callback()
 
     def stopService(self):
-        d = MultiService.stopService(self)
-        d.addCallback(
-            lambda result: self.log.info("Service has been stopped."))
+        self.log.debug(
+            "Going to shutdown with subservices %s" %
+            [s.__class__.__name__ for s in reversed(list(self))]
+        )
+
+        def _on_stop(result):
+            self.log.info("Service has been stopped")
+            Service.stopService(self)
+            return result
+
+        d = Deferred()
+        d.addCallback(lambda _: self.log.debug("Shutting down..."))
+        for service in reversed(list(self)):
+            _d = maybeDeferred(self.removeService, service)
+            if not isinstance(service, MultiService):
+                _d._suppressAlreadyCalled = True
+            d.chainDeferred(_d)
+        d.addCallback(_on_stop)
         return d
 
     def on_started(self, callback):
@@ -80,44 +94,44 @@ class SmartAnthillService(SAMultiService):
             self.workspace_dir).replace("#dashboard#", dashboard))
 
         self.log.debug("Initial configuration: %s." % self.config)
-        self._preload_subservices()
+        self.startEnabledSubServices()
         SAMultiService.startService(self)
 
-    def startSubService(self, name):
-        sopt = self.config.get("services.%s" % name)
-        if not sopt.get("enabled", False):
-            return
-        path = "smartanthill.%s.service" % name
-        service = namedModule(path).makeService(name, sopt['options'])
-        service.setServiceParent(self)
+    def stopService(self):
+        return SAMultiService.stopService(self).callback(None)
 
-    def stopSubService(self, name):
-        return self.removeService(self.getServiceNamed(name))
+    def startEnabledSubServices(self, skip=None):
+        self.startSubServices(
+            [name for name, _ in self._get_ordered_service_names()
+             if name not in (skip or [])])
 
-    def restartSubService(self, name):
-        d = defer.Deferred()
-        d.addCallback(lambda result: self.stopSubService(name))
-        d.addCallback(lambda result: self.startSubService(name))
+    def stopEnabledSubServices(self, skip=None):
+        return self.stopSubServices(
+            [name for name, _ in reversed(self._get_ordered_service_names())
+             if name not in (skip or [])])
+
+    def startSubServices(self, names):
+        if not isinstance(names, list):
+            names = [names]
+        for name in names:
+            sopt = self.config.get("services.%s" % name)
+            if not sopt.get("enabled", False):
+                return
+            path = "smartanthill.%s.service" % name
+            service = namedModule(path).makeService(name, sopt['options'])
+            service.setServiceParent(self)
+
+    def stopSubServices(self, names):
+        if not isinstance(names, list):
+            names = [names]
+        d = Deferred()
+        for name in names:
+            d.chainDeferred(self.removeService(self.getServiceNamed(name)))
         return d
-
-    def restartSubServices(self):
-        d = self.stopSubServices()
-        d.addCallback(lambda result: self._preload_subservices())
-        return d
-
-    def stopSubServices(self):
-        l = []
-        for name, _ in reversed(self._get_ordered_service_names()):
-            l.append(defer.maybeDeferred(self.stopSubService, name))
-        return defer.DeferredList(l)
 
     def _get_ordered_service_names(self):
         return sorted(self.config.get("services").items(),
                       key=lambda s: s[1]['priority'])
-
-    def _preload_subservices(self):
-        for name, _ in self._get_ordered_service_names():
-            self.startSubService(name)
 
 
 class Options(usage.Options):

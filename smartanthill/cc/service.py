@@ -100,7 +100,7 @@ class SmartAnthillCC(MultiService):
 
     def stopService(self):
         rmtree(self.options['project_dir'])
-        MultiService.stopService(self)
+        return MultiService.stopService(self)
 
 
 class Options(usage.Options):
