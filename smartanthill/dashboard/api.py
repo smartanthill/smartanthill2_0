@@ -14,6 +14,8 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import json
+import os
+from shutil import rmtree
 
 from platformio.util import get_serialports
 from twisted.internet import reactor, task
@@ -24,6 +26,8 @@ from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
 from smartanthill.configprocessor import ConfigProcessor
+from smartanthill.device.device import (DEVICE_CONFIG_DIR_FORMAT,
+                                        DEVICE_CONFIG_KEY_FORMAT)
 from smartanthill.log import Logger
 from smartanthill.util import get_service_named
 from smartanthill.webrouter import WebRouter
@@ -100,14 +104,21 @@ def get_device_info(request, devid):
 @router.add("/devices/<int:devid>$", method="POST")
 def update_device(request, devid):
     assert 0 < devid <= 255
-    device_config_key_format = "services.device.options.devices.%d"
 
     def _do_update(result):
         new_config = json.loads(request.content.read())
-        ConfigProcessor().update(device_config_key_format % devid, new_config)
+        ConfigProcessor().update(DEVICE_CONFIG_KEY_FORMAT % devid, new_config)
         previous_id = new_config['prevId']
         if previous_id != devid:
-            ConfigProcessor().delete(device_config_key_format % previous_id)
+            ConfigProcessor().delete(DEVICE_CONFIG_KEY_FORMAT % previous_id)
+            old_device_config_dir = DEVICE_CONFIG_DIR_FORMAT % previous_id
+            if os.path.exists(old_device_config_dir)\
+                    and os.path.isdir(old_device_config_dir):
+                rmtree(old_device_config_dir)
+        device_config_dir = DEVICE_CONFIG_DIR_FORMAT % devid
+        if not os.path.exists(device_config_dir):
+            os.makedirs(device_config_dir)
+
         return True
 
     sas = get_service_named("sas")
