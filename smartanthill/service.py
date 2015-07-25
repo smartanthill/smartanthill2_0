@@ -116,7 +116,7 @@ class SmartAnthillService(SAMultiService):
         for name in names:
             sopt = self.config.get("services.%s" % name)
             if not sopt.get("enabled", False):
-                return
+                continue
             path = "smartanthill.%s.service" % name
             service = namedModule(path).makeService(name, sopt['options'])
             service.setServiceParent(self)
@@ -126,6 +126,9 @@ class SmartAnthillService(SAMultiService):
             names = [names]
         d = Deferred()
         for name in names:
+            sopt = self.config.get("services.%s" % name)
+            if not sopt.get("enabled", False):
+                continue
             d.chainDeferred(self.removeService(self.getServiceNamed(name)))
         return d
 
