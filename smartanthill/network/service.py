@@ -45,9 +45,13 @@ class ControlService(SAMultiService):
         SAMultiService.startService(self)
 
     def stopService(self):
-        SAMultiService.stopService(self)
-        self._litemq.unconsume("network", "control.in")
-        self._litemq.unconsume("network", "control.out")
+        def _on_stop(_):
+            self._litemq.unconsume("network", "control.in")
+            self._litemq.unconsume("network", "control.out")
+
+        d = SAMultiService.stopService(self)
+        d.addCallback(_on_stop)
+        return d
 
     def write(self, message):
         self._litemq.produce("network", "control->transport", message,
@@ -85,9 +89,13 @@ class TransportService(SAMultiService):
         SAMultiService.startService(self)
 
     def stopService(self):
-        SAMultiService.stopService(self)
-        self._litemq.unconsume("network", "transport.in")
-        self._litemq.unconsume("network", "transport.out")
+        def _on_stop(_):
+            self._litemq.unconsume("network", "transport.in")
+            self._litemq.unconsume("network", "transport.out")
+
+        d = SAMultiService.stopService(self)
+        d.addCallback(_on_stop)
+        return d
 
     def rawmessage_protocallback(self, message):
         self.log.debug("Received incoming raw message %s" % hexlify(message))
@@ -161,13 +169,17 @@ class RouterService(SAMultiService):
         SAMultiService.startService(self)
 
     def stopService(self):
-        SAMultiService.stopService(self)
-        if self._reconnect_callid:
-            self._reconnect_callid.cancel()
-        if self._router_device:
-            self._router_device.loseConnection()
-        if self._litemq:
-            self._litemq.unconsume("network", "routing.out." + self.name)
+        def _on_stop(_):
+            if self._reconnect_callid:
+                self._reconnect_callid.cancel()
+            if self._router_device:
+                self._router_device.loseConnection()
+            if self._litemq:
+                self._litemq.unconsume("network", "routing.out." + self.name)
+
+        d = SAMultiService.stopService(self)
+        d.addCallback(_on_stop)
+        return d
 
     def inpacket_protocallback(self, packet):
         self.log.debug("Received incoming packet %s" % hexlify(packet))
@@ -217,12 +229,12 @@ class ConnectionInfo(object):
         self._protocol = uri[:uri.index("://")]
 
         if options_pos != -1:
-            self._address = uri[protoend_pos+3:options_pos]
+            self._address = uri[protoend_pos + 3:options_pos]
         else:
-            self._address = uri[protoend_pos+3:]
+            self._address = uri[protoend_pos + 3:]
 
         if options_pos != -1:
-            for option in uri[options_pos+1:].split("&"):
+            for option in uri[options_pos + 1:].split("&"):
                 key, value = option.split("=")
                 self._options[key] = value
 
@@ -256,8 +268,12 @@ class NetworkService(SAMultiService):
         SAMultiService.startService(self)
 
     def stopService(self):
-        SAMultiService.stopService(self)
-        self._litemq.undeclare_exchange("network")
+        def _on_stop(_):
+            self._litemq.undeclare_exchange("network")
+
+        d = SAMultiService.stopService(self)
+        d.addCallback(_on_stop)
+        return d
 
 
 def makeService(name, options):

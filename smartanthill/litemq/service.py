@@ -15,6 +15,8 @@
 
 from binascii import hexlify
 
+from twisted.internet.defer import Deferred
+
 from smartanthill.litemq.exchange import ExchangeFactory
 from smartanthill.service import SAMultiService
 
@@ -26,10 +28,17 @@ class LiteMQService(SAMultiService):
         self._exchanges = {}
 
     def stopService(self):
-        if self._exchanges:
-            raise Exception("Non-empty exchanges dict: %s"
-                            % (self._exchanges,))
-        SAMultiService.stopService(self)
+
+        def _on_stop(result):
+            if self._exchanges:
+                raise Exception("Non-empty exchanges dict: %s"
+                                % (self._exchanges,))
+            return result
+
+        d = Deferred()
+        d.addCallback(_on_stop)
+        d.chainDeferred(SAMultiService.stopService(self))
+        return d
 
     def declare_exchange(self, name, type_="direct"):
         if name in self._exchanges:
