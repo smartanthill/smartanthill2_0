@@ -99,24 +99,35 @@ def get_device_info(request, devid):
 @router.add("/devices/<int:devid>$", method="POST")
 def update_device(request, devid):
     assert 0 < devid <= 255
-    ConfigProcessor().update("services.device.options.devices.%d" % devid,
-                             json.loads(request.content.read()))
+
+    def _do_update(result):
+        ConfigProcessor().update(
+            "services.device.options.devices.%d" % devid,
+            json.loads(request.content.read()))
+        return True
+
     sas = get_service_named("sas")
-    d = maybeDeferred(sas.stopSubService, "network")
-    d.chainDeferred(sas.restartSubService("device"))
-    d.addCallback(lambda _: sas.startSubService("network"))
+    d = sas.stopSubServices(["network", "device"])
+    d.addCallback(_do_update)
+    d.addCallback(lambda _: sas.startSubServices(["device", "network"]))
     d.addCallback(lambda _: get_device_info(request, devid))
+    d.callback(None)
     return d
 
 
 @router.add("/devices/<int:devid>$", method="DELETE")
 def delete_device(request, devid):
     assert 0 < devid <= 255
-    ConfigProcessor().delete("services.device.options.devices.%d" % devid)
+
+    def _do_delete(result):
+        ConfigProcessor().delete("services.device.options.devices.%d" % devid)
+        return True
+
     sas = get_service_named("sas")
-    d = maybeDeferred(sas.stopSubService, "network")
-    d.chainDeferred(sas.restartSubService("device"))
-    d.addCallback(lambda _: sas.startSubService("network"))
+    d = sas.stopSubServices(["network", "device"])
+    d.addCallback(_do_delete)
+    d.addCallback(lambda _: sas.startSubServices(["device", "network"]))
+    d.callback(None)
     return d
 
 
@@ -130,18 +141,20 @@ def build_device_firmware(request, devid):
 @router.add("/devices/<int:devid>/uploadfw", method="POST")
 def upload_device_firmware(request, devid):
     assert 0 < devid <= 255
+    sas = get_service_named("sas")
 
     def _on_upload_result(result):
         def _on_device_restart(result):
-            get_service_named("sas").startSubService("network")
-            return result
+            sas.startSubServices("network")
+            return True
         return task.deferLater(reactor, 1, _on_device_restart, result)
 
-    get_service_named("sas").stopSubService("network")
     device = get_service_named("device").get_device(devid)
-    d = maybeDeferred(device.upload_firmware,
-                      json.loads(request.content.read()))
+    d = sas.stopSubServices("network")
+    d.addCallback(lambda _, data: device.upload_firmware(data),
+                  json.loads(request.content.read()))
     d.addBoth(_on_upload_result)
+    d.callback(None)
     return d
 
 
@@ -190,11 +203,24 @@ def get_settings(request):
 
 @router.add("/settings", method="POST")
 def update_settings(request):
-    data = json.loads(request.content.read())
-    ConfigProcessor().load_data(data)
     sas = get_service_named("sas")
-    sas.log.set_level(ConfigProcessor().get("logger.level"))
-    sas.restartSubServices()
+    data = json.loads(request.content.read())
+
+    def _do_update(result):
+        ConfigProcessor().load_data(data)
+        sas.log.set_level(ConfigProcessor().get("logger.level"))
+        sas.startEnabledSubServices()
+        return True
+
+    def _delayed_restart():
+        d = sas.stopEnabledSubServices()
+        d.addCallback(_do_update)
+        d.callback(None)
+        return d
+
+    reactor.callLater(1, _delayed_restart)
+
+    return data
 
 
 class REST(Resource):
