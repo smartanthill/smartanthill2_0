@@ -88,6 +88,7 @@ def get_device_info(request, devid):
     device = get_service_named("device").get_device(devid)
     data = {
         "id": devid,
+        "prevId": devid,
         "boardId": device.board.get_id(),
         "name": device.get_name(),
         "connectionUri": device.options.get("connectionUri"),
@@ -99,11 +100,14 @@ def get_device_info(request, devid):
 @router.add("/devices/<int:devid>$", method="POST")
 def update_device(request, devid):
     assert 0 < devid <= 255
+    device_config_key_format = "services.device.options.devices.%d"
 
     def _do_update(result):
-        ConfigProcessor().update(
-            "services.device.options.devices.%d" % devid,
-            json.loads(request.content.read()))
+        new_config = json.loads(request.content.read())
+        ConfigProcessor().update(device_config_key_format % devid, new_config)
+        previous_id = new_config['prevId']
+        if previous_id != devid:
+            ConfigProcessor().delete(device_config_key_format % previous_id)
         return True
 
     sas = get_service_named("sas")
