@@ -17,7 +17,7 @@ import sys
 from os.path import expanduser, join
 
 from twisted.application.service import MultiService, Service
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.python import usage
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedModule
@@ -62,10 +62,10 @@ class SAMultiService(MultiService):
         d = Deferred()
         d.addCallback(lambda _: self.log.debug("Shutting down..."))
         for service in reversed(list(self)):
-            if isinstance(service, MultiService):
-                d.chainDeferred(self.removeService(service))
-            else:
-                d.addCallback(lambda _, s: self.removeService(s), service)
+            _d = maybeDeferred(self.removeService, service)
+            if not isinstance(service, MultiService):
+                _d._suppressAlreadyCalled = True
+            d.chainDeferred(_d)
         d.addCallback(_on_stop)
         return d
 
@@ -101,18 +101,14 @@ class SmartAnthillService(SAMultiService):
         return SAMultiService.stopService(self).callback(None)
 
     def startEnabledSubServices(self, skip=None):
-        if skip is None:
-            skip = []
         self.startSubServices(
             [name for name, _ in self._get_ordered_service_names()
-             if name not in skip])
+             if name not in (skip or [])])
 
     def stopEnabledSubServices(self, skip=None):
-        if skip is None:
-            skip = []
         return self.stopSubServices(
             [name for name, _ in reversed(self._get_ordered_service_names())
-             if name not in skip])
+             if name not in (skip or [])])
 
     def startSubServices(self, names):
         if not isinstance(names, list):
