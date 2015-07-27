@@ -25,7 +25,7 @@ from twisted.python.reflect import namedModule
 from smartanthill import __banner__, __description__, __version__
 from smartanthill.configprocessor import ConfigProcessor, get_baseconf
 from smartanthill.log import Console, Logger
-from smartanthill.util import singleton
+from smartanthill.util import fire_defer, singleton
 
 
 class SAMultiService(MultiService):
@@ -98,7 +98,7 @@ class SmartAnthillService(SAMultiService):
         SAMultiService.startService(self)
 
     def stopService(self):
-        return SAMultiService.stopService(self).callback(None)
+        return fire_defer(SAMultiService.stopService(self))
 
     def startEnabledSubServices(self, skip=None):
         self.startSubServices(

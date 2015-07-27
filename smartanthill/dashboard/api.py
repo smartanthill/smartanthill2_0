@@ -14,6 +14,9 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import json
+from os import makedirs, rename
+from os.path import isdir
+from shutil import rmtree
 
 from platformio.util import get_serialports
 from twisted.internet import reactor, task
@@ -24,8 +27,10 @@ from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
 from smartanthill.configprocessor import ConfigProcessor
+from smartanthill.device.device import (DEVICE_CONFIG_DIR_FORMAT,
+                                        DEVICE_CONFIG_KEY_FORMAT)
 from smartanthill.log import Logger
-from smartanthill.util import get_service_named
+from smartanthill.util import fire_defer, get_service_named
 from smartanthill.webrouter import WebRouter
 
 # pylint: disable=W0613
@@ -88,6 +93,7 @@ def get_device_info(request, devid):
     device = get_service_named("device").get_device(devid)
     data = {
         "id": devid,
+        "prevId": devid,
         "boardId": device.board.get_id(),
         "name": device.get_name(),
         "connectionUri": device.options.get("connectionUri"),
@@ -101,9 +107,18 @@ def update_device(request, devid):
     assert 0 < devid <= 255
 
     def _do_update(result):
-        ConfigProcessor().update(
-            "services.device.options.devices.%d" % devid,
-            json.loads(request.content.read()))
+        new_config = json.loads(request.content.read())
+        ConfigProcessor().update(DEVICE_CONFIG_KEY_FORMAT % devid, new_config)
+        new_device_config_dir = DEVICE_CONFIG_DIR_FORMAT % devid
+        previous_id = new_config['prevId']
+        if previous_id != devid:
+            ConfigProcessor().delete(DEVICE_CONFIG_KEY_FORMAT % previous_id)
+            old_device_config_dir = DEVICE_CONFIG_DIR_FORMAT % previous_id
+            if isdir(old_device_config_dir):
+                rename(old_device_config_dir, new_device_config_dir)
+        if not isdir(new_device_config_dir):
+            makedirs(new_device_config_dir)
+
         return True
 
     sas = get_service_named("sas")
@@ -111,8 +126,7 @@ def update_device(request, devid):
     d.addCallback(_do_update)
     d.addCallback(lambda _: sas.startSubServices(["device", "network"]))
     d.addCallback(lambda _: get_device_info(request, devid))
-    d.callback(None)
-    return d
+    return fire_defer(d)
 
 
 @router.add("/devices/<int:devid>$", method="DELETE")
@@ -120,15 +134,17 @@ def delete_device(request, devid):
     assert 0 < devid <= 255
 
     def _do_delete(result):
-        ConfigProcessor().delete("services.device.options.devices.%d" % devid)
+        ConfigProcessor().delete(DEVICE_CONFIG_KEY_FORMAT % devid)
+        device_config_dir = DEVICE_CONFIG_DIR_FORMAT % devid
+        if isdir(device_config_dir):
+            rmtree(device_config_dir)
         return True
 
     sas = get_service_named("sas")
     d = sas.stopSubServices(["network", "device"])
     d.addCallback(_do_delete)
     d.addCallback(lambda _: sas.startSubServices(["device", "network"]))
-    d.callback(None)
-    return d
+    return fire_defer(d)
 
 
 @router.add("/devices/<int:devid>/buildfw")
@@ -154,8 +170,7 @@ def upload_device_firmware(request, devid):
     d.addCallback(lambda _, data: device.upload_firmware(data),
                   json.loads(request.content.read()))
     d.addBoth(_on_upload_result)
-    d.callback(None)
-    return d
+    return fire_defer(d)
 
 
 @router.add("/plugins")
@@ -214,8 +229,7 @@ def update_settings(request):
     d.addCallback(_do_update)
     d.addCallback(lambda _: sas.startEnabledSubServices(skip=["dashboard"]))
     d.addCallback(lambda _: get_settings(request))
-    d.callback(None)
-    return d
+    return fire_defer(d)
 
 
 class REST(Resource):

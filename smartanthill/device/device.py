@@ -13,6 +13,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+import os.path
 from shutil import rmtree
 from tempfile import mkdtemp
 
@@ -20,11 +21,16 @@ from smartanthill_zc.api import ZeptoBodyPart, ZeptoProgram
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from smartanthill.cc import platformio
+from smartanthill.configprocessor import ConfigProcessor
 from smartanthill.device.board.base import BoardFactory
 from smartanthill.exception import DeviceUnknownPlugin
 from smartanthill.log import Logger
 from smartanthill.network.zvd import ZeroVirtualDevice
 from smartanthill.util import memoized
+
+DEVICE_CONFIG_KEY_FORMAT = "services.device.options.devices.%d"
+DEVICE_CONFIG_DIR_FORMAT = os.path.join(ConfigProcessor().get("workspace"),
+                                        "devices", "%d")
 
 
 class Device(object):
@@ -113,3 +119,6 @@ class Device(object):
         )
         d.addBoth(_on_result, project_dir)
         return d
+
+    def get_conf_dir(self):
+        return DEVICE_CONFIG_DIR_FORMAT % self.id_
