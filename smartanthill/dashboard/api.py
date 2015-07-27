@@ -162,7 +162,7 @@ def upload_device_firmware(request, devid):
     def _on_upload_result(result):
         def _on_device_restart(result):
             sas.startSubServices("network")
-            return True
+            return result
         return task.deferLater(reactor, 1, _on_device_restart, result)
 
     device = get_service_named("device").get_device(devid)

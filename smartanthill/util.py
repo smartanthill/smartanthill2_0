@@ -22,7 +22,7 @@ from os import getenv
 from os.path import isfile, join
 
 from platformio.util import exec_command, get_systype
-from twisted.internet import reactor, task
+from twisted.internet import reactor
 
 
 class memoized(object):
@@ -115,7 +115,8 @@ def where_is_program(program):
 def fire_defer(d, *args):
     if len(args) == 0:
         args = (None,)
-    return task.deferLater(reactor, 0, d.callback, *args)
+    reactor.callLater(0, d.callback, *args)
+    return d
 
 
 def calc_crc16(dataset):
