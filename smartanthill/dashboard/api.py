@@ -14,7 +14,8 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import json
-import os
+from os import makedirs, rename
+from os.path import isdir
 from shutil import rmtree
 
 from platformio.util import get_serialports
@@ -113,10 +114,10 @@ def update_device(request, devid):
         if previous_id != devid:
             ConfigProcessor().delete(DEVICE_CONFIG_KEY_FORMAT % previous_id)
             old_device_config_dir = DEVICE_CONFIG_DIR_FORMAT % previous_id
-            if os.path.isdir(old_device_config_dir):
-                os.rename(old_device_config_dir, new_device_config_dir)
-        if not os.path.isdir(new_device_config_dir):
-            os.makedirs(new_device_config_dir)
+            if isdir(old_device_config_dir):
+                rename(old_device_config_dir, new_device_config_dir)
+        if not isdir(new_device_config_dir):
+            makedirs(new_device_config_dir)
 
         return True
 
@@ -135,7 +136,7 @@ def delete_device(request, devid):
     def _do_delete(result):
         ConfigProcessor().delete(DEVICE_CONFIG_KEY_FORMAT % devid)
         device_config_dir = DEVICE_CONFIG_DIR_FORMAT % devid
-        if os.path.isdir(device_config_dir):
+        if isdir(device_config_dir):
             rmtree(device_config_dir)
         return True
 
