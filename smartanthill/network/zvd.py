@@ -29,7 +29,7 @@ class ZeroVirtualDevice(object):
 
     def __init__(self):
         self._litemq = get_service_named("litemq")
-        self._litemq.consume("network", "msgqueue", "control->client",
+        self._litemq.consume("network", "msgqueue", "commstack->client",
                              self.onresult_mqcallback)
         self._litemq.consume("network", "errqueue", "commstack->err",
                              self.onerr_mqcallback)
@@ -37,7 +37,7 @@ class ZeroVirtualDevice(object):
 
     def request(self, destination, data):
         cm = ControlMessage(self.ID, destination, data)
-        self._litemq.produce("network", "client->control", cm)
+        self._litemq.produce("network", "client->commstack", cm)
         return self._defer_result(cm)
 
     def _defer_result(self, message):

@@ -117,21 +117,3 @@ def fire_defer(d, *args):
         args = (None,)
     reactor.callLater(0, d.callback, *args)
     return d
-
-
-def calc_crc16(dataset):
-    crc_table = [
-        0x0000, 0xcc01, 0xd801, 0x1400, 0xf001, 0x3c00, 0x2800, 0xe401,
-        0xa001, 0x6c00, 0x7800, 0xb401, 0x5000, 0x9c01, 0x8801, 0x4400
-    ]
-
-    crc = 0
-    tbl_idx = 0
-
-    for data in dataset:
-        tbl_idx = crc ^ (data >> (0 * 4))
-        crc = crc_table[tbl_idx & 0x0f] ^ (crc >> 4)
-        tbl_idx = crc ^ (data >> (1 * 4))
-        crc = crc_table[tbl_idx & 0x0f] ^ (crc >> 4)
-
-    return crc & 0xffff

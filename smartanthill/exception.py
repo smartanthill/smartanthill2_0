@@ -38,14 +38,14 @@ class LiteMQResendFailed(SABaseException):
     pass
 
 
-class NetworkSATPMessageLost(SABaseException):
+class NetworkDataLinkUnsupportedProtocol(SABaseException):
 
-    MESSAGE = "Message has been lost: %s"
+    MESSAGE = "Unsupported Network Data Link protocol '%s'"
 
 
-class NetworkRouterConnectFailure(SABaseException):
+class NetworkDataLinkConnectionFailure(SABaseException):
 
-    MESSAGE = "Couldn't connect to router with options=%s"
+    MESSAGE = "Can't make Data Link using options=%s"
 
 
 class BoardUnknownId(SABaseException):
@@ -76,11 +76,6 @@ class DeviceUnknownOperation(SABaseException):
 class DeviceNotResponding(SABaseException):
 
     MESSAGE = "Device #%d is not responding (tried %s times)"
-
-
-class OperArgInvalid(SABaseException):
-
-    MESSAGE = "%s%s: Invalid value '%s'"
 
 
 class DeviceUnknownPlugin(SABaseException):

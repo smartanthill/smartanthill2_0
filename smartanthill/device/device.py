@@ -66,6 +66,9 @@ class Device(object):
     def get_bodyparts(self):
         return self.bodypartsToObjects(self.options.get("bodyparts", []))
 
+    def get_id(self):
+        return self.id_
+
     def get_name(self):
         return self.options.get(
             "name", "Device #%d, %s" % (self.id_, self.board.get_name()))
