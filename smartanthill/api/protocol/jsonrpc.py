@@ -35,9 +35,7 @@ def is_valid_jsonrpc_request(request):
 
 
 def is_valid_api_request(request):
-    return "params" in request \
-           and "action" in request['params'] \
-           and "data" in request['params']
+    return ":" in request['method']
 
 
 class JSONRPCAPIProtocol(Protocol):
@@ -93,12 +91,12 @@ class JSONRPCAPIProtocol(Protocol):
             }
             return response
 
+        action_name, key = request['method'].split(":")
         try:
-            action = APIPermission.lookupByName(request['params']['action'])
+            action = APIPermission.lookupByName(action_name)
         except ValueError as exc:
             return error_response(exc, **INVALID_ACTION)
-        key = request['method']
-        data = request['params']['data']
+        data = request.get("params", {})
         d = maybeDeferred(self._service.parent.request, action, key, data)
         d.addCallbacks(success_response, error_response)
         return d
