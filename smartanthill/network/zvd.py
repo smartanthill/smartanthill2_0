@@ -19,7 +19,7 @@ from twisted.internet.defer import Deferred
 
 from smartanthill.exception import DeviceNotResponding
 from smartanthill.network.protocol import ControlMessage
-from smartanthill.util import get_service_named, singleton
+from smartanthill.util import fire_defer, get_service_named, singleton
 
 
 @singleton
@@ -53,7 +53,7 @@ class ZeroVirtualDevice(object):
             ]
             if all(conds):
                 self._resqueue.remove(item)
-                item[0].callback(message.data)
+                fire_defer(item[0], message.data)
                 return True
 
     def onerr_mqcallback(self, message, properties):
