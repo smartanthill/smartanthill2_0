@@ -45,11 +45,8 @@ class REST(Resource):
 
     isLeaf = True
 
-    METHOD_TO_ACTION = dict(
-        GET=APIPermission.GET,
-        POST=APIPermission.ADD,
-        PUT=APIPermission.UPDATE,
-        DELETE=APIPermission.DELETE
+    METHOD_TO_PERMISSION = dict(
+        GET=APIPermission.EXECUTE,
     )
 
     def __init__(self, restservice):
@@ -71,7 +68,7 @@ class REST(Resource):
 
         request.setHeader("Access-Control-Allow-Origin", "*")
         try:
-            action = REST.METHOD_TO_ACTION[request.method]
+            action = REST.METHOD_TO_PERMISSION[request.method]
             request_key = request.path[1:].replace("/", ".")
             if request_key.endswith(".json"):
                 request_key = request_key[:-5]
