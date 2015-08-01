@@ -38,6 +38,11 @@ class LiteMQResendFailed(SABaseException):
     pass
 
 
+class LiteMQUndeclaredExchange(SABaseException):
+
+    MESSAGE = "Exchange is not declared: %s"
+
+
 class NetworkDataLinkUnsupportedProtocol(SABaseException):
 
     MESSAGE = "Unsupported Network Data Link protocol '%s'"

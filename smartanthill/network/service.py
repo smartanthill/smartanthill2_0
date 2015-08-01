@@ -16,14 +16,16 @@
 # pylint: disable=W0613
 
 from binascii import hexlify
+from os.path import join
 
 from twisted.application.internet import TCPClient  # pylint: disable=E0611
 from twisted.internet import reactor
 from twisted.internet.serialport import SerialPort
 
 from smartanthill import exception
-from smartanthill.network.commstack import CommStackClientFactory
-from smartanthill.network.protocol import DataLinkSerialProtocol
+from smartanthill.network.commstack import (CommStackClientFactory,
+                                            CommStackProcessService)
+from smartanthill.network.protocol import DataLinkProtocol
 from smartanthill.service import SAMultiService
 from smartanthill.util import get_service_named
 
@@ -37,7 +39,9 @@ class DataLinkService(SAMultiService):
         assert isinstance(options['connection'], ConnectionInfo)
         SAMultiService.__init__(self, name, options)
 
-        self._protocol = None
+        self._protocol = DataLinkProtocol()
+        self._protocol.factory = self
+
         self._link = None
         self._litemq = None
         self._reconnect_nums = 0
@@ -46,7 +50,6 @@ class DataLinkService(SAMultiService):
     def startService(self):
         connection = self.options['connection']
         try:
-            self._protocol = self.build_protocol(connection)
             self._link = self._make_link(connection)
         except OSError as e:
             self.log.error(str(e))
@@ -80,20 +83,12 @@ class DataLinkService(SAMultiService):
         d.addCallback(_on_stop)
         return d
 
-    def build_protocol(self, connection):
-        assert isinstance(connection, ConnectionInfo)
-        if connection.get_protocol() not in ("serial",):
-            raise exception.NetworkDataLinkUnsupportedProtocol(
-                connection.get_protocol())
-        p = None
-        if connection.get_protocol() == "serial":
-            p = DataLinkSerialProtocol()
-        assert p
-        p.factory = self
-        return p
-
     def _make_link(self, connection):
-        if connection.get_protocol() == "serial":
+        assert isinstance(connection, ConnectionInfo)
+        protocol_type = connection.get_protocol()
+        if protocol_type not in ("serial",):
+            raise exception.NetworkDataLinkUnsupportedProtocol(protocol_type)
+        if protocol_type == "serial":
             return self._make_serial_link(connection)
 
     def _make_serial_link(self, connection):
@@ -167,15 +162,26 @@ class NetworkService(SAMultiService):
         self._litemq = get_service_named("litemq")
         self._litemq.declare_exchange("network")
 
+        self._litemq.consume(
+            exchange="network",
+            queue="commstack.server",
+            routing_key="commstack.server.started",
+            callback=self.on_commstack_server_started
+        )
+
         for device in get_service_named("device").get_devices().values():
             device_id = device.get_id()
             connectionUri = device.options.get("connectionUri")
             assert connectionUri
 
-            # Communication stack
-            TCPClient(
-                "localhost", 7665, CommStackClientFactory(device_id)
-            ).setServiceParent()
+            CommStackProcessService(
+                "network.commstack.server.%d" % device_id,
+                dict(
+                    device_id=device_id,
+                    port=0,  # allow system to assign free port
+                    eeprom_path=join(device.get_conf_dir(), "eeprom.dat")
+                )
+            ).setServiceParent(self)
 
             # SADLP
             DataLinkService(
@@ -187,11 +193,25 @@ class NetworkService(SAMultiService):
 
     def stopService(self):
         def _on_stop(_):
+            self._litemq.unconsume("network", "commstack.server")
             self._litemq.undeclare_exchange("network")
 
         d = SAMultiService.stopService(self)
         d.addCallback(_on_stop)
         return d
+
+    def on_commstack_server_started(self, message, properties):
+        assert set(["device_id", "port"]) == set(message.keys())
+        self.start_commstack_client(**message)
+
+    def start_commstack_client(self, device_id, port):
+        TCPClient(
+            "", port,
+            CommStackClientFactory(
+                "network.commstack.client.%d" % device_id,
+                device_id
+            )
+        ).setServiceParent(self)
 
 
 def makeService(name, options):

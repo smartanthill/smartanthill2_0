@@ -16,31 +16,83 @@
 # pylint: disable=W0613
 
 from binascii import hexlify
+from os.path import join
 
-from twisted.internet import protocol
+from platformio.util import get_systype
+from twisted.internet import protocol, reactor
+from twisted.internet.error import ProcessExitedAlready
 
 from smartanthill.log import Logger
-from smartanthill.network.protocol import CommStackProtocol, ControlMessage
-from smartanthill.util import get_service_named
+from smartanthill.network.protocol import (CommStackClientProtocol,
+                                           CommStackProcessProtocol,
+                                           ControlMessage)
+from smartanthill.service import SAMultiService
+from smartanthill.util import get_bin_dir, get_service_named
+
+
+class CommStackProcessService(SAMultiService):
+
+    def __init__(self, name, options):
+        assert set(["device_id", "port", "eeprom_path"]) <= set(options.keys())
+        SAMultiService.__init__(self, name, options)
+        self._litemq = get_service_named("litemq")
+        self._process = None
+
+    def startService(self):
+        p = CommStackProcessProtocol()
+        p.factory = self
+
+        bin_path = join(get_bin_dir(), get_systype(), "sacommstack")
+        if "windows" in get_systype():
+            bin_path += ".exe"
+
+        print bin_path
+
+        self._process = reactor.spawnProcess(
+            p, bin_path,
+            ["--port=%d" % self.options['port'],
+             "--psp=%s" % self.options['eeprom_path']]
+        )
+
+        SAMultiService.startService(self)
+
+    def stopService(self):
+        def _on_stop(_):
+            if self._process:
+                self._process.loseConnection()
+                try:
+                    self._process.signalProcess("KILL")
+                except ProcessExitedAlready:
+                    pass
+
+        d = SAMultiService.stopService(self)
+        d.addCallback(_on_stop)
+        return d
+
+    def on_server_started(self, port):
+        self.log.info("Server has been started on port %d" % port)
+        self._litemq.produce(
+            "network", "commstack.server.started",
+            {"device_id": self.options['device_id'], "port": port}
+        )
 
 
 class CommStackClientFactory(protocol.ClientFactory):
 
-    def __init__(self, device_id):
-        self.name = "network.commstack.%d" % device_id
+    def __init__(self, name, device_id):
+        self.name = name
         self.log = Logger(self.name)
         self.device_id = device_id
+        self._litemq = get_service_named("litemq")
         self._protocol = None
-        self._litemq = None
         self._source_id = 0
 
     def buildProtocol(self, addr):
-        self._protocol = CommStackProtocol()
+        self._protocol = CommStackClientProtocol()
         self._protocol.factory = self
         return self._protocol
 
     def startFactory(self):
-        self._litemq = get_service_named("litemq")
         self._litemq.consume(
             "network",
             "%s.in" % self.name,
@@ -67,7 +119,7 @@ class CommStackClientFactory(protocol.ClientFactory):
             data = bytearray(data)
         data.insert(0, 0x01)  # first packet in chain
         self._protocol.send_data(
-            CommStackProtocol.PACKET_DIRECTION_CLIENT_TO_COMMSTACK,
+            CommStackClientProtocol.PACKET_DIRECTION_CLIENT_TO_COMMSTACK,
             data
         )
 
@@ -80,7 +132,7 @@ class CommStackClientFactory(protocol.ClientFactory):
         self.log.debug("Incoming from DataLink: %s and properties=%s" %
                        (hexlify(message), properties))
         self._protocol.send_data(
-            CommStackProtocol.PACKET_DIRECTION_DATALINK_TO_COMMSTACK,
+            CommStackClientProtocol.PACKET_DIRECTION_DATALINK_TO_COMMSTACK,
             message
         )
 

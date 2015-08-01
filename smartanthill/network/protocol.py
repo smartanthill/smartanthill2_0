@@ -17,6 +17,7 @@ from binascii import hexlify
 from struct import pack
 
 from twisted.internet import protocol
+from twisted.protocols.basic import LineReceiver
 
 
 class ControlMessage(object):
@@ -43,7 +44,48 @@ class ControlMessage(object):
         return not self.__eq__(other)
 
 
-class CommStackProtocol(protocol.Protocol):
+class CommStackProcessProtocol(protocol.ProcessProtocol):
+
+    def __init__(self):
+        self._line_parser = LineReceiver()
+        self._line_parser.delimiter = "\n"
+        self._line_parser.makeConnection(None)
+        self._line_parser.lineReceived = self.outLineReceived
+
+        self._port_is_found = False
+
+    def connectionMade(self):
+        self.factory.log.debug("Child process id = %s" % self.transport.pid)
+
+    def outReceived(self, data):
+        self._line_parser.dataReceived(data)
+
+    def outLineReceived(self, line):
+        line = line.strip()
+        self.factory.log.debug(line)
+        if not self._port_is_found:
+            self._parse_server_port(line)
+
+    def errReceived(self, data):
+        self.factory.log.error(data)
+
+    def processExited(self, reason):
+        self.factory.log.debug("Process has exited")
+
+    def processEnded(self, reason):
+        self.factory.log.debug("Process has ended")
+        self.factory.stopService()
+
+    def _parse_server_port(self, line):
+        if "socket: started on port" not in line:
+            return
+        port = int(line.split()[-1])
+        assert port > 0
+        self._port_is_found = True
+        self.factory.on_server_started(port)
+
+
+class CommStackClientProtocol(protocol.Protocol):
 
     PACKET_DIRECTION_CLIENT_TO_COMMSTACK = 38
     PACKET_DIRECTION_COMMSTACK_TO_CLIENT = 37
@@ -66,7 +108,7 @@ class CommStackProtocol(protocol.Protocol):
         assert "Invalid direction %d" % direction
 
 
-class DataLinkSerialProtocol(protocol.Protocol):
+class DataLinkProtocol(protocol.Protocol):
 
     FRAGMENT_START_CODE = 0x01
     FRAGMENT_ESCAPE_CODE = 0xff
@@ -77,25 +119,25 @@ class DataLinkSerialProtocol(protocol.Protocol):
     def __init__(self):
         self._buffer = []
 
-    def packet_to_fragment(self, packet):
-        fragment = [self.FRAGMENT_START_CODE]
+    def packet_to_frame(self, packet):
+        frame = [self.FRAGMENT_START_CODE]
         for byte in packet:
             byte = ord(byte)
             if byte == self.FRAGMENT_START_CODE:
-                fragment.extend([self.FRAGMENT_ESCAPE_CODE, 0x00])
+                frame.extend([self.FRAGMENT_ESCAPE_CODE, 0x00])
             elif byte == self.FRAGMENT_END_CODE:
-                fragment.extend([self.FRAGMENT_ESCAPE_CODE, 0x02])
+                frame.extend([self.FRAGMENT_ESCAPE_CODE, 0x02])
             elif byte == self.FRAGMENT_ESCAPE_CODE:
-                fragment.extend([self.FRAGMENT_ESCAPE_CODE, 0x03])
+                frame.extend([self.FRAGMENT_ESCAPE_CODE, 0x03])
             else:
-                fragment.append(byte)
-        fragment.append(self.FRAGMENT_END_CODE)
-        return "".join([chr(c) for c in fragment])
+                frame.append(byte)
+        frame.append(self.FRAGMENT_END_CODE)
+        return "".join([chr(c) for c in frame])
 
-    def fragment_to_packet(self, fragment):
+    def frame_to_packet(self, frame):
         packet = []
         escape_found = False
-        for byte in fragment:
+        for byte in frame:
             byte = ord(byte)
             if byte == self.FRAGMENT_ESCAPE_CODE:
                 escape_found = True
@@ -113,10 +155,10 @@ class DataLinkSerialProtocol(protocol.Protocol):
         return "".join([chr(c) for c in packet])
 
     def send_packet(self, packet):
-        self.transport.write(self.packet_to_fragment(packet))
+        self.transport.write(self.packet_to_frame(packet))
 
-    def fragment_received(self, data):
-        return self.factory.in_packet_callback(self.fragment_to_packet(data))
+    def frame_received(self, data):
+        return self.factory.in_packet_callback(self.frame_to_packet(data))
 
     def dataReceived(self, data):
         for byte in data:
@@ -127,7 +169,7 @@ class DataLinkSerialProtocol(protocol.Protocol):
             self._buffer = []  # clean buffer
             return
         elif ord(byte) == self.FRAGMENT_END_CODE:
-            return self.fragment_received(self._buffer)
+            return self.frame_received(self._buffer)
 
         self._buffer.append(byte)
 

@@ -19,7 +19,7 @@ import collections
 import functools
 import json
 from os import getenv
-from os.path import isfile, join
+from os.path import dirname, isfile, join, realpath
 
 from platformio.util import exec_command, get_systype
 from twisted.internet import reactor
@@ -110,6 +110,10 @@ def where_is_program(program):
             return join(bin_dir, "%s.exe" % program)
 
     return program
+
+
+def get_bin_dir():
+    return realpath(join(dirname(realpath(__file__)), "..", "bin"))
 
 
 def fire_defer(d, *args):
