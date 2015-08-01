@@ -18,10 +18,7 @@ from twisted.python.constants import FlagConstant, Flags
 
 class APIPermission(Flags):
 
-    GET = FlagConstant()
-    ADD = FlagConstant()
-    UPDATE = FlagConstant()
-    DELETE = FlagConstant()
+    EXECUTE = FlagConstant()
 
 
 class APIHandlerBase(object):
