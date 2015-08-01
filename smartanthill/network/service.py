@@ -16,126 +16,33 @@
 # pylint: disable=W0613
 
 from binascii import hexlify
+from os.path import join
 
+from twisted.application.internet import TCPClient  # pylint: disable=E0611
 from twisted.internet import reactor
-from twisted.internet.defer import inlineCallbacks, maybeDeferred, returnValue
 from twisted.internet.serialport import SerialPort
 
-import smartanthill.network.protocol as sanp
-from smartanthill.exception import NetworkRouterConnectFailure
+from smartanthill import exception
+from smartanthill.network.commstack import (CommStackClientFactory,
+                                            CommStackProcessService)
+from smartanthill.network.protocol import DataLinkProtocol
 from smartanthill.service import SAMultiService
 from smartanthill.util import get_service_named
 
 
-class ControlService(SAMultiService):
-
-    def __init__(self, name):
-        SAMultiService.__init__(self, name)
-        self._protocol = sanp.ControlProtocolWrapping(
-            self.climessage_protocallback)
-        self._litemq = None
-
-    def startService(self):
-        self._litemq = get_service_named("litemq")
-        self._protocol.makeConnection(self)
-        self._litemq.consume("network", "control.in", "transport->control",
-                             self.inmessage_mqcallback)
-        self._litemq.consume("network", "control.out", "client->control",
-                             self.outmessage_mqcallback)
-        SAMultiService.startService(self)
-
-    def stopService(self):
-        def _on_stop(_):
-            self._litemq.unconsume("network", "control.in")
-            self._litemq.unconsume("network", "control.out")
-
-        d = SAMultiService.stopService(self)
-        d.addCallback(_on_stop)
-        return d
-
-    def write(self, message):
-        self._litemq.produce("network", "control->transport", message,
-                             dict(binary=True))
-
-    def inmessage_mqcallback(self, message, properties):
-        self.log.debug("Received incoming raw message %s" % hexlify(message))
-        self._protocol.dataReceived(message)
-
-    def outmessage_mqcallback(self, message, properties):
-        self.log.debug("Received outgoing %s and properties=%s" %
-                       (message, properties))
-        self._protocol.send_message(message)
-
-    def climessage_protocallback(self, message):
-        self.log.debug("Received incoming client %s" % message)
-        self._litemq.produce("network", "control->client", message)
-
-
-class TransportService(SAMultiService):
-
-    def __init__(self, name):
-        SAMultiService.__init__(self, name)
-        self._protocol = sanp.TransportProtocolWrapping(
-            self.rawmessage_protocallback)
-        self._litemq = None
-
-    def startService(self):
-        self._litemq = get_service_named("litemq")
-        self._protocol.makeConnection(self)
-        self._litemq.consume("network", "transport.in", "routing->transport",
-                             self.insegment_mqcallback)
-        self._litemq.consume("network", "transport.out", "control->transport",
-                             self.outmessage_mqcallback, ack=True)
-        SAMultiService.startService(self)
-
-    def stopService(self):
-        def _on_stop(_):
-            self._litemq.unconsume("network", "transport.in")
-            self._litemq.unconsume("network", "transport.out")
-
-        d = SAMultiService.stopService(self)
-        d.addCallback(_on_stop)
-        return d
-
-    def rawmessage_protocallback(self, message):
-        self.log.debug("Received incoming raw message %s" % hexlify(message))
-        self._litemq.produce("network", "transport->control", message,
-                             dict(binary=True))
-
-    def write(self, segment):
-        self._litemq.produce("network", "transport->routing", segment,
-                             dict(binary=True))
-
-    def insegment_mqcallback(self, message, properties):
-        self.log.debug("Received incoming segment %s" % hexlify(message))
-        self._protocol.dataReceived(message)
-
-    @inlineCallbacks
-    def outmessage_mqcallback(self, message, properties):
-        self.log.debug("Received outgoing message %s" % hexlify(message))
-        ctrlmsg = sanp.ControlProtocol.rawmessage_to_message(message)
-
-        def _on_err(failure):
-            self._litemq.produce("network", "transport->err", ctrlmsg)
-            failure.raiseException()
-
-        d = maybeDeferred(self._protocol.send_message, message)
-        d.addErrback(_on_err)
-        result = yield d
-        if result and ctrlmsg.ack:
-            self._litemq.produce("network", "transport->ack", ctrlmsg)
-        returnValue(result)
-
-
-class RouterService(SAMultiService):
+class DataLinkService(SAMultiService):
 
     RECONNECT_DELAY = 1  # in seconds
 
     def __init__(self, name, options):
+        assert "connection" in options
+        assert isinstance(options['connection'], ConnectionInfo)
         SAMultiService.__init__(self, name, options)
-        self._protocol = sanp.RoutingProtocolWrapping(
-            self.inpacket_protocallback)
-        self._router_device = None
+
+        self._protocol = DataLinkProtocol()
+        self._protocol.factory = self
+
+        self._link = None
         self._litemq = None
         self._reconnect_nums = 0
         self._reconnect_callid = None
@@ -143,16 +50,11 @@ class RouterService(SAMultiService):
     def startService(self):
         connection = self.options['connection']
         try:
-            if connection.get_protocol() == "serial":
-                _kwargs = connection.get_options()
-                _kwargs[
-                    'deviceNameOrPortNumber'] = connection.get_address()
-                _kwargs['protocol'] = self._protocol
-                _kwargs['reactor'] = reactor
-                self._router_device = SerialPort(**_kwargs)
+            self._link = self._make_link(connection)
         except OSError as e:
             self.log.error(str(e))
-            self.log.error(NetworkRouterConnectFailure(self.options))
+            self.log.error(
+                exception.NetworkDataLinkConnectionFailure(self.options))
             self._reconnect_nums += 1
             self._reconnect_callid = reactor.callLater(
                 self._reconnect_nums * self.RECONNECT_DELAY, self.startService)
@@ -161,9 +63,9 @@ class RouterService(SAMultiService):
         self._litemq = get_service_named("litemq")
         self._litemq.consume(
             exchange="network",
-            queue="routing.out." + self.name,
-            routing_key="transport->routing",
-            callback=self.outsegment_mqcallback
+            queue=self.name,
+            routing_key="commstack->datalink",
+            callback=self.out_packet_callback
         )
 
         SAMultiService.startService(self)
@@ -172,27 +74,38 @@ class RouterService(SAMultiService):
         def _on_stop(_):
             if self._reconnect_callid:
                 self._reconnect_callid.cancel()
-            if self._router_device:
-                self._router_device.loseConnection()
+            if self._link:
+                self._link.loseConnection()
             if self._litemq:
-                self._litemq.unconsume("network", "routing.out." + self.name)
+                self._litemq.unconsume("network", self.name)
 
         d = SAMultiService.stopService(self)
         d.addCallback(_on_stop)
         return d
 
-    def inpacket_protocallback(self, packet):
-        self.log.debug("Received incoming packet %s" % hexlify(packet))
-        self._litemq.produce("network", "routing->transport",
-                             sanp.RoutingProtocol.packet_to_segment(packet),
-                             dict(binary=True))
+    def _make_link(self, connection):
+        assert isinstance(connection, ConnectionInfo)
+        protocol_type = connection.get_protocol()
+        if protocol_type not in ("serial",):
+            raise exception.NetworkDataLinkUnsupportedProtocol(protocol_type)
+        if protocol_type == "serial":
+            return self._make_serial_link(connection)
 
-    def outsegment_mqcallback(self, message, properties):
-        # check destination ID  @TODO
-        if ord(message[2]) not in self.options['deviceids']:
-            return False
-        self.log.debug("Received outgoing segment %s" % hexlify(message))
-        self._protocol.send_segment(message)
+    def _make_serial_link(self, connection):
+        kwargs = connection.get_options()
+        kwargs['deviceNameOrPortNumber'] = connection.get_address()
+        kwargs['protocol'] = self._protocol
+        kwargs['reactor'] = reactor
+        return SerialPort(**kwargs)
+
+    def in_packet_callback(self, packet):
+        self.log.debug("Received incoming packet %s" % hexlify(packet))
+        self._litemq.produce(
+            "network", "datalink->commstack", packet, dict(binary=True))
+
+    def out_packet_callback(self, message, properties):
+        self.log.debug("Received outgoing packet %s" % hexlify(message))
+        self._protocol.send_packet(message)
 
 
 class ConnectionInfo(object):
@@ -238,8 +151,6 @@ class ConnectionInfo(object):
                 key, value = option.split("=")
                 self._options[key] = value
 
-        print self._protocol, self._address, self._options
-
 
 class NetworkService(SAMultiService):
 
@@ -251,29 +162,56 @@ class NetworkService(SAMultiService):
         self._litemq = get_service_named("litemq")
         self._litemq.declare_exchange("network")
 
-        ControlService("network.control").setServiceParent(self)
-        TransportService("network.transport").setServiceParent(self)
+        self._litemq.consume(
+            exchange="network",
+            queue="commstack.server",
+            routing_key="commstack.server.started",
+            callback=self.on_commstack_server_started
+        )
 
-        devices = get_service_named("device").get_devices()
-        for devid, devobj in devices.iteritems():
-            connectionUri = devobj.options.get("connectionUri", None)
-            if not connectionUri:
-                continue
+        for device in get_service_named("device").get_devices().values():
+            device_id = device.get_id()
+            connectionUri = device.options.get("connectionUri")
+            assert connectionUri
 
-            _options = {"connection": ConnectionInfo(connectionUri),
-                        "deviceids": [devid]}
-            RouterService("network.router.%d" % devid,
-                          _options).setServiceParent(self)
+            CommStackProcessService(
+                "network.commstack.server.%d" % device_id,
+                dict(
+                    device_id=device_id,
+                    port=0,  # allow system to assign free port
+                    eeprom_path=join(device.get_conf_dir(), "eeprom.dat")
+                )
+            ).setServiceParent(self)
+
+            # SADLP
+            DataLinkService(
+                "network.datalink.%d" % device_id,
+                dict(connection=ConnectionInfo(connectionUri))
+            ).setServiceParent(self)
 
         SAMultiService.startService(self)
 
     def stopService(self):
         def _on_stop(_):
+            self._litemq.unconsume("network", "commstack.server")
             self._litemq.undeclare_exchange("network")
 
         d = SAMultiService.stopService(self)
         d.addCallback(_on_stop)
         return d
+
+    def on_commstack_server_started(self, message, properties):
+        assert set(["device_id", "port"]) == set(message.keys())
+        self.start_commstack_client(**message)
+
+    def start_commstack_client(self, device_id, port):
+        TCPClient(
+            "", port,
+            CommStackClientFactory(
+                "network.commstack.client.%d" % device_id,
+                device_id
+            )
+        ).setServiceParent(self)
 
 
 def makeService(name, options):

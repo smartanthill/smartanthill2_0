@@ -1,3 +1,7 @@
 include smartanthill/*.json
-recursive-include smartanthill/cc/embedded/firmware *
+
+include smartanthill/cc/embedded/firmware/platformio.ini
+recursive-include smartanthill/cc/embedded/firmware/lib *
+recursive-include smartanthill/cc/embedded/firmware/src *
+
 recursive-include smartanthill/dashboard/site/dist *

@@ -17,6 +17,7 @@ from binascii import hexlify
 
 from twisted.internet.defer import Deferred
 
+from smartanthill.exception import LiteMQUndeclaredExchange
 from smartanthill.litemq.exchange import ExchangeFactory
 from smartanthill.service import SAMultiService
 
@@ -31,8 +32,8 @@ class LiteMQService(SAMultiService):
 
         def _on_stop(result):
             if self._exchanges:
-                raise Exception("Non-empty exchanges dict: %s"
-                                % (self._exchanges,))
+                self.log.warn(
+                    "Non-empty exchanges dict: %s" % (self._exchanges,))
             return result
 
         d = Deferred()
@@ -72,14 +73,19 @@ class LiteMQService(SAMultiService):
                                                   ack))
 
     def unconsume(self, exchange, queue):
-        self._ensure_exchange_declared(exchange)
+        try:
+            self._ensure_exchange_declared(exchange)
+        except LiteMQUndeclaredExchange as e:
+            self.log.warn(str(e))
+            return
+
         self._exchanges[exchange].unbind_queue(queue)
         self.log.info("Unregistered consumer with exchange=%s "
                       "and queue=%s" % (exchange, queue))
 
     def _ensure_exchange_declared(self, exchange):
         if exchange not in self._exchanges:
-            raise Exception("Exchange is not declared: %s" % exchange)
+            raise LiteMQUndeclaredExchange(exchange)
 
 
 def makeService(name, options):

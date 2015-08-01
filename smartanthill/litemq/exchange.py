@@ -22,7 +22,7 @@ from twisted.python.reflect import namedObject
 
 from smartanthill.exception import LiteMQACKFailed, LiteMQResendFailed
 from smartanthill.log import Logger
-from smartanthill.util import get_service_named
+from smartanthill.util import fire_defer, get_service_named
 
 
 class ExchangeFactory(object):
@@ -70,7 +70,7 @@ class Queue(object):
 
     def _d_rescallback(self, result, resdef):
         if not self.ack or (isinstance(result, bool) and result):
-            resdef.callback(result)
+            return fire_defer(resdef, result)
         else:
             return Failure(LiteMQACKFailed())
 
@@ -79,7 +79,7 @@ class Queue(object):
 
         resentnums += 1
         if not self.ack:
-            resdef.callback(False)
+            fire_defer(resdef, False)
         elif resentnums < self.RESEND_MAX:
             self._defer_message(resdef, resentnums, message, properties)
         else:

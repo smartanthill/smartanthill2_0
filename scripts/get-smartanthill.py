@@ -112,7 +112,6 @@ def main():
         ("Installing SmartAnthill and dependencies", install_pypi_packages, [[
             ["setuptools"],
             ["http://cc.smartanthill.org/package/smartanthill.latest.tar.gz"],
-            ["https://github.com/platformio/platformio/archive/develop.zip"],
             ["https://github.com/smartanthill/smartanthill-zepto-compiler/"
              "archive/develop.zip"],
             ["--egg", "http://dl.platformio.org/scons.zip"]
