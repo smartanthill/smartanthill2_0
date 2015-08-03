@@ -16,12 +16,13 @@
 # pylint: disable=W0613
 
 from binascii import hexlify
-from os.path import join
+from os.path import exists, join
 
 from platformio.util import get_systype
 from twisted.internet import protocol, reactor
 from twisted.internet.error import ProcessExitedAlready
 
+from smartanthill.exception import NetworkCommStackServerNotExists
 from smartanthill.log import Logger
 from smartanthill.network.protocol import (CommStackClientProtocol,
                                            CommStackProcessProtocol,
@@ -42,12 +43,8 @@ class CommStackServerService(SAMultiService):
         p = CommStackProcessProtocol()
         p.factory = self
 
-        bin_path = join(get_bin_dir(), get_systype(), "sacommstack")
-        if "windows" in get_systype():
-            bin_path += ".exe"
-
         self._process = reactor.spawnProcess(
-            p, bin_path,
+            p, self.get_server_bin(),
             ["--port=%d" % self.options['port'],
              "--psp=%s" % self.options['eeprom_path']]
         )
@@ -66,6 +63,23 @@ class CommStackServerService(SAMultiService):
         d = SAMultiService.stopService(self)
         d.addCallback(_on_stop)
         return d
+
+    def get_server_bin(self):
+        systype = get_systype()
+
+        if systype == "windows_amd64":
+            systype = "windows_x86"
+        elif systype == "linux_x86_64":
+            systype = "linux_i686"
+        elif systype == "linux_armv7l":
+            systype = "linux_armv6l"
+
+        bin_path = join(get_bin_dir(), systype, "sacommstack")
+        if "windows" in systype:
+            bin_path += ".exe"
+        if not exists(bin_path):
+            raise NetworkCommStackServerNotExists(bin_path)
+        return bin_path
 
     def on_server_started(self, port):
         self.log.info("Server has been started on port %d" % port)

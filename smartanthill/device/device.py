@@ -13,7 +13,8 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-import os.path
+from os import makedirs
+from os.path import isdir, join
 from shutil import rmtree
 from tempfile import mkdtemp
 
@@ -29,8 +30,8 @@ from smartanthill.network.zvd import ZeroVirtualDevice
 from smartanthill.util import memoized
 
 DEVICE_CONFIG_KEY_FORMAT = "services.device.options.devices.%d"
-DEVICE_CONFIG_DIR_FORMAT = os.path.join(ConfigProcessor().get("workspace"),
-                                        "devices", "%d")
+DEVICE_CONFIG_DIR_FORMAT = join(ConfigProcessor().get("workspace"),
+                                "devices", "%d")
 
 
 class Device(object):
@@ -124,4 +125,7 @@ class Device(object):
         return d
 
     def get_conf_dir(self):
-        return DEVICE_CONFIG_DIR_FORMAT % self.id_
+        path = DEVICE_CONFIG_DIR_FORMAT % self.id_
+        if not isdir(path):
+            makedirs(path)
+        return path

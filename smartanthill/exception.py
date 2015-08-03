@@ -48,6 +48,11 @@ class NetworkDataLinkUnsupportedProtocol(SABaseException):
     MESSAGE = "Unsupported Network Data Link protocol '%s'"
 
 
+class NetworkCommStackServerNotExists(SABaseException):
+
+    MESSAGE = "Communication server does not exist by path '%s'"
+
+
 class NetworkDataLinkConnectionFailure(SABaseException):
 
     MESSAGE = "Can't make Data Link using options=%s"
