@@ -24,7 +24,7 @@ from twisted.internet.serialport import SerialPort
 
 from smartanthill import exception
 from smartanthill.network.commstack import (CommStackClientFactory,
-                                            CommStackProcessService)
+                                            CommStackServerService)
 from smartanthill.network.protocol import DataLinkProtocol
 from smartanthill.service import SAMultiService
 from smartanthill.util import get_service_named
@@ -174,7 +174,7 @@ class NetworkService(SAMultiService):
             connectionUri = device.options.get("connectionUri")
             assert connectionUri
 
-            CommStackProcessService(
+            CommStackServerService(
                 "network.commstack.server.%d" % device_id,
                 dict(
                     device_id=device_id,
@@ -206,7 +206,7 @@ class NetworkService(SAMultiService):
 
     def start_commstack_client(self, device_id, port):
         TCPClient(
-            "", port,
+            "127.0.0.1", port,
             CommStackClientFactory(
                 "network.commstack.client.%d" % device_id,
                 device_id

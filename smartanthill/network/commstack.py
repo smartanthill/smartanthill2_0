@@ -30,7 +30,7 @@ from smartanthill.service import SAMultiService
 from smartanthill.util import get_bin_dir, get_service_named
 
 
-class CommStackProcessService(SAMultiService):
+class CommStackServerService(SAMultiService):
 
     def __init__(self, name, options):
         assert set(["device_id", "port", "eeprom_path"]) <= set(options.keys())
@@ -45,8 +45,6 @@ class CommStackProcessService(SAMultiService):
         bin_path = join(get_bin_dir(), get_systype(), "sacommstack")
         if "windows" in get_systype():
             bin_path += ".exe"
-
-        print bin_path
 
         self._process = reactor.spawnProcess(
             p, bin_path,
