@@ -110,8 +110,8 @@ def update_device(request, devid):
         new_config = json.loads(request.content.read())
         ConfigProcessor().update(DEVICE_CONFIG_KEY_FORMAT % devid, new_config)
         new_device_config_dir = DEVICE_CONFIG_DIR_FORMAT % devid
-        previous_id = new_config['prevId']
-        if previous_id != devid:
+        previous_id = new_config.get("prevId")
+        if previous_id and previous_id != devid:
             ConfigProcessor().delete(DEVICE_CONFIG_KEY_FORMAT % previous_id)
             old_device_config_dir = DEVICE_CONFIG_DIR_FORMAT % previous_id
             if isdir(old_device_config_dir):
