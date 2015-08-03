@@ -23,8 +23,8 @@ class BoardTIMSP430G2Base(BoardBase):
     PLATFORMIO_CONF = dict(
         platform="msp430",
         framework="energia",
-        src_filter="+<*> -<hal/platforms> +<hal/platforms/wiring>",
-        build_flags="-D SA_PLATFORM_WIRING"
+        src_filter="+<*> -<platforms> +<platforms/wiring>",
+        build_flags="-I$PROJECTSRC_DIR/hal_common -DSA_PLATFORM_WIRING"
     )
 
     VENDOR = "Texas Instruments"

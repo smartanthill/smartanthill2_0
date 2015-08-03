@@ -23,8 +23,8 @@ class BoardArduinoBase(BoardBase):
     PLATFORMIO_CONF = dict(
         platform="atmelavr",
         framework="arduino",
-        src_filter="+<*> -<hal/platforms> +<hal/platforms/wiring>",
-        build_flags="-D SA_PLATFORM_WIRING"
+        src_filter="+<*> -<platforms> +<platforms/wiring>",
+        build_flags="-I$PROJECTSRC_DIR/hal_common -DSA_PLATFORM_WIRING"
     )
 
     VENDOR = "Arduino"

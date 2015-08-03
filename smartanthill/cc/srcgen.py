@@ -78,7 +78,7 @@ class BodyPartListH(SourceGenerator):
 #if !defined __SA_SA_BODYPART_LIST_H__
 #define __SA_SA_BODYPART_LIST_H__
 
-#include "common/sa_bodypart_list_common.h"
+#include <simpleiot/siot_bodypart_list_common.h>
 
 #define BODYPARTS_MAX ${bodypart_nums}
 extern const bodypart_item bodyparts[ BODYPARTS_MAX ];
@@ -96,7 +96,7 @@ extern const bodypart_item bodyparts[ BODYPARTS_MAX ];
 class BodyPartListC(SourceGenerator):
 
     TPL = Template("""
-#include "sa_bodypart_list.h"
+#include <simpleiot/siot_bodypart_list.h>
 
 // include declarations of respective plugins
 ${plugin_includes}
