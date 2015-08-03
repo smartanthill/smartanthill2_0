@@ -147,8 +147,9 @@ class DataLinkProtocol(protocol.Protocol):
                     packet.append(self.FRAGMENT_START_CODE)
                 elif byte == 0x02:
                     packet.append(self.FRAGMENT_END_CODE)
-                if byte == 0x03:
+                elif byte == 0x03:
                     packet.append(self.FRAGMENT_ESCAPE_CODE)
+                escape_found = False
                 assert "Invalid escape symbol %d" % byte
             else:
                 packet.append(byte)
