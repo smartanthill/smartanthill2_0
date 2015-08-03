@@ -19,6 +19,8 @@ from struct import pack
 from twisted.internet import protocol
 from twisted.protocols.basic import LineReceiver
 
+from smartanthill.exception import SABaseException
+
 
 class ControlMessage(object):
 
@@ -149,8 +151,9 @@ class DataLinkProtocol(protocol.Protocol):
                     packet.append(self.FRAGMENT_END_CODE)
                 elif byte == 0x03:
                     packet.append(self.FRAGMENT_ESCAPE_CODE)
+                else:
+                    raise SABaseException("Invalid escape symbol %d" % byte)
                 escape_found = False
-                assert "Invalid escape symbol %d" % byte
             else:
                 packet.append(byte)
         return "".join([chr(c) for c in packet])
