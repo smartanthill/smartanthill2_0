@@ -64,7 +64,8 @@ class CommStackServerService(SAMultiService):
         d.addCallback(_on_stop)
         return d
 
-    def get_server_bin(self):
+    @staticmethod
+    def get_server_bin():
         systype = get_systype()
 
         if systype == "windows_amd64":
