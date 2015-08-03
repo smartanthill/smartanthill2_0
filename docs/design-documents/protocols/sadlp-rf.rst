@@ -27,7 +27,7 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.4.7a
+:Version:   v0.4.8
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -62,7 +62,7 @@ Frequency ranges:
 
 (\*\*) SA-Deviation uses deviation which is twice-wider than theoretically necessary for MSK, to account for not-so-perfect hardware.
 
-Line code: preamble (at least two 0xAA (TODO:check if it is really 0xAA or 0x55) symbols), followed by symbols 0x0F, 0xCC (sync word), followed by "raw" SADLP-RF Packet as described below. 
+Line code: preamble (at least two 0xAA symbols), followed by symbols 0x0F, 0x33 (sync word), followed by "raw" SADLP-RF Packet as described below. 
 
 CSMA/CA: enabled (if available)
 
