@@ -100,8 +100,10 @@ class CommStackClientProtocol(protocol.Protocol):
         packet = pack("HB", len(data), direction)
         packet += pack("B" * len(data), *data)
         self.transport.write(packet)
+        self.factory.log.debug("Sent packet %s" % hexlify(packet))
 
     def dataReceived(self, data):
+        self.factory.log.debug("Received data %s" % hexlify(data))
         direction = ord(data[2])
         if direction == self.PACKET_DIRECTION_COMMSTACK_TO_DATALINK:
             return self.factory.to_datalink_callback(data[3:])
