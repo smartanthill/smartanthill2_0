@@ -39,6 +39,9 @@ class ConfigProcessor(object):
         self._process_workspace_conf()
         self._process_user_options(user_options)
 
+    def __str__(self):
+        return str(self._data)
+
     def _process_workspace_conf(self):
         if (not self.wsconfp.exists() or not
                 self.wsconfp.isfile()):  # pragma: no cover
