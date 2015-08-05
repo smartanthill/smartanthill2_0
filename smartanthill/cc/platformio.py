@@ -216,9 +216,6 @@ def build_firmware(project_dir, platformio_conf, bodyparts,
 
     pio = PlatformIOProject(project_dir, platformio_conf)
     pio.add_src_content(
-        "sa_bodypart_list.h", srcgen.BodyPartListH(bodyparts).generate()
-    )
-    pio.add_src_content(
         "sa_bodypart_list.c", srcgen.BodyPartListC(bodyparts).generate()
     )
     pio.add_src_content(

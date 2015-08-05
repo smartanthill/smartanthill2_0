@@ -72,27 +72,6 @@ const uint8_t AES_ENCRYPTION_KEY[16] ZEPTO_PROG_CONSTANT_LOCATION = \
         )
 
 
-class BodyPartListH(SourceGenerator):
-
-    TPL = Template("""
-#if !defined __SA_SA_BODYPART_LIST_H__
-#define __SA_SA_BODYPART_LIST_H__
-
-#include <simpleiot/siot_bodypart_list_common.h>
-
-#define BODYPARTS_MAX ${bodypart_nums}
-extern const bodypart_item bodyparts[ BODYPARTS_MAX ];
-
-#endif // __SA_SA_BODYPART_LIST_H__
-""")
-
-    def __init__(self, bodyparts):
-        self.bodyparts = bodyparts
-
-    def get_content(self):
-        return self.TPL.substitute(bodypart_nums=len(self.bodyparts))
-
-
 class BodyPartListC(SourceGenerator):
 
     TPL = Template("""
@@ -105,7 +84,8 @@ ${plugin_configs}
 
 ${plugin_states}
 
-const bodypart_item bodyparts[ BODYPARTS_MAX ] ZEPTO_PROG_CONSTANT_LOCATION =
+const uint8_t SA_BODYPARTS_MAX ZEPTO_PROG_CONSTANT_LOCATION = ${bodypart_nums};
+const bodypart_item bodyparts[${bodypart_nums}] ZEPTO_PROG_CONSTANT_LOCATION =
 {
     ${bodypart_items}
 };
@@ -116,6 +96,7 @@ const bodypart_item bodyparts[ BODYPARTS_MAX ] ZEPTO_PROG_CONSTANT_LOCATION =
 
     def get_content(self):
         return self.TPL.substitute(
+            bodypart_nums=len(self.bodyparts),
             plugin_includes="\n".join(self._gen_plugin_includes()),
             plugin_configs="\n".join(self._gen_plugin_configs()),
             plugin_states="\n".join(self._gen_plugin_states()),
@@ -143,12 +124,15 @@ const bodypart_item bodyparts[ BODYPARTS_MAX ] ZEPTO_PROG_CONSTANT_LOCATION =
                     else:
                         data.append(".%s=%s" % (item['name'], item['value']))
 
-            configs.append(
-                "{pid}_plugin_config {pid}_plugin_config_{bpid}={{ {data} }};"
+            config = (
+                "{pid}_plugin_config {pid}_plugin_config_{bpid}"
                 .format(bpid=bodypart.get_id(),
-                        pid=bodypart.plugin.get_id(),
-                        data=", ".join(data))
+                        pid=bodypart.plugin.get_id())
             )
+            if data:
+                config += "={ %s }" % ", ".join(data)
+            configs.append(config + ";")
+
         return configs
 
     def _gen_plugin_states(self):
