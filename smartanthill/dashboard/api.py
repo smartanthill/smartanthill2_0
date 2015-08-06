@@ -118,13 +118,12 @@ def update_device(request, devid):
                 rename(old_device_config_dir, new_device_config_dir)
         if not isdir(new_device_config_dir):
             makedirs(new_device_config_dir)
-
-        return True
+        return result
 
     sas = get_service_named("sas")
-    d = sas.stopSubServices(["network", "device"])
+    d = sas.stopSubServices(["api", "network", "device"])
     d.addCallback(_do_update)
-    d.addCallback(lambda _: sas.startSubServices(["device", "network"]))
+    d.addCallback(lambda _: sas.startSubServices(["device", "network", "api"]))
     d.addCallback(lambda _: get_device_info(request, devid))
     return fire_defer(d)
 
