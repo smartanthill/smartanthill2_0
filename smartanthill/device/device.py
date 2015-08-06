@@ -27,15 +27,7 @@ from smartanthill.device.board.base import BoardFactory
 from smartanthill.exception import DeviceUnknownPlugin
 from smartanthill.log import Logger
 from smartanthill.network.zvd import ZeroVirtualDevice
-from smartanthill.util import memoized, Unformattable
-
-DEVICE_CONFIG_KEY_FORMAT = "services.device.options.devices.%d"
-try:
-    DEVICE_CONFIG_DIR_FORMAT = join(ConfigProcessor().get("workspace"),
-                                    "devices", "%d")
-except TypeError:
-    DEVICE_CONFIG_DIR_FORMAT = Unformattable(
-        "ConfigProcessor not initialized.")
+from smartanthill.util import memoized
 
 
 class Device(object):
@@ -129,7 +121,16 @@ class Device(object):
         return d
 
     def get_conf_dir(self):
-        path = DEVICE_CONFIG_DIR_FORMAT % self.id_
+        path = self.get_config_dir_by_id(self.id_)
         if not isdir(path):
             makedirs(path)
         return path
+
+    @staticmethod
+    def get_config_key_by_id(device_id):
+        return "services.device.options.devices.%d" % (device_id,)
+
+    @staticmethod
+    def get_config_dir_by_id(device_id):
+        return join(ConfigProcessor().get("workspace"),
+                    "devices", "%d") % (device_id,)

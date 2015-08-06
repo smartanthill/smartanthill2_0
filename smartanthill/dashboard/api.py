@@ -27,8 +27,7 @@ from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
 from smartanthill.configprocessor import ConfigProcessor
-from smartanthill.device.device import (DEVICE_CONFIG_DIR_FORMAT,
-                                        DEVICE_CONFIG_KEY_FORMAT)
+from smartanthill.device.device import Device
 from smartanthill.log import Logger
 from smartanthill.util import fire_defer, get_service_named
 from smartanthill.webrouter import WebRouter
@@ -108,12 +107,13 @@ def update_device(request, devid):
 
     def _do_update(result):
         new_config = json.loads(request.content.read())
-        ConfigProcessor().update(DEVICE_CONFIG_KEY_FORMAT % devid, new_config)
-        new_device_config_dir = DEVICE_CONFIG_DIR_FORMAT % devid
+        ConfigProcessor().update(Device.get_config_key_by_id(devid),
+                                 new_config)
+        new_device_config_dir = Device.get_config_dir_by_id(devid)
         previous_id = new_config.get("prevId")
         if previous_id and previous_id != devid:
-            ConfigProcessor().delete(DEVICE_CONFIG_KEY_FORMAT % previous_id)
-            old_device_config_dir = DEVICE_CONFIG_DIR_FORMAT % previous_id
+            ConfigProcessor().delete(Device.get_config_key_by_id(previous_id))
+            old_device_config_dir = Device.get_config_key_by_id(previous_id)
             if isdir(old_device_config_dir):
                 rename(old_device_config_dir, new_device_config_dir)
         if not isdir(new_device_config_dir):
@@ -134,8 +134,8 @@ def delete_device(request, devid):
     assert 0 < devid <= 255
 
     def _do_delete(result):
-        ConfigProcessor().delete(DEVICE_CONFIG_KEY_FORMAT % devid)
-        device_config_dir = DEVICE_CONFIG_DIR_FORMAT % devid
+        ConfigProcessor().delete(Device.get_config_key_by_id(devid))
+        device_config_dir = Device.get_config_dir_by_id(devid)
         if isdir(device_config_dir):
             rmtree(device_config_dir)
         return True
