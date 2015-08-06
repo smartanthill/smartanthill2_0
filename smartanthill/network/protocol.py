@@ -19,7 +19,8 @@ from struct import pack
 from twisted.internet import protocol
 from twisted.protocols.basic import LineReceiver
 
-from smartanthill.exception import SABaseException
+from smartanthill.exception import (NetworkCommStackServerInternalError,
+                                    SABaseException)
 
 
 class ControlMessage(object):
@@ -34,7 +35,8 @@ class ControlMessage(object):
 
     def __repr__(self):
         return ("ControlMessage: source=%d, destination=%d, data=%s" % (
-            self.source, self.destination, hexlify(self.data)))
+            self.source, self.destination,
+            hexlify(self.data if self.data else "")))
 
     def __eq__(self, other):
         for attr in ("source", "destination", "data"):
@@ -93,6 +95,7 @@ class CommStackClientProtocol(protocol.Protocol):
     PACKET_DIRECTION_COMMSTACK_TO_CLIENT = 37
     PACKET_DIRECTION_DATALINK_TO_COMMSTACK = 40
     PACKET_DIRECTION_COMMSTACK_TO_DATALINK = 35
+    PACKET_DIRECTION_COMMSTACK_INTERNAL_ERROR = 47
 
     def send_data(self, direction, data):
         if not isinstance(data, bytearray):
@@ -109,7 +112,10 @@ class CommStackClientProtocol(protocol.Protocol):
             return self.factory.to_datalink_callback(data[3:])
         elif direction == self.PACKET_DIRECTION_COMMSTACK_TO_CLIENT:
             return self.factory.to_client_callback(data[3:])
-        assert "Invalid direction %d" % direction
+        elif direction == self.PACKET_DIRECTION_COMMSTACK_INTERNAL_ERROR:
+            return self.factory.to_client_errback(
+                NetworkCommStackServerInternalError())
+        raise SABaseException("Invalid direction %d" % direction)
 
 
 class DataLinkProtocol(protocol.Protocol):

@@ -138,10 +138,15 @@ class CommStackClientFactory(protocol.ClientFactory):
         )
 
     def to_client_callback(self, message):
-        m = ControlMessage(self.device_id, self._source_id,
-                           bytearray(message[3:]))
-        self.log.debug("Outgoing to Client: %s" % m)
-        self._litemq.produce("network", "commstack->client", m)
+        cm = ControlMessage(self.device_id, self._source_id,
+                            bytearray(message[3:]))
+        self.log.debug("Outgoing to Client: %s" % cm)
+        self._litemq.produce("network", "commstack->client", cm)
+
+    def to_client_errback(self, reason):
+        cm = ControlMessage(self.device_id, self._source_id)
+        self.log.error("Outgoing to Client: %s, error: %s" % (cm, reason))
+        self._litemq.produce("network", "commstack->error", (cm, reason))
 
     def from_datalink_callback(self, message, properties):
         self.log.debug("Incoming from DataLink: %s and properties=%s" %

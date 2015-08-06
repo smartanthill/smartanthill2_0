@@ -53,9 +53,19 @@ class NetworkCommStackServerNotExists(SABaseException):
     MESSAGE = "Communication server does not exist by path '%s'"
 
 
+class NetworkCommStackServerInternalError(SABaseException):
+
+    MESSAGE = "Internal error. System is to be reinitialized"
+
+
 class NetworkDataLinkConnectionFailure(SABaseException):
 
     MESSAGE = "Can't make Data Link using options=%s"
+
+
+class NetworkRequestCancelled(SABaseException):
+
+    MESSAGE = "Request has been cancelled by user"
 
 
 class BoardUnknownId(SABaseException):
@@ -76,16 +86,6 @@ class DeviceUnknownId(SABaseException):
 class DeviceUnknownBoard(SABaseException):
 
     MESSAGE = "Unknown device board '%s'"
-
-
-class DeviceUnknownOperation(SABaseException):
-
-    MESSAGE = "Unknown operation '%s' for device #%d"
-
-
-class DeviceNotResponding(SABaseException):
-
-    MESSAGE = "Device #%d is not responding (tried %s times)"
 
 
 class DeviceUnknownPlugin(SABaseException):

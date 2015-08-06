@@ -17,7 +17,7 @@
 
 from twisted.internet.defer import Deferred
 
-from smartanthill.exception import DeviceNotResponding
+from smartanthill.exception import NetworkRequestCancelled
 from smartanthill.network.protocol import ControlMessage
 from smartanthill.util import fire_defer, get_service_named, singleton
 
@@ -30,39 +30,43 @@ class ZeroVirtualDevice(object):
     def __init__(self):
         self._litemq = get_service_named("litemq")
         self._litemq.consume("network", "msgqueue", "commstack->client",
-                             self.onresult_mqcallback)
-        self._litemq.consume("network", "errqueue", "commstack->err",
+                             self.onresult_mqcallback, ack=True)
+        self._litemq.consume("network", "errqueue", "commstack->error",
                              self.onerr_mqcallback)
-        self._resqueue = []
+        self._resqueue = {}
 
     def request(self, destination, data):
         cm = ControlMessage(self.ID, destination, data)
         self._litemq.produce("network", "client->commstack", cm)
-        return self._defer_result(cm)
 
-    def _defer_result(self, message):
-        d = Deferred()
-        self._resqueue.append((d, message, 0))
-        return d
+        if cm.destination in self._resqueue:
+            self._cancel_request(cm)
+
+        return self._defer_request(cm)
+
+    def _cancel_request(self, message):
+        self._resqueue[message.destination][0].errback(
+            NetworkRequestCancelled())
+        del self._resqueue[message.destination]
+
+    def _defer_request(self, message):
+        self._resqueue[message.destination] = (Deferred(), message)
+        return self._resqueue[message.destination][0]
+
+    def _my_message(self, message):
+        return (message.destination == self.ID and
+                message.source in self._resqueue)
 
     def onresult_mqcallback(self, message, properties):
-        for item in self._resqueue:
-            conds = [
-                item[1].source == message.destination,
-                item[1].destination == message.source
-            ]
-            if all(conds):
-                self._resqueue.remove(item)
-                fire_defer(item[0], message.data)
-                return True
+        if not self._my_message(message):
+            return
+        fire_defer(self._resqueue[message.source][0], message.data)
+        del self._resqueue[message.source]
+        return True
 
     def onerr_mqcallback(self, message, properties):
-        for item in self._resqueue:
-            if item[1] == message:
-                if item[2] == self._litemq.options['resend_max']:
-                    self._resqueue.remove(item)
-                    item[0].errback(DeviceNotResponding(
-                        message.destination, item[2]))
-                else:
-                    item[2] += 1
-                break
+        cm, reason = message
+        if not self._my_message(cm):
+            return
+        self._resqueue[cm.source][0].errback(reason)
+        del self._resqueue[cm.source]
