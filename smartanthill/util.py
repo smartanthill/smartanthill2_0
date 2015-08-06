@@ -121,3 +121,13 @@ def fire_defer(d, *args):
         args = (None,)
     reactor.callLater(0, d.callback, *args)
     return d
+
+
+class Unformattable(object):
+    """Raises exception on use of modulo operator."""
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __mod__(self, other):
+        raise Exception(self.msg)
