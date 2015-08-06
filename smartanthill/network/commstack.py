@@ -139,7 +139,7 @@ class CommStackClientFactory(protocol.ClientFactory):
 
     def to_client_callback(self, message):
         cm = ControlMessage(self.device_id, self._source_id,
-                            bytearray(message[3:]))
+                            bytearray(message[1:]))  # strip 1-st chain's byte
         self.log.debug("Outgoing to Client: %s" % cm)
         self._litemq.produce("network", "commstack->client", cm)
 
