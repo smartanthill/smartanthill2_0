@@ -246,7 +246,7 @@ class REST(Resource):
 
     def delayed_render(self, result, request):
         # if user disconnected
-        if self.finished:
+        if request.finished:
             return
         request.setHeader("Access-Control-Allow-Origin", "*")
         if isinstance(result, Failure):
