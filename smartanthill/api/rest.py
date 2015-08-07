@@ -98,7 +98,7 @@ class REST(Resource):
             request.setHeader("content-type", "application/json")
             request.write(self.result_to_json(result))
         elif isinstance(result, Failure):
-            request.write("Error: " + self.failure_to_errmsg(result))
+            request.write(self.failure_to_errmsg(result))
         else:
             request.write(str(result))
         request.finish()
@@ -110,12 +110,12 @@ class REST(Resource):
             _json['message'] = self.failure_to_errmsg(result)
         else:
             _json['status'] = "success"
-            _json['data'] = result
+            _json['result'] = result
         return json_dumps(_json)
 
     @staticmethod
     def failure_to_errmsg(failure):
-        return str(failure.value)
+        return "%s: %s" % (failure.type.__name__, failure.getErrorMessage())
 
 
 class APIRestService(SAMultiService):
