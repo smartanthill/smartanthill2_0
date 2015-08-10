@@ -27,7 +27,7 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.4.8
+:Version:   v0.4.9
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -49,34 +49,56 @@ SADLP-RF PHY Level
 
 Modulation: 2FSK (a.k.a. FSK without further specialization, and BFSK), or GFSK (2FSK and GFSK are generally compatible), with frequency deviation specified above.
 
-Frequency ranges:
+Supported modulation types:
 
-+--------------------------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+
-| From                           | To                             | Tau (\*)                       | SA-Deviation                   | Receiver filter bandwidth      |
-|                                |                                |                                |                                | (non-normative)                |
-+================================+================================+================================+================================+================================+
-| 433.075 MHz                    | 434.775 MHz                    | 1/38400 sec                    | 38400 Hz (\*\*)                | 4*38400 = 153600 Hz            |
-+--------------------------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+
++-------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+
+| Name        | From (for base frequency)      | To (for base frequency)        | Tau (\*)                       | SA-Deviation                   | Receiver filter bandwidth      |
+|             |                                |                                |                                |                                | (non-normative)                |
++=============+================================+================================+================================+================================+================================+
+| Generic 433 | 433.125 MHz                    | 434.715 MHz                    | 1/38'400 sec                   | 38'400 Hz (\*\*)               | 4*38'400 = 153'600 Hz          |
++-------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+
+| nRF24       | 2401 MHz                       | 2499 MHz                       | 1/1'000'000 sec                | 320 kHz (same as +-160kHz)     | 1 MHz                          |
++-------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+
 
 (\*) Tau is minimum period with the same frequency during FSK modulation. *NB: tau of 1/38400 sec usually, but not necessarily, corresponds to 38400 baud transfer rate as used in RF Module APIs.* (TODO: rate negotiation?)
 
-(\*\*) SA-Deviation uses deviation which is twice-wider than theoretically necessary for MSK, to account for not-so-perfect hardware.
+(\*\*) For this modulation type, SA-Deviation uses deviation which is twice-wider than theoretically necessary for MSK, to account for not-so-perfect hardware.
 
-Line code: preamble (at least two 0xAA symbols), followed by symbols 0x0F, 0x33 (sync word), followed by "raw" SADLP-RF Packet as described below. 
+Line code always consists of preamble, followed by a sync word, followed by "raw" SADLP-RF Packet as described below. The following parameters are used depending on the modulation type: 
+
++-------------+--------------------------------+--------------------------------+
+| Name        | Preamble                       | Sync Word                      |
+|             |                                |                                |
++=============+================================+================================+
+| Generic 433 | At least six symbols 0xAA      | 0x0F, 0x33                     |
+|             | (eight recommended)            |                                |
++-------------+--------------------------------+--------------------------------+
+| nRF24       | At least two symbols 0xAA      | 0x0F, 0x33                     |
++-------------+--------------------------------+--------------------------------+
 
 CSMA/CA: enabled (if available)
 
 Typical transceiver chips settings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Transceiver chips are often providing additional features, which MUST be disabled for SADLP-RF to work properly:
+
+* **Modulation: GFSK (if available), otherwise 2FSK**. GFSK is preferred over 2FSK due to better spectral characteristics.
+* **Frequency: see table above**
+* **Baud rate: see table above**
+* **FSK Frequency Deviation: see table above**
+* **Receiver filter bandwidth: see table above**
+
+In addition, transceiver chips are often providing additional features, which MUST be disabled for SADLP-RF to work properly:
 
 * **CRC: off** *Rationale: SADLP-RF uses forward error correction, which allows to improve reliability and reduce power consumption significantly and CRC would disable this ability*
 * **Manchester encoding: off** *Rationale: SADLP-RF uses it's own line code which allows for higher bit rates than Manchester*
+* **Whitening: off** *Rationale: SADLP-RF provides it's own whitening which is compatible between chips by different manufacturers*
 * **Encryption: off** *Rationale: SADLP-RF relies on encryption being performed on higher levels; enabling AES at L2 would defeat such features as forward error correction*
+* **Shockburst: off** *Rationale: (Shockburst(tm) enforces CRC, which should be turned off, see above*
+* **Auto-ACK: off** *Rationale: SAMP provides its own ACK where applicable.*
 
 In addition, the following settings SHOULD be used (if supported by transceiver chip):
 
-* **Number of mismatched bits allowed for sync word: 1**
+* **Number of mismatched bits allowed for sync word: 1** *Note that this SHOULD be emulated by SADLP-RF HAL if not supported by the chip.*
 * **CSMA/CA: enabled**
 
 SADLP-RF Packets, SCRAMBLING, and Line Codes
