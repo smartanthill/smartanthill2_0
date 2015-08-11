@@ -44,8 +44,16 @@ class JSONRPCAPIProtocol(Protocol):
         self._service = service
 
     def dataReceived(self, data):
-        def write_response(result):
+        def write_success_response(result):
             self.transport.write(json.dumps(result))
+
+        def write_error_response(failure, message_id):
+            error_response = {
+                'jsonrpc': "2.0",
+                'id': message_id,
+                'error': SERVER_ERROR,
+            }
+            self.transport.write(json.dumps(error_response))
 
         try:
             request = json.loads(data)
@@ -55,15 +63,18 @@ class JSONRPCAPIProtocol(Protocol):
                 'id': None,
                 'error': PARSE_ERROR
             }
-            write_response(response)
+            write_success_response(response)
             return
 
+        current_message_id = None
         if isinstance(request, list):
             d = DeferredList([maybeDeferred(self.processRequest, subrequest)
                               for subrequest in request])
         else:
+            current_message_id = request.get("id", None)
             d = maybeDeferred(self.processRequest, request)
-        d.addCallback(write_response)
+        d.addCallback(write_success_response)
+        d.addErrback(write_error_response, current_message_id)
 
     def processRequest(self, request):
         response = {
