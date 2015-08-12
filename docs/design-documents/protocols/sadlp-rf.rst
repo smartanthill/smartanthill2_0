@@ -27,7 +27,7 @@
 SmartAnthill DLP for RF (SADLP-RF)
 ==================================
 
-:Version:   v0.4.9
+:Version:   v0.4.10
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -55,26 +55,26 @@ Supported modulation types:
 | Name        | From (for base frequency)      | To (for base frequency)        | Tau (\*)                       | SA-Deviation                   | Receiver filter bandwidth      |
 |             |                                |                                |                                |                                | (non-normative)                |
 +=============+================================+================================+================================+================================+================================+
-| Generic 433 | 433.125 MHz                    | 434.715 MHz                    | 1/38'400 sec                   | 38'400 Hz (\*\*)               | 4*38'400 = 153'600 Hz          |
+| Generic 433 | 433.125 MHz                    | 434.715 MHz                    | 1/38'400 sec                   | +-38'400 Hz (\*\*)             | 4*38'400 = 153'600 Hz          |
 +-------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+
-| nRF24       | 2401 MHz                       | 2499 MHz                       | 1/1'000'000 sec                | 320 kHz (same as +-160kHz)     | 1 MHz                          |
+| nRF24       | 2401 MHz                       | 2499 MHz                       | 1/1'000'000 sec                | +-160kHz                       | 1 MHz                          |
 +-------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+--------------------------------+
 
 (\*) Tau is minimum period with the same frequency during FSK modulation. *NB: tau of 1/38400 sec usually, but not necessarily, corresponds to 38400 baud transfer rate as used in RF Module APIs.* (TODO: rate negotiation?)
 
-(\*\*) For this modulation type, SA-Deviation uses deviation which is twice-wider than theoretically necessary for MSK, to account for not-so-perfect hardware.
+(\*\*) For this modulation type, SA-Deviation uses deviation which is four times larger than theoretically necessary for MSK, to account for not-so-perfect hardware.
 
-Line code always consists of preamble, followed by a sync word, followed by "raw" SADLP-RF Packet as described below. The following parameters are used depending on the modulation type: 
+Line code always consists of preamble, followed by a sync word, followed by "raw" SADLP-RF Packet as described below. The following parameters are used for the line code depending on the modulation type: 
 
-+-------------+--------------------------------+--------------------------------+
-| Name        | Preamble                       | Sync Word                      |
-|             |                                |                                |
-+=============+================================+================================+
-| Generic 433 | At least six symbols 0xAA      | 0x0F, 0x33                     |
-|             | (eight recommended)            |                                |
-+-------------+--------------------------------+--------------------------------+
-| nRF24       | At least two symbols 0xAA      | 0x0F, 0x33                     |
-+-------------+--------------------------------+--------------------------------+
++-------------+--------------------------------+--------------------------------+-------------------------------+
+| Name        | Preamble                       | Sync Word                      | Byte encoding                 |
+|             |                                |                                |                               |
++=============+================================+================================+===============================+
+| Generic 433 | At least six symbols 0xAA      | 0x0F, 0x33                     | MSB-first                     |
+|             | (eight recommended)            |                                |                               |
++-------------+--------------------------------+--------------------------------+-------------------------------+
+| nRF24       | At least two symbols 0xAA      | 0x0F, 0x33                     | TBD                           |
++-------------+--------------------------------+--------------------------------+-------------------------------+
 
 CSMA/CA: enabled (if available)
 
