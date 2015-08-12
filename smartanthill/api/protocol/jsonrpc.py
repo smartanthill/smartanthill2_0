@@ -47,7 +47,7 @@ class JSONRPCAPIProtocol(Protocol):
         def write_success_response(result):
             self.transport.write(json.dumps(result))
 
-        def write_error_response(failure, message_id):
+        def write_error_response(_, message_id):
             error_response = {
                 'jsonrpc': "2.0",
                 'id': message_id,
