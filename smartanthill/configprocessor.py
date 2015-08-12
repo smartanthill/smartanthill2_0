@@ -21,7 +21,8 @@ from twisted.python.filepath import FilePath
 from twisted.python.util import sibpath
 
 from smartanthill.exception import ConfigKeyError
-from smartanthill.util import load_config, merge_nested_dicts, singleton
+from smartanthill.util import (dict_difference, load_config,
+                               merge_nested_dicts, singleton)
 
 
 def get_baseconf():
@@ -34,7 +35,8 @@ class ConfigProcessor(object):
     def __init__(self, wsdir, user_options):
         self.wsconfp = FilePath(os.path.join(wsdir, "smartanthill.json"))
 
-        self._data = get_baseconf()
+        self._base = get_baseconf()
+        self._data = deepcopy(self._base)
         self._wsdata = {}
         self._process_workspace_conf()
         self._process_user_options(user_options)
@@ -89,7 +91,8 @@ class ConfigProcessor(object):
 
     def load_data(self, data, write_wsconf=True):
         self._data = merge_nested_dicts(self._data, deepcopy(data))
-        self._wsdata = merge_nested_dicts(self._wsdata, data)
+        self._wsdata = dict_difference(
+            self._base, merge_nested_dicts(self._wsdata, data))
 
         if write_wsconf:
             self._write_wsconf()

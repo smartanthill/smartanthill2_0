@@ -92,6 +92,54 @@ def merge_nested_dicts(d1, d2):
     return d2
 
 
+def dict_difference(base, modified):
+    """Finds difference between `base` and `modified` dicts.
+
+    Returns dict containing those values from `modified` which are not equal to
+    values in `base` under same key.
+
+    >>> dict_difference({}, {})
+    {}
+
+    >>> dict_difference({'key1': "value1", 'key2': "value2"},
+    ...                 {'key1': "value1", 'key2': "value2"})
+    {}
+
+    >>> dict_difference(None, {'key': "value"})
+    {'key': 'value'}
+
+    >>> dict_difference({'key1': "value1"},
+    ...                 {'key2': "value2"})
+    {'key2': 'value2'}
+
+    >>> dict_difference({'key1': "value1", 'key2': "value2"},
+    ...                 {'key1': "value1", 'key2': "modified value2"})
+    {'key2': 'modified value2'}
+
+    >>> dict_difference({'key': {'subkey': "value"}},
+    ...                 {'key': {'subkey': "value"}})
+    {}
+
+    >>> dict_difference({'key': {'subkey1': "value1", 'subkey2': "value2"}},
+    ...                 {'key': {'subkey1': "modified value1",
+    ...                          'subkey2': "value2"}})
+    {'key': {'subkey1': 'modified value1'}}
+    """
+    if base is None:
+        base = {}
+
+    diff = {}
+    for key, value in modified.items():
+        base_value = base.get(key)
+        if isinstance(value, dict):
+            subdiff = dict_difference(base_value, value)
+            if subdiff:
+                diff[key] = subdiff
+        elif base_value != value:
+            diff[key] = value
+    return diff
+
+
 def where_is_program(program):
     # try OS's built-in commands
     try:
