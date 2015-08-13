@@ -181,13 +181,13 @@ class PlatformIOUploader(object):
 
     def run(self):
         d = utils.getProcessOutputAndValue(
-            where_is_program("platformio"), args=(
+            where_is_program("platformio"), args=[
                 "--force", "run",
                 "--project-dir", self.project.get_project_dir(),
                 "--target", "uploadlazy",
-                "--upload-port", self._options.get("upload_port"),
                 "--disable-auto-clean"
-            ),
+            ] + (["--upload-port", self._options.get("upload_port")]
+                 if self._options.get("upload_port") else []),
             env=environ
         )
         d.addBoth(self.on_result)
