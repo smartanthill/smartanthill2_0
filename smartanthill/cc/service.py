@@ -61,7 +61,7 @@ class WebCloud(Resource):
             d = platformio.build_firmware(
                 self.project_dir,
                 BoardFactory.newBoard(data['boardId']).get_platformio_conf(),
-                Device.bodypartsToObjects(data['bodyparts']),
+                Device.bodyparts_to_objects(data['bodyparts']),
                 disable_auto_clean=True
             )
             d.addBoth(self.delayed_render, request)

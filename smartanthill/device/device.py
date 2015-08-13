@@ -39,7 +39,7 @@ class Device(object):
         self.board = BoardFactory.newBoard(options['boardId'])
 
     @staticmethod
-    def bodypartsToObjects(bodyparts_raw):
+    def bodyparts_to_objects(bodyparts_raw):
         from smartanthill.device.service import DeviceService
 
         def _get_plugin(id_):
@@ -61,7 +61,7 @@ class Device(object):
 
     @memoized
     def get_bodyparts(self):
-        return self.bodypartsToObjects(self.options.get("bodyparts", []))
+        return self.bodyparts_to_objects(self.options.get("bodyparts", []))
 
     def get_id(self):
         return self.id_
