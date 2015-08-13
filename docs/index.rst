@@ -47,7 +47,9 @@ From programming point of view, SmartAnthill provides a clear separation between
     :caption: Developer Documentation
     :maxdepth: 2
 
+    design-documents/smartanthill-plugins
     design-documents/reference-implementation/plugin_api
+    design-documents/zepto-patterns
 
 
 .. toctree::
