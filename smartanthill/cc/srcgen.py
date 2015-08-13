@@ -139,8 +139,10 @@ const bodypart_item bodyparts[${bodypart_nums}] ZEPTO_PROG_CONSTANT_LOCATION =
         states = []
         for bodypart in self.bodyparts:
             states.append(
-                "{pid}_plugin_state {pid}_plugin_state_{bpid};".
-                format(pid=bodypart.plugin.get_id(), bpid=bodypart.get_id())
+                "{pid}_plugin_state {pid}_plugin_state_{bpid};\n"
+                "{pid}_plugin_persistent_state "
+                "{pid}_plugin_persistent_state_{bpid};"
+                .format(pid=bodypart.plugin.get_id(), bpid=bodypart.get_id())
             )
         return states
 
@@ -148,8 +150,9 @@ const bodypart_item bodyparts[${bodypart_nums}] ZEPTO_PROG_CONSTANT_LOCATION =
         bpitems = []
         for bodypart in self.bodyparts:
             bpitems.append(
-                "{{ {pid}_plugin_handler_init, {pid}_plugin_handler, "
-                "&{pid}_plugin_config_{bpid}, &{pid}_plugin_state_{bpid} }}"
+                "{{ {pid}_plugin_handler_init, {pid}_plugin_exec_init, "
+                "{pid}_plugin_handler, &{pid}_plugin_config_{bpid}, "
+                "&{pid}_plugin_persistent_state_{bpid}, NULL }}"
                 .format(pid=bodypart.plugin.get_id(), bpid=bodypart.get_id())
             )
         return bpitems
