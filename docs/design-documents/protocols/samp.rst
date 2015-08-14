@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.20
+:Version:   v0.0.20.a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -255,8 +255,8 @@ OPTIONAL-CUSTOM-INTRA-BUS-SIZE is present only if OPTIONAL-VIA-OR-INTRA-BUS-SIZE
 Multiple-Target-Addresses is essentially a multi-cast address. It is encoded as a list of items, where each item is similar to an Target-Address field, with the following changes: 
 
 * for list entries, within FLAG-AND-NODE-ID field it is `NODE-ID + 1` which is stored (instead of simple NODE-ID for single Target-Address). This change does not affect VIA fields.
-* to denote the end of Multiple-Target-Addresses list, FLAG-AND-NODE-ID field with NONPAIRED_ADDRESS=0 and NODE-ID=0, is used
-* value of FLAG-AND-NODE-ID field with NONPAIRED_ADDRESS=1 and NODE-ID=0, is prohibited (reserved)
+* to denote the end of Multiple-Target-Addresses list, FLAG-AND-NODE-ID field with EXTRA_DATA_FOLLOWS=0 and NODE-ID=0, is used
+* value of FLAG-AND-NODE-ID field with EXTRA_DATA_FOLLOWS=1 and NODE-ID=0, is prohibited (reserved)
 
 Multiple-Target-Addresses-With-Extra-Data is the same as Multiple-Target-Addresses, but each item (except for the last one, where NODE-ID=0), additionally contains some extra data (which is specified whenever Multiple-Target-Addresses-With-Extra-Data is mentioned). For example, if we're speaking about "Multiple-Target-Addresses-With-Extra-Data, where Extra-Data is 1-byte field", it means that each item of the list (except for the last one) will have both Target-Address field (with changes described in Multiple-Target-Addresses), and 1-byte field of extra data.
 
