@@ -18,7 +18,7 @@ from os import makedirs, rename
 from os.path import isdir
 from shutil import rmtree
 
-from platformio.util import get_serialports
+from platformio.util import get_logicaldisks, get_serialports
 from twisted.internet import reactor, task
 from twisted.internet.defer import maybeDeferred
 from twisted.python.failure import Failure
@@ -229,6 +229,11 @@ def update_settings(request):
     d.addCallback(lambda _: sas.startEnabledSubServices(skip=["dashboard"]))
     d.addCallback(lambda _: get_settings(request))
     return fire_defer(d)
+
+
+@router.add('/logicaldisks')
+def get_logicaldisks_handler(request):
+    return get_logicaldisks()
 
 
 class REST(Resource):
