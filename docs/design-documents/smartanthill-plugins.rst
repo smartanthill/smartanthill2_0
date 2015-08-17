@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version: v0.3.3
+:Version: v0.4
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -48,7 +48,7 @@ Each SmartAnthill Plugin has Plugin Handler, usually implemented as two C functi
 
 **plugin_handler_init(const void\* plugin_config, void\* plugin_state )**
 
-**plugin_handler(const void\* plugin_config, void\* plugin_state, ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor\* waiting_for)**
+**plugin_handler(const void\* plugin_config, void\* plugin_state, ZEPTO_PARSER* command, REPLY_HANDLE reply, WAITING_FOR\* waiting_for)**
 
 See details on MEMORY_HANDLE in 'Plugin API' section below.
 
@@ -205,7 +205,7 @@ Simple SA plugins MAY be written without being a State Machine, for example:
     //TODO: reinit? (via deinit, or directly, or implicitly)
 
     byte my_plugin_handler(const void* plugin_config, void* plugin_state,
-      ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {
+      ZEPTO_PARSER* command, REPLY_HANDLE reply, WAITING_FOR* waiting_for) {
       const my_plugin_config* pc = (my_plugin_config*) plugin_config;
 
       //requesting sensor to perform read, using pc->request_pin_number
@@ -249,7 +249,7 @@ Implementation above is not ideal; in fact, it blocks execution at the point of 
     //TODO: reinit? (via deinit, or directly, or implicitly)
 
     byte my_plugin_handler(const void* plugin_config, void* plugin_state,
-      ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {
+      ZEPTO_PARSER* command, REPLY_HANDLE reply, WAITING_FOR* waiting_for) {
       const my_plugin_config* pc = (my_plugin_config*) plugin_config;
       my_plugin_state* ps = (my_plugin_state*)plugin_state;
 
@@ -372,36 +372,126 @@ ZEPTO_PARSER is an opaque structure (which can be seen as a sort of object where
   uint16_t sz = zepto_parse_encodeduint2(parser);
   byte b = zepto_parse_byte(parser,sz);
 
-TODO: WaitingFor
+TODO: WAITING_FOR
 
 TODO: half-float library
 
 Functions
 ^^^^^^^^^
 
-zepto_reply_append_*()
-''''''''''''''''''''''
+Names of all functions within plugin interface start from ``papi_`` using by plugins of any functions with names not starting from ``papi_`` is not supported. All such calls should be declared in a single papi.h file, and, if possible, this file should not include any other file listing function calls (that is, calls not related to plugin API).
 
-**void zepto_reply_append_byte(REQUEST_REPLY_HANDLE request_reply, byte data);**
+Parsing request and writing response functions
+''''''''''''''''''''''''''''''''''''''''''''''
 
-**void zepto_reply_append_encodeduint2(REQUEST_REPLY_HANDLE request_reply, uint16_t data);**
+Request parsing functions:
+""""""""""""""""""""""""""
 
-**void zepto_reply_append_encodedint2(REQUEST_REPLY_HANDLE request_reply, int16_t data);**
+.. function:: uint8_t papi_parser_read_byte( parser_obj* po );
+.. function:: uint16_t papi_parser_read_encoded_uint16( parser_obj* po );
+.. function:: uint16_t papi_parser_read_encoded_signed_int16( parser_obj* po );
+.. function:: TODO: add vector-related functions
 
-**void zepto_reply_append_block(REQUEST_REPLY_HANDLE request_reply, void* data, size_t datasz);**
+Writing functions:
+""""""""""""""""""
 
-zepto_reply_append_*() appends data to the end of reply buffer, which is specified by request_reply parameter. Any zepto_reply_append_*() call MAY cause re-allocation (which in turn MAY cause moving of any memory block); this is usually not a problem, provided that request_reply is used as a completely opaque handle.
+.. function:: void papi_reply_write_byte( REPLY_HANDLE mem_h, uint8_t val );
+.. function:: void papi_reply_write_encoded_uint16( REPLY_HANDLE mem_h, uint16_t num );
+.. function:: void papi_reply_write_encoded_signed_int16( REPLY_HANDLE mem_h, int16_t sx );
+.. function:: TODO: add vector-related functions
 
-TODO: describe error conditions (such as lack of space in buffer) - longjmp?
+Misc functions:
+"""""""""""""""
+.. function:: void papi_init_parser_with_parser( parser_obj* po, const parser_obj* po_base );
+.. function:: bool papi_parser_is_parsing_done( parser_obj* po );
+.. function:: uint16_t papi_parser_get_remaining_size( parser_obj* po );
 
-ZEPTO_PARSER functions
-''''''''''''''''''''''
 
-**byte zepto_parse_byte(ZEPTO_PARSER* parser);**
+EEPROM access
+'''''''''''''
 
-**uint16_t zepto_parse_encodeduint2(ZEPTO_PARSER* parser);**
+.. function:: bool papi_eeprom_write( uint16_t plugin_id, const uint8_t* data );
+.. function:: bool papi_eeprom_read( uint16_t plugin_id, uint8_t* data );
 
-**int16_t zepto_parse_encodedint2(ZEPTO_PARSER* parser);**
+   plugin_id should eventually be converted to slot_id; data_size must be declared by plugin writer in advance (that is, in plugin manifest); mapping of plugin_id to slot_id must be done at time of firmware code generation (exact details are TBD).
 
-zepto_parse_*() familty of functions parses data from request (which previously has been composed by zepto_reply_append_*() functions, usually on the other device)
+.. function:: void papi_eeprom_flush();
+
+   when this function returns, results of previous 'write' operations are guaranteed to be actually stored in eeprom. Note: depending on a particular archetecture this may result in an actually-empty call.
+
+
+Non-blocking calls to access hardware
+'''''''''''''''''''''''''''''''''''''
+
+Here are calls to access pins.
+
+.. function:: bool papi_read_digital_pin( uint16_t pin_num );
+.. function:: void papi_write_digital_pin( uint16_t pin_num, bool value );
+
+The following calls implement access to devices sitting behind SPI and I2C interfaces. Each size is in bits. TODO: discuss the order of bits within an unsigned int representing command/data
+
+.. function:: void papi_start_sending_spi_command_16( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint16_t command, uint8_t command_sz);
+.. function:: void papi_start_sending_spi_command_32( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint32_t command, uint8_t command_sz);
+
+.. function:: void papi_start_sending_i2c_command_16( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint16_t command, uint8_t command_sz);
+.. function:: void papi_start_sending_i2c_command_32( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint32_t command, uint8_t command_sz);
+
+   Each of the above papi_start_sending_*() calls start an operation and return immediately; to know that the request is already performed wait for a respective spi_id / i2c_id
+
+.. function:: uint8_t papi_start_receiving_spi_data_16( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint16_t* data);
+.. function:: uint8_t papi_start_receiving_spi_data_32( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint32_t* data);
+
+.. function:: uint8_t papi_start_receiving_i2c_data_16( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint16_t* data);
+.. function:: uint8_t papi_start_receiving_i2c_data_32( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint32_t* data);
+
+   Each of the above papi_start_receiving_*() calls start an operation and return immediately; to know that the data is already available wait for a respective spi_id / i2c_id
+
+.. function:: uint8_t papi_cancel_spi_operation( uint8_t spi_id );
+.. function:: uint8_t papi_cancel_i2c_operation( uint8_t spi_id );
+
+   Each of the above ``papi_cancel_*()`` calls return immediately. TODO: do we need to supply as parameters addr and addr_sz as well?
+
+
+Blocking calls
+''''''''''''''
+
+All calls in this group are pseudo-functions that will be compiled to a proper sequence of calls that implements initiating of a correspondent operation and starting waiting for the result.
+
+Blocking calls to to wait for timeout
+"""""""""""""""""""""""""""""""""""""
+
+.. function:: void papi_sleep( uint16_t millisec );//TODO: time instead of ms?
+
+Blocking calls to access hardware
+"""""""""""""""""""""""""""""""""
+
+.. function:: void papi_wait_for_sending_spi_command_16( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint16_t command, uint8_t command_sz);
+.. function:: void papi_wait_for_sending_spi_command_32( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint32_t command, uint8_t command_sz);
+.. function:: void papi_wait_for_sending_i2c_command_16( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint16_t command, uint8_t command_sz);
+.. function:: void papi_wait_for_sending_i2c_command_32( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint32_t command, uint8_t command_sz);
+.. function:: uint8_t papi_wait_for_receiving_spi_data_16( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint16_t* data);
+.. function:: uint8_t papi_wait_for_receiving_spi_data_32( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint32_t* data);
+.. function:: uint8_t papi_wait_for_receiving_i2c_data_16( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint16_t* data);
+.. function:: uint8_t papi_wait_for_receiving_i2c_data_32( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint32_t* data);
+
+.. function:: uint8_t papi_wait_for_wait_handler( WAITING_FOR* wf );//see helper functions below
+
+Helper functions to fill WAITING_FOR structure
+''''''''''''''''''''''''''''''''''''''''''''''
+
+.. function:: papi_init_wait_handler( WAITING_FOR* wf );
+.. function:: papi_wait_handler_add_wait_for_spi_delivering_command( WAITING_FOR* wf, uint8_t spi_id );
+.. function:: papi_wait_handler_add_wait_for_i2c_delivering_command( WAITING_FOR* wf, uint8_t i2c_id );
+.. function:: papi_wait_handler_add_wait_for_spi_read( WAITING_FOR* wf, uint8_t spi_id );
+.. function:: papi_wait_handler_add_wait_for_i2c_read( WAITING_FOR* wf, uint8_t i2c_id );
+.. function:: papi_wait_handler_add_wait_for_timeout( WAITING_FOR* wf, SA_TIME_VAL tv );
+
+.. function:: bool papi_wait_handler_is_waiting( WAITING_FOR* wf );
+
+   TODO: think about parameters
+
+Yet unsorted calls
+''''''''''''''''''
+
+.. function:: void papi_gravely_power_inefficient_micro_sleep( SA_TIME_VAL* timeval );
 
