@@ -16,8 +16,8 @@
 import sys
 from os.path import expanduser, join
 
-from twisted.application.service import MultiService, Service
-from twisted.internet.defer import Deferred, maybeDeferred
+from twisted.application.service import MultiService
+from twisted.internet import defer
 from twisted.python import usage
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedModule
@@ -25,7 +25,7 @@ from twisted.python.reflect import namedModule
 from smartanthill import __banner__, __description__, __version__
 from smartanthill.configprocessor import ConfigProcessor, get_baseconf
 from smartanthill.log import Console, Logger
-from smartanthill.util import fire_defer, singleton
+from smartanthill.util import singleton
 
 
 class SAMultiService(MultiService):
@@ -56,16 +56,9 @@ class SAMultiService(MultiService):
 
         def _on_stop(result):
             self.log.info("Service has been stopped")
-            Service.stopService(self)
             return result
 
-        d = Deferred()
-        d.addCallback(lambda _: self.log.debug("Shutting down..."))
-        for service in reversed(list(self)):
-            _d = maybeDeferred(self.removeService, service)
-            if not isinstance(service, MultiService):
-                _d._suppressAlreadyCalled = True  # pylint: disable=W0212
-            d.chainDeferred(_d)
+        d = defer.maybeDeferred(MultiService.stopService, self)
         d.addCallback(_on_stop)
         return d
 
@@ -97,9 +90,6 @@ class SmartAnthillService(SAMultiService):
         self.startEnabledSubServices()
         SAMultiService.startService(self)
 
-    def stopService(self):
-        return fire_defer(SAMultiService.stopService(self))
-
     def startEnabledSubServices(self, skip=None):
         self.startSubServices(
             [name for name, _ in self._get_ordered_service_names()
@@ -124,13 +114,13 @@ class SmartAnthillService(SAMultiService):
     def stopSubServices(self, names):
         if not isinstance(names, list):
             names = [names]
-        d = Deferred()
+        l = []
         for name in names:
             sopt = self.config.get("services.%s" % name)
             if not sopt.get("enabled", False):
                 continue
-            d.chainDeferred(self.removeService(self.getServiceNamed(name)))
-        return d
+            l.append(self.removeService(self.getServiceNamed(name)))
+        return defer.DeferredList(l)
 
     def _get_ordered_service_names(self):
         return sorted(self.config.get("services").items(),

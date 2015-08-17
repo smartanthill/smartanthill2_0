@@ -19,7 +19,7 @@ from binascii import hexlify
 from os.path import join
 
 from twisted.application.internet import TCPClient  # pylint: disable=E0611
-from twisted.internet import reactor
+from twisted.internet import reactor, task
 from twisted.internet.serialport import SerialPort
 
 from smartanthill import exception
@@ -79,8 +79,12 @@ class DataLinkService(SAMultiService):
             if self._litemq:
                 self._litemq.unconsume("network", self.name)
 
+        def _wait():  # wait for 1sec while HW devices disconnect
+            pass
+
         d = SAMultiService.stopService(self)
         d.addCallback(_on_stop)
+        d.addCallback(lambda _: task.deferLater(reactor, 1, _wait))
         return d
 
     def _make_link(self, connection):

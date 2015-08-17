@@ -29,7 +29,7 @@ from twisted.web.server import NOT_DONE_YET
 from smartanthill.configprocessor import ConfigProcessor
 from smartanthill.device.device import Device
 from smartanthill.log import Logger
-from smartanthill.util import fire_defer, get_service_named
+from smartanthill.util import get_service_named
 from smartanthill.webrouter import WebRouter
 
 # pylint: disable=W0613
@@ -123,7 +123,7 @@ def update_device(request, devid):
     d.addCallback(_do_update)
     d.addCallback(lambda _: sas.startSubServices(["device", "network", "api"]))
     d.addCallback(lambda _: get_device_info(request, devid))
-    return fire_defer(d)
+    return d
 
 
 @router.add("/devices/<int:devid>$", method="DELETE")
@@ -141,7 +141,7 @@ def delete_device(request, devid):
     d = sas.stopSubServices(["network", "device"])
     d.addCallback(_do_delete)
     d.addCallback(lambda _: sas.startSubServices(["device", "network"]))
-    return fire_defer(d)
+    return d
 
 
 @router.add("/devices/<int:devid>/buildfw")
@@ -167,7 +167,7 @@ def upload_device_firmware(request, devid):
     d.addCallback(lambda _, data: device.upload_firmware(data),
                   json.loads(request.content.read()))
     d.addBoth(_on_upload_result)
-    return fire_defer(d)
+    return d
 
 
 @router.add("/plugins")
@@ -226,7 +226,7 @@ def update_settings(request):
     d.addCallback(_do_update)
     d.addCallback(lambda _: sas.startEnabledSubServices(skip=["dashboard"]))
     d.addCallback(lambda _: get_settings(request))
-    return fire_defer(d)
+    return d
 
 
 @router.add('/logicaldisks')
