@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version: v0.4.3a
+:Version: v0.4.4
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -438,18 +438,20 @@ The following calls implement access to devices sitting behind SPI and I2C inter
 
    Each of the above papi_start_sending_*() calls start an operation and return immediately; to know that the request is already performed wait for a respective spi_id / i2c_id
 
-.. function:: uint8_t papi_start_receiving_spi_data_16( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint16_t* data);
-.. function:: uint8_t papi_start_receiving_spi_data_32( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint32_t* data);
+.. function:: void papi_start_receiving_spi_data_16( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint16_t* data);
+.. function:: void papi_start_receiving_spi_data_32( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint32_t* data);
 
-.. function:: uint8_t papi_start_receiving_i2c_data_16( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint16_t* data);
-.. function:: uint8_t papi_start_receiving_i2c_data_32( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint32_t* data);
+.. function:: void papi_start_receiving_i2c_data_16( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint16_t* data);
+.. function:: void papi_start_receiving_i2c_data_32( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint32_t* data);
 
    Each of the above papi_start_receiving_*() calls start an operation and return immediately; to know that the data is already available wait for a respective spi_id / i2c_id
 
-.. function:: uint8_t papi_cancel_spi_operation( uint8_t spi_id );
-.. function:: uint8_t papi_cancel_i2c_operation( uint8_t i2c_id );
+.. function:: void papi_cancel_spi_send( uint8_t spi_id );
+.. function:: void papi_cancel_spi_receive( uint8_t spi_id );
+.. function:: void papi_cancel_i2c_send( uint8_t i2c_id );
+.. function:: void papi_cancel_i2c_receive( uint8_t i2c_id );
 
-   Each of the above ``papi_cancel_*()`` calls return immediately. TODO: do we need to supply as parameters addr and addr_sz as well?
+   Each of the above ``papi_cancel_*()`` calls return immediately.
 
 
 Blocking calls
