@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.20.b
+:Version:   v0.0.20.c
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -473,7 +473,7 @@ If IS-PROBE flag is set, then PAYLOAD is treated differently. When destination r
 
 Samp-To-Santa-Data-Or-Error-Packet: **\| SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-NO-TTL \| OPTIONAL-EXTRA-HEADERS \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
-where SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-NO-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_TO_SANTA_DATA_OR_ERROR_PACKET, bit[5] being EXTRA-HEADERS-PRESENT, and bits [5..] reserved (MUST be zero); OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above. Note that Samp-To-Santa-Data-Or-Error-Packet doesn't contain TTL (as it is never retransmitted 'as is'); OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details); PAYLOAD is either data or error data depending on IS_ERROR flag; if IS_ERROR flag is set - PAYLOAD format is the same as the body (after OPTIONAL-EXTRA-HEADERS) of Samp-Routing-Error-Packet; and FULL-CHECKSUM is a SAMP-CHECKSUM of concatenation of the header (without header checksum) and PAYLOAD.
+where SAMP-TO-SANTA-DATA-OR-ERROR-PACKET-NO-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant SAMP_TO_SANTA_DATA_OR_ERROR_PACKET, bit[4] being EXTRA-HEADERS-PRESENT, and bits [5..] reserved (MUST be zero); OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above. Note that Samp-To-Santa-Data-Or-Error-Packet doesn't contain TTL (as it is never retransmitted 'as is'); OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details); PAYLOAD is either data or error data depending on IS_ERROR flag; if IS_ERROR flag is set - PAYLOAD format is the same as the body (after OPTIONAL-EXTRA-HEADERS) of Samp-Routing-Error-Packet; and FULL-CHECKSUM is a SAMP-CHECKSUM of concatenation of the header (without header checksum) and PAYLOAD.
 
 If IS-LOCAL-ECHO flag is set, the packet is ignored, except for Retransmitting Devices sending Samp-Ack-Nack-Packet back to LAST-HOP. To avoid "packet storms", these ACKs MUST be sent using FORWARD-TO-SANTA-DELAY (using FORWARD-TO-SANTA-DELAY-UNIT for calculations). In addition, these ACKs SHOULD contain DELAY-UNIT, DELAY-PASSED, and DELAY-LEFT fields, with DELAY-UNIT being FORWARD-TO-SANTA-DELAY-UNIT, DELAY-PASSED being FORWARD-TO-SANTA-DELAY, and DELAY-LEFT calculated as `MAX-FORWARD-TO-SANTA-DELAY - FORWARD-TO-SANTA-DELAY`. TODO: add RETRANSMITTING-DEVICE-QUALITY?
 
