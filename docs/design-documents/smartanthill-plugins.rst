@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version: v0.4
+:Version: v0.4a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -387,9 +387,9 @@ Parsing request and writing response functions
 Request parsing functions:
 """"""""""""""""""""""""""
 
-.. function:: uint8_t papi_parser_read_byte( parser_obj* po );
-.. function:: uint16_t papi_parser_read_encoded_uint16( parser_obj* po );
-.. function:: uint16_t papi_parser_read_encoded_signed_int16( parser_obj* po );
+.. function:: uint8_t papi_parser_read_byte( ZEPTO_PARSER* po );
+.. function:: uint16_t papi_parser_read_encoded_uint16( ZEPTO_PARSER* po );
+.. function:: uint16_t papi_parser_read_encoded_signed_int16( ZEPTO_PARSER* po );
 .. function:: TODO: add vector-related functions
 
 Writing functions:
@@ -402,9 +402,9 @@ Writing functions:
 
 Misc functions:
 """""""""""""""
-.. function:: void papi_init_parser_with_parser( parser_obj* po, const parser_obj* po_base );
-.. function:: bool papi_parser_is_parsing_done( parser_obj* po );
-.. function:: uint16_t papi_parser_get_remaining_size( parser_obj* po );
+.. function:: void papi_init_parser_with_parser( ZEPTO_PARSER* po, const ZEPTO_PARSER* po_base );
+.. function:: bool papi_parser_is_parsing_done( ZEPTO_PARSER* po );
+.. function:: uint16_t papi_parser_get_remaining_size( ZEPTO_PARSER* po );
 
 
 EEPROM access
