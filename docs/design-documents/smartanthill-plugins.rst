@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version: v0.4.2
+:Version: v0.4.2a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -486,11 +486,11 @@ Helper functions to fill WAITING_FOR structure
 .. function:: void papi_wait_handler_add_wait_for_i2c_receive( WAITING_FOR* wf, uint8_t i2c_id );
 .. function:: void papi_wait_handler_add_wait_for_timeout( WAITING_FOR* wf, SA_TIME_VAL tv );
 
-.. function:: bool papi_wait_handler_is_waiting_for_spi_send( WAITING_FOR* wf, uint8_t spi_id );
-.. function:: bool papi_wait_handler_is_waiting_for_i2c_send( WAITING_FOR* wf, uint8_t i2c_id );
-.. function:: bool papi_wait_handler_is_waiting_for_spi_receive( WAITING_FOR* wf, uint8_t spi_id );
-.. function:: bool papi_wait_handler_is_waiting_for_i2c_receive( WAITING_FOR* wf, uint8_t i2c_id );
-.. function:: bool papi_wait_handler_is_waiting_for_timeout( SA_TIME_VAL* remaining, WAITING_FOR* wf );
+.. function:: bool papi_wait_handler_is_waiting_for_spi_send( const WAITING_FOR* wf, uint8_t spi_id );
+.. function:: bool papi_wait_handler_is_waiting_for_i2c_send( const WAITING_FOR* wf, uint8_t i2c_id );
+.. function:: bool papi_wait_handler_is_waiting_for_spi_receive( const WAITING_FOR* wf, uint8_t spi_id );
+.. function:: bool papi_wait_handler_is_waiting_for_i2c_receive( const WAITING_FOR* wf, uint8_t i2c_id );
+.. function:: bool papi_wait_handler_is_waiting_for_timeout( SA_TIME_VAL* remaining, const WAITING_FOR* wf );
 
    TODO: think about parameters
 
