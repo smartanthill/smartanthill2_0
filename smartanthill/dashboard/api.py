@@ -68,9 +68,7 @@ def get_board_info(request, board_id):
         "pinsAlias": board.get_pins_alias(),
         "analogPins": board.get_analog_pins(),
         "pwmPins": board.get_pwm_pins(),
-        "extintPins": board.get_extint_pins(),
-        "pinModeArgParams": board.get_pinmodearg_params()[1],
-        "pinAnalogRefArgParams": board.get_pinanalogrefarg_params()[1]
+        "extintPins": board.get_extint_pins()
     }
     return data
 

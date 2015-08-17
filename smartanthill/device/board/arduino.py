@@ -50,12 +50,6 @@ class BoardArduinoBase(BoardBase):
     PWM_PINS = (3, 5, 6, 9, 10, 11)
     EXTINT_PINS = (2, 3)
 
-    def get_pinmodearg_params(self):
-        return ((0, 1, 2), dict(INPUT=0, OUTPUT=1, INPUT_PULLUP=2))
-
-    def get_pinanalogrefarg_params(self):
-        return ((0, 1, 2), dict(DEFAULT=0, EXTERNAL=1, INTERNAL=2))
-
 
 class Board_Arduino_DiecimilaATmega328(BoardArduinoBase):
 

@@ -73,14 +73,6 @@ class BoardTIMSP430G2Base(BoardBase):
     PWM_PINS = (4, 9, 10, 12, 13, 14, 19)
     EXTINT_PINS = range(2, 16) + [18, 19]
 
-    def get_pinmodearg_params(self):
-        return ((0, 1, 2, 4), dict(INPUT=0, OUTPUT=1, INPUT_PULLUP=2,
-                                   INPUT_PULLDOWN=4))
-
-    def get_pinanalogrefarg_params(self):
-        return ((0, 1, 2, 3), dict(DEFAULT=0, EXTERNAL=1, INTERNAL1V5=2,
-                                   INTERNAL2V5=3))
-
 
 class Board_TI_LPmsp430g2553(BoardTIMSP430G2Base):
 

@@ -76,12 +76,6 @@ class BoardBase(object):
     def get_pwmpinarg_params(self):
         return (self.PWM_PINS, self.PINS_ALIAS)
 
-    def get_pinmodearg_params(self):
-        raise NotImplementedError
-
-    def get_pinanalogrefarg_params(self):
-        raise NotImplementedError
-
     def get_platformio_conf(self):
         raise NotImplementedError
 
