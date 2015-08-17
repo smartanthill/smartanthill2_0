@@ -56,5 +56,6 @@ From programming point of view, SmartAnthill provides a clear separation between
     :caption: Design Documents
     :maxdepth: 2
 
+    design-documents/SimpleIoT/index
     design-documents/index
     design-documents/reference-implementation/index
