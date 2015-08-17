@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version: v0.4.1
+:Version: v0.4.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -447,7 +447,7 @@ The following calls implement access to devices sitting behind SPI and I2C inter
    Each of the above papi_start_receiving_*() calls start an operation and return immediately; to know that the data is already available wait for a respective spi_id / i2c_id
 
 .. function:: uint8_t papi_cancel_spi_operation( uint8_t spi_id );
-.. function:: uint8_t papi_cancel_i2c_operation( uint8_t spi_id );
+.. function:: uint8_t papi_cancel_i2c_operation( uint8_t i2c_id );
 
    Each of the above ``papi_cancel_*()`` calls return immediately. TODO: do we need to supply as parameters addr and addr_sz as well?
 
@@ -460,33 +460,37 @@ All calls in this group are pseudo-functions that will be compiled to a proper s
 Blocking calls to to wait for timeout
 """""""""""""""""""""""""""""""""""""
 
-.. function:: void papi_sleep( uint16_t millisec );//TODO: time instead of ms?
+.. function:: void papi_sleep( uint16_t millisec );//TODO?: SA_TIME_VAL instead of ms?
 
 Blocking calls to access hardware
 """""""""""""""""""""""""""""""""
 
-.. function:: void papi_wait_for_sending_spi_command_16( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint16_t command, uint8_t command_sz);
-.. function:: void papi_wait_for_sending_spi_command_32( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint32_t command, uint8_t command_sz);
-.. function:: void papi_wait_for_sending_i2c_command_16( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint16_t command, uint8_t command_sz);
-.. function:: void papi_wait_for_sending_i2c_command_32( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint32_t command, uint8_t command_sz);
-.. function:: uint8_t papi_wait_for_receiving_spi_data_16( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint16_t* data);
-.. function:: uint8_t papi_wait_for_receiving_spi_data_32( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint32_t* data);
-.. function:: uint8_t papi_wait_for_receiving_i2c_data_16( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint16_t* data);
-.. function:: uint8_t papi_wait_for_receiving_i2c_data_32( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint32_t* data);
+.. function:: void papi_wait_for_sending_spi_command_16( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint16_t command, uint8_t command_sz );
+.. function:: void papi_wait_for_sending_spi_command_32( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint32_t command, uint8_t command_sz );
+.. function:: void papi_wait_for_sending_i2c_command_16( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint16_t command, uint8_t command_sz );
+.. function:: void papi_wait_for_sending_i2c_command_32( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint32_t command, uint8_t command_sz );
+.. function:: uint8_t papi_wait_for_receiving_spi_data_16( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint16_t* data );
+.. function:: uint8_t papi_wait_for_receiving_spi_data_32( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint32_t* data );
+.. function:: uint8_t papi_wait_for_receiving_i2c_data_16( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint16_t* data );
+.. function:: uint8_t papi_wait_for_receiving_i2c_data_32( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint32_t* data );
 
 .. function:: uint8_t papi_wait_for_wait_handler( WAITING_FOR* wf );//see helper functions below
 
 Helper functions to fill WAITING_FOR structure
 ''''''''''''''''''''''''''''''''''''''''''''''
 
-.. function:: papi_init_wait_handler( WAITING_FOR* wf );
-.. function:: papi_wait_handler_add_wait_for_spi_send( WAITING_FOR* wf, uint8_t spi_id );
-.. function:: papi_wait_handler_add_wait_for_i2c_send( WAITING_FOR* wf, uint8_t i2c_id );
-.. function:: papi_wait_handler_add_wait_for_spi_receive( WAITING_FOR* wf, uint8_t spi_id );
-.. function:: papi_wait_handler_add_wait_for_i2c_receive( WAITING_FOR* wf, uint8_t i2c_id );
-.. function:: papi_wait_handler_add_wait_for_timeout( WAITING_FOR* wf, SA_TIME_VAL tv );
+.. function:: void papi_init_wait_handler( WAITING_FOR* wf );
+.. function:: void papi_wait_handler_add_wait_for_spi_send( WAITING_FOR* wf, uint8_t spi_id );
+.. function:: void papi_wait_handler_add_wait_for_i2c_send( WAITING_FOR* wf, uint8_t i2c_id );
+.. function:: void papi_wait_handler_add_wait_for_spi_receive( WAITING_FOR* wf, uint8_t spi_id );
+.. function:: void papi_wait_handler_add_wait_for_i2c_receive( WAITING_FOR* wf, uint8_t i2c_id );
+.. function:: void papi_wait_handler_add_wait_for_timeout( WAITING_FOR* wf, SA_TIME_VAL tv );
 
-.. function:: bool papi_wait_handler_is_waiting( WAITING_FOR* wf );
+.. function:: bool papi_wait_handler_is_waiting_for_spi_send( WAITING_FOR* wf, uint8_t spi_id );
+.. function:: bool papi_wait_handler_is_waiting_for_i2c_send( WAITING_FOR* wf, uint8_t i2c_id );
+.. function:: bool papi_wait_handler_is_waiting_for_spi_receive( WAITING_FOR* wf, uint8_t spi_id );
+.. function:: bool papi_wait_handler_is_waiting_for_i2c_receive( WAITING_FOR* wf, uint8_t i2c_id );
+.. function:: bool papi_wait_handler_is_waiting_for_timeout( SA_TIME_VAL* remaining, WAITING_FOR* wf );
 
    TODO: think about parameters
 
