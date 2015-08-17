@@ -20,7 +20,6 @@ from os.path import exists, join
 
 from platformio.util import get_systype
 from twisted.internet import protocol, reactor
-from twisted.internet.error import ProcessExitedAlready
 
 from smartanthill.exception import NetworkCommStackServerNotExists
 from smartanthill.log import Logger
@@ -54,11 +53,7 @@ class CommStackServerService(SAMultiService):
     def stopService(self):
         def _on_stop(_):
             if self._process:
-                self._process.loseConnection()
-                try:
-                    self._process.signalProcess("KILL")
-                except ProcessExitedAlready:
-                    pass
+                return self._process.loseConnection()
 
         d = SAMultiService.stopService(self)
         d.addCallback(_on_stop)
