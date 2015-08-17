@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version: v0.4.3
+:Version: v0.4.3a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -467,10 +467,10 @@ Blocking calls to access hardware
 
 .. function:: void papi_wait_for_spi_send( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint16_t command, uint8_t command_sz );
 .. function:: void papi_wait_for_i2c_send( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint16_t command, uint8_t command_sz );
-.. function:: uint8_t papi_wait_for_spi_receive( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint16_t* data );
-.. function:: uint8_t papi_wait_for_i2c_receive( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint16_t* data );
+.. function:: void papi_wait_for_spi_receive( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint16_t* data );
+.. function:: void papi_wait_for_i2c_receive( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint16_t* data );
 
-.. function:: uint8_t papi_wait_for_wait_handler( WAITING_FOR* wf );//see helper functions below
+.. function:: void papi_wait_for_wait_handler( WAITING_FOR* wf );//see helper functions below
 
 Helper functions to fill WAITING_FOR structure
 ''''''''''''''''''''''''''''''''''''''''''''''
