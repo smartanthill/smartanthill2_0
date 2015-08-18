@@ -140,9 +140,9 @@ def delete_device(request, devid):
         return True
 
     sas = get_service_named("sas")
-    d = sas.stopSubServices(["network", "device"])
+    d = sas.stopSubServices(["api", "network", "device"])
     d.addCallback(_do_delete)
-    d.addCallback(lambda _: sas.startSubServices(["device", "network"]))
+    d.addCallback(lambda _: sas.startSubServices(["device", "network", "api"]))
     return d
 
 
@@ -160,12 +160,12 @@ def upload_device_firmware(request, devid):
 
     def _on_upload_result(result):
         def _on_device_restart(result):
-            sas.startSubServices("network")
+            sas.startSubServices(["device", "network", "api"])
             return result
         return task.deferLater(reactor, 1, _on_device_restart, result)
 
     device = get_service_named("device").get_device(devid)
-    d = sas.stopSubServices("network")
+    d = sas.stopSubServices(["api", "network", "device"])
     d.addCallback(lambda _, data: device.upload_firmware(data),
                   json.loads(request.content.read()))
     d.addBoth(_on_upload_result)
