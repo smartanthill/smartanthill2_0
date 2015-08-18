@@ -18,6 +18,7 @@
 from binascii import hexlify
 from os.path import join
 
+from serial import SerialException
 from twisted.application.internet import TCPClient  # pylint: disable=E0611
 from twisted.internet import reactor, task
 from twisted.internet.serialport import SerialPort
@@ -51,7 +52,7 @@ class DataLinkService(SAMultiService):
         connection = self.options['connection']
         try:
             self._link = self._make_link(connection)
-        except OSError as e:
+        except (SerialException, OSError) as e:
             self.log.error(str(e))
             self.log.error(
                 exception.NetworkDataLinkConnectionFailure(self.options))
