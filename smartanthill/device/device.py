@@ -134,3 +134,6 @@ class Device(object):
     def get_config_dir_by_id(device_id):
         return join(ConfigProcessor().get("workspace"),
                     "devices", "%d") % (device_id,)
+
+    def is_enabled(self):
+        return self.options.get("enabled", True)

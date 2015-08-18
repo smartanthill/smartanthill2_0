@@ -75,11 +75,12 @@ def get_board_info(request, board_id):
 
 @router.add("/devices$")
 def get_devices(request):
-    devices = get_service_named("device").get_devices()
+    devices = get_service_named("device").get_devices(enabled_only=False)
     data = [{
         "id": id_,
         "boardId": device.board.get_id(),
-        "name": device.get_name()
+        "name": device.get_name(),
+        "enabled": device.is_enabled(),
     } for id_, device in devices.iteritems()]
     return sorted(data, key=lambda d: d['id'])
 
@@ -94,7 +95,8 @@ def get_device_info(request, devid):
         "boardId": device.board.get_id(),
         "name": device.get_name(),
         "connectionUri": device.options.get("connectionUri"),
-        "bodyparts": device.options.get("bodyparts")
+        "bodyparts": device.options.get("bodyparts"),
+        "enabled": device.is_enabled(),
     }
     return data
 

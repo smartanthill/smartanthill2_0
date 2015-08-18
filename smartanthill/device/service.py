@@ -48,8 +48,11 @@ class DeviceService(SAMultiService):
 
         SAMultiService.startService(self)
 
-    def get_devices(self):
-        return self._devices
+    def get_devices(self, enabled_only=True):
+        if not enabled_only:
+            return self._devices
+        return dict((id_, device) for id_, device in self._devices.items()
+                    if device.is_enabled())
 
     def get_device(self, id_):
         if id_ not in self._devices:
