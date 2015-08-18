@@ -52,8 +52,12 @@ class CommStackServerService(SAMultiService):
 
     def stopService(self):
         def _on_stop(_):
-            if self._process:
-                return self._process.loseConnection()
+            result = self._process.loseConnection()
+            try:
+                self._process.signalProcess("KILL")
+            except Exception:  # ignore any exception when can't kill process
+                pass
+            return result
 
         d = SAMultiService.stopService(self)
         d.addCallback(_on_stop)
