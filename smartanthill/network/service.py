@@ -52,6 +52,7 @@ class DataLinkService(SAMultiService):
         connection = self.options['connection']
         try:
             self._link = self._make_link(connection)
+            self._reconnect_callid = None
         except (SerialException, OSError) as e:
             self.log.error(str(e))
             self.log.error(
