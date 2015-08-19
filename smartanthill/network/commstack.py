@@ -20,6 +20,7 @@ from os.path import exists, join
 
 from platformio.util import get_systype
 from twisted.internet import protocol, reactor
+from twisted.python.util import sibpath
 
 from smartanthill.exception import NetworkCommStackServerNotExists
 from smartanthill.log import Logger
@@ -27,7 +28,7 @@ from smartanthill.network.protocol import (CommStackClientProtocol,
                                            CommStackProcessProtocol,
                                            ControlMessage)
 from smartanthill.service import SAMultiService
-from smartanthill.util import get_bin_dir, get_service_named
+from smartanthill.util import get_service_named
 
 
 class CommStackServerService(SAMultiService):
@@ -74,7 +75,7 @@ class CommStackServerService(SAMultiService):
         elif systype == "linux_armv7l":
             systype = "linux_armv6l"
 
-        bin_path = join(get_bin_dir(), systype, "sacommstack")
+        bin_path = sibpath(__file__, join("bin", systype, "sacommstack"))
         if "windows" in systype:
             bin_path += ".exe"
         if not exists(bin_path):

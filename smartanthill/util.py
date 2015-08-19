@@ -160,22 +160,8 @@ def where_is_program(program):
     return program
 
 
-def get_bin_dir():
-    return realpath(join(dirname(realpath(__file__)), "..", "bin"))
-
-
 def fire_defer(d, *args):
     if len(args) == 0:
         args = (None,)
     reactor.callLater(0, d.callback, *args)
     return d
-
-
-class Unformattable(object):
-    """Raises exception on use of modulo operator."""
-
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __mod__(self, other):
-        raise Exception(self.msg)
