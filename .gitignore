@@ -11,4 +11,4 @@ twistd.pid
 twistd-cc.pid
 dist
 _trial_temp
-bin/*/sacommstack*
+smartanthill/network/bin/*/sacommstack*
