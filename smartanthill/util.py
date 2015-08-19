@@ -19,7 +19,7 @@ import collections
 import functools
 import json
 from os import getenv
-from os.path import dirname, isfile, join, realpath
+from os.path import isfile, join
 
 from platformio.util import exec_command, get_systype
 from twisted.internet import reactor
