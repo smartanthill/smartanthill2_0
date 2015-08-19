@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.21
+:Version:   v0.0.21.a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -410,7 +410,7 @@ Most of SAMP packets have OPTIONAL-EXTRA-HEADERS field. It has a generic structu
 
 * **\| TOSANTA-EXTRA-HEADER-LAST-INCOMING-HOP \| CONNECTION_QUALITY \|**
 
-  where TOSANTA-EXTRA-HEADER-FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-HEADER list, bits[1..3] equal to 3-bit constant TOSANTA_EXTRA_HEADER_LAST_INCOMING_HOP, and bits [5..] being node id; and CONNECTION_QUALITY is an Encoded-Unsigned-Int<max=1> bitfield substrate, with bits[0..3] being signal level (with 0 correcponding to the highest and 15 to the lowest signal level) and bits[4..6] being error count (resulting from error correction of the received packet). This extra header MUST NOT be present for packets other than Samp-To-Santa-Data-Or-Error-Packet. There can be multiple TOSANTA-EXTRA-HEADER-LAST-INCOMING-HOP extra headers within single packet.
+  where TOSANTA-EXTRA-HEADER-FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-HEADER list, bits[1..3] equal to 3-bit constant TOSANTA_EXTRA_HEADER_LAST_INCOMING_HOP, and bits [4..] being node id; and CONNECTION_QUALITY is an Encoded-Unsigned-Int<max=1> bitfield substrate, with bits[0..3] being signal level (with 0 correcponding to the highest and 15 to the lowest signal level) and bits[4..6] being error count (resulting from error correction of the received packet). This extra header MUST NOT be present for packets other than Samp-To-Santa-Data-Or-Error-Packet. There can be multiple TOSANTA-EXTRA-HEADER-LAST-INCOMING-HOP extra headers within single packet.
 
 *NB: 2-bit extra header type constants MAY overlap as long as applicable types are different.*
 
