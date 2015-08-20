@@ -84,7 +84,7 @@ To install or upgrade |SA| paste that at a *Terminal* prompt
 Installer Script (Mac / Linux / Windows)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To install or upgrade |SA|, download
+To install or upgrade |SA|, download (save as...)
 `get-smartanthill.py <https://raw.githubusercontent.com/smartanthill/smartanthill2_0/develop/scripts/get-smartanthill.py>`_
 script. Then run the following (**you MIGHT need** to run ``sudo`` first,
 just for installation):
@@ -107,9 +107,6 @@ On *Windows OS* it may look like:
     # run it
     C:\Python27\python.exe get-smartanthill.py
 
-.. warning::
-    **Windows Users**: Don't forget to download and install the latest
-    `Python for Windows extensions (PyWin32) <http://sourceforge.net/projects/pywin32/files/pywin32/>`_.
 
 Full Guide
 ----------
@@ -144,6 +141,10 @@ If your computer does not recognize ``pip`` command, try to install it first
 using `these instructions <https://pip.pypa.io/en/latest/installing.html>`_.
 
 3. Install a ``smartanthill`` and related packages:
+
+.. warning::
+    SmartAnthill has not been published in PyPi registry. Please use
+    installation script ``get-smartanthill.py`` mentioned above.
 
 .. code-block:: bash
 
