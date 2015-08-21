@@ -14,14 +14,15 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import os
+import platform
 import subprocess
 import sys
-from platform import system
 from tempfile import NamedTemporaryFile
 
 
 CURINTERPRETER_PATH = os.path.normpath(sys.executable)
-IS_WINDOWS = system().lower() == "windows"
+IS_WINDOWS = platform.system().lower() == "windows"
+IS_64BITS = "64" in platform.architecture()[0]
 
 
 def fix_winpython_pathenv():
@@ -105,6 +106,26 @@ def install_pypi_packages(packages):
             "install", "-U"] + pipargs))
 
 
+def install_pywin32():
+    # try to uninstall pywin32 previously installed via easy_install
+    try:
+        exec_command(["pip", "uninstall", "-y", "pywin32"])
+    except Exception:
+        pass
+
+    # install pywin32 directly form exe
+    dl_url = (
+        "http://sourceforge.net/projects/pywin32/files/pywin32/"
+        "Build%20{pywin32ver}/pywin32-{pywin32ver}.{winarch}-"
+        "py{pyver}.exe/download"
+    ).format(
+        pywin32ver=219,
+        winarch="win-amd64" if IS_64BITS else "win32",
+        pyver=".".join([str(v) for v in sys.version_info[0:2]])
+    )
+    print (exec_command(["easy_install", dl_url]).strip())
+
+
 def main():
     steps = [
         ("Fixing Windows %PATH% Environment", fix_winpython_pathenv, []),
@@ -118,7 +139,10 @@ def main():
         ]])
     ]
 
-    if not IS_WINDOWS:
+    if IS_WINDOWS:
+        steps.insert(2, ("Installing Python for Windows Extensions",
+                         install_pywin32, []))
+    else:
         del steps[0]
 
     is_error = False
