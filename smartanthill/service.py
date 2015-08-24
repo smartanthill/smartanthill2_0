@@ -136,7 +136,7 @@ class Options(usage.Options):
 
     longdesc = "SmartAnthill: %s (version %s)" % (__description__, __version__)
 
-    allowed_defconf_opts = ("logger.level", "ccurl")
+    allowed_defconf_opts = ("logger.level", "compiler")
 
     def __init__(self):
         self._gather_baseparams(get_baseconf())

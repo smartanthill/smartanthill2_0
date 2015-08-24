@@ -4,7 +4,7 @@
     "level": "INFO"
   },
 
-  "ccurl": "http://cc.smartanthill.org",
+  "compiler": "http://cc.smartanthill.org",
 
   "services":
   {

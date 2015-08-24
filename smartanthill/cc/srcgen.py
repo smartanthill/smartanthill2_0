@@ -59,6 +59,9 @@ class ZeptoConfigH(SourceGenerator):
 const uint8_t AES_ENCRYPTION_KEY[16] ZEPTO_PROG_CONSTANT_LOCATION = \
 { ${AES_ENCRYPTION_KEY} }; \
 
+#define DECLARE_DEVICE_ID \
+uint16_t DEVICE_SELF_ID = 1;
+
 #endif // __ZEPTO_CONFIG_H__
 """)
 
