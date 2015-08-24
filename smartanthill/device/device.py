@@ -13,6 +13,9 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+from copy import deepcopy
+from hashlib import sha1
+from json import dumps
 from os import makedirs
 from os.path import isdir, join
 from shutil import rmtree
@@ -20,7 +23,9 @@ from tempfile import mkdtemp
 
 from smartanthill_zc.api import ZeptoBodyPart, ZeptoProgram
 from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.python.constants import ValueConstant, Values
 
+from smartanthill import FIRMWARE_VERSION
 from smartanthill.cc import platformio
 from smartanthill.configprocessor import ConfigProcessor
 from smartanthill.device.board.base import BoardFactory
@@ -28,6 +33,12 @@ from smartanthill.exception import DeviceUnknownPlugin
 from smartanthill.log import Logger
 from smartanthill.network.zvd import ZeroVirtualDevice
 from smartanthill.util import memoized
+
+
+class DeviceStatus(Values):
+    OFFLINE = ValueConstant(0)
+    ONLINE = ValueConstant(1)
+    WAITFORTRAINIT = ValueConstant(2)
 
 
 class Device(object):
@@ -136,4 +147,24 @@ class Device(object):
                     "devices", "%d") % (device_id,)
 
     def is_enabled(self):
-        return self.options.get("enabled", True)
+        return self.options.get("enabled", DeviceStatus.ONLINE.value)
+
+    def get_settings_hash(self):
+        settings = deepcopy(self.options)
+        for key in ["name", "prevId", "enabled", "connectionUri", "firmware",
+                    "status"]:
+            if key in settings:
+                del settings[key]
+        for bodypart in settings.get("bodyparts", []):
+            del bodypart['name']
+        settings['currentFirmwareVersion'] = FIRMWARE_VERSION[:2]
+        return sha1(dumps(settings, sort_keys=True)).hexdigest()
+
+    def get_firmware_settings_hash(self):
+        return self.options.get("firmware", {}).get("settingsHash")
+
+    def get_status(self):
+        if self.get_settings_hash() != self.get_firmware_settings_hash():
+            return DeviceStatus.WAITFORTRAINIT.value
+        else:
+            return self.is_enabled()

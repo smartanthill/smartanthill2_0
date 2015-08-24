@@ -81,6 +81,7 @@ def get_devices(request):
         "boardId": device.board.get_id(),
         "name": device.get_name(),
         "enabled": device.is_enabled(),
+        "status": device.get_status(),
     } for id_, device in devices.iteritems()]
     return sorted(data, key=lambda d: d['id'])
 
@@ -97,6 +98,7 @@ def get_device_info(request, devid):
         "connectionUri": device.options.get("connectionUri"),
         "bodyparts": device.options.get("bodyparts"),
         "enabled": device.is_enabled(),
+        "status": device.get_status(),
     }
     return data
 
@@ -159,14 +161,18 @@ def upload_device_firmware(request, devid):
     sas = get_service_named("sas")
 
     def _on_upload_result(result):
+        ConfigProcessor().update(
+            Device.get_config_key_by_id(devid) + ".firmware.settingsHash",
+            device_instance.get_settings_hash())
+
         def _on_device_restart(result):
             sas.startSubServices(["device", "network", "api"])
             return result
         return task.deferLater(reactor, 1, _on_device_restart, result)
 
-    device = get_service_named("device").get_device(devid)
+    device_instance = get_service_named("device").get_device(devid)
     d = sas.stopSubServices(["api", "network", "device"])
-    d.addCallback(lambda _, data: device.upload_firmware(data),
+    d.addCallback(lambda _, data: device_instance.upload_firmware(data),
                   json.loads(request.content.read()))
     d.addBoth(_on_upload_result)
     return d
