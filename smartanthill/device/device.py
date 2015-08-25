@@ -39,6 +39,7 @@ class DeviceStatus(Values):
     OFFLINE = ValueConstant(0)
     ONLINE = ValueConstant(1)
     WAITFORTRAINIT = ValueConstant(2)
+    IDLE = ValueConstant(3)
 
 
 class Device(object):
@@ -147,7 +148,7 @@ class Device(object):
                     "devices", "%d") % (device_id,)
 
     def is_enabled(self):
-        return self.options.get("enabled", DeviceStatus.ONLINE.value)
+        return self.options.get("enabled", True)
 
     def get_settings_hash(self):
         settings = deepcopy(self.options)
@@ -167,4 +168,4 @@ class Device(object):
         if self.get_settings_hash() != self.get_firmware_settings_hash():
             return DeviceStatus.WAITFORTRAINIT.value
         else:
-            return self.is_enabled()
+            return DeviceStatus.IDLE.value
