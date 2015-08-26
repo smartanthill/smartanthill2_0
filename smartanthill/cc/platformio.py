@@ -216,7 +216,7 @@ def build_firmware(project_dir, platformio_conf, bodyparts,
 
     pio = PlatformIOProject(project_dir, platformio_conf)
     pio.add_src_content(
-        "sa_bodypart_list.c", srcgen.BodyPartListC(bodyparts).generate()
+        "sa_bodypart_list.cpp", srcgen.BodyPartListC(bodyparts).generate()
     )
     pio.add_src_content(
         "zepto_config.h", srcgen.ZeptoConfigH(zepto_conf).generate()

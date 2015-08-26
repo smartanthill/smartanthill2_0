@@ -73,6 +73,8 @@ class BoardStstm32Base(BoardBase):
                 "PA_8", "PA_9", "PC_7", "PB_6", "PA_7", "PA_6", "PA_5",
                 "PB_9", "PB_8")
 
+    EXTINT_PINS = ()
+
     def __init__(self):
         BoardBase.__init__(self)
 
