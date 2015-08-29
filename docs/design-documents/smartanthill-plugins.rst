@@ -27,7 +27,7 @@
 SmartAnthill Plugins
 ====================
 
-:Version: v0.4.4
+:Version: v0.5.0
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
@@ -67,6 +67,12 @@ Plugin Manifest is an XML file, with structure which looks as follows:
 
     <request>
       <field name="abc" type="encoded-int[max=2]" />
+      <field name="level" type="encoded-uint[max=1]" min="0" max="1" default="0" title="Level">
+        <values>
+          <item value="0" title="LOW" />
+          <item value="1" title="HIGH" />
+         </values>
+      </field>
     </request>
 
     <response>
@@ -90,6 +96,13 @@ Plugin Manifest is an XML file, with structure which looks as follows:
       <options>
         <option type="uint[2]" name="delay_blink_ms" default="150" title="Delay between blinks, ms" />
         <option type="char[30]" name="welcome_to" default="Welcome to SmartAnthill" title="Welcome text" />
+        <option type="uint[max=1]" name="power" min="0" max="2" default="1" title="Transmitter power">
+          <values>
+            <item value="0" title="MIN" />
+            <item value="1" title="NORMAL" />
+            <item value="2" title="MAX" />
+           </values>
+        </option>
       </options>
     </configuration>
 
