@@ -30,8 +30,7 @@ from twisted.web.server import NOT_DONE_YET
 from smartanthill import __version__
 from smartanthill.cc import platformio
 from smartanthill.device.board.base import BoardFactory
-from smartanthill.device.device import Device
-from smartanthill.exception import DeviceUnknownPlugin
+from smartanthill.device.plugin import bodyparts_to_objects
 
 
 class WebCloud(Resource):
@@ -61,18 +60,19 @@ class WebCloud(Resource):
             d = platformio.build_firmware(
                 self.project_dir,
                 BoardFactory.newBoard(data['boardId']).get_platformio_conf(),
-                Device.bodyparts_to_objects(data['bodyparts']),
+                bodyparts_to_objects(data['bodyparts']),
                 disable_auto_clean=True
             )
             d.addBoth(self.delayed_render, request)
             return NOT_DONE_YET
-        except (AssertionError, ValueError, DeviceUnknownPlugin) as e:
+        except (AssertionError, ValueError) as e:
             result = ("<html><body>The request cannot be fulfilled due to bad "
                       "syntax.</body></html>")
-            if isinstance(e, DeviceUnknownPlugin):
-                result = str(e)
             request.setResponseCode(BAD_REQUEST)
             return result
+        except Exception as e:
+            request.setResponseCode(INTERNAL_SERVER_ERROR)
+            return str(e)
 
     def delayed_render(self, result, request):  # pylint: disable=R0201
         if isinstance(result, Failure):

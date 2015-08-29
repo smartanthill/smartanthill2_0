@@ -29,10 +29,10 @@ from smartanthill import FIRMWARE_VERSION
 from smartanthill.cc import platformio
 from smartanthill.configprocessor import ConfigProcessor
 from smartanthill.device.board.base import BoardFactory
-from smartanthill.exception import DeviceUnknownPlugin
+from smartanthill.device.plugin import bodyparts_to_objects
 from smartanthill.log import Logger
 from smartanthill.network.zvd import ZeroVirtualDevice
-from smartanthill.util import memoized
+from smartanthill.util import get_service_named, memoized
 
 
 class DeviceStatus(Values):
@@ -50,30 +50,12 @@ class Device(object):
         self.options = options
         self.board = BoardFactory.newBoard(options['boardId'])
 
-    @staticmethod
-    def bodyparts_to_objects(bodyparts_raw):
-        from smartanthill.device.service import DeviceService
-
-        def _get_plugin(id_):
-            for item in DeviceService.get_plugins():
-                if item.get_id() == id_:
-                    return item
-            raise DeviceUnknownPlugin(id_)
-
-        bodyparts = []
-        for id_, item in enumerate(bodyparts_raw):
-            bodyparts.append(ZeptoBodyPart(
-                _get_plugin(item['pluginId']),
-                id_,
-                item['name'],
-                item.get("peripheral", None),
-                item.get("options", None)
-            ))
-        return bodyparts
-
     @memoized
     def get_bodyparts(self):
-        return self.bodyparts_to_objects(self.options.get("bodyparts", []))
+        return bodyparts_to_objects(
+            self.options.get("bodyparts", []),
+            join(get_service_named("sas").workspace_dir, "plugins")
+        )
 
     def get_id(self):
         return self.id_

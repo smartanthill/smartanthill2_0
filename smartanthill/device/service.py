@@ -14,15 +14,14 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from os import listdir
-from os.path import isdir, isfile, join
+from os.path import join
 
-from smartanthill_zc.api import ZeptoPlugin
-from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedModule
 from twisted.python.util import sibpath
 
 from smartanthill.device.board.base import BoardBase
 from smartanthill.device.device import Device
+from smartanthill.device.plugin import get_plugins
 from smartanthill.exception import (BoardUnknownId, DeviceUnknownBoard,
                                     DeviceUnknownId)
 from smartanthill.service import SAMultiService
@@ -85,27 +84,8 @@ class DeviceService(SAMultiService):
     @staticmethod
     @memoized
     def get_plugins():
-        plugins = []
-        plugins_dirs = [
-            sibpath(
-                __file__,
-                join("..", "cc", "embedded", "firmware", "src", "plugins"))
-        ]
-
-        try:
-            plugins_dirs.append(
-                join(get_service_named("sas").workspace_dir, "plugins"))
-        except TypeError:
-            pass
-
-        for plugins_dir in plugins_dirs:
-            if not isdir(plugins_dir):
-                continue
-            for item in FilePath(plugins_dir).listdir():
-                manifest = join(plugins_dir, item, "manifest.xml")
-                if isfile(manifest):
-                    plugins.append(ZeptoPlugin(manifest))
-        return sorted(plugins, key=lambda item: item.get_id())
+        return get_plugins(
+            join(get_service_named("sas").workspace_dir, "plugins"))
 
 
 def makeService(name, options):
