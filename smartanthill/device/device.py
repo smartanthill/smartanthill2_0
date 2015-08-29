@@ -30,6 +30,7 @@ from smartanthill.cc import platformio
 from smartanthill.configprocessor import ConfigProcessor
 from smartanthill.device.board.base import BoardFactory
 from smartanthill.device.plugin import bodyparts_to_objects
+from smartanthill.device.transport import buses_to_objects
 from smartanthill.log import Logger
 from smartanthill.network.zvd import ZeroVirtualDevice
 from smartanthill.util import get_service_named, memoized
@@ -55,6 +56,13 @@ class Device(object):
         return bodyparts_to_objects(
             self.options.get("bodyparts", []),
             join(get_service_named("sas").workspace_dir, "plugins")
+        )
+
+    @memoized
+    def get_buses(self):
+        return buses_to_objects(
+            self.options.get("buses", []),
+            join(get_service_named("sas").workspace_dir, "transports")
         )
 
     def get_id(self):
@@ -95,7 +103,8 @@ class Device(object):
         d = platformio.build_firmware(
             project_dir,
             self.board.get_platformio_conf(),
-            self.get_bodyparts()
+            self.get_bodyparts(),
+            self.get_buses()
         )
         d.addBoth(_on_result, project_dir)
         return d
@@ -122,7 +131,7 @@ class Device(object):
 
     @staticmethod
     def get_config_key_by_id(device_id):
-        return "services.device.options.devices.%d" % (device_id,)
+        return "services.device.options.devices.%d" % device_id
 
     @staticmethod
     def get_config_dir_by_id(device_id):
@@ -134,12 +143,13 @@ class Device(object):
 
     def get_settings_hash(self):
         settings = deepcopy(self.options)
-        for key in ["name", "prevId", "enabled", "connectionUri", "firmware",
-                    "status"]:
+        for key in ["name", "prevId", "enabled", "firmware", "status"]:
             if key in settings:
                 del settings[key]
-        for bodypart in settings.get("bodyparts", []):
-            del bodypart['name']
+        for items in (settings.get("bodyparts", []),
+                      settings.get("buses", [])):
+            for item in items:
+                del item['name']
         settings['currentFirmwareVersion'] = FIRMWARE_VERSION[:2]
         return sha1(dumps(settings, sort_keys=True)).hexdigest()
 

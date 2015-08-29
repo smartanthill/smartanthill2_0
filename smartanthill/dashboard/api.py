@@ -193,6 +193,20 @@ def get_plugins(request):
     return plugins
 
 
+@router.add("/transports")
+def get_transports(request):
+    transports = []
+    for p in get_service_named("device").get_transports():
+        transports.append({
+            "id": p.get_id(),
+            "name": p.get_name(),
+            "description": p.get_description(),
+            "peripheral": p.get_peripheral(),
+            "options": p.get_options()
+        })
+    return transports
+
+
 @router.add("/serialports")
 def get_serialports_route(request):
     data = get_serialports()

@@ -205,7 +205,7 @@ class PlatformIOUploader(object):
         return {"result": "Please restart device"}
 
 
-def build_firmware(project_dir, platformio_conf, bodyparts,
+def build_firmware(project_dir, platformio_conf, bodyparts, buses,
                    zepto_conf=None, disable_auto_clean=False):
     assert (set(["platform", "board", "src_filter", "build_flags"]) <=
             set(platformio_conf.keys()))
@@ -216,7 +216,10 @@ def build_firmware(project_dir, platformio_conf, bodyparts,
 
     pio = PlatformIOProject(project_dir, platformio_conf)
     pio.add_src_content(
-        "sa_bodypart_list.cpp", srcgen.BodyPartListC(bodyparts).generate()
+        "sa_bodypart_list.cpp", srcgen.BodyPartListCPP(bodyparts).generate()
+    )
+    pio.add_src_content(
+        "sa_bus_list.cpp", srcgen.BusListCPP(buses).generate()
     )
     pio.add_src_content(
         "zepto_config.h", srcgen.ZeptoConfigH(zepto_conf).generate()
@@ -229,6 +232,16 @@ def build_firmware(project_dir, platformio_conf, bodyparts,
         copytree(
             item.plugin.get_source_dir(),
             join(pio.get_src_dir(), join("plugins", item.plugin.get_id())))
+
+    # copy user's transports
+    for item in buses:
+        if pio.src_exists(join("transports", item.transport.get_id())):
+            continue
+        copytree(
+            item.transport.get_source_dir(),
+            join(pio.get_src_dir(),
+                 join("transports", item.transport.get_id()))
+        )
 
     return pio.run(
         target="build", options={"disable-auto-clean": disable_auto_clean})

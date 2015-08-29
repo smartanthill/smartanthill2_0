@@ -75,7 +75,7 @@ uint16_t DEVICE_SELF_ID = 1;
         )
 
 
-class BodyPartListC(SourceGenerator):
+class BodyPartListCPP(SourceGenerator):
 
     TPL = Template("""
 #include <simpleiot/siot_bodypart_list.h>
@@ -159,3 +159,16 @@ const bodypart_item bodyparts[${bodypart_nums}] ZEPTO_PROG_CONSTANT_LOCATION =
                 .format(pid=bodypart.plugin.get_id(), bpid=bodypart.get_id())
             )
         return bpitems
+
+
+class BusListCPP(SourceGenerator):
+
+    TPL = Template("""
+#include "sa_transports_list.h"
+""")
+
+    def __init__(self, buses):
+        self.buses = buses
+
+    def get_content(self):
+        return self.TPL.substitute()

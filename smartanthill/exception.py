@@ -93,6 +93,11 @@ class DeviceUnknownPlugin(SABaseException):
     MESSAGE = "Unknown plugin with ID '%s'"
 
 
+class DeviceUnknownTransport(SABaseException):
+
+    MESSAGE = "Unknown transport with ID '%s'"
+
+
 class APIUnknownRequest(SABaseException):
 
     MESSAGE = "Unknown '%s' action with key '%s'"

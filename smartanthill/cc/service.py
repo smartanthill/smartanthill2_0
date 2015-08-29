@@ -31,6 +31,7 @@ from smartanthill import __version__
 from smartanthill.cc import platformio
 from smartanthill.device.board.base import BoardFactory
 from smartanthill.device.plugin import bodyparts_to_objects
+from smartanthill.device.transport import buses_to_objects
 
 
 class WebCloud(Resource):
@@ -55,12 +56,13 @@ class WebCloud(Resource):
         try:
             data = json.loads(request.content.read())
             log.msg(str(data))
-            assert set(["boardId", "bodyparts"]) <= set(data.keys())
+            assert set(["boardId", "bodyparts", "buses"]) <= set(data.keys())
 
             d = platformio.build_firmware(
                 self.project_dir,
                 BoardFactory.newBoard(data['boardId']).get_platformio_conf(),
                 bodyparts_to_objects(data['bodyparts']),
+                buses_to_objects(data['buses']),
                 disable_auto_clean=True
             )
             d.addBoth(self.delayed_render, request)

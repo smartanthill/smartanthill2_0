@@ -22,6 +22,7 @@ from twisted.python.util import sibpath
 from smartanthill.device.board.base import BoardBase
 from smartanthill.device.device import Device
 from smartanthill.device.plugin import get_plugins
+from smartanthill.device.transport import get_transports
 from smartanthill.exception import (BoardUnknownId, DeviceUnknownBoard,
                                     DeviceUnknownId)
 from smartanthill.service import SAMultiService
@@ -86,6 +87,12 @@ class DeviceService(SAMultiService):
     def get_plugins():
         return get_plugins(
             join(get_service_named("sas").workspace_dir, "plugins"))
+
+    @staticmethod
+    @memoized
+    def get_transports():
+        return get_transports(
+            join(get_service_named("sas").workspace_dir, "transports"))
 
 
 def makeService(name, options):
