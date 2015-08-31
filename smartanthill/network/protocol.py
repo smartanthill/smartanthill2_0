@@ -109,7 +109,7 @@ class CommStackClientProtocol(protocol.Protocol):
         self.factory.log.debug("Received data %s" % hexlify(data))
         direction = ord(data[2])
         if direction == self.PACKET_DIRECTION_COMMSTACK_TO_TRANSMITTER:
-            return self.factory.to_transmitter_callback(data[3:])
+            return self.factory.to_transceiver_callback(data[3:])
         elif direction == self.PACKET_DIRECTION_COMMSTACK_TO_CLIENT:
             return self.factory.to_client_callback(data[3:])
         elif direction == self.PACKET_DIRECTION_COMMSTACK_INTERNAL_ERROR:
