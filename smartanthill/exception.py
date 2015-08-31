@@ -43,7 +43,7 @@ class LiteMQUndeclaredExchange(SABaseException):
     MESSAGE = "Exchange is not declared: %s"
 
 
-class NetworkDataLinkUnsupportedProtocol(SABaseException):
+class NetworkTransmitterUnsupportedProtocol(SABaseException):
 
     MESSAGE = "Unsupported Network Data Link protocol '%s'"
 
@@ -58,7 +58,7 @@ class NetworkCommStackServerInternalError(SABaseException):
     MESSAGE = "Internal error. System is to be reinitialized"
 
 
-class NetworkDataLinkConnectionFailure(SABaseException):
+class NetworkTransmitterConnectionFailure(SABaseException):
 
     MESSAGE = "Can't make Data Link using options=%s"
 
