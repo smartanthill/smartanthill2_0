@@ -88,7 +88,13 @@ class Board_Ststm32_f401re(BoardStstm32Base):
     NAME = "ST Nucleo F401RE"
 
     def get_platformio_conf(self):
-        self.PLATFORMIO_CONF.update({"board": "nucleo_f401re"})
+        self.PLATFORMIO_CONF.update({
+            "board": "nucleo_f401re",
+            "src_filter": "+<*> -<platforms>"
+            "+<platforms/mbed>"
+            "-<platforms/mbed/eeprom>"
+            "+<platforms/mbed/eeprom/stm32f4xx>"
+        })
         return self.PLATFORMIO_CONF
 
 
@@ -100,5 +106,11 @@ class Board_Ststm32_l152re(BoardStstm32Base):
                 "PC_7", "PB_6", "PA_7", "PA_6", "PB_9", "PB_8")
 
     def get_platformio_conf(self):
-        self.PLATFORMIO_CONF.update({"board": "nucleo_l152re"})
+        self.PLATFORMIO_CONF.update({
+            "board": "nucleo_l152re",
+            "src_filter": "+<*> -<platforms>"
+            "+<platforms/mbed>"
+            "-<platforms/mbed/eeprom>"
+            "+<platforms/mbed/eeprom/emuram>"
+        })
         return self.PLATFORMIO_CONF
