@@ -93,8 +93,8 @@ class CommStackClientProtocol(protocol.Protocol):
 
     PACKET_DIRECTION_CLIENT_TO_COMMSTACK = 38
     PACKET_DIRECTION_COMMSTACK_TO_CLIENT = 37
-    PACKET_DIRECTION_TRANSMITTER_TO_COMMSTACK = 40
-    PACKET_DIRECTION_COMMSTACK_TO_TRANSMITTER = 35
+    PACKET_DIRECTION_HUB_TO_COMMSTACK = 40
+    PACKET_DIRECTION_COMMSTACK_TO_HUB = 35
     PACKET_DIRECTION_COMMSTACK_INTERNAL_ERROR = 47
 
     def send_data(self, direction, data):
@@ -108,8 +108,8 @@ class CommStackClientProtocol(protocol.Protocol):
     def dataReceived(self, data):
         self.factory.log.debug("Received data %s" % hexlify(data))
         direction = ord(data[2])
-        if direction == self.PACKET_DIRECTION_COMMSTACK_TO_TRANSMITTER:
-            return self.factory.to_transceiver_callback(data[3:])
+        if direction == self.PACKET_DIRECTION_COMMSTACK_TO_HUB:
+            return self.factory.to_hub_callback(data[3:])
         elif direction == self.PACKET_DIRECTION_COMMSTACK_TO_CLIENT:
             return self.factory.to_client_callback(data[3:])
         elif direction == self.PACKET_DIRECTION_COMMSTACK_INTERNAL_ERROR:

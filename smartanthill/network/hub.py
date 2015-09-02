@@ -27,7 +27,7 @@ from smartanthill.service import SAMultiService
 from smartanthill.util import get_service_named
 
 
-class TransceiverService(SAMultiService):
+class HubService(SAMultiService):
 
     RECONNECT_DELAY = 1  # in seconds
 
@@ -52,7 +52,7 @@ class TransceiverService(SAMultiService):
         except (SerialException, OSError) as e:
             self.log.error(str(e))
             self.log.error(
-                exception.NetworkTransceiverConnectionFailure(self.options))
+                exception.NetworkHubConnectionFailure(self.options))
             self._reconnect_nums += 1
             self._reconnect_callid = reactor.callLater(
                 self._reconnect_nums * self.RECONNECT_DELAY, self.startService)
@@ -62,7 +62,7 @@ class TransceiverService(SAMultiService):
         self._litemq.consume(
             exchange="network",
             queue=self.name,
-            routing_key="commstack->transceiver",
+            routing_key="commstack->hub",
             callback=self.out_packet_callback
         )
 
@@ -88,7 +88,7 @@ class TransceiverService(SAMultiService):
     def _make_link(self):
         protocol_type = self.connection.get_protocol()
         if protocol_type not in ("serial",):
-            raise exception.NetworkTransceiverUnsupportedProtocol(
+            raise exception.NetworkHubUnsupportedProtocol(
                 protocol_type)
         if protocol_type == "serial":
             return self._make_serial_link()
@@ -103,7 +103,7 @@ class TransceiverService(SAMultiService):
     def in_packet_callback(self, packet):
         self.log.debug("Received incoming packet %s" % hexlify(packet))
         self._litemq.produce(
-            "network", "transceiver->commstack", packet, dict(binary=True))
+            "network", "hub->commstack", packet, dict(binary=True))
 
     def out_packet_callback(self, message, properties):
         self.log.debug("Received outgoing packet %s" % hexlify(message))

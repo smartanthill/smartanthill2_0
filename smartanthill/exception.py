@@ -43,9 +43,9 @@ class LiteMQUndeclaredExchange(SABaseException):
     MESSAGE = "Exchange is not declared: %s"
 
 
-class NetworkTransceiverUnsupportedProtocol(SABaseException):
+class NetworkHubUnsupportedProtocol(SABaseException):
 
-    MESSAGE = "Unsupported Network Data Link protocol '%s'"
+    MESSAGE = "Unsupported Network Hub protocol '%s'"
 
 
 class NetworkCommStackServerNotExists(SABaseException):
@@ -58,9 +58,9 @@ class NetworkCommStackServerInternalError(SABaseException):
     MESSAGE = "Internal error. System is to be reinitialized"
 
 
-class NetworkTransceiverConnectionFailure(SABaseException):
+class NetworkHubConnectionFailure(SABaseException):
 
-    MESSAGE = "Can't make Data Link using options=%s"
+    MESSAGE = "Could not conenct to Hub using options=%s"
 
 
 class NetworkRequestCancelled(SABaseException):

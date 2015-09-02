@@ -21,7 +21,7 @@ from twisted.application.internet import TCPClient  # pylint: disable=E0611
 
 from smartanthill.network.commstack import (CommStackClientFactory,
                                             CommStackServerService)
-from smartanthill.network.transceiver import TransceiverService
+from smartanthill.network.hub import HubService
 from smartanthill.service import SAMultiService
 from smartanthill.util import get_service_named
 
@@ -58,11 +58,11 @@ class NetworkService(SAMultiService):
                 )
             ).setServiceParent(self)
 
-        # initialize transceivers
-        for i, t in enumerate(self.options.get("transceivers", [])):
+        # initialize hubs
+        for i, t in enumerate(self.options.get("hubs", [])):
             if t.get("enabled", False):
-                TransceiverService(
-                    "network.transceiver.%d" % (i + 1), t
+                HubService(
+                    "network.hub.%d" % (i + 1), t
                 ).setServiceParent(self)
 
         SAMultiService.startService(self)

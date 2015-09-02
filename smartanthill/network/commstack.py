@@ -115,7 +115,7 @@ class CommStackClientFactory(protocol.ClientFactory):
         self._litemq.consume(
             "network",
             "%s.out" % self.name,
-            "transceiver->commstack", self.from_transceiver_callback
+            "hub->commstack", self.from_hub_callback
         )
 
     def stopFactory(self):
@@ -148,15 +148,15 @@ class CommStackClientFactory(protocol.ClientFactory):
         self.log.error("Outgoing to Client: %s, error: %s" % (cm, reason))
         self._litemq.produce("network", "commstack->error", (cm, reason))
 
-    def from_transceiver_callback(self, message, properties):
-        self.log.debug("Incoming from Transceiver: %s and properties=%s" %
+    def from_hub_callback(self, message, properties):
+        self.log.debug("Incoming from Hub: %s and properties=%s" %
                        (hexlify(message), properties))
         self._protocol.send_data(
-            CommStackClientProtocol.PACKET_DIRECTION_TRANSMITTER_TO_COMMSTACK,
+            CommStackClientProtocol.PACKET_DIRECTION_HUB_TO_COMMSTACK,
             message
         )
 
-    def to_transceiver_callback(self, data):
-        self.log.debug("Outgoing to Transceiver: %s" % hexlify(data))
+    def to_hub_callback(self, data):
+        self.log.debug("Outgoing to Hub: %s" % hexlify(data))
         self._litemq.produce(
-            "network", "commstack->transceiver", data, dict(binary=True))
+            "network", "commstack->hub", data, dict(binary=True))
