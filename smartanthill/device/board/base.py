@@ -42,6 +42,7 @@ class BoardBase(object):
     PINS = None
     ANALOG_PINS = None
     PWM_PINS = None
+    EXTINT_PINS = None
 
     def get_id(self):
         return self.__class__.__name__.replace("Board_", "")
