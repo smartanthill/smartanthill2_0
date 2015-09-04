@@ -111,6 +111,6 @@ class Board_Ststm32_l152re(BoardStstm32Base):
             "src_filter": ("+<*> -<platforms>"
                            "+<platforms/mbed>"
                            "-<platforms/mbed/eeprom>"
-                           "+<platforms/mbed/eeprom/emuram>")
+                           "+<platforms/mbed/eeprom/stm32l1xx>")
         })
         return self.PLATFORMIO_CONF
