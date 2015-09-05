@@ -256,6 +256,19 @@ def get_logicaldisks_handler(request):
     return get_logicaldisks()
 
 
+@router.add("/hubs", method="GET")
+def get_hubs(request):
+    return \
+        {'items': ConfigProcessor().get("services.network.options.hubs", [])}
+
+
+@router.add("/hubs", method="POST")
+def update_hubs(request):
+    return ConfigProcessor().update(
+        "services.network.options.hubs",
+        json.load(request.content).get("items", []))
+
+
 class REST(Resource):
 
     isLeaf = True
