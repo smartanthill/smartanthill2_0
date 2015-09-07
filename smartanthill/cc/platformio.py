@@ -13,12 +13,15 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+from __future__ import absolute_import
+
 import base64
 from hashlib import sha1
 from os import environ, listdir, makedirs
 from os.path import dirname, exists, isdir, isfile, join
 from shutil import copytree, rmtree
 
+from platformio.util import where_is_program
 from smartanthill_zc.api import ZeptoBodyPart
 from twisted.internet import utils
 from twisted.python.filepath import FilePath
@@ -27,7 +30,6 @@ from twisted.python.util import sibpath
 from smartanthill import FIRMWARE_VERSION
 from smartanthill.cc import srcgen
 from smartanthill.log import Logger
-from smartanthill.util import where_is_program
 
 
 class PlatformIOProject(object):
@@ -132,7 +134,7 @@ class PlatformIOBuilder(object):
     def run(self):
         d = utils.getProcessOutputAndValue(
             where_is_program("platformio"), args=[
-                "--force", "run",
+                "-f", "-c", "smartanthill", "run",
                 "-vv",
                 "--environment", self.project.get_env_name(),
                 "--project-dir", self.project.get_project_dir()
@@ -182,7 +184,7 @@ class PlatformIOUploader(object):
     def run(self):
         d = utils.getProcessOutputAndValue(
             where_is_program("platformio"), args=[
-                "--force", "run",
+                "-f", "-c", "smartanthill", "run",
                 "--project-dir", self.project.get_project_dir(),
                 "--target", "uploadlazy",
                 "--disable-auto-clean"

@@ -134,8 +134,7 @@ def main():
             ["setuptools"],
             ["http://cc.smartanthill.org/package/smartanthill.latest.tar.gz"],
             ["https://github.com/smartanthill/smartanthill-zepto-compiler/"
-             "archive/develop.zip"],
-            ["--egg", "http://dl.platformio.org/scons.zip"]
+             "archive/develop.zip"]
         ]])
     ]
 

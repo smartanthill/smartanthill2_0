@@ -29,13 +29,13 @@ setup(
     license=__license__,
     install_requires=[
         # "smartanthill_zc",
-        "platformio>=2.2.2",
+        "platformio>=2.3.1",
         "pyserial",
         "twisted>=14.1",
         "txws",
         "six",  # required by txws but not listed in it's requirements
     ],
-    packages=find_packages()+["twisted.plugins"],
+    packages=find_packages() + ["twisted.plugins"],
     include_package_data=True,
     entry_points={
         "console_scripts": [

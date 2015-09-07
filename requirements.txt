@@ -1,6 +1,6 @@
 https://github.com/smartanthill/smartanthill-zepto-compiler/archive/develop.zip
-platformio==2.2.2
-twisted==15.2.1
+platformio==2.3.1
+twisted==15.4.0
 pyserial==2.7
 txWS==0.9.1
 six==1.9.0 # required by txws but not listed in it's requirements

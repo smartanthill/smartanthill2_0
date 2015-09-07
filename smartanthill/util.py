@@ -26,6 +26,7 @@ from twisted.internet import reactor
 
 
 class memoized(object):
+
     '''
     Decorator. Caches a function's return value each time it is called.
     If called later with the same arguments, the cached value is returned
@@ -138,26 +139,6 @@ def dict_difference(base, modified):
         elif base_value != value:
             diff[key] = value
     return diff
-
-
-def where_is_program(program):
-    # try OS's built-in commands
-    try:
-        result = exec_command(
-            ["where" if "windows" in get_systype() else "which", program])
-        if result['returncode'] == 0 and isfile(result['out'].strip()):
-            return result['out'].strip()
-    except OSError:
-        pass
-
-    # look up in $PATH
-    for bin_dir in getenv("PATH", "").split(";"):
-        if isfile(join(bin_dir, program)):
-            return join(bin_dir, program)
-        elif isfile(join(bin_dir, "%s.exe" % program)):
-            return join(bin_dir, "%s.exe" % program)
-
-    return program
 
 
 def fire_defer(d, *args):
