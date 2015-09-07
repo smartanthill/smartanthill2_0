@@ -265,11 +265,11 @@ def get_hubs(request):
 @router.add("/hubs", method="POST")
 def update_hubs(request):
     sas = get_service_named("sas")
-    d = sas.stopEnabledSubServices(skip=["dashboard"])
+    d = sas.stopSubServices(["api", "network", "device"])
     d.addCallback(lambda _: ConfigProcessor().update(
         "services.network.options.hubs",
         json.load(request.content).get("items", [])))
-    d.addCallback(lambda _: sas.startEnabledSubServices(skip=["dashboard"]))
+    d.addCallback(lambda _: sas.startSubServices(["device", "network", "api"]))
     d.addCallback(lambda _: get_hubs(request))
     return d
 
