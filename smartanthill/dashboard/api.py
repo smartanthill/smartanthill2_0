@@ -256,6 +256,24 @@ def get_logicaldisks_handler(request):
     return get_logicaldisks()
 
 
+@router.add("/hubs", method="GET")
+def get_hubs(request):
+    return \
+        {'items': ConfigProcessor().get("services.network.options.hubs", [])}
+
+
+@router.add("/hubs", method="POST")
+def update_hubs(request):
+    sas = get_service_named("sas")
+    d = sas.stopEnabledSubServices(skip=["dashboard"])
+    d.addCallback(lambda _: ConfigProcessor().update(
+        "services.network.options.hubs",
+        json.load(request.content).get("items", [])))
+    d.addCallback(lambda _: sas.startEnabledSubServices(skip=["dashboard"]))
+    d.addCallback(lambda _: get_hubs(request))
+    return d
+
+
 class REST(Resource):
 
     isLeaf = True
