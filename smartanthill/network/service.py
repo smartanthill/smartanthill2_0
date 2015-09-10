@@ -46,9 +46,6 @@ class NetworkService(SAMultiService):
         # initialize Communication Stack per device
         for device in get_service_named("device").get_devices().values():
             device_id = device.get_id()
-            connectionUri = device.options.get("connectionUri")
-            assert connectionUri
-
             CommStackServerService(
                 "network.commstack.server.%d" % device_id,
                 dict(

@@ -95,7 +95,6 @@ def get_device_info(request, devid):
         "prevId": devid,
         "boardId": device.board.get_id(),
         "name": device.get_name(),
-        "connectionUri": device.options.get("connectionUri"),
         "bodyparts": device.options.get("bodyparts"),
         "enabled": device.is_enabled(),
         "status": device.get_status(),

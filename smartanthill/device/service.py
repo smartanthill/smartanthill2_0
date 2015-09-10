@@ -39,7 +39,7 @@ class DeviceService(SAMultiService):
         for devid, devoptions in self.options.get("devices", {}).items():
             devid = int(devid)
             assert 0 < devid <= 255
-            assert (set(["boardId", "bodyparts", "connectionUri"]) <=
+            assert (set(["boardId", "bodyparts", "buses"]) <=
                     set(devoptions.keys()))
             try:
                 self._devices[devid] = Device(devid, devoptions)
