@@ -161,7 +161,7 @@ class Board_Arduino_Micro(BoardArduinoBase):
         # LEDs
         LED_BUILTIN=13
     )
-    ANALOG_PINS = (14, 15, 16, 17, 18, 19, 4, 6, 8, 8, 10, 12)
+    ANALOG_PINS = (14, 15, 16, 17, 18, 19, 4, 6, 8, 10, 12)
     PWM_PINS = (3, 5, 6, 9, 10, 11, 13)
     EXTINT_PINS = (0, 1, 2, 3)
 
