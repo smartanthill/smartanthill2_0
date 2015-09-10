@@ -99,6 +99,7 @@ def get_device_info(request, devid):
         "bodyparts": device.options.get("bodyparts"),
         "enabled": device.is_enabled(),
         "status": device.get_status(),
+        "buses": device.options.get("buses"),
     }
     return data
 
