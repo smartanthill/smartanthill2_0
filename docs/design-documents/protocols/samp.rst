@@ -29,7 +29,7 @@ SmartAnthill Mesh Protocol (SAMP)
 
 **EXPERIMENTAL**
 
-:Version:   v0.0.22
+:Version:   v0.0.23
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
@@ -115,7 +115,7 @@ Despite that Routing Tables are updated only by authenticated upper-layer messag
 Communicating Routing Table Information over SACCP
 --------------------------------------------------
 
-As described above, SAMP relies on Routing Table information being available on all relevant Retransmitting Nodes. To ensure that this information is transmitted in secure manner, it SHOULD be transmitted by an upper-layer secure (and guaranteed-delivery) protocol such as SACCP. As described above, this doesn't create a chichen-and-egg problem, as each Retransmitting Node can be accessed via SAMP regardless of Routing Tables present (or even badly broken) on the Retransmitting Node in question; and as soon as Retransmitting Node can be accessed via SAMP - upper-layer protocol such as SACCP can be used to update Routing Table on the Retransmitting Node. 
+As described above, SAMP relies on Routing Table information being available on all relevant Retransmitting Nodes. To ensure that this information is transmitted in secure manner, it SHOULD be transmitted by an upper-layer secure (and guaranteed-delivery) protocol such as SACCP. As described above, this doesn't create a chicken-and-egg problem, as each Retransmitting Node can be accessed via SAMP regardless of Routing Tables present (or even badly broken) on the Retransmitting Node in question; and as soon as Retransmitting Node can be accessed via SAMP - upper-layer protocol such as SACCP can be used to update Routing Table on the Retransmitting Node. 
 
 Technically, protocol for communicating Routing Table information is not a part of SAMP. However, in this section we provide an example implementation of such protocol over SACCP_PHY_AND_ROUTING_DATA packets.
 
@@ -391,7 +391,7 @@ Most of SAMP packets have OPTIONAL-EXTRA-HEADERS field. It has a generic structu
 
   where GENERIC-EXTRA-HEADER-FLAGS is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] indicating the end of OPTIONAL-EXTRA-HEADER list, bits[1..2] equal to 2-bit constant GENERIC_EXTRA_HEADER_FLAGS, and further bits interpreted depending on packet type:
 
-  + bit[3]. If the packet type is any packet type except for Samp-Unicast-Data-Packet - the bit is MORE-PACKETS-FOLLOW flag. For Samp-Unicast-Data-Packet - RESERVED (MUST be zero)
+  + bit[3]. MORE-PACKETS-FOLLOW flag.
   + bit[4]. If the packet type is Samp-To-Santa-Data-Or-Error-Packet or Samp-Forward-To-Santa-Data-Or-Error-Packet - the bit is IS-ERROR (indicating that PAYLOAD is in fact Routing-Error). If the packet type is Samp-From-Santa-Data-Packet - it is a TARGET-COLLECT-LAST-HOPS flag. For Samp-To-Santa-Data-Or-Error-Packet the bit is IS-LOCAL-ECHO flag. For Samp-Ack-Nack-Packet the bit is IS-NACK flag. For other packet types - RESERVED (MUST be zero)
   + bit[5]. If the packet type is Samp-From-Santa-Data-Packet, the bit is an EXPLICIT-TIME-SCHEDULING flag. For Samp-Ack-Nack-Packet - the bit is IS-LOOP-ACK flag. For other packet types - RESERVED (MUST be zero)
   + bit[6]. RESERVED (MUST be zero)
@@ -424,13 +424,13 @@ When combining packets, SAMP MUST take into account both "MTU Hard Limits" and "
 SAMP Packets
 ------------
 
-Samp-Unicast-Data-Packet: **\| SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| NEXT-HOP \| LAST-HOP \| Target-Address \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
+Samp-Unicast-Data-Packet: **\| SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| NEXT-HOP \| LAST-HOP \| Non-Root-Address \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
-where SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] equal to 0, bit[1] being GUARANTEED-DELIVERY flag, bit [2] being BACKWARD-GUARANTEED-DELIVERY, bit [3] being EXTRA-HEADERS-PRESENT, bit[4] being MORE-PACKETS-FOLLOW, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set and is described above; NEXT-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of the next-hop node (based on info from Routing Table), LAST-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of currently transmitting node, Target-Address is described above, OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field, HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details), PAYLOAD is a payload to be passed to the upper-layer protocol, and FULL-CHECKSUM is a SAMP-CHECKSUM of concatenation of the header (without header checksum) and PAYLOAD.
+where SAMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] equal to 0, bit[1] being GUARANTEED-DELIVERY flag, bit [2] being BACKWARD-GUARANTEED-DELIVERY, bit [3] being EXTRA-HEADERS-PRESENT, bit[4] being DIRECTION-FLAG that is set, if a packet follows from the Root, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set and is described above; NEXT-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of the next-hop node (based on info from Routing Table), LAST-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of currently transmitting node, Non-Root-Address is a target (recipient) address or a source (sender) address depending on DIRECTION-FLAG and is always a device ID of a communication party other than the Root, OPTIONAL-PAYLOAD-SIZE is present only if optional headers are present and MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field, HEADER-CHECKSUM is a header SAMP-CHECKSUM (see SAMP-CHECKSUM section for details), PAYLOAD is a payload to be passed to the upper-layer protocol, and FULL-CHECKSUM is a SAMP-CHECKSUM of concatenation of the header (without header checksum) and PAYLOAD.
 
 If NEXT-HOP field doesn't match ID of the receiving Device - the packet is ignored.
 
-If Target-Address is Root (i.e. =0), it MUST NOT contain VIA fields within; in addition, if Target-Address is Root (i.e. =0), the packet MUST NOT have BACKWARD-GUARANTEED-DELIVERY flag set.
+If a packet is addressed to the Root (DIRECTION-FLAG is not set), it MUST NOT contain VIA fields within; in addition, if the packet is addressed to the Root (DIRECTION-FLAG is not set), the packet MUST NOT have BACKWARD-GUARANTEED-DELIVERY flag set.
 
 If IS-PROBE flag is set, then PAYLOAD is treated differently. When destination receives Samp-Unicast-Data-Packet with IS-PROBE flag set, destination doesn't pass PAYLOAD to upper-layer protocol. Instead, destination parses PAYLOAD as follows: **\| PROBE-TYPE \| OPTIONAL-PROBE-EXTRA-HEADERS \| PROBE-PAYLOAD \|** where PROBE-TYPE is 1-byte bitfield substrate, with bits [0..2] being either PROBE_UNICAST or PROBE_TO_SANTA, bit[3] being PROBE-EXTRA-HEADERS-PRESENT, and bits [4..7] reserved (MUST be zeros); OPTIONAL-PROBE-EXTRA-HEADERS are similar to OPTIONAL-EXTRA-HEADERS, and PROBE-PAYLOAD takes the rest of the PAYLOAD; if PROBE-TYPE==PROBE_UNICAST, then destination Device sends Samp-Unicast-Data-Packet back to Root, with PAYLOAD copied from PROBE-PAYLOAD, and extra headers formed from PROBE-EXTRA-HEADERS, "as if" this packet is sent in reply to IS-PROBE packet by upper layer, but adding IS-PROBE flag (as a part of GENERIC-EXTRA-FLAGS extra header). If PROBE-TYPE==PROBE_TO_SANTA, destination Device sends a Samp-To-Santa-Data-Or-Error-Packet, with PAYLOAD copied from PROBE-PAYLOAD, "as if" the packet is sent in reply to IS-PROBE packet by upper layer, but adding IS-PROBE flag (as a part of GENERIC-EXTRA-FLAGS extra header).
 
