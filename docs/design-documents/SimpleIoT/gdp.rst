@@ -22,17 +22,12 @@
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE
 
-SimpleIoT
-=========
+.. _siot_gdp:
 
-.. toctree::
-    :maxdepth: 2
+SimpleIoT Guaranteed Delivery Protocol (SimpleIoT/GDP)
+======================================================
 
-    SimpleIoT
-    sp
-    rng
-    pairing
-    mp
-    gdp
-    ccp
+:Version:   v0.0
+
+** TODO **
 

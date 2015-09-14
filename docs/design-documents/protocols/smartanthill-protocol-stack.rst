@@ -29,6 +29,8 @@ SmartAnthill 2.0 Protocol Stack
 
 :Version:   v0.3.1
 
+**IMPORTANT: This document is obsolete. Please DO NOT modify it. Please refer to** :ref:`siot` **for an up to date version.**
+
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *document, please make sure to read it before proceeding.*
 
 SmartAnthill protocol stack is intended to provide communication services between SmartAnthill Clients and SmartAnthill Devices, allowing SmartAnthill Clients to control SmartAnthill Devices. These communication services are implemented as a request-response services within OSI/ISO network model.

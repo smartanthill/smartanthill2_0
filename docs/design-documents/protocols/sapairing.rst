@@ -29,6 +29,8 @@ SmartAnthill Pairing
 
 :Version:   v0.1.7
 
+**IMPORTANT: This document is obsolete. Please DO NOT modify it. Please refer to** :ref:`siot_pairing` **for an up to date version.**
+
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
 "Pairing" SmartAnthill Device to SmartAnthill Client (which is normally located on SmartAnthill Central Controller) is necessary to ensure secure key exchange between SmartAnthill Device and SmartAnthill Client. As soon as "pairing" is completed, both parties have a 128-bit symmetric key shared between them, and can use it for SASP purposes.

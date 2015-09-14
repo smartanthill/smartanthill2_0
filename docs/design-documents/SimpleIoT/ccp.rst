@@ -22,17 +22,12 @@
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE
 
-SimpleIoT
-=========
+.. _siot_ccp:
 
-.. toctree::
-    :maxdepth: 2
+SimpleIoT Command and Control Protocol (SimpleIoT/CCP)
+======================================================
 
-    SimpleIoT
-    sp
-    rng
-    pairing
-    mp
-    gdp
-    ccp
+:Version:   v0.0
+
+** TODO **
 

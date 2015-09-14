@@ -22,32 +22,30 @@
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE
 
-.. _sarng:
+.. _siot_rng:
 
-SmartAnthill SmartAnthill Random Number Generation and Key Generation
-=====================================================================
+SimpleIoT Random Number Generation and Key Generation
+=====================================================
 
-:Version:   v0.1.5c
+:Version:   v0.1
 
-**IMPORTANT: This document is obsolete. Please DO NOT modify it. Please refer to** :ref:`siot_rng` **for an up to date version.**
+*NB: this document relies on certain terms and concepts introduced in* :ref:`siot` *document, please make sure to read it before proceeding.*
 
-*NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
-
-Random Number Generation is vital for ensuring security. This document describes requirements for Random Number Generation for SmartAnthill Devices.
+Random Number Generation is vital for ensuring security. This document describes requirements for Random Number Generation for SimpleIoT Devices.
 
 .. contents::
 
 Poor-Man's PRNG
 ---------------
 
-Each device with Poor-Man's PRNG, has it's own AES-128 secret key (this key MUST NOT be stored outside of the device), and additionally keeps a counter. This counter MUST be kept in a way which guarantees that the same value of the counter is never reused; this includes both having counter of sufficient size, and proper commits to persistent storage to avoid re-use of the counter in case of accidental device reboot. As for commits to persistent storage - two such implementations are discussed in :ref:`sasp` document, in 'Implementation Details' section, with respect to storing nonces.
+Each device with Poor-Man's PRNG, has it's own AES-128 secret key (this key MUST NOT be stored outside of the device), and additionally keeps a counter. This counter MUST be kept in a way which guarantees that the same value of the counter is never reused; this includes both having counter of sufficient size, and proper commits to persistent storage to avoid re-use of the counter in case of accidental device reboot. As for commits to persistent storage - two such implementations are discussed in :ref:`siot_sp` document, in 'Implementation Notes' section, with respect to storing nonces.
 
 Then, Poor-Man's PRNG simply encrypts current value of the counter with AES-128, increments counter (see note above about guarantees of no-reuse), and returns encrypted value of the counter as next 16 bytes of the random output.
 
 Devices with uniquely-pre-initialized Poor-Man's PRNG
 -----------------------------------------------------
 
-Resource-constrained SmartAnthill Devices which don't have their own crypto-safe RNG, MUST use Poor-Man's PRNG. On such Devices, Poor-Man's PRNG MUST be pre-populated during Device manufacturing, with a random key and random initial counter, generated outside of Device. Both key and counter MUST be crypto-safe random numbers, and MUST be statistically unique for each Device.
+Resource-constrained SimpleIoT Devices which don't have their own crypto-safe RNG, MUST use Poor-Man's PRNG. On such Devices, Poor-Man's PRNG MUST be pre-populated during Device manufacturing, with a random key and random initial counter, generated outside of Device. Both key and counter MUST be crypto-safe random numbers, and MUST be statistically unique for each Device.
 
 Devices with hardware-assisted Fortuna
 --------------------------------------
@@ -62,28 +60,28 @@ If Device doesn't have a uniquely-pre-initialized Poor-Man's PRNG, the following
 * Device MUST implement hardware entropy gathering, and RNG additional seeding procedure, as described below
 
 
-Fortuna Implementation in SmartAnthill
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Fortuna Implementation in SimpleIoT
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-There are two approaches to implement Fortuna in SmartAntill: 'Radical' and 'Conservative'. 'Radical' is not strictly compliant with Fortuna description from [Fortuna], but we feel it should perform significantly better for our special circumstances. 'Conservative' is fully compliant to description in [Fortuna], with really minor tweaks (within the spirit of Fortuna) to reduce resource requirements. Currently, and until it is shown otherwise, both implementations are acceptable for SmartAnthill.
+There are two approaches to implement Fortuna in SimpleIoT: 'Radical' and 'Conservative'. 'Radical' is not strictly compliant with Fortuna description from [Fortuna], but we feel it should perform significantly better for our special circumstances. 'Conservative' is fully compliant to description in [Fortuna], with really minor tweaks (within the spirit of Fortuna) to reduce resource requirements. Currently, and until it is shown otherwise, both implementations are acceptable for SimpleIoT.
 
-In any case, pool size for SmartAnthill Fortuna implementations is 128*3 bytes; effectively it means that we're making a  guesstimate that each event (encoded as 3 bytes per ADDRANDOMEVENT() description) carries one bit of entropy.
+In any case, pool size for SimpleIoT Fortuna implementations is 128*3 bytes; effectively it means that we're making a  guesstimate that each event (encoded as 3 bytes per ADDRANDOMEVENT() description) carries one bit of entropy.
 
 Currently, Fortuna implementation is estimated to require 32 (state of first SHA256 in SHAd256)+32 (state of second SHA256 in SHAd256)+64 (512-bit chunk buffer) = 128 bytes per pool, plus 32 bytes regardless of pools (generator state).
 
-'Radical' SmartAnthill Fortuna
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'Radical' SimpleIoT Fortuna
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-'Radical' SmartAnthill Fortuna has the following changes from [Fortuna] description:
+'Radical' SimpleIoT Fortuna has the following changes from [Fortuna] description:
 
-* only one pool is used. *Rationale. Under conditions of generic PC-based RNG it may be seen as a major deficiency, but we feel that for SmartAnthill purposes, where the mostly important random generation (the one for pairing purposes) is 'imminent', and long-term recovery is of significantly less interest than making key material really random. Under these circumstances, spreading entropy across multiple pools, where it won't be used for imminent security-critical key generation, is considered a waste.*
+* only one pool is used. *Rationale. Under conditions of generic PC-based RNG it may be seen as a major deficiency, but we feel that for SimpleIoT purposes, where the mostly important random generation (the one for pairing purposes) is 'imminent', and long-term recovery is of significantly less interest than making key material really random. Under these circumstances, spreading entropy across multiple pools, where it won't be used for imminent security-critical key generation, is considered a waste.*
 
-'Conservative' SmartAnthill Fortuna
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'Conservative' SimpleIoT Fortuna
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-'Conservative' SmartAnthill Fortuna has the following changes from [Fortuna] description:
+'Conservative' SimpleIoT Fortuna has the following changes from [Fortuna] description:
 
-* for non-Secure SmartAnthill Devices, number of pools MAY be reduced to 16 (from 32 in original Fortuna); for Secure SmartAnthill Devices number of pools MUST be at least 24
+* for non-Secure SimpleIoT Devices, number of pools MAY be reduced to 16 (from 32 in original Fortuna); for Secure SimpleIoT Devices number of pools MUST be at least 24
 * minimum time between reseeds MUST be increased to 1 minute (from 100ms in original Fortuna). *Rationale: given our limited entropy sources and rare events, we're not likely to get 128 bits of entropy more frequently anyway*
 
 These changes bring time-needed-for-attacker-to-exhaust-pools from 13 years as in original Fortuna, down to 1.5 months; we feel that this number is prudent enough for non-Secure devices. For Secure Devices 24 pools with 1 minute minimum reseeds, provide 31 years. 
@@ -91,11 +89,11 @@ These changes bring time-needed-for-attacker-to-exhaust-pools from 13 years as i
 Fortuna Seed File
 ^^^^^^^^^^^^^^^^^
 
-[Fortuna] specifies a 64-byte 'seed file' to keep Fortuna state between reboots. SmartAnthill Fortuna implementations MUST implement a 'seed file' (normally in EEPROM), with all atomicity requriements specified in [Fortuna]. If 'seed file' cannot be read on Device start, then Device MUST perform the following (depending on Device 'pairing state' as described in :ref:`sapairing` document):
+[Fortuna] specifies a 64-byte 'seed file' to keep Fortuna state between reboots. SimpleIoT Fortuna implementations MUST implement a 'seed file' (normally in EEPROM), with all atomicity requriements specified in [Fortuna]. If 'seed file' cannot be read on Device start, then Device MUST perform the following (depending on Device 'pairing state' as described in :ref:`siot_pairing` document):
 
 * if Device is in PRE-PAIRING state, necessary entropy will be gathered during normal "pairing" procedure, so Fortuna may start without seed file.
 * if Device is in PAIRING-MITM-CHECK state, Device MUST switch to PRE-PAIRING state and require "pairing" to be repeated (TODO: provide appropriate Client-side errors and user messages)
-* if Device is in PAIRING-COMPLETED state, Device MUST use "SACCP Entropy Recovery" procedure as described in :ref:`saccp` document (this procedure is different from "Entropy Gathering" procedure used as a part of "pairing"); in practice, it MAY be sufficient to get a single entropy recovery packet to re-initialize Fortuna (as it is after-pairing, packet is transferred encrypted, so there is no risk for it to be known to adversary; also, if key material will be needed, Fortuna will be fed with additional entropy which is sufficient for such generation, according to :ref:`sapairing`).
+* if Device is in PAIRING-COMPLETED state, Device MUST use "SimpleIoT/CCP Entropy Recovery" procedure as described in :ref:`siot_ccp` document (this procedure is different from "Entropy Gathering" procedure used as a part of "pairing"); in practice, it MAY be sufficient to get a single entropy recovery packet to re-initialize Fortuna (as it is after-pairing, packet is transferred encrypted, so there is no risk for it to be known to adversary; also, if key material will be needed, Fortuna will be fed with additional entropy which is sufficient for such generation, according to :ref:`siot_pairing`).
 
 Fortuna 'seed file' MUST be written before any MCUSLEEP operation (TODO: what if MCUSLEEP is memory-preserving?), and MUST be written at least every 10 minutes of Device operation.
 
@@ -116,7 +114,7 @@ NB: when "feeding entropy to Fortuna", exact bit representation doesn't matter, 
 * During each "pairing" (IMPORTANT: it applies to any "pairing", not just first "pairing"), the following procedure of RNG additional seeding MUST be performed:
 
   + When pairing procedure starts, Device MUST initialize two internal variables (Network-Time-Change-Count and ADC-Change-Count) as zeros
-  + Device MUST implement "Entropy Gathering" procedure as defined in :ref:`sapairing` document
+  + Device MUST implement "Entropy Gathering" procedure as defined in :ref:`siot_pairing` document
 
   + On receiving each packet with entropy, Device MUST:
 
@@ -153,7 +151,7 @@ NB: when "feeding entropy to Fortuna", exact bit representation doesn't matter, 
 Fortuna State and re-pairing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When Device is to be re-paired (i.e. Device pairing state is changed to PRE-PAIRING, see :ref:`sapairing` document for details), Fortuna PRNG state (both seed file and in-memory state) MUST NOT be affected. The only process which MAY rewrite Fortuna persistent state while ignoring the existing Fortuna state, is Device re-programming (but **not** OtA re-programming).
+When Device is to be re-paired (i.e. Device pairing state is changed to PRE-PAIRING, see :ref:`siot_pairing` document for details), Fortuna PRNG state (both seed file and in-memory state) MUST NOT be affected. The only process which MAY rewrite Fortuna persistent state while ignoring the existing Fortuna state, is Device re-programming (but **not** OtA re-programming).
 
 Devices with hardware RNG
 -------------------------
@@ -179,7 +177,7 @@ To qualify as a 'Device with hardware RNG', Device MUST comply with all the foll
 Restrictions for Secure and non-Secure Devices
 ----------------------------------------------
 
-non-Secure SmartAnthill Devices MAY use one of the following RNGs (as long as all requirements for respective RNG, as specified above, are complied with):
+non-Secure SimpleIoT Devices MAY use one of the following RNGs (as long as all requirements for respective RNG, as specified above, are complied with):
 
 * uniquely-pre-initialized Poor-Man's PRNGs
 * hardware-assisted Fortuna
@@ -187,7 +185,7 @@ non-Secure SmartAnthill Devices MAY use one of the following RNGs (as long as al
 * hardware RNG
 * hardware RNG with Fortuna having uniquely-pre-initialized seed file
 
-Secure SmartAnthill Devices MAY use one of the following RNGs (as long as all requirements for respective RNG, as specified above, are complied with):
+Secure SimpleIoT Devices MAY use one of the following RNGs (as long as all requirements for respective RNG, as specified above, are complied with):
 
 * uniquely-pre-initialized Poor-Man's PRNGs
 * hardware-assisted Fortuna
@@ -195,23 +193,23 @@ Secure SmartAnthill Devices MAY use one of the following RNGs (as long as all re
 * hardware RNG
 * hardware RNG with Fortuna having uniquely-pre-initialized seed file (RECOMMENDED)
 
-SmartAnthill Client (and Devices with Crypto-Safe RNG)
-------------------------------------------------------
+SimpleIoT Client (and Devices with Crypto-Safe RNG)
+---------------------------------------------------
 
-Even if the system where the SmartAnthill stack is running, has a supposedly crypto-safe RNG (such as built-in crypto-safe /dev/urandom), SmartAnthill implementations still MUST employ Poor-Man's PRNG (as described above) in addition to system-provided crypto-safe PRNG. In such cases, each byte of SmartAnthill RNG (which is provided to the rest of SmartAnthill) SHOULD be a XOR of 1 byte of system-provided crypto-safe PRNG, and 1 byte of Poor-Man's PRNG. 
+Even if the system where the SimpleIoT stack is running, has a supposedly crypto-safe RNG (such as built-in crypto-safe /dev/urandom), SimpleIoT implementations still MUST employ Poor-Man's PRNG (as described above) in addition to system-provided crypto-safe PRNG. In such cases, each byte of SimpleIoT RNG (which is provided to the rest of SimpleIoT) SHOULD be a XOR of 1 byte of system-provided crypto-safe PRNG, and 1 byte of Poor-Man's PRNG. 
 
 *Rationale. This approach allows to reduce the impact of catastrophic failures of the system-provided crypto-safe PRNG (for example, it would mitigate effects of the Debian RNG disaster very significantly).*
 
-To initialize Poor-Man's RNG on Client side, SmartAnthill implementation MUST NOT use the same crypto-safe RNG which output will be used for XOR-ing with Poor-Man's RNG (as specified above); instead, Poor-Man's RNG on Client side MUST be initialized independently; valid examples of such independent initialization include XOR-ing of at least two sources, such as an independent Fortuna PRNG with user input (timing of typing or mouse movements), or online generators such as 'raw bytes' from random.org or from smartanthill.org (TODO); IMPORTANT: all exchanges with online generators MUST be over https, and with server certificate validation.
+To initialize Poor-Man's RNG on Client side, SimpleIoT implementation MUST NOT use the same crypto-safe RNG which output will be used for XOR-ing with Poor-Man's RNG (as specified above); instead, Poor-Man's RNG on Client side MUST be initialized independently; valid examples of such independent initialization include XOR-ing of at least two sources, such as an independent Fortuna PRNG with user input (timing of typing or mouse movements), or online generators such as 'raw bytes' from random.org or from (TODO); IMPORTANT: all exchanges with online generators MUST be over https, and with server certificate validation.
 
-The same procedure SHOULD also be used for generating random data which is used for SmartAnthill key generation.
+The same procedure SHOULD also be used for generating random data which is used for SimpleIoT key generation.
 
 Key Generation
 --------------
 
 This sections describes rules for generating keys (and other key material, such as DH random numbers).
 
-For Devices which support OtA Pairing (see :ref:`sapairing` document for details), key material needs to be generated. For such Devices the following requirements MUST be met:
+For Devices which support OtA Pairing (see :ref:`siot_pairing` document for details), key material needs to be generated. For such Devices the following requirements MUST be met:
 
 * if Device doesn't have a hardware-assisted Fortuna PRNG:
 
@@ -229,7 +227,7 @@ For Devices which support OtA Pairing (see :ref:`sapairing` document for details
 
   + Device MUST implement at least two uniquely-pre-initialized Poor-Man's PRNGs: one of them (named 'POORMAN4KEYS') MUST NOT be used for any purposes except for key generation as described below. Another one (named 'NONKEYPOORMAN') is used to produce 'non-key Random Stream'.
 
-    - Initialization of both Poor-Man's PRNGs (as well as initialization of KEY4KEYS and POORMAN4KEYS, see below) MUST be done independently, as specified in "SmartAnthill Client (and Devices with Crypto-Safe RNG)" section above.
+    - Initialization of both Poor-Man's PRNGs (as well as initialization of KEY4KEYS and POORMAN4KEYS, see below) MUST be done independently, as specified in "SimpleIoT Client (and Devices with Crypto-Safe RNG)" section above.
 
   + in addition, Device MUST have an additional uniquely-pre-initialized key (KEY4KEYS), which MUST NOT be used except for key generation as described below
   + to generate 128 bits of key, the following procedure applies:
@@ -239,7 +237,7 @@ For Devices which support OtA Pairing (see :ref:`sapairing` document for details
 Non-Key Random Stream
 ---------------------
 
-SmartAnthill RNG provides a 'non-key Random Stream' for various purposes such as padding, ENTROPY data for the pairing (sic!), etc. Generation of 128 bits of non-key Random Stream is similar to key generation described above, with the following differences:
+SimpleIoT RNG provides a 'non-key Random Stream' for various purposes such as padding, ENTROPY data for the pairing (sic!), etc. Generation of 128 bits of non-key Random Stream is similar to key generation described above, with the following differences:
 
 * instead of POORMAN4KEYS Poor-Man's PRNG, NONKEYPOORMAN Poor-Man's PRNG is used
 * instead of AES(key=KEY4KEYS,data=DATA), DATA is used directly
