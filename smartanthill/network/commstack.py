@@ -128,8 +128,7 @@ class CommStackClientFactory(protocol.ClientFactory):
         assert isinstance(message, ControlMessage)
         self._source_id = message.source
         data = message.data
-        if not isinstance(data, bytearray):
-            data = bytearray(data)
+        assert isinstance(data, bytearray)
         data.insert(0, 0x01)  # first packet in chain
         data.insert(1, 0x02)  # SACCP_NEW_PROGRAM
         self._protocol.send_data(
@@ -157,6 +156,7 @@ class CommStackClientFactory(protocol.ClientFactory):
         )
 
     def to_hub_callback(self, data):
+        data = bytearray(data)
         self.log.debug("Outgoing to Hub: %s" % hexlify(data))
         self._litemq.produce(
             "network", "commstack->hub", data, dict(binary=True))

@@ -28,7 +28,8 @@ class ControlMessage(object):
     def __init__(self, source, destination, data=None):
         self.source = source
         self.destination = destination
-        self.data = data or []
+        self.data = data or bytearray()
+        assert isinstance(data, bytearray)
 
         assert 0 <= self.source <= 255 and 0 <= self.destination <= 255
         assert self.source != self.destination
@@ -98,16 +99,16 @@ class CommStackClientProtocol(protocol.Protocol):
     PACKET_DIRECTION_COMMSTACK_INTERNAL_ERROR = 47
 
     def send_data(self, direction, data):
-        if not isinstance(data, bytearray):
-            data = bytearray(data)
+        assert isinstance(data, bytearray)
         packet = pack("HB", len(data), direction)
-        packet += pack("B" * len(data), *data)
+        packet += str(data)
         self.transport.write(packet)
         self.factory.log.debug("Sent packet %s" % hexlify(packet))
 
     def dataReceived(self, data):
+        data = bytearray(data)
         self.factory.log.debug("Received data %s" % hexlify(data))
-        direction = ord(data[2])
+        direction = data[2]
         if direction == self.PACKET_DIRECTION_COMMSTACK_TO_HUB:
             return self.factory.to_hub_callback(data[3:])
         elif direction == self.PACKET_DIRECTION_COMMSTACK_TO_CLIENT:
@@ -127,12 +128,12 @@ class DataLinkProtocol(protocol.Protocol):
     BUFFER_MAX_LEN = 300
 
     def __init__(self):
-        self._buffer = []
+        self._buffer = bytearray()
 
     def packet_to_frame(self, packet):
-        frame = [self.FRAGMENT_START_CODE]
+        assert isinstance(packet, bytearray)
+        frame = bytearray([self.FRAGMENT_START_CODE])
         for byte in packet:
-            byte = ord(byte)
             if byte == self.FRAGMENT_START_CODE:
                 frame.extend([self.FRAGMENT_ESCAPE_CODE, 0x00])
             elif byte == self.FRAGMENT_END_CODE:
@@ -142,13 +143,13 @@ class DataLinkProtocol(protocol.Protocol):
             else:
                 frame.append(byte)
         frame.append(self.FRAGMENT_END_CODE)
-        return "".join([chr(c) for c in frame])
+        return frame
 
     def frame_to_packet(self, frame):
-        packet = []
+        assert isinstance(frame, bytearray)
+        packet = bytearray()
         escape_found = False
         for byte in frame:
-            byte = ord(byte)
             if byte == self.FRAGMENT_ESCAPE_CODE:
                 escape_found = True
                 continue
@@ -164,23 +165,23 @@ class DataLinkProtocol(protocol.Protocol):
                 escape_found = False
             else:
                 packet.append(byte)
-        return "".join([chr(c) for c in packet])
+        return packet
 
     def send_packet(self, packet):
-        self.transport.write(self.packet_to_frame(packet))
+        self.transport.write(str(self.packet_to_frame(packet)))
 
     def frame_received(self, data):
         return self.factory.in_packet_callback(self.frame_to_packet(data))
 
     def dataReceived(self, data):
-        for byte in data:
+        for byte in bytearray(data):
             self._byte_received(byte)
 
     def _byte_received(self, byte):
-        if ord(byte) == self.FRAGMENT_START_CODE:
-            self._buffer = []  # clean buffer
+        if byte == self.FRAGMENT_START_CODE:
+            self._buffer = bytearray()  # clean buffer
             return
-        elif ord(byte) == self.FRAGMENT_END_CODE:
+        elif byte == self.FRAGMENT_END_CODE:
             return self.frame_received(self._buffer)
 
         self._buffer.append(byte)
