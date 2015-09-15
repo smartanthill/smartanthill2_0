@@ -16,6 +16,7 @@
 # pylint: disable=W0613
 
 from binascii import hexlify
+from urlparse import urlparse
 
 from serial import SerialException
 from twisted.internet import reactor, task
@@ -138,17 +139,10 @@ class ConnectionInfo(object):
         return self._options
 
     def _parse_uri(self, uri):
-        protoend_pos = uri.index("://")
-        options_pos = uri.find("?")
+        result = urlparse(uri)
+        self._protocol = result.scheme
+        self._address = result.netloc + result.path
 
-        self._protocol = uri[:uri.index("://")]
-
-        if options_pos != -1:
-            self._address = uri[protoend_pos + 3:options_pos]
-        else:
-            self._address = uri[protoend_pos + 3:]
-
-        if options_pos != -1:
-            for option in uri[options_pos + 1:].split("&"):
-                key, value = option.split("=")
-                self._options[key] = value
+        for option in result.query.split("&"):
+            key, value = option.split("=")
+            self._options[key] = value
