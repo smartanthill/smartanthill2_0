@@ -32,7 +32,7 @@ SimpleIoT
     sp
     rng
     pairing
-    mp
+    hmp
     gdp
     ccp
 

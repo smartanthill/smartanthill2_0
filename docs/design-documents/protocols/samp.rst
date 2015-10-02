@@ -31,6 +31,8 @@ SmartAnthill Mesh Protocol (SAMP)
 
 :Version:   v0.0.23
 
+**IMPORTANT: This document is obsolete. Please DO NOT modify it. Please refer to** :ref:`siot_hmp` **for an up to date version.**
+
 *NB: this document relies on certain terms and concepts introduced in* :ref:`saoverarch` *and* :ref:`saprotostack` *documents, please make sure to read them before proceeding.*
 
 SAMP is a part of SmartAnthill 2.0 protocol stack (TODO: insert). It belongs to Level 3 of OSI/ISO Network Model, and is responsible for routing packets within SmartAnthill mesh network.

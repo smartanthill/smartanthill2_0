@@ -27,7 +27,7 @@
 SimpleIoT Pairing
 =================
 
-:Version:   v0.1
+:Version:   0.1a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` *document, please make sure to read it before proceeding.*
 
@@ -158,7 +158,7 @@ Pairing-Ready-Pseudo-Response: **|\ ENTROPY-NEEDED-SIZE \|**
 
 where ENTROPY-NEEDED-SIZE is an Encoded-Unsigned-Int<max=2> field specifying amount of needed entropy in bytes.
 
-Pairing-Ready-Pseudo-Response is not really a response, but a request from Device side which initiates pairing sequence. It is sent as a payload for a SIOT-CCP-OTA-PAIRING-RESPONSE message (which in turn initiates a new "packet chain"), with 2 "additional bits" being 0x0. If ENTROPY-NEEDED-SIZE is not zero, it indicates that Phase 1 of 'Entropy Gathering Procedure' (see below) is necessary before issuing a Pairing-Pre-Request from Client side.
+Pairing-Ready-Pseudo-Response is not really a response, but a request from Device side which initiates pairing sequence. It is sent as a payload for a CCP-OTA-PAIRING-RESPONSE message (which in turn initiates a new "packet chain"), with 2 "additional bits" being 0x0. If ENTROPY-NEEDED-SIZE is not zero, it indicates that Phase 1 of 'Entropy Gathering Procedure' (see below) is necessary before issuing a Pairing-Pre-Request from Client side.
 
 If Client is not in "awaiting pairing" mode, it MUST respond with Pairing-Error-Request with ERROR-CODE = ERROR_NOT_AWAITING_PAIRING.
 
@@ -166,13 +166,13 @@ Pairing-Pre-Request: **\| OTA-PROTOCOL-VERSION-NUMBER-MAJOR \| OTA-PROTOCOL-VERS
 
 where OTA-PROTOCOL-VERSION-NUMBER-\* are Encoded-Unsigned-Int<max=2> fields, CLIENT-RANDOM is a 16-byte field with crypto-random data, PROJECTED-NODE-ID is an Encoded-Unsigned-Int<max=2> field, containing NODE-ID which Client intends to assign to the Device if pairing is successful, and CLIENT-OTA-AND-SIOT-SP-CAPABILITIES TBD. 
 
-Pairing-Pre-Request is sent as a payload for a SimpleIoT/CCP SIOT-CCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SIOT-CCP-OTA-PAIRING-REQUEST message being 0x0.
+Pairing-Pre-Request is sent as a payload for a SimpleIoT/CCP CCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for CCP-OTA-PAIRING-REQUEST message being 0x0.
 
 Pairing-Pre-Response: **\| ENTROPY-NEEDED-SIZE \| OPTIONAL-DEVICE-RANDOM \| OPTIONAL-DEVICE-BUS-TYPE \| OPTIONAL-DEVICE-INTRABUS-ID-SIZE \| OPTIONAL-DEVICE-INTRABUS-ID \| OPTIONAL-DEVICE-OTA-AND-SIOT-SP-CAPABILITIES \|**
 
 where ENTROPY-NEEDED-SIZE is an Encoded-Unsigned-Int<max=2> field, OPTIONAL-DEVICE-RANDOM is an optional 32-byte field, OPTIONAL-DEVICE-BUS-TYPE is an Encoded-Unsigned-Int<max=1> field representing a enum of bus types (TBD), OPTIONAL-DEVICE-INTRABUS-ID-SIZE is an Encoded-Unsigned-Int<max=1> field, representing size of OPTIONAL-DEVICE-INTRABUS-ID field in bytes, OPTIONAL-DEVICE-INTRABUS-ID depends on the bus type, and OPTIONAL-DEVICE-OTA-AND-SIOT-SP-CAPABILITIES (format TBD); all the OPTIONAL-\* fields are present only if this Pairing-Pre-Response packet is the first such packet in current "pairing" exchange.
 
-Pairing-Pre-Response is sent as a payload for a SIOT-CCP SIOT-CCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for SIOT-CCP-OTA-PAIRING-RESPONSE message being 0x1.
+Pairing-Pre-Response is sent as a payload for SimpleIoT/CCP CCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for CCP-OTA-PAIRING-RESPONSE message being 0x1.
 
 NB: to comply with key generation requirements as specified in :ref:`siot_rng` document, Device MUST request at least amount of entropy which is equal to the `b` parameter size for DH key exchange; however, Device MAY request more entropy (up to 256 extra bytes per pairing attempt, which requests MAY be split into packets as small as 1-byte) - for example, to initialize it's own Fortuna generator. 
 
@@ -182,7 +182,7 @@ Pairing-Entropy-Provided-Request: **\| ERROR-CODE \| ENTROPY \|**
 
 where ERROR-CODE is an Encoded-Unsigned-Int<max=2> field, equal to zero, and ENTROPY is an arbitrary-length field with cryptographically safe random data. 
 
-Pairing-Entropy-Provided-Request is sent as a payload for a SIOT-CCP SIOT-CCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SIOT-CCP-OTA-PAIRING-REQUEST message being 0x1. Note that "additional bits" for Pairing-Entropy-Provided-Request are the same as for Pairing-Error-Request, and they're distinguished by the value of ERROR-CODE field.
+Pairing-Entropy-Provided-Request is sent as a payload for SimpleIoT/CCP CCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for CCP-OTA-PAIRING-REQUEST message being 0x1. Note that "additional bits" for Pairing-Entropy-Provided-Request are the same as for Pairing-Error-Request, and they're distinguished by the value of ERROR-CODE field.
 
 Client MAY supply less entropy than it was requested (and SHOULD do it in case if requested data potentially exceeds MTU); in such a case, Device SHOULD request more entropy via replying with an appropriate message with a non-zero ENTROPY-NEEDED-SIZE.
 
@@ -192,7 +192,7 @@ Pairing-Error-Request: **\| ERROR-CODE \|**
 
 where ERROR-CODE is an Encoded-Unsigned-Int<max=2> field, never equal to zero. 
 
-Pairing-Error-Request is sent as a payload for a SimpleIoT/CCP SIOT-CCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SIOT-CCP-OTA-PAIRING-REQUEST message being 0x1. Note that "additional bits" for Pairing-Error-Request are the same as for Pairing-Entropy-Provided-Request, and they're distinguished by the value of ERROR-CODE field.
+Pairing-Error-Request is sent as a payload for SimpleIoT/CCP CCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for CCP-OTA-PAIRING-REQUEST message being 0x1. Note that "additional bits" for Pairing-Error-Request are the same as for Pairing-Entropy-Provided-Request, and they're distinguished by the value of ERROR-CODE field.
 
 Pairing-DH-Data-Request: **\| OPTIONAL-KEY-EXCHANGE-TYPE \| DH-REQUEST-PART \|**
 
@@ -214,19 +214,19 @@ Supported OPTIONAL-KEY-EXCHANGE-TYPEs:
 
 TODO: double-check presence of any typical patterns in Z, and decide on split (first-half/second-half or even-bits/odd-bits)
 
-Pairing-DH-Data-Request is sent as a payload for a SimpleIoT/CCP SIOT-CCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SIOT-CCP-OTA-PAIRING-REQUEST message being 0x2.
+Pairing-DH-Data-Request is sent as a payload for SimpleIoT/CCP CCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for CCP-OTA-PAIRING-REQUEST message being 0x2.
 
 Pairing-DH-Data-Response: **\| DH-RESPONSE-PART \|**
 
 where DH-RESPONSE-PART is a field taking the whole packet; length of DH-RESPONSE-PART MUST be exactly the same as DH-REQUEST-PART in the incoming Pairing-DH-Data-Request message. DH-RESPONSE-PART represents first remaining (SimpleIoT-Endianness-wise) bytes of `B = g^b mod p` from DH key exchange (using SimpleIoT Endianness).
 
-Pairing-DH-Data-Response is sent as a payload for a SimpleIoT/CCP SIOT-CCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for SIOT-CCP-OTA-PAIRING-RESPONSE message being 0x2.
+Pairing-DH-Data-Response is sent as a payload for SimpleIoT/CCP CCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for CCP-OTA-PAIRING-RESPONSE message being 0x2.
 
 Pairing-Ok-Request: **\| OK-A-ENTROPY-CHECKSUM \| NODE-ID \|**
 
 where OK-A-ENTROPY-CHECKSUM is a 16-byte field containing result of SimpleIoT/SP-tag(nonce=(varying-part=1,direction=from-client-to-device),authenticated-data=All-Sent-ENTROPY-Combined,key=derived-SimpleIoT/SP-key), where nonce is constructed in the same way it is constructed in SimpleIoT/SP, and NODE-ID is an Encoded-Unsigned-Int<max=2> field containing SimpleIoT/MP node ID to be assigned to the Device. NODE-ID is conditional on OK-A-ENTROPY-CHECKSUM check described below, otherwise NODE-ID MUST be ignored.
 
-Pairing-Ok-Request is sent by Client when the last Pairing-DH-Data-Response is received; it is sent as a payload for a SimpleIoT/CCP SIOT-CCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for SIOT-CCP-OTA-PAIRING-RESPONSE message being 0x3.
+Pairing-Ok-Request is sent by Client when the last Pairing-DH-Data-Response is received; it is sent as a payload for SimpleIoT/CCP CCP-OTA-PAIRING-REQUEST message, with 2 "additional bits" for CCP-OTA-PAIRING-RESPONSE message being 0x3.
 
 On receiving Pairing-Ok-Request, Device calculated it's own DEVICE-OK-A-ENTROPY-CHECKSUM with derived-SimpleIoT/SP-key, compares it to received OK-A-ENTROPY-CHECKSUM. If the check is Ok, then Device calculates OK-B-ENTROPY-CHECKSUM (the same way as OK-A-ENTROPY-CHECKSUM is calculated, but with direction=from-device-to-client), and sends it back as a part of Part-Ok-Response; then Device changes pairing state into Pairing-MITM-Check, sets SimpleIoT/SP key to derived-SimpleIoT/SP-key for all future communications with Client, and sets next SimpleIoT/SP nonce varying-part (including the one stored in persistent storage) to 2.
 
@@ -236,7 +236,7 @@ Pairing-Ok-Response: **\| OK-B-ENTROPY-CHECKSUM \|**
 
 where OK-B-ENTROPY-CHECKSUM is a 16-byte field.
 
-Pairing-Ok-Response is sent as a payload for a SimpleIoT/CCP SIOT-CCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for SIOT-CCP-OTA-PAIRING-RESPONSE message being 0x3.
+Pairing-Ok-Response is sent as a payload for SimpleIoT/CCP CCP-OTA-PAIRING-RESPONSE message, with 2 "additional bits" for CCP-OTA-PAIRING-RESPONSE message being 0x3.
 
 On receiving Pairing-Ok-Response, Client calculates it's own CLIENT-OK-B-ENTROPY-CHECKSUM, compares it with received OK-B-ENTROPY-CHECKSUM. If everything is fine - "pairing" can be considered completed, and Client sets SimpleIoT/SP key (to be used by SimpleIoT/SP) to derived-SimpleIoT/SP-key for all future communications with this Device, and sets next SimpleIoT/SP nonce varying-part (including the one stored in persistent storage) to 2. After that, Client starts to perform MITM check (using MITM-Check-Program as described below).
 
@@ -254,13 +254,13 @@ Phase 1 (OPTIONAL, used only if Device ID needs to be generated, hardware-assist
 * Device sends Pairing-Ready-Pseudo-Response with non-zero ENTROPY-NEEDED-SIZE
 * Client replies with Pairing-Entropy-Provided request, sent as a broadcast (SHOULD be restricted to those Retransmitting Nodes which may reach the Device)
 * this Pairing-Ready-Pseudo-Response - Pairing-Entropy-Provided sequence is repeated until Device has sufficient entropy to generate Device ID (this is the same as for regular "pairing", as described in :ref:`siot_rng` document)
-* NB: during Phase 1, Pairing-Entropy-Provided packets from Client to Device are sent as SimpleIoT/MP From-Santa packets (see :ref:`siot_mp`) which do not distinguish between target Devices, so there is a chance that more than one Device obtains the same packet. However, these same packets will (with an overwhelming probability) lead to different states within Fortuna PRNGs on different Devices, which will allow to distinguish these (originally potentially indistinguishable) Devices.
+* NB: during Phase 1, Pairing-Entropy-Provided packets from Client to Device are sent as SimpleIoT/MP From-Santa packets (see :ref:`siot_hmp`) which do not distinguish between target Devices, so there is a chance that more than one Device obtains the same packet. However, these same packets will (with an overwhelming probability) lead to different states within Fortuna PRNGs on different Devices, which will allow to distinguish these (originally potentially indistinguishable) Devices.
 
 Phase 2:
 
 * Device sends Pre-Pairing-Response non-zero ENTROPY-NEEDED-SIZE, DEVICE-ID-FLAG set, and all Device ID-related fields.
 * Client replies with Pairing-Entropy-Provided request
-* NB: starting from Phase 2, all the packets from Client to Device are sent as SimpleIoT/MP Unicast packets (see :ref:`siot_mp`) and are addressed to specific Device (using Device ID from Phase 2).
+* NB: starting from Phase 2, all the packets from Client to Device are sent as SimpleIoT/MP Unicast packets (see :ref:`siot_hmp`) and are addressed to specific Device (using Device ID from Phase 2).
 
 Phase 3:
 

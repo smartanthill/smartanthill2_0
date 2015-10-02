@@ -27,7 +27,7 @@
 SimpleIoT Security Protocol (SimpleIoT/SP)
 ==========================================
 
-:Version:   v0.1
+:Version:   0.1a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` *document, please make sure to read it before proceeding.*
 
@@ -41,18 +41,18 @@ SimpleIoT/SP (SimpleIoT Security Protocol) aims to provide security guarantees f
 1.1. **Packet**. A unit of data exchange with other levels/protocols. For the sake of clarity two types of packets are distinguished:
 
      * **HLP packet**: a packet that is sent to or received from a higher-level protocol. HLP packet data is a payload for SimpleIoT/SP, as it will be discussed in more details below.
-     * **SimpleIoT/SP packet**:  a packet that is formed by SimpleIoT/SP and is sent to or received from the communication peer (using an underlying protocol).
-     * **Internally valid SimpleIoT/SP packet**: a packet that has passed authentication based solely on packet data (see also "intra-packet authentication").
+     * **SP packet**:  a packet that is formed by SimpleIoT/SP and is sent to or received from the communication peer (using an underlying protocol).
+     * **Internally valid SP packet**: a packet that has passed authentication based solely on packet data (see also "intra-packet authentication").
 
-1.2. **SimpleIoT/SP Packet structure**
+1.2. **SP Packet structure**
 
-SimpleIoT/SP packet structure looks as follows:
+SP packet structure looks as follows:
 
-**\| SimpleIoT/SP Header \| Security Tag \| Encrypted Data \|**
+**\| SP Header \| Security Tag \| Encrypted Data \|**
 
 where:
 
-  * **SimpleIoT/SP Header** is a non-encrypted part of the packet that contains flags and certain bits of the packet nonce. Header takes 6 bytes.
+  * **SP Header** is a non-encrypted part of the packet that contains flags and certain bits of the packet nonce. Header takes 6 bytes.
   * **Security Tag**: data related to encryption and authentication process. Security Tag takes 16 bytes.
   * **Encrypted Data**: encrypted data, which includes certain SimpleIoT/SP information as well as SimpleIoT/SP payload. The same data before encryption (or after decryption) is referred to as "Data Under Encryption
 
@@ -76,7 +76,7 @@ where:
 
 1.7. **Last Received Packet Signature**: [**TODO**: check whether it is indeed required]
 
-1.8. **Packet validation process**: a core task of SimpleIoT/SP main purpose of which is to ensure that a packet is actually received is from an intended communication partner, is not modified by a third party on the way, and its content (unless specified otherwise) is protected from reading by not indented parties. On the sending side of communication the packet validation process results in encryption and adding authentication data. On receiving side a process can logically be divided into two steps:
+1.8. **Packet validation process**: a core task of SimpleIoT/SP. Main purpose of the packet validation is to ensure that a packet is actually received is from an intended communication partner, is not modified by a third party on the way, and its content (unless specified otherwise) is protected from reading by not indented parties. On the sending side of communication the packet validation process results in encryption and adding authentication data. On receiving side a process can logically be divided into two steps:
 
   * **intra-packet authentication**, which is done using solely packet data such as respective headers, nonces, tags, etc, and not using NLW;
   * **in-sequence authentication**, which is based on comparison of a packet nonce Varying Part with the Nonce Lower Watermark.
@@ -92,7 +92,7 @@ The core of SimpleIoT/SP is packet encryption/decryption and authentication. The
 
   * Encryption method: AES-256
   * Tag size: 128 bit
-  * EAX Nonce size: 49 bit, in particular:
+  * EAX Nonce size: 49 bit, consisting of:
      
      * Nonce Varying Part: 47 bit [1]_
      * Destination Flag: 1 bit
@@ -100,7 +100,7 @@ The core of SimpleIoT/SP is packet encryption/decryption and authentication. The
 
 To reduce the amount of data transferred, Peer-Distinguishing Flag is not actually transferred but just appended to the packet header that actually contains only Nonce Varying Part and Destination Flag to get a Packet Full Nonce:
 
-  * SimpleIoT/SP Header size: 48 bit, in particular:
+  * SP Header: 48 bit, consisting of:
      
      * Nonce Varying Part: 47 bit
      * Destination Flag: 1 bit
@@ -110,8 +110,8 @@ To reduce the amount of data transferred, Peer-Distinguishing Flag is not actual
 .. [1] If 47 bit nonce VP is used, then different nonces will be enough for 10 years with packet frequency of 2.25 mks: 10*365*24*60*60*1000000/2^47 = 2.25
 
 
-2.1 SimpleIoT/SP Nonces
-^^^^^^^^^^^^^^^^^^^^^^^
+2.1 SP Nonces
+^^^^^^^^^^^^^
 
 In SimpleIoT/SP, nonce varying part is always increased, and never goes back. This is a critical requirement for SimpleIoT/SP to be secure (both to guarantee nonce being unique, which is required for EAX to be secure, and to avoid replay attacks).
 
@@ -143,7 +143,7 @@ Two devices, A and B, participate in packet exchange. Each packet sent is encryp
 4.1.1. How NFS / NLW pair works
 '''''''''''''''''''''''''''''''
 
-To avoid replay attacks nonces are commonly used to distinguish between an original message and a message with otherwise the same content that is being replayed. A problem with nonces is to check that a particular value is actually new and has not yet been used ever before. To address this problem SimpleIoT/SP treats VP of nonces as numerical values and compares a nonce VP from a received packet with a current value of the NLW. If the value of nonce VP is greater than a current value of the NLW, the nonce is considered as new; in this case the value of NLW is set to the value of the nonce VP, and its reuse becomes impossible.
+To avoid replay attacks nonces are commonly used to distinguish between an original message and a message with otherwise the same content that is being replayed. A problem with nonces is to check that a particular value is actually new and has not yet been used ever before. To address this problem, SimpleIoT/SP treats VP of nonces as numerical values and compares a nonce VP from a received packet with a current value of the NLW. If the value of nonce VP is greater than a current value of the NLW, the nonce is considered as new; in this case the value of NLW is set to the value of the nonce VP, and its reuse becomes impossible.
 
 To be economical with the set of values that are greater than a current value of NLW (within a certain range), it is desired that a value of a new nonce VP received be as close (from above) to NLW as possible, ideally, greater by 1. NFS is used to keep track of nonces on the sending side. Initially (for example, at the same time when secret keys are exchanged between the sides) communication partners set NLW on receiving side to the same value as NFS on sending side (namely, NLW = 0, and NFS = 0). Before a new packet is being sent, NFS is incremented, and packet nonce VP is set to a value of NFS. On the receiving side, upon reception of the packet, the value of NLW will become the value of the nonce VP, that is, again equal to NFS on the sending side. The process may be continued until all space of NFS/NLW values is exhausted.
 
@@ -159,8 +159,8 @@ If an Error "Old Nonce" Message is received, the receiving party compares its NF
 TODO: exact format of 'Error "Old Nonce" Message'
 
 
-5. SimpleIoT/SP padding
------------------------
+5. SP padding
+-------------
 
 5.1. SimpleIoT/SP data under encryption and payload
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -209,10 +209,10 @@ To implement it, on receiving such a request SimpleIoT/SP MUST do the following:
 
 TODO: specify handling of enforce-pad-to for the layers between SimpleIoT/SP and SimpleIoT/CCP.
 
-6. SimpleIoT/SP data
---------------------
+6. SP state
+-----------
 
-For its operations SimpleIoT/SP uses the following data:
+For its operations SimpleIoT/SP keeps the following state on both sides of communication:
 
 - Nonce Lower Watermark (NLW)
 - Nonce to use For Sending (NFS)
@@ -223,19 +223,19 @@ For its operations SimpleIoT/SP uses the following data:
 
 There are three events that SimpleIoT/SP processes: 
 
- 1. receiving a SimpleIoT/SP packet from the communication peer
+ 1. receiving a SP packet from the communication peer
  2. receiving a packet from a higher level protocol (HLP packet)
  3. receiving a request from a higher level for nonce variable part
 
 7.1. Receiving an HLP packet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A packet from a higher level protocol is received together with a nonce VP. After a received nonce VP is ensured to be numerically greater than NLS, this packet is encrypted and authentication data is added using a new nonce based on a received nonce VP, a resulting SimpleIoT/SP packet is to be passed to the communication peer (using underlying protocol).
+A packet from a higher level protocol is received together with a nonce VP. After a received nonce VP is ensured to be numerically greater than NLS, this packet is encrypted and authentication data is added using a new nonce based on a received nonce VP, a resulting SP packet is to be passed to the communication peer (using underlying protocol).
 
-7.2. Receiving a SimpleIoT/SP packet
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+7.2. Receiving an SP packet
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A SimpleIoT/SP packet from the communication peer is received (via underlying protocol). A packet can be:
+An SP packet from the communication peer is received (via underlying protocol). The packet can be:
 
   * valid new packet, which means that the packet data passed validation process, and packet nonce VP is greater than the Nonce Lower Watermark;
   * old-nonce packet, an otherwise valid packet with a nonce VP less than the Nonce Lower Watermark, which means either de-synchronization in communication, or an attack attempt
@@ -261,19 +261,19 @@ Further details of event processing are placed below.
 A packet from a higher level protocol is received together with a nonce VP. Nonce VP is compared to the current value of NFS.
 
   * Nonce VP is less than or equal to NFS: no processing is done and an error is reported [TODO: should we provide more details on what such error should result in]
-  * Nonce VP is greater than NFS: NFS is set to the value of nonce VP; HLP packet is encrypted and authenticated using a new nonce based on a received nonce VP to form a SimpleIoT/SP packet. This SimpleIoT/SP packet is sent to the communication peer using underlying protocol.
+  * Nonce VP is greater than NFS: NFS is set to the value of nonce VP; HLP packet is encrypted and authenticated using a new nonce based on a received nonce VP to form an SP packet. This SP packet is sent to the communication peer using underlying protocol.
 
-8.2. Receiving a SimpleIoT/SP packet
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+8.2. Receiving an SP packet
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-On receipt of a SimpleIoT/SP packet, first, an intra-packet authentication is performed as follows:
+On receipt of a SP packet, first, an intra-packet authentication is performed as follows:
 
 * TODO!
 
 Then:
 
   * if intra-packet authentication has failed: the packet is silently dropped as being either corrupted or an attacker's packet;
-  * if intra-packet authentication is passed: it can be either an error message packet directed to SimpleIoT/SP itself, or a "regular" packet with payload intended for a higher level protocol.
+  * if intra-packet authentication is passed: it can be either an error message packet directed to SP itself, or a "regular" packet with payload intended for a higher level protocol.
 
      + if a packet is with Error Old Nonce Message [+++structure and detection]: packet nonce VP is not compared to NLW (reason: replay attack is impossible since NFS cannot be decreased as a result of this message, and performing comparison may lead to a deadlock); a value of the lowest possible valid nonce from the packet is compared to the current value of NFS.
 
@@ -294,12 +294,12 @@ A Nonce VP is generated based on a current value of NLS so that the numerical va
 
 
 
-9. Payload Size and SimpleIoT/SP Packet Size
---------------------------------------------
+9. Payload Size and SP Packet Size
+----------------------------------
 
 As SimpleIoT/SP is using 48-bit (= 6 bytes) nonce, a block cipher (AES128) with a block size of 128 bits (=16 bytes), and tag size is chosen as maximum 128 bits, it means that SimpleIoT/SP packet size is always *(6+16+k\*16)=(22+k\*16)*, where *k >= 1*. 
 
-The following table shows relations between SimpleIoT/SP packet sizes and SimpleIoT/SP payload [2]_ not including "remaining 7 bits" part (that is, a size of byte sequence part only):
+The following table shows relations between SP packet sizes and SP payload [2]_ not including "remaining 7 bits" part (that is, a size of byte sequence part only):
 
 +-------------------------+----------------------------------+
 | SimpleIoT/SP packet     | SimpleIoT/SP payload, bytes      |

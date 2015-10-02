@@ -27,7 +27,7 @@
 SimpleIoT Random Number Generation and Key Generation
 =====================================================
 
-:Version:   v0.1
+:Version:   0.1a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` *document, please make sure to read it before proceeding.*
 
