@@ -27,7 +27,7 @@
 SimpleIoT Data Link Protocol over Bluetooth Low Energy HCI (SimpleIoT/DLP-BTLE-HCI)
 ===================================================================================
 
-:Version:   0.1.1a
+:Version:   0.1.1b
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` * and * :ref:`siot_hmp` *documents, please make sure to read it before proceeding.*
 
@@ -48,7 +48,7 @@ SimpleIoT/DLP-BTLE-HCI is a TERMINAL-ADVERTISING protocol, as defined in :ref:`s
 MAC Addresses
 -------------
 
-Due to software nature of SimpleIoT/DLP-BTLE-HCI, whenever MAC address is required by HCI equipment manufacturer, it MUST be generated randomly out of the following "Locally Administered MAC Addresses" (during either "Zero Pairing", or crypto-safe RNG as defined in :ref:`siot_rng`): 
+Due to software nature of SimpleIoT/DLP-BTLE-HCI, whenever MAC address is required by HCI equipment manufacturer, it MUST be generated randomly out of the following "Locally Administered MAC Addresses" (either during "Zero Pairing", or using crypto-safe RNG as defined in :ref:`siot_rng`): 
 
 X6-XX-XX-XX-XX-XX
 
