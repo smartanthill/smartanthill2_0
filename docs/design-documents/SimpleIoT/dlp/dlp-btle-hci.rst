@@ -27,7 +27,7 @@
 SimpleIoT Data Link Protocol over Bluetooth Low Energy HCI (SimpleIoT/DLP-BTLE-HCI)
 ===================================================================================
 
-:Version:   0.1.1
+:Version:   0.1.1a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` * and * :ref:`siot_hmp` *documents, please make sure to read it before proceeding.*
 
@@ -53,6 +53,8 @@ Due to software nature of SimpleIoT/DLP-BTLE-HCI, whenever MAC address is requir
 X6-XX-XX-XX-XX-XX
 
 where each 'X' represents a random hex digit. 
+
+*Side Note: in general, X2-\*, XA-\*, and XE-\* addresses are also "Locally Administered MAC Addresses", but we've chosen to use only X6-\* for now.*
 
 Advertising
 -----------
