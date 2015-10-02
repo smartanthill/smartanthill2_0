@@ -27,7 +27,7 @@
 SimpleIoT Heteroheneous Mesh Protocol (SimpleIoT/HMP)
 =====================================================
 
-:Version:   0.1.1
+:Version:   0.1.1a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` *document, please make sure to read it before proceeding.*
 
@@ -554,7 +554,7 @@ Some of underlying SimpleIoT/DLP-\* protocols MAY be designated as TERMINAL-ADVE
   + If, according to the normal HMP logic described above, a need arises to send Hmp-From-Santa packet with such a BUS-TYPE, this BUS-TYPE is simply skipped.
   + If, as a result of such filtering, BUS-TYPE-LIST of Hmp-From-Santa packet becomes empty, Hmp-From-Santa packet is not sent at all
 
-* Whenever TERMINAL-ADVERTISING Device has its transmitter turned on, but it has no connection (as defined in respective SimpleIoT/DLP-\* document) to the next hop, it starts to "advertise" itself (as defined in respective SimpleIoT/DLP-\* document), using an Hmp-To-Santa packet as a payload. This Hmp-To-Santa packet MAY be a packet-which-needs-to-be-delivered-to-Root, or MAY be an empty packet (TODO: define). 
+* Whenever TERMINAL-ADVERTISING Device has its transmitter turned on, but it has no connection (as defined in respective SimpleIoT/DLP-\* document) to the next hop, it starts to "advertise" itself (as defined in respective SimpleIoT/DLP-\* document), using an Hmp-To-Santa packet as a payload. This Hmp-To-Santa packet MAY be a packet-which-needs-to-be-delivered-to-Root, or MAY be an Hmp-To-Santa packet with an empty payload (TODO: define). 
 
   + All Retransmitting Devices which hear this "advertised" Hmp-To-Santa packet, process it as a normal Hmp-To-Santa packet
   + When Hmp-Forward-To-Santa packets reach Root:

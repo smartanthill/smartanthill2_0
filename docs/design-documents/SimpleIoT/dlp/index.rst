@@ -22,17 +22,11 @@
     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
     DAMAGE
 
-SimpleIoT
-=========
+SimpleIoT/DLP\* Protocols
+=========================
 
 .. toctree::
     :maxdepth: 2
 
-    SimpleIoT
-    sp
-    rng
-    pairing
-    hmp
-    gdp
-    ccp
-    dlp/index
+    dlp-btle-hci
+
