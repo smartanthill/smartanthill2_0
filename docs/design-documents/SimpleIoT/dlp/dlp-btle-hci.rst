@@ -27,7 +27,9 @@
 SimpleIoT Data Link Protocol over Bluetooth Low Energy HCI (SimpleIoT/DLP-BTLE-HCI)
 ===================================================================================
 
-:Version:   0.1
+:Version:   0.1a
+
+**TODO: IEEE MAC**
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` * and * :ref:`siot_hmp` *documents, please make sure to read it before proceeding.*
 
