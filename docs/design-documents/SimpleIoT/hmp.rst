@@ -27,7 +27,7 @@
 SimpleIoT Heteroheneous Mesh Protocol (SimpleIoT/HMP)
 =====================================================
 
-:Version:   0.1
+:Version:   0.1.1
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` *document, please make sure to read it before proceeding.*
 
@@ -543,6 +543,28 @@ Packet Urgency
 
 From SimpleIoT/HMP point of view, all upper-layer-protocol packets can have one of three urgency levels. If the packet has urgency URGENCY_LAZY, it is first sent as a Hmp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent with GUARANTEED-DELIVERY). If the packet has urgency URGENCY_QUITE_URGENT, it is first sent as a Hmp-Unicast-Data-Packet with GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent as a Hmp-\*-Santa-\* packet). If the packet has urgency URGENCY_TRIPLE_GALOP, 
 then it is first sent as a Hmp-From-Santa-Data-Packet or Hmp-To-Santa-Data-Packet (depending on source being Root or Device). 
+
+Handling of TERMINAL-ADVERTISING Underlying Protocols
+-----------------------------------------------------
+
+Some of underlying SimpleIoT/DLP-\* protocols MAY be designated as TERMINAL-ADVERTISING ones. For these protocols, some of the handling is different from described above. In particular:
+
+* Hmp-From-Santa packets are never sent with BUS-TYPE being a TERMINAL-ADVERTISING bus. 
+
+  + If, according to the normal HMP logic described above, a need arises to send Hmp-From-Santa packet with such a BUS-TYPE, this BUS-TYPE is simply skipped.
+  + If, as a result of such filtering, BUS-TYPE-LIST of Hmp-From-Santa packet becomes empty, Hmp-From-Santa packet is not sent at all
+
+* Whenever TERMINAL-ADVERTISING Device has its transmitter turned on, but it has no connection (as defined in respective SimpleIoT/DLP-\* document) to the next hop, it starts to "advertise" itself (as defined in respective SimpleIoT/DLP-\* document), using an Hmp-To-Santa packet as a payload. This Hmp-To-Santa packet MAY be a packet-which-needs-to-be-delivered-to-Root, or MAY be an empty packet (TODO: define). 
+
+  + All Retransmitting Devices which hear this "advertised" Hmp-To-Santa packet, process it as a normal Hmp-To-Santa packet
+  + When Hmp-Forward-To-Santa packets reach Root:
+    
+    - Root chooses "the best" route, and assumes that all the inter-hops connections are symmetrical (i.e. path from A to B always implies path from B to A).
+    - Root updates Routing Tables along the chosen route (the same way as for non-TERMINAL-ADVERTISING Devices)
+
+      - Retransmitting Device which is adjacent to the TERMINAL-ADVERTISING Device which has advertised, established connection with the Device (as defined in respective SimpleIoT/DLP-\* document). If connection cannot be established, Retransmitting Device sends a TODO Hmp-Routing-Error-Packet to Root.
+
+      - If, at any point, connection is broken (as defined in respective SimpleIoT/DLP-\* document), Retransmitting Device sends a TODO Hmp-Routing-Error-Packet to Root.
 
 PHY quality measurement over SimpleIoT/HMP
 ------------------------------------------
