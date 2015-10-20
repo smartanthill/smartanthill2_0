@@ -131,6 +131,7 @@ class CommStackClientFactory(protocol.ClientFactory):
         assert isinstance(data, bytearray)
         data.insert(0, 0x01)  # first packet in chain
         data.insert(1, 0x02)  # SACCP_NEW_PROGRAM
+        data.insert(2, self.device_id)  # destination id
         self._protocol.send_data(
             CommStackClientProtocol.PACKET_DIRECTION_CLIENT_TO_COMMSTACK,
             data
