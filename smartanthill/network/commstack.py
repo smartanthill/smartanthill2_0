@@ -129,9 +129,9 @@ class CommStackClientFactory(protocol.ClientFactory):
         self._source_id = message.source
         data = message.data
         assert isinstance(data, bytearray)
-        data.insert(0, 0x01)  # first packet in chain
-        data.insert(1, 0x02)  # SACCP_NEW_PROGRAM
-        data.insert(2, self.device_id)  # destination id
+        data.insert(0, self.device_id)  # destination id
+        data.insert(1, 0x01)  # first packet in chain
+        data.insert(2, 0x02)  # SACCP_NEW_PROGRAM
         self._protocol.send_data(
             CommStackClientProtocol.PACKET_DIRECTION_CLIENT_TO_COMMSTACK,
             data
