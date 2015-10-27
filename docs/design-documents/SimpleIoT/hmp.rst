@@ -27,7 +27,7 @@
 SimpleIoT Heteroheneous Mesh Protocol (SimpleIoT/HMP)
 =====================================================
 
-:Version:   0.1.1a
+:Version:   0.1.2
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` *document, please make sure to read it before proceeding.*
 
@@ -108,12 +108,12 @@ TODO: no mobile non-Retransmitting (TODO reporting 'mobile' in pairing CAPABILIT
 Broken Routing Tables
 ^^^^^^^^^^^^^^^^^^^^^
 
-Despite that Routing Tables are updated only by authenticated upper-layer messages, SimpleIoT/HMP does recognize that Routing Tables may become broken during operation. To deal with it, two separate procedures are used. One such procedure is intended for destination Devices (either Retransmitting or non-Retransmitting), and is described within "Unicast" section below. Another procedure is intended for Retransmitting Devices, and is described in "Guaranteed Unicast" section below.
+Despite that Routing Tables are updated only by authenticated upper-layer messages, SimpleIoT/HMP does recognize that Routing Tables may become broken during operation. To deal with it, two separate procedures are used. One such procedure is intended for destination Devices (either Retransmitting or non-Retransmitting), and is described within "Unicast" section below. Another procedure is intended for Retransmitting Devices, and is described in "Acknowledged Unicast" section below.
 
 Communicating Routing Table Information over SimpleIoT/CCP
 ----------------------------------------------------------
 
-As described above, SimpleIoT/HMP relies on Routing Table information being available on all relevant Retransmitting Nodes. To ensure that this information is transmitted in secure manner, it SHOULD be transmitted by an upper-layer secure (and guaranteed-delivery) protocol such as SimpleIoT/CCP. As described above, this doesn't create a chicken-and-egg problem, as each Retransmitting Node can be accessed via SimpleIoT/HMP regardless of Routing Tables present (or even badly broken) on the Retransmitting Node in question; and as soon as Retransmitting Node can be accessed via SimpleIoT/HMP - upper-layer protocol such as SimpleIoT/CCP can be used to update Routing Table on the Retransmitting Node. 
+As described above, SimpleIoT/HMP relies on Routing Table information being available on all relevant Retransmitting Nodes. To ensure that this information is transmitted in secure manner, it SHOULD be transmitted by an upper-layer secure (and acknowledged-delivery) protocol such as SimpleIoT/CCP. As described above, this doesn't create a chicken-and-egg problem, as each Retransmitting Node can be accessed via SimpleIoT/HMP regardless of Routing Tables present (or even badly broken) on the Retransmitting Node in question; and as soon as Retransmitting Node can be accessed via SimpleIoT/HMP - upper-layer protocol such as SimpleIoT/CCP can be used to update Routing Table on the Retransmitting Node. 
 
 Technically, protocol for communicating Routing Table information is not a part of SimpleIoT/HMP. However, in this section we provide an example implementation of such protocol over CCP_PHY_AND_ROUTING_DATA packets.
 
@@ -211,8 +211,8 @@ Recovery from route changes/failures is vital for any mesh protocol. SimpleIoT/H
 * by default, most of the transfers are not acknowledged at SimpleIoT/HMP level (go as Hmp-Unicast-Data-Packet without ACKNOWLEDGED-DELIVERY flag)
 * however, upper-layer protocol (normally SimpleIoT/GDP) issues it's own retransmits and passes retransmit number to SimpleIoT/HMP
 * on retransmit #TODO, SimpleIoT/HMP switches ACKNOWLEDGED-DELIVERY flag on
-* when ACKNOWLEDGED-DELIVERY flag is set, SimpleIoT/HMP uses 'Guaranteed Uni-Cast' mode described below
-* if 'Guaranteed Uni-Cast' fails for M times (as described below), link failure is assumed
+* when ACKNOWLEDGED-DELIVERY flag is set, SimpleIoT/HMP uses 'Acknowledged Uni-Cast' mode described below
+* if 'Acknowledged Uni-Cast' fails for M times (as described below), link failure is assumed
 * link failure (as described above) is reported to the Root, so it can initiate route discovery to the node on the other side of the failed link (using Hmp-From-Santa-Data-Packet)
 
   + if link failure is detected from the side of the link which is close to Root, link failure reporting is done by sending Routing-Error (which always come in ACKNOWLEDGED-DELIVERY mode) back to Root
@@ -290,15 +290,15 @@ Processing on Destination and Broken Routing Table
 As described above, SimpleIoT/HMP does recognize that Routing Tables may become broken during operation. On a destination Device, whenever Device attempts retransmit #TODO of the message, Device sends it as a Hmp-To-Santa message, ignoring local Routing Table completely; TODO: add optional-header with RT-CHECKSUM for Hmp-To-Santa messages?
 
 
-Guaranteed Uni-Cast
-^^^^^^^^^^^^^^^^^^^
+Acknowledged Uni-Cast
+^^^^^^^^^^^^^^^^^^^^^
 
-As described in detail below, Hmp-Unicast-Data-Packets, except for Hmp-Unicast-Data-Packets without ACKNOWLEDGED-DELIVERY flag and Hmp-Loop-Ack-Packet, are sent in 'Guaranteed Uni-Cast' mode. 
+As described in detail below, Hmp-Unicast-Data-Packets, except for Hmp-Unicast-Data-Packets without ACKNOWLEDGED-DELIVERY flag and Hmp-Loop-Ack-Packet, are sent in 'Acknowledged Uni-Cast' mode. 
 
 Processing by Retransmitting Devices
 ''''''''''''''''''''''''''''''''''''
 
-If packet is to be delivered to the next hop in 'Guaranteed' mode by Retransmitting Device, it is processed in the following manner:
+If packet is to be delivered to the next hop in 'Acknowledged' mode by Retransmitting Device, it is processed in the following manner:
 
 If the packet already has LOOP-ACK extra header (see below), and next hop has NEXT-HOP-ACKS flag set in the Routing Table, then Retransmitting Device:
 
@@ -377,7 +377,7 @@ Promiscuous Mode Processing
 
 Retransmitting Devices SHOULD, wherever possible, to listen to all the packets in "promiscuous mode". It allows for the following processing:
 
-* if Retransmitting Device hears a packet addressed (at underlying protocol level) to another ("next-hop") Retransmitting Device (which is not Root), and it has a RETRANSMIT-ON-NO-RETRANSMIT flag in Routing Table for the route entry for that Retransmitting Device, and after a TODO timeout it doesn't hear a retransmit (neither full nor "partially correct") by next retransmitting the same packet (TODO define "the same packet"), it MUST try to send a TODO packet to the next-hop Retransmitting Device (in "guaranteed mode") - receiving Device MUST forward the packet to the destination, and send (or attach as a Combined-Packet if the target is Root) a TODO Routing-Error to the Root. If this attempt by our Retransmitting Device doesn't succeed - our Retransmitting Device MUST send a TODO Routing-Error packet (containing the packet as a payload) to the Root.
+* if Retransmitting Device hears a packet addressed (at underlying protocol level) to another ("next-hop") Retransmitting Device (which is not Root), and it has a RETRANSMIT-ON-NO-RETRANSMIT flag in Routing Table for the route entry for that Retransmitting Device, and after a TODO timeout it doesn't hear a retransmit (neither full nor "partially correct") by next retransmitting the same packet (TODO define "the same packet"), it MUST try to send a TODO packet to the next-hop Retransmitting Device (in "acknowledged mode") - receiving Device MUST forward the packet to the destination, and send (or attach as a Combined-Packet if the target is Root) a TODO Routing-Error to the Root. If this attempt by our Retransmitting Device doesn't succeed - our Retransmitting Device MUST send a TODO Routing-Error packet (containing the packet as a payload) to the Root.
 
 
 OPTIONAL-EXTRA-HEADERS
@@ -432,7 +432,7 @@ If a packet is addressed to the Root (DIRECTION-FLAG is not set), it MUST NOT co
 
 If IS-PROBE flag is set, then PAYLOAD is treated differently. When destination receives Hmp-Unicast-Data-Packet with IS-PROBE flag set, destination doesn't pass PAYLOAD to upper-layer protocol. Instead, destination parses PAYLOAD as follows: **\| PROBE-TYPE \| OPTIONAL-PROBE-EXTRA-HEADERS \| PROBE-PAYLOAD \|** where PROBE-TYPE is 1-byte bitfield substrate, with bits [0..2] being either PROBE_UNICAST or PROBE_TO_SANTA, bit[3] being PROBE-EXTRA-HEADERS-PRESENT, and bits [4..7] reserved (MUST be zeros); OPTIONAL-PROBE-EXTRA-HEADERS are similar to OPTIONAL-EXTRA-HEADERS, and PROBE-PAYLOAD takes the rest of the PAYLOAD; if PROBE-TYPE==PROBE_UNICAST, then destination Device sends Hmp-Unicast-Data-Packet back to Root, with PAYLOAD copied from PROBE-PAYLOAD, and extra headers formed from PROBE-EXTRA-HEADERS, "as if" this packet is sent in reply to IS-PROBE packet by upper layer, but adding IS-PROBE flag (as a part of GENERIC-EXTRA-FLAGS extra header). If PROBE-TYPE==PROBE_TO_SANTA, destination Device sends a Hmp-To-Santa-Data-Or-Error-Packet, with PAYLOAD copied from PROBE-PAYLOAD, "as if" the packet is sent in reply to IS-PROBE packet by upper layer, but adding IS-PROBE flag (as a part of GENERIC-EXTRA-FLAGS extra header).
 
-Hmp-Unicast-Data-Packet is processed as specified in Uni-Cast Processing section above; if ACKNOWLEDGED-DELIVERY flag is set, packet is sent in 'Guaranteed Uni-Cast' mode. In any case, LAST-HOP field is updated every time the packet is re-sent. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
+Hmp-Unicast-Data-Packet is processed as specified in Uni-Cast Processing section above; if ACKNOWLEDGED-DELIVERY flag is set, packet is sent in 'Acknowledged Uni-Cast' mode. In any case, LAST-HOP field is updated every time the packet is re-sent. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
 
 If Retransmitting Device receives a "partially correct" Hmp-Unicast-Data-Packet, addressed to itself, and it has NACK-PREV-HOP flag set for the source link within Routing Table, it MUST send a Hmp-Nack-Packet back to the source of packet.
 
@@ -481,7 +481,7 @@ Hmp-To-Santa-Data-Or-Error-Packet is a packet intended from Device (either Retra
 
 In any case, if Hmp-To-Santa-Data-Or-Error-Packet is sent in response to a Hmp-From-Santa-Data-Packet flag (regardless of packet being first or not from SimpleIoT/GDP point of view), Device MUST provide TOSANTA-EXTRA-HEADER-LAST-INCOMING-HOP extra header, filling it from LAST-HOP field of the Hmp-From-Santa-Data-Packet.
 
-On receiving Hmp-To-Santa-Data-Or-Error-Packet, Retransmitting Device sends a Hmp-Forward-To-Santa-Data-Or-Error-Packet towards Root, in 'Guaranteed Uni-Cast' mode. To avoid congestion at this point, each Retransmitting Device delays according for FORWARD-TO-SANTA-DELAY (using FORWARD-TO-SANTA-DELAY-UNIT for calculations), where FORWARD-TO-SANTA-DELAY and FORWARD-TO-SANTA-DELAY-UNIT are the values which are locally stored on Retransmitting Device.
+On receiving Hmp-To-Santa-Data-Or-Error-Packet, Retransmitting Device sends a Hmp-Forward-To-Santa-Data-Or-Error-Packet towards Root, in 'Acknowledged Uni-Cast' mode. To avoid congestion at this point, each Retransmitting Device delays according for FORWARD-TO-SANTA-DELAY (using FORWARD-TO-SANTA-DELAY-UNIT for calculations), where FORWARD-TO-SANTA-DELAY and FORWARD-TO-SANTA-DELAY-UNIT are the values which are locally stored on Retransmitting Device.
 
 Hmp-Forward-To-Santa-Data-Or-Error-Packet: **\| HMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| NEXT-HOP \| FORWARDED-SOURCE-ID \| REQUEST-ID \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
@@ -489,13 +489,13 @@ where HMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-I
 
 If NEXT-HOP field doesn't match ID of the receiving Device - the packet is ignored.
 
-Hmp-Forward-To-Santa-Data-Or-Error-Packet is sent by Retransmitting Device when it receives Hmp-To-Santa-Data-Or-Error-Packet (with TTL=MAX_TTL-1 to account for original Hmp-To-Santa-Data-Or-Error-Packet). On receiving Hmp-Forward-To-Santa-Data-Or-Error-Packet by a Retransmitting Device, it is  processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Guaranteed Uni-Cast' mode.
+Hmp-Forward-To-Santa-Data-Or-Error-Packet is sent by Retransmitting Device when it receives Hmp-To-Santa-Data-Or-Error-Packet (with TTL=MAX_TTL-1 to account for original Hmp-To-Santa-Data-Or-Error-Packet). On receiving Hmp-Forward-To-Santa-Data-Or-Error-Packet by a Retransmitting Device, it is  processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Acknowledged Uni-Cast' mode.
 
 Hmp-Routing-Error-Packet: **\| HMP-ROUTING-ERROR-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| ERROR-CODE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
 where HMP-ROUTING-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant HMP_ROUTING_ERROR_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above, ERROR-CODE is an Encoded-Unsigned-Int<max=1> field, HEADER-CHECKSUM is a header HMP-CHECKSUM (see HMP-CHECKSUM section for details), PAYLOAD is TODO, and FULL-CHECKSUM is a full-packet HMP-CHECKSUM.
 
-On receiving Hmp-Routing-Error-Packet, it is processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Guaranteed Uni-Cast' mode.
+On receiving Hmp-Routing-Error-Packet, it is processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Acknowledged Uni-Cast' mode.
 
 Hmp-Ack-Nack-Packet: **\| HMP-ACK-NACK-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| Target-Address \| NUMBER-OF-ERRORS \| ACK-CHESKSUM \| HEADER-CHECKSUM \| OPTIONAL-DELAY-UNIT \| OPTIONAL-DELAY-PASSED \| OPTIONAL-DELAY-LEFT \|**
 
@@ -503,9 +503,9 @@ where HMP-ACK-NACK-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate,
 
 NUMBER-OF-ERRORS field allows to provide feedback about connection quality to sender by receiver; it is a normalized number of bit errors which have been error-corrected when the packet being acknowledged, was received by receiver. If error correction is not employed, this field SHOULD be zero. This information SHOULD be used by sending-side PHY level to optimize power consumption.
 
-Hmp-Ack-Nack-Packet with IS-LOOP-ACK flag is generated either by destination, or by the node which has found that the next hop already has NEXT-HOP-ACKS flag (see details in 'Guaranteed Uni-Cast' section above); generating node always specifies itself as a target. Hmp-Ack-Nack-Packet with IS-LOOP-ACK flag MUST NOT have IS-NACK flag.
+Hmp-Ack-Nack-Packet with IS-LOOP-ACK flag is generated either by destination, or by the node which has found that the next hop already has NEXT-HOP-ACKS flag (see details in 'Acknowledged Uni-Cast' section above); generating node always specifies itself as a target. Hmp-Ack-Nack-Packet with IS-LOOP-ACK flag MUST NOT have IS-NACK flag.
 
-If Hmp-Ack-Nack-Packet has IS-LOOP-ACK flag, it is processed as specified in 'Uni-cast processing' section above; Hmp-Loop-Ack packet is never sent using 'Guaranteed uni-cast' delivery. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
+If Hmp-Ack-Nack-Packet has IS-LOOP-ACK flag, it is processed as specified in 'Uni-cast processing' section above; Hmp-Loop-Ack packet is never sent using 'Acknowledged uni-cast' delivery. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
 
 Hmp-Ack-Nack-Packet without IS-LOOP-ACK flag and without IS-NACK flag, is generated as a response to an incoming Hmp-Unicast-Data-Packet with ACKNOWLEDGED-DELIVERY flag, or in response to a packet with IS-LOCAL-ECHO flag (TODO: anything else?). It is not retransmitted, but taken as an acknowledgement that the packet has been received. 
 
