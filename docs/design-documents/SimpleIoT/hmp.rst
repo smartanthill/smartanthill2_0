@@ -208,15 +208,15 @@ Recovery Philosophy
 
 Recovery from route changes/failures is vital for any mesh protocol. SimpleIoT/HMP does it as follows:
 
-* by default, most of the transfers are not acknowledged at SimpleIoT/HMP level (go as Hmp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag)
+* by default, most of the transfers are not acknowledged at SimpleIoT/HMP level (go as Hmp-Unicast-Data-Packet without ACKNOWLEDGED-DELIVERY flag)
 * however, upper-layer protocol (normally SimpleIoT/GDP) issues it's own retransmits and passes retransmit number to SimpleIoT/HMP
-* on retransmit #TODO, SimpleIoT/HMP switches GUARANTEED-DELIVERY flag on
-* when GUARANTEED-DELIVERY flag is set, SimpleIoT/HMP uses 'Guaranteed Uni-Cast' mode described below
+* on retransmit #TODO, SimpleIoT/HMP switches ACKNOWLEDGED-DELIVERY flag on
+* when ACKNOWLEDGED-DELIVERY flag is set, SimpleIoT/HMP uses 'Guaranteed Uni-Cast' mode described below
 * if 'Guaranteed Uni-Cast' fails for M times (as described below), link failure is assumed
 * link failure (as described above) is reported to the Root, so it can initiate route discovery to the node on the other side of the failed link (using Hmp-From-Santa-Data-Packet)
 
-  + if link failure is detected from the side of the link which is close to Root, link failure reporting is done by sending Routing-Error (which always come in GUARANTEED-DELIVERY mode) back to Root
-  + if link failure is detected from the side of the link which is far from Root, link failure reporting is done by broadcasting Hmp-To-Santa-Data-Or-Error-Packet, which is then converted into Hmp-Forward-To-Santa-Data-Or-Error-Packet (which is always sent in GUARANTEED-DELIVERY mode) by all Retransmitting Devices which have received it.
+  + if link failure is detected from the side of the link which is close to Root, link failure reporting is done by sending Routing-Error (which always come in ACKNOWLEDGED-DELIVERY mode) back to Root
+  + if link failure is detected from the side of the link which is far from Root, link failure reporting is done by broadcasting Hmp-To-Santa-Data-Or-Error-Packet, which is then converted into Hmp-Forward-To-Santa-Data-Or-Error-Packet (which is always sent in ACKNOWLEDGED-DELIVERY mode) by all Retransmitting Devices which have received it.
 
 Storm Avoidance
 ---------------
@@ -293,7 +293,7 @@ As described above, SimpleIoT/HMP does recognize that Routing Tables may become 
 Guaranteed Uni-Cast
 ^^^^^^^^^^^^^^^^^^^
 
-As described in detail below, Hmp-Unicast-Data-Packets, except for Hmp-Unicast-Data-Packets without GUARANTEED-DELIVERY flag and Hmp-Loop-Ack-Packet, are sent in 'Guaranteed Uni-Cast' mode. 
+As described in detail below, Hmp-Unicast-Data-Packets, except for Hmp-Unicast-Data-Packets without ACKNOWLEDGED-DELIVERY flag and Hmp-Loop-Ack-Packet, are sent in 'Guaranteed Uni-Cast' mode. 
 
 Processing by Retransmitting Devices
 ''''''''''''''''''''''''''''''''''''
@@ -424,17 +424,15 @@ HMP Packets
 
 Hmp-Unicast-Data-Packet: **\| HMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| NEXT-HOP \| LAST-HOP \| Non-Root-Address \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
-where HMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] equal to 0, bit[1] being GUARANTEED-DELIVERY flag, bit [2] being BACKWARD-GUARANTEED-DELIVERY, bit [3] being EXTRA-HEADERS-PRESENT, bit[4] being DIRECTION-FLAG that is set, if a packet follows from the Root, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set and is described above; NEXT-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of the next-hop node (based on info from Routing Table), LAST-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of currently transmitting node, Non-Root-Address is a target (recipient) address or a source (sender) address depending on DIRECTION-FLAG and is always a device ID of a communication party other than the Root, OPTIONAL-PAYLOAD-SIZE is present only if optional headers are present and MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field, HEADER-CHECKSUM is a header HMP-CHECKSUM (see HMP-CHECKSUM section for details), PAYLOAD is a payload to be passed to the upper-layer protocol, and FULL-CHECKSUM is a HMP-CHECKSUM of concatenation of the header (without header checksum) and PAYLOAD.
+where HMP-UNICAST-DATA-PACKET-FLAGS-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] equal to 0, bit[1] being ACKNOWLEDGED-DELIVERY flag, bit [2] being reserved (must be 0), bit [3] being EXTRA-HEADERS-PRESENT, bit[4] being DIRECTION-FLAG that is set, if a packet follows from the Root, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set and is described above; NEXT-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of the next-hop node (based on info from Routing Table), LAST-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of currently transmitting node, Non-Root-Address is a target (recipient) address or a source (sender) address depending on DIRECTION-FLAG and is always a device ID of a communication party other than the Root, OPTIONAL-PAYLOAD-SIZE is present only if optional headers are present and MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field, HEADER-CHECKSUM is a header HMP-CHECKSUM (see HMP-CHECKSUM section for details), PAYLOAD is a payload to be passed to the upper-layer protocol, and FULL-CHECKSUM is a HMP-CHECKSUM of concatenation of the header (without header checksum) and PAYLOAD.
 
 If NEXT-HOP field doesn't match ID of the receiving Device - the packet is ignored.
 
-If a packet is addressed to the Root (DIRECTION-FLAG is not set), it MUST NOT contain VIA fields within; in addition, if the packet is addressed to the Root (DIRECTION-FLAG is not set), the packet MUST NOT have BACKWARD-GUARANTEED-DELIVERY flag set.
+If a packet is addressed to the Root (DIRECTION-FLAG is not set), it MUST NOT contain VIA fields within.
 
 If IS-PROBE flag is set, then PAYLOAD is treated differently. When destination receives Hmp-Unicast-Data-Packet with IS-PROBE flag set, destination doesn't pass PAYLOAD to upper-layer protocol. Instead, destination parses PAYLOAD as follows: **\| PROBE-TYPE \| OPTIONAL-PROBE-EXTRA-HEADERS \| PROBE-PAYLOAD \|** where PROBE-TYPE is 1-byte bitfield substrate, with bits [0..2] being either PROBE_UNICAST or PROBE_TO_SANTA, bit[3] being PROBE-EXTRA-HEADERS-PRESENT, and bits [4..7] reserved (MUST be zeros); OPTIONAL-PROBE-EXTRA-HEADERS are similar to OPTIONAL-EXTRA-HEADERS, and PROBE-PAYLOAD takes the rest of the PAYLOAD; if PROBE-TYPE==PROBE_UNICAST, then destination Device sends Hmp-Unicast-Data-Packet back to Root, with PAYLOAD copied from PROBE-PAYLOAD, and extra headers formed from PROBE-EXTRA-HEADERS, "as if" this packet is sent in reply to IS-PROBE packet by upper layer, but adding IS-PROBE flag (as a part of GENERIC-EXTRA-FLAGS extra header). If PROBE-TYPE==PROBE_TO_SANTA, destination Device sends a Hmp-To-Santa-Data-Or-Error-Packet, with PAYLOAD copied from PROBE-PAYLOAD, "as if" the packet is sent in reply to IS-PROBE packet by upper layer, but adding IS-PROBE flag (as a part of GENERIC-EXTRA-FLAGS extra header).
 
-Hmp-Unicast-Data-Packet is processed as specified in Uni-Cast Processing section above; if GUARANTEED-DELIVERY flag is set, packet is sent in 'Guaranteed Uni-Cast' mode. In any case, LAST-HOP field is updated every time the packet is re-sent. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
-
-When target Device receives the packet, and sends reply back, it MUST set GUARANTEED-DELIVERY flag in reply to BACKWARD-GUARANTEED-DELIVERY flag in original packet; this logic applies to all the packets, including 'first' packets in SimpleIoT/GDP "packet chain" (as they're still sent in reply to some HMP packet coming from the Root).
+Hmp-Unicast-Data-Packet is processed as specified in Uni-Cast Processing section above; if ACKNOWLEDGED-DELIVERY flag is set, packet is sent in 'Guaranteed Uni-Cast' mode. In any case, LAST-HOP field is updated every time the packet is re-sent. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
 
 If Retransmitting Device receives a "partially correct" Hmp-Unicast-Data-Packet, addressed to itself, and it has NACK-PREV-HOP flag set for the source link within Routing Table, it MUST send a Hmp-Nack-Packet back to the source of packet.
 
@@ -509,11 +507,11 @@ Hmp-Ack-Nack-Packet with IS-LOOP-ACK flag is generated either by destination, or
 
 If Hmp-Ack-Nack-Packet has IS-LOOP-ACK flag, it is processed as specified in 'Uni-cast processing' section above; Hmp-Loop-Ack packet is never sent using 'Guaranteed uni-cast' delivery. Processing at the target node (regardless of node type) consists of passing PAYLOAD to the upper-layer protocol.
 
-Hmp-Ack-Nack-Packet without IS-LOOP-ACK flag and without IS-NACK flag, is generated as a response to an incoming Hmp-Unicast-Data-Packet with GUARANTEED-DELIVERY flag, or in response to a packet with IS-LOCAL-ECHO flag (TODO: anything else?). It is not retransmitted, but taken as an acknowledgement that the packet has been received. 
+Hmp-Ack-Nack-Packet without IS-LOOP-ACK flag and without IS-NACK flag, is generated as a response to an incoming Hmp-Unicast-Data-Packet with ACKNOWLEDGED-DELIVERY flag, or in response to a packet with IS-LOCAL-ECHO flag (TODO: anything else?). It is not retransmitted, but taken as an acknowledgement that the packet has been received. 
 
 In addition, Hmp-Ack-Nack-Packet without IS-LOOP-ACK flag and without IS-NACK flag, MAY be generated by receiver in an "unsolicited" manner, i.e. even if ACK has not been requested, to indicate that received packet has number of errors which is considered to be "too high" for the underlying PHY level. Such an ACK packet (as well as any other ACK packet with high NUMBER-OF-ERRORS) SHOULD lead to adjustments on sending side (for example, it MAY lead to increase in trasmission power). Another case for "unsolicited" ACK is for Retransmission Device, when NUMBER-OF-ERRORS becomes "too low" after being substantially higher, to indicate that the other side is allowed to lower transmission power. In any case, whenever Retransmission Device sends an "unsolicited" ACK to non-transmitting Device , it SHOULD make sure (from upper-layer protocols) that receiving non-transmitting Device is expected to have it's transciever on.
 
-Hmp-Ack-Nack-Packet without IS-LOOP-ACK flag and with IS-NACK flag, is generated as a response to a "partially correct" packet (regardless of type and GUARANTEED-DELIVERY flag); in this case, it's ACK-CHECKSUM represents only HEADER-CHECKSUM of the original packet. Such Hmp-Ack-Nack-Packet is not retransmitted itself, but is taken as an indication to perform quick retransmit of the last packet sent.
+Hmp-Ack-Nack-Packet without IS-LOOP-ACK flag and with IS-NACK flag, is generated as a response to a "partially correct" packet (regardless of type and ACKNOWLEDGED-DELIVERY flag); in this case, it's ACK-CHECKSUM represents only HEADER-CHECKSUM of the original packet. Such Hmp-Ack-Nack-Packet is not retransmitted itself, but is taken as an indication to perform quick retransmit of the last packet sent.
 
 Type of HMP packet
 ^^^^^^^^^^^^^^^^^^^
@@ -541,7 +539,7 @@ As described above, type of HMP packet is always defined by bits [0..3] of the f
 Packet Urgency
 --------------
 
-From SimpleIoT/HMP point of view, all upper-layer-protocol packets can have one of three urgency levels. If the packet has urgency URGENCY_LAZY, it is first sent as a Hmp-Unicast-Data-Packet without GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent with GUARANTEED-DELIVERY). If the packet has urgency URGENCY_QUITE_URGENT, it is first sent as a Hmp-Unicast-Data-Packet with GUARANTEED-DELIVERY flag (as described above, in case of retries it will be resent as a Hmp-\*-Santa-\* packet). If the packet has urgency URGENCY_TRIPLE_GALOP, 
+From SimpleIoT/HMP point of view, all upper-layer-protocol packets can have one of three urgency levels. If the packet has urgency URGENCY_LAZY, it is first sent as a Hmp-Unicast-Data-Packet without ACKNOWLEDGED-DELIVERY flag (as described above, in case of retries it will be resent with ACKNOWLEDGED-DELIVERY). If the packet has urgency URGENCY_QUITE_URGENT, it is first sent as a Hmp-Unicast-Data-Packet with ACKNOWLEDGED-DELIVERY flag (as described above, in case of retries it will be resent as a Hmp-\*-Santa-\* packet). If the packet has urgency URGENCY_TRIPLE_GALOP, 
 then it is first sent as a Hmp-From-Santa-Data-Packet or Hmp-To-Santa-Data-Packet (depending on source being Root or Device). 
 
 Handling of TERMINAL-ADVERTISING Underlying Protocols
