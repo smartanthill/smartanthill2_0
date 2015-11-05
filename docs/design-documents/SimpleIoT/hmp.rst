@@ -27,7 +27,7 @@
 SimpleIoT Heteroheneous Mesh Protocol (SimpleIoT/HMP)
 =====================================================
 
-:Version:   0.1.3a
+:Version:   0.1.3b
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` *document, please make sure to read it before proceeding.*
 
@@ -352,13 +352,13 @@ Whenever a From-Santa packet (see below) is processed by a Retransmitting Device
 
 * check if one of addresses within Target-Address is intended for the Retransmitting Device (TODO: if multiple addresses match the Retransmitting Device - it is a TODO Routing-Error, which should never happen)
 
-  + if it is - process the packet as terminating device (as described in more details while discussing Hmp-From-Santa-Data-Packet below) and do not don't process any further
+  + if it is - process the packet as terminating device (as described in more details while discussing Hmp-From-Santa-Data-Packet below) and do not process any further
 
 * if packet TTL is already equal to 0 - drop the packet and send Routing-Error to the Root (see Time-To-Live section above for details)
 * decrement packet TTL
-* using Routing Table, find next hops for all retransmitters in the Retransmitter-List; group retransmitters from the Retransmitter-List according to the Next-Hop ID in their routes; for each group of retransmitters create a new packet with Retransmitter-List consisting of retransmitters from the group, and send the packet [TODO: if two or more next hops are reachable from the same bus, and the bus supports multicasting, consider merging packets intended for those next hops by merging their Retransmitter-Lists]
+* using Routing Table, find next hops for all retransmitters in the MULTIPLE-RETRANSMITTING-ADDRESSES; group retransmitters from the MULTIPLE-RETRANSMITTING-ADDRESSES according to the Next-Hop ID in their routes; for each group of retransmitters create a new packet with MULTIPLE-RETRANSMITTING-ADDRESSES consisting of retransmitters from the group, and send the packet [TODO: if two or more next hops are reachable from the same bus, and the bus supports multicasting, consider merging packets intended for those next hops by merging their MULTIPLE-RETRANSMITTING-ADDRESSES]
 * if at least one of the next hops is not found - send a TODO Routing-Error packet (one packet containing all Routing-Errors for incoming packet) to Root, and continue processing
-* if the retransmitter is not listed in the Retransmitter-List, stop 
+* if the retransmitter is not listed in the MULTIPLE-RETRANSMITTING-ADDRESSES, stop 
 * if all bus types in the bus-type-list were used while sending packets during above steps (if any), stop
 * for each remaining bus type prepare and send a packet with the same target list and empty retransmitter list.
 
@@ -377,7 +377,7 @@ At the Root device, forming a From-Santa packet can be organized as follows:
 * determine a listof devices to be found and form a Target-Address list
 * determine which types of buses have devices to be found and form bus-type-list
 * determine a list of retransmitting devices to be used; ultimately, it can be a list of all retransmitters with known routes to, or a subset of this list
-* further processing is done as if the Root were a retransmitting device that has received a From-Sants packet with data formed above and that has found itself in the Retransmitter-List.
+* further processing is done as if the Root were a retransmitting device that has received a From-Sants packet with data formed above and that has found itself in the MULTIPLE-RETRANSMITTING-ADDRESSES.
 
 
 Promiscuous Mode Processing
