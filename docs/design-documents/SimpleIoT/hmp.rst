@@ -27,7 +27,7 @@
 SimpleIoT Heteroheneous Mesh Protocol (SimpleIoT/HMP)
 =====================================================
 
-:Version:   0.1.2
+:Version:   0.1.3
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` *document, please make sure to read it before proceeding.*
 
@@ -345,32 +345,38 @@ LOOP-ACK and Routing
 
 As LOOP-ACK currently doesn't support VIA routing, it means that Root MUST ensure that all the nodes on the "loop" route already know the routes without VIA fields; it applies both to the route from the loop beginning to the loop end, and back from the loop end to the loop beginning (as for request-response cycle, LOOP-ACKs go both directions). When speaking about 'back from the loop end to the loop beginning', it MUST be taken into account that, as specified above, non-Retransmitting Device will send a Hmp-Loop-Ack-Packet in the direction of the Root (but with Target-Address equal to the address from LOOP-ACK extra header), so there MUST be an already-defined route from this next-hop-in-direction-of-Root to the loop beginning.
 
-Multi-Cast Processing
----------------------
+"From-Santa" Packet Processing
+------------------------------
 
-Whenever a Multi-Cast packet (the one with Multiple-Target-Addresses field) is processed by a Retransmitting Device, the procedure is the following:
+Whenever a From-Santa packet (see below) is processed by a Retransmitting Device, the procedure is the following:
 
 * check if one of addresses within Target-Address is intended for the Retransmitting Device (TODO: if multiple addresses match the Retransmitting Device - it is a TODO Routing-Error, which should never happen)
 
-  + if it is - process the packet locally (NB: Retransmitting Devices SHOULD schedule processing instead)
-  + remove the address of the Retransmitting Device from Multiple-Target-Addresses
-  
-    - if Multiple-Target-Addresses became empty - don't process any further
+  + if it is - process the packet as terminating device (as described in more details while discussing Hmp-From-Santa-Data-Packet below) and do not don't process any further
 
 * if packet TTL is already equal to 0 - drop the packet and send Routing-Error to the Root (see Time-To-Live section above for details)
 * decrement packet TTL
-* using Routing Table, find next hops for all the Devices on the list of Multiple-Target-Addresses (this search MUST include using VIA field(s) if present, see Uni-Cast Processing above)
+* using Routing Table, find next hops for all retransmitters in the Retransmitter-List; group retransmitters from the Retransmitter-List according to the Next-Hop ID in their routes; for each group of retransmitters create a new packet with Retransmitter-List consisting of retransmitters from the group, and send the packet [TODO: if two or more next hops are reachable from the same bus, and the bus supports multicasting, consider merging packets intended for those next hops by merging their Retransmitter-Lists]
 * if at least one of the next hops is not found - send a TODO Routing-Error packet (one packet containing all Routing-Errors for incoming packet) to Root, and continue processing
-* if any of VIA fields in any of the Multiple-Target-Addresses is the same as the next hop - remove all such VIA fields from the Multiple-Target-Addresses
-* find buses for all next hops, forming next-hop-bus-list
-* for each bus on next-hop-bus-list
-
-  + if there is only a single next hop for this bus - send the modified packet to this bus using uni-cast bus addressing
-
-  + if there is multiple next hops for this bus:
+* if the retransmitter is not listed in the Retransmitter-List, stop 
+* if all bus types in the bus-type-list were used while sending packets during above steps (if any), stop
+* for each remaining bus type prepare and send a packet with the same target list and empty retransmitter list.
 
     - if the bus supports multi-casting - send the modified packet using multi-cast bus addressing over the bus.
-    - otherwise, send the modified packet using uni-cast bus addressing to each of the hops
+    - otherwise, [TODO: check details] send the packet using uni-cast bus addressing to each of the potential recepients
+	
+[TODO: if VIA fields are expected to be used, address this issue] 
+
+NOTE: at terminating device the above steps result in
+* check whether the device in the target-list; if found, process the packet by as described in more details while discussing Hmp-From-Santa-Data-Packet below.
+
+
+At the Root device, forming a From-Santa packet can be organized as follows:
+* determine a listof devices to be found and form a Target-Address list
+* determine which types of buses have devices to be found and form bus-type-list
+* determine a list of retransmitting devices to be used; ultimately, it can be a list of all retransmitters with known routes to, or a subset of this list
+* further processing is done as if the Root were a retransmitting device that has received a From-Sants packet with data formed above and that has found itself in the Retransmitter-List.
+
 
 Promiscuous Mode Processing
 ---------------------------
@@ -442,7 +448,7 @@ where HMP-FROM-SANTA-DATA-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfi
 
 Hmp-From-Santa-Data-Packet is a packet sent by Root, which is intended to find destination which is 'somewhere around', but exact location is unknown. When Root needs to pass data to a Node for which it has no valid route, Root sends HMP-FROM-SANTA-DATA-PACKET (or multiple packets), to each of Retransmitting Devices, in hope to find target Device and to pass the packet. 
 
-Hmp-From-Santa-Data-Packet is processed as specified in Multi-Cast Processing section above, up to the point where all the buses for all the next hops are found; note that if Multi-Cast processing generates a Routing-Error, it is not transmitted immediately (see below). Starting from that point, Retransmitting Device processes Hmp-From-Santa-Data-Packet proceeds as follows: 
+Hmp-From-Santa-Data-Packet is processed as specified in "From Santa" packet Processing section above, up to the point where all the buses for all the next hops are found; note that if Multi-Cast processing generates a Routing-Error, it is not transmitted immediately (see below). Starting from that point, Retransmitting Device processes Hmp-From-Santa-Data-Packet proceeds as follows: 
 
 * replaces LAST-HOP field with it's own node id
 * creates a broadcast-bus-list of it's own buses which match BROADCAST-BUS-TYPE-LIST
