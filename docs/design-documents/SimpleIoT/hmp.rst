@@ -27,7 +27,7 @@
 SimpleIoT Heteroheneous Mesh Protocol (SimpleIoT/HMP)
 =====================================================
 
-:Version:   0.1.3
+:Version:   0.1.3a
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` *document, please make sure to read it before proceeding.*
 
@@ -368,10 +368,12 @@ Whenever a From-Santa packet (see below) is processed by a Retransmitting Device
 [TODO: if VIA fields are expected to be used, address this issue] 
 
 NOTE: at terminating device the above steps result in
+
 * check whether the device in the target-list; if found, process the packet by as described in more details while discussing Hmp-From-Santa-Data-Packet below.
 
 
 At the Root device, forming a From-Santa packet can be organized as follows:
+
 * determine a listof devices to be found and form a Target-Address list
 * determine which types of buses have devices to be found and form bus-type-list
 * determine a list of retransmitting devices to be used; ultimately, it can be a list of all retransmitters with known routes to, or a subset of this list
