@@ -27,7 +27,7 @@
 SimpleIoT Heteroheneous Mesh Protocol (SimpleIoT/HMP)
 =====================================================
 
-:Version:   0.1.3b
+:Version:   0.1.4
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` *document, please make sure to read it before proceeding.*
 
@@ -356,8 +356,7 @@ Whenever a From-Santa packet (see below) is processed by a Retransmitting Device
 
 * if packet TTL is already equal to 0 - drop the packet and send Routing-Error to the Root (see Time-To-Live section above for details)
 * decrement packet TTL
-* using Routing Table, find next hops for all retransmitters in the MULTIPLE-RETRANSMITTING-ADDRESSES; group retransmitters from the MULTIPLE-RETRANSMITTING-ADDRESSES according to the Next-Hop ID in their routes; for each group of retransmitters create a new packet with MULTIPLE-RETRANSMITTING-ADDRESSES consisting of retransmitters from the group, and send the packet [TODO: if two or more next hops are reachable from the same bus, and the bus supports multicasting, consider merging packets intended for those next hops by merging their MULTIPLE-RETRANSMITTING-ADDRESSES]
-* if at least one of the next hops is not found - send a TODO Routing-Error packet (one packet containing all Routing-Errors for incoming packet) to Root, and continue processing
+* using Routing Table, find all retransmitters in the MULTIPLE-RETRANSMITTING-ADDRESSES for which routes are known, and exclude the rest from consideration; group found retransmitters according to Bus IDs in their routes; for each group of retransmitters create a new packet with MULTIPLE-RETRANSMITTING-ADDRESSES consisting of retransmitters from the group, and send the packet using respective BUS-ID
 * if the retransmitter is not listed in the MULTIPLE-RETRANSMITTING-ADDRESSES, stop 
 * if all bus types in the bus-type-list were used while sending packets during above steps (if any), stop
 * for each remaining bus type prepare and send a packet with the same target list and empty retransmitter list.
@@ -374,7 +373,7 @@ NOTE: at terminating device the above steps result in
 
 At the Root device, forming a From-Santa packet can be organized as follows:
 
-* determine a listof devices to be found and form a Target-Address list
+* determine a list of devices to be found and form a Target-Address list
 * determine which types of buses have devices to be found and form bus-type-list
 * determine a list of retransmitting devices to be used; ultimately, it can be a list of all retransmitters with known routes to, or a subset of this list
 * further processing is done as if the Root were a retransmitting device that has received a From-Sants packet with data formed above and that has found itself in the MULTIPLE-RETRANSMITTING-ADDRESSES.
@@ -444,16 +443,17 @@ Hmp-Unicast-Data-Packet is processed as specified in Uni-Cast Processing section
 
 If Retransmitting Device receives a "partially correct" Hmp-Unicast-Data-Packet, addressed to itself, and it has NACK-PREV-HOP flag set for the source link within Routing Table, it MUST send a Hmp-Nack-Packet back to the source of packet.
 
-Hmp-From-Santa-Data-Packet: **\| HMP-FROM-SANTA-DATA-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| REQUEST-ID \| OPTIONAL-DELAY-UNIT \| MULTIPLE-RETRANSMITTING-ADDRESSES \| BROADCAST-BUS-TYPE-LIST \| Target-Address \| OPTIONAL-TARGET-REPLY-DELAY \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
+Hmp-From-Santa-Data-Packet: **\| HMP-FROM-SANTA-DATA-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| LAST-HOP-BUS-ID \| REQUEST-ID \| OPTIONAL-DELAY-UNIT \| MULTIPLE-RETRANSMITTING-ADDRESSES \| BROADCAST-BUS-TYPE-LIST \| Target-Address \| OPTIONAL-TARGET-REPLY-DELAY \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
-where HMP-FROM-SANTA-DATA-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant HMP_FROM_SANTA_DATA_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits[5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above, LAST-HOP is an Encoded-Unsigned-Int<max=2> representing node id of the last sender, REQUEST-ID is an Encoded-Unsigned-Int<max=2> field, OPTIONAL-DELAY-UNIT is present only if EXPLICIT-TIME-SCHEDULING flag is present, and is an Encoded-Signed-Int<max=2> field, which specifies units for subsequent DELAY fields (as described below), MULTIPLE-RETRANSMITTING-ADDRESSES is a Multiple-Target-Addresses-With-Extra-Data field described above (with Extra-Data being either empty if EXPLICIT-TIME-SCHEDULING flag is not present, or otherwise Encoded-Unsigned-Int<max=2> DELAY field, using OPTIONAL-DELAY-UNIT field for delay calculations), BROADCAST-BUS-TYPE-LIST is a zero-terminated list of `BUS-TYPE+1` values (enum values for BUS-TYPE TBD), Target-Address is described above, OPTIONAL-TARGET-REPLY-DELAY has the same type as DELAY fields (and is absent if EXPLICIT-TIME-SCHEDULING flag is not present), and represents delay for the target Device (also using OPTIONAL-DELAY-UNIT field for delay calculations); OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; HEADER-CHECKSUM is a header HMP-CHECKSUM (see HMP-CHECKSUM section for details), PAYLOAD is a payload to be passed to the upper-layer protocol, and FULL-CHECKSUM is a HMP-CHECKSUM of concatenation of the header (without header checksum) and PAYLOAD.
+where HMP-FROM-SANTA-DATA-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant HMP_FROM_SANTA_DATA_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits[5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above, LAST-HOP is an Encoded-Unsigned-Int<max=2> representing node id of the last sender, LAST-HOP-BUS-ID is an Encoded-Unsigned-Int<max=2> representing ID of the Bus used by the last sender to send the packet, REQUEST-ID is an Encoded-Unsigned-Int<max=2> field, OPTIONAL-DELAY-UNIT is present only if EXPLICIT-TIME-SCHEDULING flag is present, and is an Encoded-Signed-Int<max=2> field, which specifies units for subsequent DELAY fields (as described below), MULTIPLE-RETRANSMITTING-ADDRESSES is a Multiple-Target-Addresses-With-Extra-Data field described above (with Extra-Data being either empty if EXPLICIT-TIME-SCHEDULING flag is not present, or otherwise Encoded-Unsigned-Int<max=2> DELAY field, using OPTIONAL-DELAY-UNIT field for delay calculations), BROADCAST-BUS-TYPE-LIST is a zero-terminated list of `BUS-TYPE+1` values (enum values for BUS-TYPE TBD), Target-Address is described above, OPTIONAL-TARGET-REPLY-DELAY has the same type as DELAY fields (and is absent if EXPLICIT-TIME-SCHEDULING flag is not present), and represents delay for the target Device (also using OPTIONAL-DELAY-UNIT field for delay calculations); OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; HEADER-CHECKSUM is a header HMP-CHECKSUM (see HMP-CHECKSUM section for details), PAYLOAD is a payload to be passed to the upper-layer protocol, and FULL-CHECKSUM is a HMP-CHECKSUM of concatenation of the header (without header checksum) and PAYLOAD.
 
 Hmp-From-Santa-Data-Packet is a packet sent by Root, which is intended to find destination which is 'somewhere around', but exact location is unknown. When Root needs to pass data to a Node for which it has no valid route, Root sends HMP-FROM-SANTA-DATA-PACKET (or multiple packets), to each of Retransmitting Devices, in hope to find target Device and to pass the packet. 
 
 Hmp-From-Santa-Data-Packet is processed as specified in "From Santa" packet Processing section above, up to the point where all the buses for all the next hops are found; note that if Multi-Cast processing generates a Routing-Error, it is not transmitted immediately (see below). Starting from that point, Retransmitting Device processes Hmp-From-Santa-Data-Packet proceeds as follows: 
 
-* replaces LAST-HOP field with it's own node id
-* creates a broadcast-bus-list of it's own buses which match BROADCAST-BUS-TYPE-LIST
+* replaces LAST-HOP field with its own node id
+* replaces LAST-HOP-BUS-ID field with its own bus id to be used for packet retransmission
+* creates a broadcast-bus-list of its own buses which match BROADCAST-BUS-TYPE-LIST
 * for each bus which is on a next-hop-bus list but not on the broadcast-bus-list - continue processing as specified in Multi-Cast Processing section above
 
   + transmission MUST NOT be made until time specified in DELAY field for current node, passes. If the time in DELAY field (after subtracting `(INCOMING-LINK-DELAY+OUTGOING-LINK-DELAY)` using their respective DELAY-UNITs) has already passed - node MUST introduce a random delay uniformly distributed from 0 to NODE-MAX-RANDOM-DELAY parameter (using NODE-MAX-RANDOM-DELAY-UNIT for calculations).
@@ -470,7 +470,7 @@ On target Device, Hmp-From-Santa-Data-Packet waits until reply payload is ready 
 
 * if TARGET-DELAY (expressed in DELAY-UNITs) has not passed yet, Device waits until it passes
 
-  + if the incoming packet has TARGET-COLLECT-LAST-HOPS flag set (which is normally set for all the packets which have IS-PROBE flag), then target Device traces all the incoming packets addressed to it and having the same REQUEST-ID and makes a list of extra-last-hops consisting of LAST-HOP headers from all of them
+  + if the incoming packet has TARGET-COLLECT-LAST-HOPS flag set (which is normally set for all the packets which have IS-PROBE flag), then target Device traces all the incoming packets addressed to it and having the same REQUEST-ID and makes a list of extra-last-hops consisting of LAST-HOP and LAST-HOP-BUS-ID headers from all of them
   + when sending Hmp-To-Santa-Data-Or-Error-Packet reply back, target Device adds LAST-INCOMING-HOP extra header for LAST-HOP within incoming packet, *plus* LAST-INCOMING-HOP headers for extra-last-hops (if such list exists, see above)
 
 If IS-PROBE flag is set, then PAYLOAD is treated differently. When destination receives Hmp-From-Santa-Data-Packet with IS-PROBE flag set, destination doesn't pass PAYLOAD to upper-layer protocol. Instead, destination processes the packet in the same way as described for the processing of Hmp-Unicast-Data-Packet with IS-PROBE flag set. A special case of Hmp-From-Santa-Data-Packet with IS-PROBE set is when Target-Address is Root (=0). Such packets (a.k.a. 'discovery' packets) are ignored by Root, but are replied to only by Devices which are not paired yet (i.e. have no node id). All such 'discovery' packets with Target-Address=0 MUST have IS-PROBE flag set.
