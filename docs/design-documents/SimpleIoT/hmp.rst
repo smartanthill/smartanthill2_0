@@ -27,7 +27,7 @@
 SimpleIoT Heterogeneous Mesh Protocol (SimpleIoT/HMP)
 =====================================================
 
-:Version:   0.1.6
+:Version:   0.1.7
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` *document, please make sure to read it before proceeding.*
 
@@ -501,15 +501,15 @@ If NEXT-HOP field doesn't match ID of the receiving Device - the packet is ignor
 
 Hmp-Forward-To-Santa-Data-Or-Error-Packet is sent by Retransmitting Device when it receives Hmp-To-Santa-Data-Or-Error-Packet (with TTL=MAX_TTL-1 to account for original Hmp-To-Santa-Data-Or-Error-Packet). On receiving Hmp-Forward-To-Santa-Data-Or-Error-Packet by a Retransmitting Device, it is  processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Acknowledged Uni-Cast' mode.
 
-Hmp-Routing-Error-Packet: **\| HMP-ROUTING-ERROR-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| ERROR-CODE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
+Hmp-Routing-Error-Packet: **\| HMP-ROUTING-ERROR-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| ERROR-CODE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
-where HMP-ROUTING-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant HMP_ROUTING_ERROR_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above, ERROR-CODE is an Encoded-Unsigned-Int<max=1> field, HEADER-CHECKSUM is a header HMP-CHECKSUM (see HMP-CHECKSUM section for details), PAYLOAD is TODO, and FULL-CHECKSUM is a full-packet HMP-CHECKSUM.
+where HMP-ROUTING-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant HMP_ROUTING_ERROR_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above; LAST-HOP is an Encoded-Unsigned-Int<max=2> representing node id of the last sender; ERROR-CODE is an Encoded-Unsigned-Int<max=1> field, HEADER-CHECKSUM is a header HMP-CHECKSUM (see HMP-CHECKSUM section for details), PAYLOAD is TODO, and FULL-CHECKSUM is a full-packet HMP-CHECKSUM.
 
 On receiving Hmp-Routing-Error-Packet, it is processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Acknowledged Uni-Cast' mode.
 
-Hmp-Ack-Nack-Packet: **\| HMP-ACK-NACK-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| Target-Address \| NUMBER-OF-ERRORS \| ACK-CHESKSUM \| HEADER-CHECKSUM \| OPTIONAL-DELAY-UNIT \| OPTIONAL-DELAY-PASSED \| OPTIONAL-DELAY-LEFT \|**
+Hmp-Ack-Nack-Packet: **\| HMP-ACK-NACK-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| Target-Address \| NUMBER-OF-ERRORS \| ACK-CHESKSUM \| HEADER-CHECKSUM \| OPTIONAL-DELAY-UNIT \| OPTIONAL-DELAY-PASSED \| OPTIONAL-DELAY-LEFT \| FULL-CHECKSUM \|**
 
-where HMP-ACK-NACK-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant HMP_ACK_NACK_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set, LAST-HOP is an id of the transmitting node, Target-Address is described above, NUMBER-OF-ERRORS is an Encoded-Unsigned-Int<max=2> field, which contains number of bit-errors observed at PHY level for the packet being acknowledged, ACK-CHECKSUM is copied from FULL-CHECKSUM of the packet being acknowledged (with an exception for NACK generated due to "partially correct" packet, see below), and HEADER-CHECKSUM is a header HMP-CHECKSUM (see HMP-CHECKSUM section for details); OPTIONAL-DELAY-UNIT, OPTIONAL-DELAY-PASSED, and OPTIONAL-DELAY-LEFT fields are all Encoded-Unsigned-Int<max=2> fields, all present only if DELAYS-PRESENT flag is set (which is set only in response to packets with IS-LOCAL-ECHO flag set, see above).
+where HMP-ACK-NACK-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant HMP_ACK_NACK_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT flag is set, LAST-HOP is an id of the transmitting node, Target-Address is described above, NUMBER-OF-ERRORS is an Encoded-Unsigned-Int<max=2> field, which contains number of bit-errors observed at PHY level for the packet being acknowledged, ACK-CHECKSUM is copied from FULL-CHECKSUM of the packet being acknowledged (with an exception for NACK generated due to "partially correct" packet, see below), and HEADER-CHECKSUM is a header HMP-CHECKSUM (see HMP-CHECKSUM section for details); OPTIONAL-DELAY-UNIT, OPTIONAL-DELAY-PASSED, and OPTIONAL-DELAY-LEFT fields are all Encoded-Unsigned-Int<max=2> fields, all present only if DELAYS-PRESENT flag is set (which is set only in response to packets with IS-LOCAL-ECHO flag set, see above); and FULL-CHECKSUM is a HMP-CHECKSUM of concatenation of the header (without header checksum) and the remaining part of the packet.
 
 NUMBER-OF-ERRORS field allows to provide feedback about connection quality to sender by receiver; it is a normalized number of bit errors which have been error-corrected when the packet being acknowledged, was received by receiver. If error correction is not employed, this field SHOULD be zero. This information SHOULD be used by sending-side PHY level to optimize power consumption.
 
