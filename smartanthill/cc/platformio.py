@@ -87,6 +87,8 @@ class PlatformIOProject(object):
         if isdir(self.project_dir):
             rmtree(self.project_dir)
         copytree(dir_path, self.project_dir)
+        if isdir(join(self.project_dir, ".pioenvs")):
+            rmtree(join(self.project_dir, ".pioenvs"))
 
     def _generate_env_name(self):
         data = ["%s_%s" % (k, v) for k, v in self.project_conf.iteritems()]
@@ -217,15 +219,6 @@ def build_firmware(project_dir, platformio_conf, bodyparts, buses,
         zepto_conf = dict(AES_ENCRYPTION_KEY=range(0, 16))
 
     pio = PlatformIOProject(project_dir, platformio_conf)
-    pio.add_src_content(
-        "sa_bodypart_list.cpp", srcgen.BodyPartListCPP(bodyparts).generate()
-    )
-    pio.add_src_content(
-        "sa_bus_list.cpp", srcgen.BusListCPP(buses).generate()
-    )
-    pio.add_src_content(
-        "zepto_config.h", srcgen.ZeptoConfigH(zepto_conf).generate()
-    )
 
     # copy user's plugins
     for item in bodyparts:
@@ -244,6 +237,17 @@ def build_firmware(project_dir, platformio_conf, bodyparts, buses,
             join(pio.get_src_dir(),
                  join("transports", item.transport.get_id()))
         )
+
+    # dynamic content
+    pio.add_src_content(
+        "sa_bodypart_list.cpp", srcgen.BodyPartListCPP(bodyparts).generate()
+    )
+    # pio.add_src_content(
+    #     "sa_bus_list.cpp", srcgen.BusListCPP(buses).generate()
+    # )
+    pio.add_src_content(
+        "zepto_config.h", srcgen.ZeptoConfigH(zepto_conf).generate()
+    )
 
     return pio.run(
         target="build", options={"disable-auto-clean": disable_auto_clean})
