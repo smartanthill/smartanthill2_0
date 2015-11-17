@@ -27,7 +27,7 @@
 SimpleIoT Heterogeneous Mesh Protocol (SimpleIoT/HMP)
 =====================================================
 
-:Version:   0.1.7
+:Version:   0.1.8
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` *document, please make sure to read it before proceeding.*
 
@@ -127,9 +127,9 @@ Route-Update-Request is always accompanied with SimpleIoT/CCP "additional bits" 
 
 MODIFICATIONS-LIST consists of entries, where each entry is one of the following: 
 
-* **\| ADD-OR-MODIFY-LINK-ENTRY-AND-LINK-ID \| BUS-ID \| NEXT-HOP-ACKS-AND-INTRA-BUS-ID-PLUS-1 \| OPTIONAL-LINK-DELAY-UNIT \| OPTIONAL-LINK-DELAY \| OPTIONAL-LINK-DELAY-ERROR \|**
+* **\| ADD-OR-MODIFY-LINK-ENTRY-AND-LINK-ID \| BUS-ID \| NEXT-HOP \| NEXT-HOP-ACKS-AND-INTRA-BUS-ID-PLUS-1 \| OPTIONAL-LINK-DELAY-UNIT \| OPTIONAL-LINK-DELAY \| OPTIONAL-LINK-DELAY-ERROR \|**
 
-  where ADD-OR-MODIFY-LINK-ENTRY-AND-LINK-ID is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] marks the end of MODIFICATIONS-LIST, bits[1..2] equal to a 2-bit constant ADD_OR_MODIFY_LINK_ENTRY, bit[3] being LINK-DELAY-PRESENT flag, and bits[4..] equal to LINK-ID; BUS-ID is an Encoded-Unsigned-Int<max=2> field, NEXT-HOP-ACKS-AND-INTRA-BUS-ID is an Encoded-Unsigned-Int<max=4> bitfield substrate, with bit[0] being a NEXT-HOP-ACKS flag for the Routing Table Entry, and bits[1..] representing INTRA-BUS-ID-PLUS-1 (INTRA-BUS-ID-PLUS-1 == 0 means that INTRA-BUS-ID==NULL, and therefore that the link entry is an incoming link entry; otherwise, `INTRA-BUS-ID = INTRA-BUS-ID-PLUS-1 - 1`); OPTIONAL-LINK-DELAY-UNIT, OPTIONAL-LINK-DELAY, and OPTIONAL-LINK-DELAY-ERROR are present only if LINK-DELAY-PRESENT flag is set, and are Encoded-Unsigned-Int<max=2> fields. NB: by default, link delays are not set by Root, and are set based on device's internal per-bus settings.
+  where ADD-OR-MODIFY-LINK-ENTRY-AND-LINK-ID is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0] marks the end of MODIFICATIONS-LIST, bits[1..2] equal to a 2-bit constant ADD_OR_MODIFY_LINK_ENTRY, bit[3] being LINK-DELAY-PRESENT flag, and bits[4..] equal to LINK-ID; BUS-ID is an Encoded-Unsigned-Int<max=2> field; NEXT-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of the next-hop node; NEXT-HOP-ACKS-AND-INTRA-BUS-ID is an Encoded-Unsigned-Int<max=4> bitfield substrate, with bit[0] being a NEXT-HOP-ACKS flag for the Routing Table Entry, and bits[1..] representing INTRA-BUS-ID-PLUS-1 (INTRA-BUS-ID-PLUS-1 == 0 means that INTRA-BUS-ID==NULL, and therefore that the link entry is an incoming link entry; otherwise, `INTRA-BUS-ID = INTRA-BUS-ID-PLUS-1 - 1`); OPTIONAL-LINK-DELAY-UNIT, OPTIONAL-LINK-DELAY, and OPTIONAL-LINK-DELAY-ERROR are present only if LINK-DELAY-PRESENT flag is set, and are Encoded-Unsigned-Int<max=2> fields. NB: by default, link delays are not set by Root, and are set based on device's internal per-bus settings.
 
 * **\| DELETE-LINK-ENTRY-AND-LINK-ID \|**
 
