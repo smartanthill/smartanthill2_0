@@ -27,7 +27,7 @@
 SimpleIoT Heterogeneous Mesh Protocol (SimpleIoT/HMP)
 =====================================================
 
-:Version:   0.1.8
+:Version:   0.1.9
 
 *NB: this document relies on certain terms and concepts introduced in* :ref:`siot` *document, please make sure to read it before proceeding.*
 
@@ -493,13 +493,15 @@ In any case, if Hmp-To-Santa-Data-Or-Error-Packet is sent in response to a Hmp-F
 
 On receiving Hmp-To-Santa-Data-Or-Error-Packet, Retransmitting Device sends a Hmp-Forward-To-Santa-Data-Or-Error-Packet towards Root, in 'Acknowledged Uni-Cast' mode. To avoid congestion at this point, each Retransmitting Device delays according for FORWARD-TO-SANTA-DELAY (using FORWARD-TO-SANTA-DELAY-UNIT for calculations), where FORWARD-TO-SANTA-DELAY and FORWARD-TO-SANTA-DELAY-UNIT are the values which are locally stored on Retransmitting Device.
 
-Hmp-Forward-To-Santa-Data-Or-Error-Packet: **\| HMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| NEXT-HOP \| FORWARDED-SOURCE-ID \| FORWARDED-BUS-ID-AT-SOURCE \| REQUEST-ID \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
+Hmp-Forward-To-Santa-Data-Or-Error-Packet: **\| HMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| FIRST-HOP \| NEXT-HOP \| FORWARDED-SOURCE-ID \| FORWARDED-BUS-ID-AT-SOURCE \| REQUEST-ID \| OPTIONAL-PAYLOAD-SIZE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
-where HMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant HMP_FORWARD_TO_SANTA_DATA_OR_ERROR_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above; NEXT-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of the next-hop node (based on info from Routing Table); FORWARDED-SOURCE-ID is an Encoded-Unsigned-Int<max=2> value of SOURCE-ID from the original To-Santa packet; FORWARDED-BUS-ID-AT-SOURCE is an Encoded-Unsigned-Int<max=2> value of BUS-ID-AT-SOURCE from the original To-Santa packet; REQUEST-ID is an Encoded-Unsigned-Int<max=2> field; OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; HEADER-CHECKSUM is a header HMP-CHECKSUM (see HMP-CHECKSUM section for details); PAYLOAD is data being forwarded (copied from PAYLOAD of Hmp-To-Santa-Data-Or-Error-Packet); and FULL-CHECKSUM is a HMP-CHECKSUM of concatenation of the header (without header checksum) and PAYLOAD.
+where HMP-FORWARD-TO-SANTA-DATA-OR-ERROR-PACKET-AND-TTL is an Encoded-Unsigned-Int<max=2> bitfield substrate, with bit[0]=1, bits[1..3] equal to a 3-bit constant HMP_FORWARD_TO_SANTA_DATA_OR_ERROR_PACKET, bit [4] being EXTRA-HEADERS-PRESENT, and bits [5..] being TTL; OPTIONAL-EXTRA-HEADERS is present only if EXTRA-HEADERS-PRESENT is set, and is described above; FIRST-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of a node that has received a respective TO-SANTA packet; NEXT-HOP is an Encoded-Unsigned-Int<max=2> field containing node ID of the next-hop node (based on info from Routing Table); FORWARDED-SOURCE-ID is an Encoded-Unsigned-Int<max=2> value of SOURCE-ID from the original To-Santa packet; FORWARDED-BUS-ID-AT-SOURCE is an Encoded-Unsigned-Int<max=2> value of BUS-ID-AT-SOURCE from the original To-Santa packet; REQUEST-ID is an Encoded-Unsigned-Int<max=2> field; OPTIONAL-PAYLOAD-SIZE is present only if MORE-PACKETS-FOLLOW flag is set, and is an Encoded-Unsigned-Int<max=2> field; HEADER-CHECKSUM is a header HMP-CHECKSUM (see HMP-CHECKSUM section for details); PAYLOAD is data being forwarded (copied from PAYLOAD of Hmp-To-Santa-Data-Or-Error-Packet); and FULL-CHECKSUM is a HMP-CHECKSUM of concatenation of the header (without header checksum) and PAYLOAD.
 
 If NEXT-HOP field doesn't match ID of the receiving Device - the packet is ignored.
 
-Hmp-Forward-To-Santa-Data-Or-Error-Packet is sent by Retransmitting Device when it receives Hmp-To-Santa-Data-Or-Error-Packet (with TTL=MAX_TTL-1 to account for original Hmp-To-Santa-Data-Or-Error-Packet). On receiving Hmp-Forward-To-Santa-Data-Or-Error-Packet by a Retransmitting Device, it is  processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Acknowledged Uni-Cast' mode.
+Hmp-Forward-To-Santa-Data-Or-Error-Packet is sent by Retransmitting Device when it receives Hmp-To-Santa-Data-Or-Error-Packet (with TTL=MAX_TTL-1 to account for original Hmp-To-Santa-Data-Or-Error-Packet). In this case retransmitting device sets FIRST-HOP to its node ID.
+
+On receiving Hmp-Forward-To-Santa-Data-Or-Error-Packet by a Retransmitting Device, it is  processed as described in Uni-Cast processing section above (with implicit Target-Address being Root), and is always sent in 'Acknowledged Uni-Cast' mode.
 
 Hmp-Routing-Error-Packet: **\| HMP-ROUTING-ERROR-PACKET-AND-TTL \| OPTIONAL-EXTRA-HEADERS \| LAST-HOP \| ERROR-CODE \| HEADER-CHECKSUM \| PAYLOAD \| FULL-CHECKSUM \|**
 
