@@ -34,6 +34,11 @@ All SmartAnthill devices within a system are controlled from the one place (such
 
 From programming point of view, SmartAnthill provides a clear separation between microcontroller programming (such as "how to get temperature from this sensor") and system integration logic (such as "how we should heat this particular house to reduce the heating bill"). Microcontroller programming usually requires C/asm programming and C/asm programs are notoriously difficult to customize. SmartAnthill allows you to customise device with pre-defined capabilities via GUI and generate compatible firmware which will be flashed to device automatically. On the other hand, system integration logic needs to be highly customizable for needs and properties of specific house or office, but within SmartAnthill it can be done via rich suite of development instruments: Generic Protocols (HTTP, Sockets, WebSokets), High Level API (REST API) and SDK for popular languages, which allow for easy development and customization.
 
+
+.. image:: _static/diagrams/smartanthill-overall-architecture-diagram.png
+    :alt: SmartAnthill Overall Architecture
+    :target: design-documents/smartanthill-overall-architecture.html
+
 .. toctree::
     :caption: Getting Started
     :maxdepth: 2
