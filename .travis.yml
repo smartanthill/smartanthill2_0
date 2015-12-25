@@ -30,7 +30,6 @@ python:
 env:
     - TOX_ENV=docs
     - TOX_ENV=lint
-    - TOX_ENV=py26
     - TOX_ENV=py27
     - TOX_ENV=coverage
 
