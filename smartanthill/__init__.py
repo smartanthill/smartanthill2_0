@@ -15,8 +15,8 @@
 
 # pylint: disable=W1401
 
-VERSION = (0, 0, "0.dev4")
-FIRMWARE_VERSION = (0, 0, 2)
+VERSION = (0, 0, "0.dev5")
+FIRMWARE_VERSION = (0, 0, 3)
 
 __version__ = ".".join([str(s) for s in VERSION])
 

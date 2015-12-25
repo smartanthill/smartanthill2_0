@@ -14,7 +14,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from binascii import hexlify
-from struct import pack
+from struct import pack, unpack
 
 from twisted.internet import protocol
 from twisted.protocols.basic import LineReceiver
@@ -31,7 +31,7 @@ class ControlMessage(object):
         self.data = data or bytearray()
         assert isinstance(data, bytearray)
 
-        assert 0 <= self.source <= 255 and 0 <= self.destination <= 255
+        assert 0 <= self.source <= 65535 and 0 <= self.destination <= 65535
         assert self.source != self.destination
 
     def __repr__(self):
@@ -67,7 +67,8 @@ class CommStackProcessProtocol(protocol.ProcessProtocol):
 
     def outLineReceived(self, line):
         line = line.strip()
-        self.factory.log.debug(line)
+        if "siot_mesh_at_root_get_next_update" not in line:
+            self.factory.log.debug(line)
         if not self._port_is_found:
             self._parse_server_port(line)
 
@@ -98,23 +99,25 @@ class CommStackClientProtocol(protocol.Protocol):
     PACKET_DIRECTION_COMMSTACK_TO_HUB = 35
     PACKET_DIRECTION_COMMSTACK_INTERNAL_ERROR = 47
 
-    def send_data(self, direction, data):
-        assert isinstance(data, bytearray)
-        packet = pack("HB", len(data), direction)
-        packet += str(data)
-        self.transport.write(packet)
+    def send_data(self, direction, address, payload):
+        assert isinstance(payload, bytearray)
+        packet = bytearray(pack("HHB", len(payload), address, direction))
+        packet.extend(payload)
+        self.transport.write(str(packet))
         self.factory.log.debug("Sent packet %s" % hexlify(packet))
 
     def dataReceived(self, data):
         data = bytearray(data)
         self.factory.log.debug("Received data %s" % hexlify(data))
-        direction = data[2]
+        direction = data[4]
         if direction == self.PACKET_DIRECTION_COMMSTACK_TO_HUB:
-            return self.factory.to_hub_callback(data[3:])
+            return self.factory.to_hub_callback(data[5:])
         elif direction == self.PACKET_DIRECTION_COMMSTACK_TO_CLIENT:
-            return self.factory.to_client_callback(data[3:])
+            return self.factory.to_client_callback(
+                unpack("H", data[2:4]), data[5:])
         elif direction == self.PACKET_DIRECTION_COMMSTACK_INTERNAL_ERROR:
             return self.factory.to_client_errback(
+                unpack("H", data[2:4]),
                 NetworkCommStackServerInternalError())
         raise SABaseException("Invalid direction %d" % direction)
 

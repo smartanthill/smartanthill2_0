@@ -34,7 +34,7 @@ from smartanthill.util import get_service_named
 class CommStackServerService(SAMultiService):
 
     def __init__(self, name, options):
-        assert set(["device_id", "port", "eeprom_path"]) <= set(options.keys())
+        assert set(["port", "eeprom_path"]) <= set(options.keys())
         SAMultiService.__init__(self, name, options)
         self._litemq = get_service_named("litemq")
         self._process = None
@@ -85,20 +85,16 @@ class CommStackServerService(SAMultiService):
     def on_server_started(self, port):
         self.log.info("Server has been started on port %d" % port)
         self._litemq.produce(
-            "network", "commstack.server.started",
-            {"device_id": self.options['device_id'], "port": port}
-        )
+            "network", "commstack.server.started", {"port": port})
 
 
 class CommStackClientFactory(protocol.ClientFactory):
 
-    def __init__(self, name, device_id):
+    def __init__(self, name):
         self.name = name
         self.log = Logger(self.name)
-        self.device_id = device_id
         self._litemq = get_service_named("litemq")
         self._protocol = None
-        self._source_id = 0
 
     def buildProtocol(self, addr):
         self._protocol = CommStackClientProtocol()
@@ -126,25 +122,25 @@ class CommStackClientFactory(protocol.ClientFactory):
         self.log.debug("Incoming from Client: %s and properties=%s" %
                        (message, properties))
         assert isinstance(message, ControlMessage)
-        self._source_id = message.source
-        data = message.data
-        assert isinstance(data, bytearray)
-        # data.insert(0, self.device_id)  # destination id
-        data.insert(0, 0x01)  # first packet in chain
-        data.insert(1, 0x02)  # SACCP_NEW_PROGRAM
+        assert isinstance(message.data, bytearray)
+        data = bytearray()
+        data.append(0x01)  # first packet in chain
+        data.append(0x02)  # SACCP_NEW_PROGRAM
+        data.extend(message.data)
         self._protocol.send_data(
             CommStackClientProtocol.PACKET_DIRECTION_CLIENT_TO_COMMSTACK,
+            message.destination,
             data
         )
 
-    def to_client_callback(self, message):
-        cm = ControlMessage(self.device_id, self._source_id,
+    def to_client_callback(self, source_id, message):
+        cm = ControlMessage(source_id, 0,
                             bytearray(message[1:]))  # strip 1-st chain's byte
         self.log.debug("Outgoing to Client: %s" % cm)
         self._litemq.produce("network", "commstack->client", cm)
 
-    def to_client_errback(self, reason):
-        cm = ControlMessage(self.device_id, self._source_id)
+    def to_client_errback(self, source_id, reason):
+        cm = ControlMessage(source_id, 0)
         self.log.error("Outgoing to Client: %s, error: %s" % (cm, reason))
         self._litemq.produce("network", "commstack->error", (cm, reason))
 
@@ -153,6 +149,7 @@ class CommStackClientFactory(protocol.ClientFactory):
                        (hexlify(message), properties))
         self._protocol.send_data(
             CommStackClientProtocol.PACKET_DIRECTION_HUB_TO_COMMSTACK,
+            0,  # bus_id, @TODO (0x0, 0x0)
             message
         )
 

@@ -19,6 +19,7 @@ from os.path import join
 
 from twisted.application.internet import TCPClient  # pylint: disable=E0611
 
+from smartanthill.configprocessor import ConfigProcessor
 from smartanthill.network.commstack import (CommStackClientFactory,
                                             CommStackServerService)
 from smartanthill.network.hub import HubService
@@ -43,17 +44,15 @@ class NetworkService(SAMultiService):
             callback=self.on_commstack_server_started
         )
 
-        # initialize Communication Stack per device
-        for device in get_service_named("device").get_devices().values():
-            device_id = device.get_id()
-            CommStackServerService(
-                "network.commstack.server.%d" % device_id,
-                dict(
-                    device_id=device_id,
-                    port=0,  # allow system to assign free port
-                    eeprom_path=join(device.get_conf_dir(), "eeprom.dat")
-                )
-            ).setServiceParent(self)
+        # initialize Communication Stack
+        CommStackServerService(
+            "network.commstack.server",
+            dict(
+                port=0,  # allow system to assign free port
+                eeprom_path=join(
+                    ConfigProcessor().get("workspace"), "commstack.dat")
+            )
+        ).setServiceParent(self)
 
         # initialize hubs
         for i, t in enumerate(self.options.get("hubs", [])):
@@ -74,15 +73,14 @@ class NetworkService(SAMultiService):
         return d
 
     def on_commstack_server_started(self, message, properties):
-        assert set(["device_id", "port"]) == set(message.keys())
+        assert set(["port"]) == set(message.keys())
         self.start_commstack_client(**message)
 
-    def start_commstack_client(self, device_id, port):
+    def start_commstack_client(self, port):
         TCPClient(
             "127.0.0.1", port,
             CommStackClientFactory(
-                "network.commstack.client.%d" % device_id,
-                device_id
+                "network.commstack.client"
             )
         ).setServiceParent(self)
 
