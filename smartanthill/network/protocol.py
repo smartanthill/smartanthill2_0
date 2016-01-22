@@ -67,8 +67,7 @@ class CommStackProcessProtocol(protocol.ProcessProtocol):
 
     def outLineReceived(self, line):
         line = line.strip()
-        if "siot_mesh_at_root_get_next_update" not in line:
-            self.factory.log.debug(line)
+        self.factory.log.debug(line)
         if not self._port_is_found:
             self._parse_server_port(line)
 
@@ -93,33 +92,121 @@ class CommStackProcessProtocol(protocol.ProcessProtocol):
 
 class CommStackClientProtocol(protocol.Protocol):
 
-    PACKET_DIRECTION_CLIENT_TO_COMMSTACK = 38
-    PACKET_DIRECTION_COMMSTACK_TO_CLIENT = 37
-    PACKET_DIRECTION_HUB_TO_COMMSTACK = 40
-    PACKET_DIRECTION_COMMSTACK_TO_HUB = 35
-    PACKET_DIRECTION_COMMSTACK_INTERNAL_ERROR = 47
+    #
+    # Constants described below should be synced with
+    # https://github.com/smartanthill/commstack-server/blob/develop/server/
+    # src/commstack_commlayer.h#L39
+    #
 
-    def send_data(self, direction, address, payload):
+    # received packet status
+    COMMLAYER_FROM_CU_STATUS_FAILED = 0
+    COMMLAYER_FROM_CU_STATUS_FOR_SLAVE = 38
+    COMMLAYER_FROM_CU_STATUS_FROM_SLAVE = 40
+    COMMLAYER_FROM_CU_STATUS_INITIALIZER = 50
+    COMMLAYER_FROM_CU_STATUS_INITIALIZER_LAST = 51
+    COMMLAYER_FROM_CU_STATUS_ADD_DEVICE = 55
+    COMMLAYER_FROM_CU_STATUS_REMOVE_DEVICE = 60
+    COMMLAYER_FROM_CU_STATUS_SYNC_RESPONSE = 57
+    COMMLAYER_FROM_CU_STATUS_GET_DEV_PERF_COUNTERS_REQUEST = 70
+
+    # sent packet status
+    COMMLAYER_TO_CU_STATUS_RESERVED_FAILED = 0
+    COMMLAYER_TO_CU_STATUS_FOR_SLAVE = 37
+    COMMLAYER_TO_CU_STATUS_FROM_SLAVE = 35
+    COMMLAYER_TO_CU_STATUS_SLAVE_ERROR = 47
+    COMMLAYER_TO_CU_STATUS_SYNC_REQUEST = 56
+    COMMLAYER_TO_CU_STATUS_INITIALIZATION_DONE = 60
+    COMMLAYER_TO_CU_STATUS_DEVICE_ADDED = 61
+    COMMLAYER_TO_CU_STATUS_DEVICE_REMOVED = 62
+    COMMLAYER_FROM_CU_STATUS_GET_DEV_PERF_COUNTERS_REPLY = 70
+
+    # REQUEST/REPLY CODES
+    REQUEST_TO_CU_WRITE_DATA = 0
+    REQUEST_TO_CU_READ_DATA = 1
+    RESPONSE_FROM_CU_WRITE_DATA = 0
+    RESPONSE_FROM_CU_READ_DATA = 1
+
+    # error codes
+    COMMLAYER_TO_CU_STATUS_OK = 0
+    COMMLAYER_TO_CU_STATUS_FAILED_EXISTS = 1
+    COMMLAYER_TO_CU_STATUS_FAILED_INCOMPLETE_OR_CORRUPTED_DATA = 2
+    COMMLAYER_TO_CU_STATUS_FAILED_UNKNOWN_REASON = 3
+    COMMLAYER_TO_CU_STATUS_FAILED_UNEXPECTED_PACKET = 4
+    COMMLAYER_TO_CU_STATUS_FAILED_DOES_NOT_EXIST = 5
+
+    def __init__(self):
+        self._buffer = bytearray()
+        self._queue = []
+
+    def connectionMade(self):
+        for item in self._queue:
+            self.send_data(*item)
+
+    def send_data(self, status, address, payload=None):
+        if not self.connected:
+            self._queue.append((status, address, payload))
+            return
+
+        if payload is None:
+            payload = bytearray()
+
         assert isinstance(payload, bytearray)
-        packet = bytearray(pack("HHB", len(payload), address, direction))
+        size = len(payload)
+        packet = bytearray(pack("<HHB", size, address, status))
         packet.extend(payload)
+
         self.transport.write(str(packet))
-        self.factory.log.debug("Sent packet %s" % hexlify(packet))
+        self.factory.log.debug(
+            "Sent packet: size=%d, address=%d, status=%d, payload=%s" % (
+                size, address, status, hexlify(payload))
+        )
 
     def dataReceived(self, data):
-        data = bytearray(data)
+        """
+        Packet structure
+        | size of payload (2 bytes, low, high)
+        | address (2 bytes, low, high)
+        | status (1 byte)
+        | payload (variable size)
+        """
+
         self.factory.log.debug("Received data %s" % hexlify(data))
-        direction = data[4]
-        if direction == self.PACKET_DIRECTION_COMMSTACK_TO_HUB:
-            return self.factory.to_hub_callback(data[5:])
-        elif direction == self.PACKET_DIRECTION_COMMSTACK_TO_CLIENT:
+        self._buffer.extend(bytearray(data))
+
+        while len(self._buffer) >= 5:  # min size of packet
+            size, address, status = unpack("<HHB", self._buffer[:5])
+            payload = self._buffer[5:5 + size] if size else []
+            del self._buffer[:5 + size]
+
+            self.factory.log.debug(
+                "Received packet: size=%d, address=%d, status=%d, "
+                "payload=%s" % (
+                    size, address, status, hexlify(payload))
+            )
+            self._process_packet(status, address, payload)
+
+    def _process_packet(self, status, address, payload):
+        if status == self.COMMLAYER_TO_CU_STATUS_INITIALIZATION_DONE:
+            return self.factory.on_initialization_done(
+                address, payload[0]
+            )
+
+        elif status == self.COMMLAYER_TO_CU_STATUS_SYNC_REQUEST:
+            return self.factory.on_status_sync_request(
+                address, payload[0], payload[1:])
+
+        elif status == self.COMMLAYER_TO_CU_STATUS_FOR_SLAVE:
+            return self.factory.to_hub_callback(payload)
+
+        elif status == self.COMMLAYER_TO_CU_STATUS_FROM_SLAVE:
             return self.factory.to_client_callback(
-                unpack("H", data[2:4]), data[5:])
-        elif direction == self.PACKET_DIRECTION_COMMSTACK_INTERNAL_ERROR:
+                address, payload)
+
+        elif status == self.COMMLAYER_TO_CU_STATUS_SLAVE_ERROR:
             return self.factory.to_client_errback(
-                unpack("H", data[2:4]),
+                address,
                 NetworkCommStackServerInternalError())
-        raise SABaseException("Invalid direction %d" % direction)
+        raise SABaseException("Invalid status %d" % status)
 
 
 class DataLinkProtocol(protocol.Protocol):

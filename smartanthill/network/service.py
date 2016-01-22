@@ -15,11 +15,8 @@
 
 # pylint: disable=W0613
 
-from os.path import join
-
 from twisted.application.internet import TCPClient  # pylint: disable=E0611
 
-from smartanthill.configprocessor import ConfigProcessor
 from smartanthill.network.commstack import (CommStackClientFactory,
                                             CommStackServerService)
 from smartanthill.network.hub import HubService
@@ -47,11 +44,7 @@ class NetworkService(SAMultiService):
         # initialize Communication Stack
         CommStackServerService(
             "network.commstack.server",
-            dict(
-                port=0,  # allow system to assign free port
-                eeprom_path=join(
-                    ConfigProcessor().get("workspace"), "commstack.dat")
-            )
+            dict(port=0)  # allow system to assign free port
         ).setServiceParent(self)
 
         # initialize hubs
@@ -74,9 +67,9 @@ class NetworkService(SAMultiService):
 
     def on_commstack_server_started(self, message, properties):
         assert set(["port"]) == set(message.keys())
-        self.start_commstack_client(**message)
+        self._start_commstack_client(**message)
 
-    def start_commstack_client(self, port):
+    def _start_commstack_client(self, port):
         TCPClient(
             "127.0.0.1", port,
             CommStackClientFactory(

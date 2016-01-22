@@ -17,24 +17,27 @@
 
 from binascii import hexlify
 from os.path import exists, join
+from struct import pack, unpack
 
 from platformio.util import get_systype
 from twisted.internet import protocol, reactor
+from twisted.python.filepath import FilePath
 from twisted.python.util import sibpath
 
+from smartanthill.configprocessor import ConfigProcessor
 from smartanthill.exception import NetworkCommStackServerNotExists
 from smartanthill.log import Logger
 from smartanthill.network.protocol import (CommStackClientProtocol,
                                            CommStackProcessProtocol,
                                            ControlMessage)
 from smartanthill.service import SAMultiService
-from smartanthill.util import get_service_named
+from smartanthill.util import get_service_named, load_config, singleton
 
 
 class CommStackServerService(SAMultiService):
 
     def __init__(self, name, options):
-        assert set(["port", "eeprom_path"]) <= set(options.keys())
+        assert "port" in options
         SAMultiService.__init__(self, name, options)
         self._litemq = get_service_named("litemq")
         self._process = None
@@ -45,8 +48,7 @@ class CommStackServerService(SAMultiService):
 
         self._process = reactor.spawnProcess(
             p, self.get_server_bin(),
-            ["--port=%d" % self.options['port'],
-             "--psp=%s" % self.options['eeprom_path']]
+            ["--port=%d" % self.options['port']]
         )
 
         SAMultiService.startService(self)
@@ -96,11 +98,6 @@ class CommStackClientFactory(protocol.ClientFactory):
         self._litemq = get_service_named("litemq")
         self._protocol = None
 
-    def buildProtocol(self, addr):
-        self._protocol = CommStackClientProtocol()
-        self._protocol.factory = self
-        return self._protocol
-
     def startFactory(self):
         self._litemq.consume(
             "network",
@@ -118,6 +115,79 @@ class CommStackClientFactory(protocol.ClientFactory):
         for direction in ("in", "out"):
             self._litemq.unconsume("network", "%s.%s" % (self.name, direction))
 
+    def buildProtocol(self, addr):
+        self._protocol = CommStackClientProtocol()
+        self._protocol.factory = self
+
+        self._init_devices()
+
+        return self._protocol
+
+    def _init_devices(self):
+        devices = get_service_named("device").get_devices()
+
+        # initialise linked devices
+        counter = 0
+        for (id_, device) in devices.iteritems():
+            self._protocol.send_data(
+                CommStackClientProtocol.COMMLAYER_FROM_CU_STATUS_INITIALIZER,
+                counter,
+                self._get_device_payload(device)
+            )
+            counter += 1
+
+        # finish initialisation
+        self._protocol.send_data(
+            CommStackClientProtocol.COMMLAYER_FROM_CU_STATUS_INITIALIZER_LAST,
+            counter
+        )
+
+    def _get_device_payload(self, device):
+        device_id = device.get_id()
+        payload = bytearray([device_id & 0xFF, device_id >> 8])
+        payload.extend(device.get_encryption_key())
+        payload.append(1 if device.is_retransmitter() else 0)
+        payload.append(len(device.get_buses()))  # bus_count
+        payload.append(len(device.get_buses()))  # TODO bus_type_count
+        for bus in device.get_buses():
+            payload.append(0)  # TODO append valid bus type
+        return payload
+
+    def on_initialization_done(self, total_inited, error_code):
+        assert error_code == CommStackClientProtocol.COMMLAYER_TO_CU_STATUS_OK
+        assert len(get_service_named("device").get_devices()) == total_inited
+
+    def on_status_sync_request(self, address, command, data):
+        key = data[:3]
+        if command == CommStackClientProtocol.REQUEST_TO_CU_READ_DATA:
+            _read_data = CommStackStorage().read(key)
+            payload = bytearray(
+                [CommStackClientProtocol.RESPONSE_FROM_CU_READ_DATA])
+            payload.extend(key)
+            payload.extend(pack("<H", len(_read_data)))
+            payload.extend(_read_data)
+            self._protocol.send_data(
+                CommStackClientProtocol.COMMLAYER_FROM_CU_STATUS_SYNC_RESPONSE,
+                address,
+                payload
+            )
+        elif command == CommStackClientProtocol.REQUEST_TO_CU_WRITE_DATA:
+            _write_size = unpack("<H", data[3:5])[0]
+            _write_data = (data[5:5 + _write_size]
+                           if _write_size else bytearray())
+            _written_size = CommStackStorage().write(key, _write_data)
+            payload = bytearray(
+                [CommStackClientProtocol.RESPONSE_FROM_CU_WRITE_DATA])
+            payload.extend(key)
+            payload.extend(pack("<H", _written_size))
+            self._protocol.send_data(
+                CommStackClientProtocol.COMMLAYER_FROM_CU_STATUS_SYNC_RESPONSE,
+                address,
+                payload
+            )
+        else:
+            raise NotImplementedError("Sync request command %d" % command)
+
     def from_client_callback(self, message, properties):
         self.log.debug("Incoming from Client: %s and properties=%s" %
                        (message, properties))
@@ -128,7 +198,7 @@ class CommStackClientFactory(protocol.ClientFactory):
         data.append(0x02)  # SACCP_NEW_PROGRAM
         data.extend(message.data)
         self._protocol.send_data(
-            CommStackClientProtocol.PACKET_DIRECTION_CLIENT_TO_COMMSTACK,
+            CommStackClientProtocol.COMMLAYER_FROM_CU_STATUS_FOR_SLAVE,
             message.destination,
             data
         )
@@ -148,7 +218,7 @@ class CommStackClientFactory(protocol.ClientFactory):
         self.log.debug("Incoming from Hub: %s and properties=%s" %
                        (hexlify(message), properties))
         self._protocol.send_data(
-            CommStackClientProtocol.PACKET_DIRECTION_HUB_TO_COMMSTACK,
+            CommStackClientProtocol.COMMLAYER_FROM_CU_STATUS_FROM_SLAVE,
             0,  # bus_id, @TODO (0x0, 0x0)
             message
         )
@@ -158,3 +228,38 @@ class CommStackClientFactory(protocol.ClientFactory):
         self.log.debug("Outgoing to Hub: %s" % hexlify(data))
         self._litemq.produce(
             "network", "commstack->hub", data, dict(binary=True))
+
+
+@singleton
+class CommStackStorage():
+
+    def __init__(self):
+        self.dat_file = FilePath(join(
+            ConfigProcessor().get("workspace"), "commstack.dat"))
+
+        if self.dat_file.isfile():
+            self._data = load_config(self.dat_file.path)
+        else:
+            self._data = {}
+
+    def __str__(self):
+        return str(self._data)
+
+    @staticmethod
+    def key_to_index(key):
+        assert isinstance(key, bytearray)
+        assert len(key) == 3
+        _key = key[:]
+        _key.insert(0, 0)
+        return unpack("<I", _key)[0]
+
+    def read(self, key):
+        index = self.key_to_index(key)
+        if index in self._data:
+            return self._data[index]
+        else:
+            return bytearray()
+
+    def write(self, key, value):
+        self._data[self.key_to_index(key)] = value
+        return len(value)

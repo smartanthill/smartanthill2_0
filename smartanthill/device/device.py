@@ -51,6 +51,37 @@ class Device(object):
         self.options = options
         self.board = BoardFactory.newBoard(options['boardId'])
 
+    def get_id(self):
+        return self.id_
+
+    def get_name(self):
+        return self.options.get(
+            "name", "Device #%d, %s" % (self.id_, self.board.get_name()))
+
+    @staticmethod
+    def get_config_key_by_id(device_id):
+        return "services.device.options.devices.%d" % device_id
+
+    @staticmethod
+    def get_config_dir_by_id(device_id):
+        return join(ConfigProcessor().get("workspace"),
+                    "devices", "%d") % (device_id,)
+
+    def get_conf_dir(self):
+        path = self.get_config_dir_by_id(self.id_)
+        if not isdir(path):
+            makedirs(path)
+        return path
+
+    def get_encryption_key(self):  # TODO
+        return bytearray(range(0, 16))
+
+    def is_retransmitter(self):  # TODO
+        return self.options.get("retransmitter", False)
+
+    def is_enabled(self):
+        return self.options.get("enabled", True)
+
     @memoized
     def get_bodyparts(self):
         return bodyparts_to_objects(
@@ -65,12 +96,26 @@ class Device(object):
             join(get_service_named("sas").workspace_dir, "transports")
         )
 
-    def get_id(self):
-        return self.id_
+    def get_settings_hash(self):
+        settings = deepcopy(self.options)
+        for key in ["name", "prevId", "enabled", "firmware", "status"]:
+            if key in settings:
+                del settings[key]
+        for items in (settings.get("bodyparts", []),
+                      settings.get("buses", [])):
+            for item in items:
+                del item['name']
+        settings['currentFirmwareVersion'] = FIRMWARE_VERSION[:2]
+        return sha1(dumps(settings, sort_keys=True)).hexdigest()
 
-    def get_name(self):
-        return self.options.get(
-            "name", "Device #%d, %s" % (self.id_, self.board.get_name()))
+    def get_firmware_settings_hash(self):
+        return self.options.get("firmware", {}).get("settingsHash")
+
+    def get_status(self):
+        if self.get_settings_hash() != self.get_firmware_settings_hash():
+            return DeviceStatus.WAITFORTRAINIT.value
+        else:
+            return DeviceStatus.IDLE.value
 
     def execute_bodypart(self, name, request_fields):
         bodypart = None
@@ -122,42 +167,3 @@ class Device(object):
         )
         d.addBoth(_on_result, project_dir)
         return d
-
-    def get_conf_dir(self):
-        path = self.get_config_dir_by_id(self.id_)
-        if not isdir(path):
-            makedirs(path)
-        return path
-
-    @staticmethod
-    def get_config_key_by_id(device_id):
-        return "services.device.options.devices.%d" % device_id
-
-    @staticmethod
-    def get_config_dir_by_id(device_id):
-        return join(ConfigProcessor().get("workspace"),
-                    "devices", "%d") % (device_id,)
-
-    def is_enabled(self):
-        return self.options.get("enabled", True)
-
-    def get_settings_hash(self):
-        settings = deepcopy(self.options)
-        for key in ["name", "prevId", "enabled", "firmware", "status"]:
-            if key in settings:
-                del settings[key]
-        for items in (settings.get("bodyparts", []),
-                      settings.get("buses", [])):
-            for item in items:
-                del item['name']
-        settings['currentFirmwareVersion'] = FIRMWARE_VERSION[:2]
-        return sha1(dumps(settings, sort_keys=True)).hexdigest()
-
-    def get_firmware_settings_hash(self):
-        return self.options.get("firmware", {}).get("settingsHash")
-
-    def get_status(self):
-        if self.get_settings_hash() != self.get_firmware_settings_hash():
-            return DeviceStatus.WAITFORTRAINIT.value
-        else:
-            return DeviceStatus.IDLE.value
