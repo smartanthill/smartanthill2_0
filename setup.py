@@ -30,7 +30,7 @@ setup(
     install_requires=[
         # "smartanthill_zc",
         "platformio>=2.3.1",
-        "pyserial",
+        "pyserial<3",
         "twisted>=14.1",
         "txws",
         "six",  # required by txws but not listed in it's requirements
